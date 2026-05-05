@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   ArrowDownToLine,
   ChevronRight,
@@ -19,8 +19,16 @@ interface Props {
 
 export function ProjectDetailPage({ projectId }: Props) {
   const project = useStore((s) => s.projects.find((p) => p.id === projectId));
-  const pipelines = useStore((s) => s.pipelines.filter((p) => p.projectId === projectId));
-  const builds = useStore((s) => s.builds.filter((b) => b.projectId === projectId));
+  const allPipelines = useStore((s) => s.pipelines);
+  const allBuilds = useStore((s) => s.builds);
+  const pipelines = useMemo(
+    () => allPipelines.filter((p) => p.projectId === projectId),
+    [allPipelines, projectId],
+  );
+  const builds = useMemo(
+    () => allBuilds.filter((b) => b.projectId === projectId),
+    [allBuilds, projectId],
+  );
   const setView = useStore((s) => s.setView);
   const removeProject = useStore((s) => s.removeProject);
   const triggerBuild = useStore((s) => s.triggerBuild);
