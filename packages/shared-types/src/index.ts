@@ -58,6 +58,7 @@ export interface Pipeline {
   edges: PipelineEdge[];
   createdAt: number;
   updatedAt: number;
+  lastBuiltSha: string | null;
 }
 
 // ── Build ───────────────────────────────────────────────────────────────────

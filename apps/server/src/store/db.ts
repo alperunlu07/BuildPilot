@@ -1,0 +1,74 @@
+import Database from 'better-sqlite3';
+import { mkdirSync } from 'node:fs';
+import { dirname } from 'node:path';
+
+export type DB = Database.Database;
+
+let _db: DB | null = null;
+
+export function initDb(path: string): DB {
+  mkdirSync(dirname(path), { recursive: true });
+  const db = new Database(path);
+  db.pragma('journal_mode = WAL');
+  db.pragma('foreign_keys = ON');
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS projects (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      path TEXT NOT NULL UNIQUE,
+      default_branch TEXT NOT NULL,
+      created_at INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS pipelines (
+      id TEXT PRIMARY KEY,
+      project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+      name TEXT NOT NULL,
+      watch_branch TEXT NOT NULL,
+      watch_interval_sec INTEGER NOT NULL,
+      auto_trigger TEXT NOT NULL,
+      nodes_json TEXT NOT NULL,
+      edges_json TEXT NOT NULL,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS builds (
+      id TEXT PRIMARY KEY,
+      pipeline_id TEXT NOT NULL,
+      project_id TEXT NOT NULL,
+      trigger_sha TEXT NOT NULL,
+      trigger_branch TEXT NOT NULL,
+      status TEXT NOT NULL,
+      started_at INTEGER NOT NULL,
+      finished_at INTEGER,
+      log TEXT NOT NULL DEFAULT ''
+    );
+    CREATE INDEX IF NOT EXISTS idx_builds_project_id ON builds(project_id);
+    CREATE INDEX IF NOT EXISTS idx_builds_pipeline_id ON builds(pipeline_id);
+    CREATE INDEX IF NOT EXISTS idx_builds_started_at ON builds(started_at DESC);
+
+    CREATE TABLE IF NOT EXISTS poller_state (
+      project_id TEXT NOT NULL,
+      branch TEXT NOT NULL,
+      last_seen_sha TEXT NOT NULL,
+      updated_at INTEGER NOT NULL,
+      PRIMARY KEY (project_id, branch)
+    );
+
+    CREATE TABLE IF NOT EXISTS pipeline_last_build (
+      pipeline_id TEXT PRIMARY KEY,
+      last_built_sha TEXT NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
+  `);
+
+  _db = db;
+  return db;
+}
+
+export function getDb(): DB {
+  if (!_db) throw new Error('DB not initialized — call initDb() first');
+  return _db;
+}
