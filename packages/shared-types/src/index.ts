@@ -17,6 +17,7 @@ export interface ProjectSummary extends Project {
 export interface Commit {
   sha: string;
   shortSha: string;
+  parents: string[]; // parent SHAs (length >= 2 means merge)
   author: string;
   email: string;
   date: number; // unix ms

@@ -52,18 +52,32 @@ export async function listCommits(
   limit = 50,
   sinceSha?: string,
 ): Promise<Commit[]> {
+  // Use control-character separators (US/RS) so commit subjects/bodies that
+  // contain pipes, tabs, or newlines don't break parsing.
+  const FS = '\x1f'; // field separator
+  const RS = '\x1e'; // record separator
+  const fmt = ['%H', '%P', '%aI', '%aN', '%aE', '%s', '%b'].join(FS) + RS;
+
   const range = sinceSha ? `${sinceSha}..${ref}` : ref;
+  const args = ['log', `--format=${fmt}`, '-n', String(limit), range];
+
   try {
-    const log = await git(repoPath).log([range, '-n', String(limit)]);
-    return log.all.map((c) => ({
-      sha: c.hash,
-      shortSha: c.hash.slice(0, 7),
-      author: c.author_name,
-      email: c.author_email,
-      date: new Date(c.date).getTime(),
-      subject: c.message,
-      body: c.body ?? '',
-    }));
+    const raw = await git(repoPath).raw(args);
+    const records = raw.split(RS).map((r) => r.replace(/^\n/, '')).filter((r) => r.length > 0);
+    return records.map((rec) => {
+      const [hash = '', parents = '', date = '', author = '', email = '', subject = '', body = ''] =
+        rec.split(FS);
+      return {
+        sha: hash,
+        shortSha: hash.slice(0, 7),
+        parents: parents.split(' ').filter((p) => p.length > 0),
+        author,
+        email,
+        date: date ? new Date(date).getTime() : 0,
+        subject,
+        body: body.trim(),
+      };
+    });
   } catch {
     return [];
   }

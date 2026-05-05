@@ -12,6 +12,7 @@ import { useStore } from '../store/store';
 import { api } from '../lib/api';
 import { CommitItem } from '../components/CommitItem';
 import { CreatePipelineDialog } from '../components/CreatePipelineDialog';
+import { cn } from '../lib/cn';
 
 interface Props {
   projectId: string;
@@ -34,29 +35,49 @@ export function ProjectDetailPage({ projectId }: Props) {
   const triggerBuild = useStore((s) => s.triggerBuild);
   const loadBuilds = useStore((s) => s.loadBuilds);
 
-  const [branch, setBranch] = useState<string>('');
+  const [currentBranch, setCurrentBranch] = useState<string>('');
+  const [browseBranch, setBrowseBranch] = useState<string>('');
   const [commits, setCommits] = useState<Commit[]>([]);
+  const [headSha, setHeadSha] = useState<string>('');
   const [pulling, setPulling] = useState(false);
   const [openCreate, setOpenCreate] = useState(false);
 
+  // Initial: fetch the actual git HEAD branch and use it as default browse branch.
   useEffect(() => {
     if (!project) return;
-    setBranch(project.defaultBranch);
-  }, [project?.id]);
-
-  useEffect(() => {
-    if (!project || !branch) return;
     let alive = true;
     api
-      .commits(project.id, { branch, limit: 50 })
+      .currentBranch(project.id)
+      .then((r) => {
+        if (!alive) return;
+        const branch = r.branch || project.defaultBranch;
+        setCurrentBranch(branch);
+        setBrowseBranch((prev) => prev || branch);
+      })
+      .catch(() => {
+        if (alive) setBrowseBranch((prev) => prev || project.defaultBranch);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [project?.id]);
+
+  // Fetch commits whenever browse branch changes.
+  useEffect(() => {
+    if (!project || !browseBranch) return;
+    let alive = true;
+    api
+      .commits(project.id, { branch: browseBranch, limit: 100 })
       .then((c) => {
-        if (alive) setCommits(c);
+        if (!alive) return;
+        setCommits(c);
+        setHeadSha(c[0]?.sha ?? '');
       })
       .catch(() => null);
     return () => {
       alive = false;
     };
-  }, [project?.id, branch]);
+  }, [project?.id, browseBranch]);
 
   useEffect(() => {
     if (!project) return;
@@ -65,8 +86,6 @@ export function ProjectDetailPage({ projectId }: Props) {
 
   if (!project) return null;
 
-  // Highlight commits that arrived after the most recently built SHA across all
-  // pipelines for this project. We pick the most recent successful build's SHA.
   const lastSuccessfulSha = builds.find((b) => b.status === 'success')?.triggerSha;
   const highlightStartIdx =
     lastSuccessfulSha == null
@@ -80,25 +99,30 @@ export function ProjectDetailPage({ projectId }: Props) {
     setPulling(true);
     try {
       await api.pullProject(project.id);
-      const refreshed = await api.commits(project.id, { branch, limit: 50 });
+      const refreshed = await api.commits(project.id, { branch: browseBranch, limit: 100 });
       setCommits(refreshed);
+      setHeadSha(refreshed[0]?.sha ?? '');
+      // Refresh current branch display in case pull changed it.
+      const cb = await api.currentBranch(project.id).catch(() => null);
+      if (cb?.branch) setCurrentBranch(cb.branch);
     } finally {
       setPulling(false);
     }
   };
 
   return (
-    <div className="mx-auto flex h-full max-w-5xl flex-col p-6">
-      <header className="mb-4">
+    <div className="flex h-full min-h-0 flex-col">
+      {/* HEADER */}
+      <header className="border-b border-slate-800 bg-slate-900/40 px-6 py-3">
         <button
           type="button"
           onClick={() => setView({ type: 'projects' })}
-          className="mb-2 text-[11px] uppercase tracking-wider text-slate-500 hover:text-slate-300"
+          className="text-[11px] uppercase tracking-wider text-slate-500 hover:text-slate-300"
         >
           ← Projects
         </button>
-        <div className="flex items-baseline justify-between">
-          <h1 className="text-xl font-semibold text-slate-100">{project.name}</h1>
+        <div className="mt-1 flex items-baseline justify-between">
+          <h1 className="text-lg font-semibold text-slate-100">{project.name}</h1>
           <button
             type="button"
             onClick={async () => {
@@ -112,85 +136,123 @@ export function ProjectDetailPage({ projectId }: Props) {
             <Trash2 size={13} />
           </button>
         </div>
-        <code className="mt-1 block text-[11px] text-slate-500">{project.path}</code>
+        <code className="mt-0.5 block text-[11px] text-slate-500">{project.path}</code>
       </header>
 
-      <section className="mb-4 rounded-md border border-slate-800 bg-slate-900/40 p-4">
-        <div className="mb-3 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <GitBranch size={14} className="text-emerald-400" />
-            <select
-              value={branch}
-              onChange={(e) => setBranch(e.target.value)}
-              className="rounded-md border border-slate-700 bg-slate-950 px-2 py-1 text-sm font-mono text-slate-100 focus:border-sky-500 focus:outline-none"
-            >
-              {project.watchedBranches.map((b) => (
-                <option key={b} value={b}>
-                  {b}
-                </option>
+      {/* BRANCH STRIP */}
+      <div className="flex flex-wrap items-center gap-3 border-b border-slate-800 bg-slate-950/60 px-6 py-2.5">
+        {currentBranch ? (
+          <span className="inline-flex items-center gap-1.5 rounded-md border border-emerald-700/50 bg-emerald-950/40 px-2.5 py-1 text-xs text-emerald-300">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+            on{' '}
+            <code className="font-mono font-semibold text-emerald-200">{currentBranch}</code>
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1.5 rounded-md border border-slate-700 bg-slate-900 px-2.5 py-1 text-xs text-slate-500">
+            <span className="h-1.5 w-1.5 rounded-full bg-slate-600" />
+            checking…
+          </span>
+        )}
+
+        <span className="flex items-center gap-1.5 text-xs text-slate-400">
+          <GitBranch size={12} className="text-slate-500" />
+          browse
+          <select
+            value={browseBranch}
+            onChange={(e) => setBrowseBranch(e.target.value)}
+            className="ml-1 rounded-md border border-slate-700 bg-slate-900 px-2 py-1 font-mono text-xs text-slate-100 focus:border-sky-500 focus:outline-none"
+          >
+            {project.watchedBranches.map((b) => (
+              <option key={b} value={b}>
+                {b}
+              </option>
+            ))}
+          </select>
+        </span>
+
+        {browseBranch && currentBranch && browseBranch !== currentBranch && (
+          <span className="rounded-md bg-slate-800 px-2 py-0.5 text-[10px] uppercase tracking-wider text-slate-400">
+            different branch
+          </span>
+        )}
+
+        {highlightShas.size > 0 && (
+          <span className="rounded-md bg-amber-950/50 px-2 py-0.5 text-[11px] text-amber-300">
+            {highlightShas.size} commit{highlightShas.size === 1 ? '' : 's'} since last build
+          </span>
+        )}
+
+        <button
+          type="button"
+          onClick={onPull}
+          disabled={pulling}
+          className="ml-auto inline-flex items-center gap-1 rounded-md border border-slate-700 px-2.5 py-1 text-xs text-slate-200 hover:border-emerald-500 hover:text-emerald-400 disabled:opacity-50"
+        >
+          <ArrowDownToLine size={12} /> {pulling ? 'Pulling…' : 'Pull'}
+        </button>
+      </div>
+
+      {/* TWO-COLUMN BODY */}
+      <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[minmax(0,1fr)_360px] xl:grid-cols-[minmax(0,1fr)_400px]">
+        {/* Commits — scrollable */}
+        <div className="scrollbar-thin min-h-0 overflow-y-auto border-r border-slate-800 px-4 py-3">
+          {commits.length === 0 ? (
+            <div className="py-10 text-center text-sm text-slate-500">No commits found.</div>
+          ) : (
+            <ol className="relative">
+              {commits.map((c, idx) => (
+                <CommitItem
+                  key={c.sha}
+                  commit={c}
+                  isFirst={idx === 0}
+                  isLast={idx === commits.length - 1}
+                  isHead={c.sha === headSha && browseBranch === currentBranch}
+                  highlight={highlightShas.has(c.sha)}
+                />
               ))}
-            </select>
-            {highlightShas.size > 0 && (
-              <span className="rounded-md bg-amber-950/50 px-2 py-0.5 text-[11px] text-amber-300">
-                {highlightShas.size} commit{highlightShas.size === 1 ? '' : 's'} since last build
-              </span>
-            )}
-          </div>
-          <button
-            type="button"
-            onClick={onPull}
-            disabled={pulling}
-            className="inline-flex items-center gap-1 rounded-md border border-slate-700 px-2.5 py-1 text-xs text-slate-200 hover:border-emerald-500 hover:text-emerald-400 disabled:opacity-50"
-          >
-            <ArrowDownToLine size={12} /> {pulling ? 'Pulling…' : 'Pull'}
-          </button>
+            </ol>
+          )}
         </div>
 
-        {commits.length === 0 ? (
-          <div className="py-6 text-center text-sm text-slate-500">No commits found.</div>
-        ) : (
-          <ul className="space-y-1.5">
-            {commits.map((c) => (
-              <CommitItem key={c.sha} commit={c} highlight={highlightShas.has(c.sha)} />
-            ))}
-          </ul>
-        )}
-      </section>
-
-      <section className="rounded-md border border-slate-800 bg-slate-900/40 p-4">
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-slate-200">Pipelines</h2>
-          <button
-            type="button"
-            onClick={() => setOpenCreate(true)}
-            className="inline-flex items-center gap-1 rounded-md bg-sky-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-sky-500"
-          >
-            <Plus size={12} /> New pipeline
-          </button>
-        </div>
-
-        {pipelines.length === 0 ? (
-          <div className="py-4 text-sm text-slate-500">
-            No pipelines yet. Create one to start watching commits and running builds.
+        {/* Pipelines — sticky panel */}
+        <aside className="scrollbar-thin min-h-0 overflow-y-auto bg-slate-950/30 px-4 py-3">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-300">
+              Pipelines
+            </h2>
+            <button
+              type="button"
+              onClick={() => setOpenCreate(true)}
+              className="inline-flex items-center gap-1 rounded-md bg-sky-600 px-2 py-1 text-xs font-medium text-white hover:bg-sky-500"
+            >
+              <Plus size={12} /> New
+            </button>
           </div>
-        ) : (
-          <ul className="space-y-2">
-            {pipelines.map((pl) => (
-              <PipelineRow
-                key={pl.id}
-                pipeline={pl}
-                onOpen={() => setView({ type: 'pipeline', id: pl.id })}
-                onRun={() => triggerBuild(pl.id)}
-              />
-            ))}
-          </ul>
-        )}
-      </section>
+
+          {pipelines.length === 0 ? (
+            <div className="rounded-md border border-dashed border-slate-700 bg-slate-900/40 p-4 text-center text-xs text-slate-500">
+              No pipelines yet. Create one to start watching commits and running builds.
+            </div>
+          ) : (
+            <ul className="space-y-2">
+              {pipelines.map((pl) => (
+                <PipelineRow
+                  key={pl.id}
+                  pipeline={pl}
+                  watchActive={pl.watch.branch === currentBranch}
+                  onOpen={() => setView({ type: 'pipeline', id: pl.id })}
+                  onRun={() => triggerBuild(pl.id)}
+                />
+              ))}
+            </ul>
+          )}
+        </aside>
+      </div>
 
       <CreatePipelineDialog
         open={openCreate}
         projectId={project.id}
-        defaultBranch={project.defaultBranch}
+        defaultBranch={currentBranch || project.defaultBranch}
         onClose={() => setOpenCreate(false)}
         onCreated={(p) => setView({ type: 'pipeline', id: p.id })}
       />
@@ -200,49 +262,58 @@ export function ProjectDetailPage({ projectId }: Props) {
 
 function PipelineRow({
   pipeline,
+  watchActive,
   onOpen,
   onRun,
 }: {
   pipeline: Pipeline;
+  watchActive: boolean;
   onOpen(): void;
   onRun(): void;
 }) {
   return (
-    <li className="rounded-md border border-slate-800 bg-slate-950/40 px-3 py-2.5">
-      <div className="flex items-center justify-between">
-        <button type="button" onClick={onOpen} className="flex-1 text-left">
+    <li className="rounded-md border border-slate-800 bg-slate-900/60 px-3 py-2.5">
+      <div className="flex items-center justify-between gap-2">
+        <button type="button" onClick={onOpen} className="min-w-0 flex-1 text-left">
           <div className="flex items-center gap-2 text-sm font-medium text-slate-100">
-            {pipeline.name}
-            <ChevronRight size={12} className="text-slate-500" />
+            <span className="truncate">{pipeline.name}</span>
+            <ChevronRight size={12} className="shrink-0 text-slate-500" />
           </div>
-          <div className="mt-0.5 flex flex-wrap gap-2 text-[11px] text-slate-500">
-            <span>
-              watch:{' '}
-              <span className="font-mono text-emerald-400">{pipeline.watch.branch}</span>
+          <div className="mt-1 flex flex-wrap gap-1">
+            <span
+              className={cn(
+                'rounded-md px-1.5 py-0.5 text-[10px] font-mono',
+                watchActive
+                  ? 'bg-emerald-950/50 text-emerald-300'
+                  : 'bg-slate-800 text-slate-400',
+              )}
+              title={watchActive ? 'matches current branch' : 'different branch'}
+            >
+              {pipeline.watch.branch}
             </span>
-            <span>·</span>
-            <span>{pipeline.nodes.length} steps</span>
-            <span>·</span>
-            <span>every {pipeline.watch.intervalSec}s</span>
+            <span className="rounded-md bg-slate-800 px-1.5 py-0.5 text-[10px] text-slate-400">
+              {pipeline.nodes.length} step{pipeline.nodes.length === 1 ? '' : 's'}
+            </span>
+            <span className="rounded-md bg-slate-800 px-1.5 py-0.5 text-[10px] text-slate-400">
+              {pipeline.watch.intervalSec}s
+            </span>
             {pipeline.lastBuiltSha && (
-              <>
-                <span>·</span>
-                <span>
-                  last:{' '}
-                  <span className="font-mono text-sky-400">
-                    {pipeline.lastBuiltSha.slice(0, 7)}
-                  </span>
-                </span>
-              </>
+              <span className="rounded-md bg-slate-800 px-1.5 py-0.5 text-[10px] text-slate-400">
+                last:{' '}
+                <code className="font-mono text-sky-400">
+                  {pipeline.lastBuiltSha.slice(0, 7)}
+                </code>
+              </span>
             )}
           </div>
         </button>
         <button
           type="button"
           onClick={onRun}
-          className="ml-3 inline-flex items-center gap-1 rounded-md border border-slate-700 px-2.5 py-1 text-xs text-slate-200 hover:border-sky-500 hover:text-sky-400"
+          className="inline-flex shrink-0 items-center gap-1 rounded-md border border-slate-700 px-2 py-1 text-xs text-slate-200 hover:border-sky-500 hover:text-sky-400"
+          title="Trigger build now"
         >
-          <Hammer size={12} /> Run
+          <Hammer size={11} /> Run
         </button>
       </div>
     </li>
