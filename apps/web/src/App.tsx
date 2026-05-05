@@ -7,7 +7,7 @@ import { ProjectsPage } from './pages/ProjectsPage';
 import { ProjectDetailPage } from './pages/ProjectDetailPage';
 import { PipelinePage } from './pages/PipelinePage';
 import { useStore } from './store/store';
-import { subscribe } from './lib/events';
+import { onConnected, subscribe } from './lib/events';
 
 export function App() {
   const view = useStore((s) => s.view);
@@ -25,6 +25,18 @@ export function App() {
   }, [loadProjects, loadPipelines, loadBuilds]);
 
   useEffect(() => subscribe(handleEvent), [handleEvent]);
+
+  // Refresh data whenever the SSE stream (re)connects so the dashboard recovers
+  // automatically after a server restart or a slow first start.
+  useEffect(
+    () =>
+      onConnected(() => {
+        void loadProjects();
+        void loadPipelines();
+        void loadBuilds();
+      }),
+    [loadProjects, loadPipelines, loadBuilds],
+  );
 
   return (
     <div className="flex h-full bg-slate-950 text-slate-100">

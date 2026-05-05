@@ -5,10 +5,10 @@
   "description": "Local CI/CD with web dashboard and React Flow pipeline editor",
   "packageManager": "pnpm@10.33.3",
   "scripts": {
-    "dev": "pnpm -r --parallel run dev",
-    "build": "pnpm -r run build",
+    "dev": "pnpm --parallel --filter \"./apps/*\" run dev",
+    "build": "pnpm --filter \"./apps/*\" run build",
     "start": "pnpm --filter @buildpilot/server run start",
-    "typecheck": "pnpm -r run typecheck"
+    "typecheck": "pnpm -r --if-present run typecheck"
   },
   "devDependencies": {
     "typescript": "^5.6.3"
