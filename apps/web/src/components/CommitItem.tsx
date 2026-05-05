@@ -1,69 +1,163 @@
 import { useState } from 'react';
 import { ChevronRight, ChevronDown, GitMerge } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
-import type { Commit } from '@buildpilot/shared-types';
+import { laneColor, type GraphRow } from '../lib/graph';
 import { cn } from '../lib/cn';
 
 interface Props {
-  commit: Commit;
+  row: GraphRow;
+  width: number;
   isFirst: boolean;
   isLast: boolean;
   highlight?: boolean;
   isHead?: boolean;
 }
 
-export function CommitItem({ commit, isFirst, isLast, highlight, isHead }: Props) {
+const LANE_WIDTH = 18;
+const SVG_HEIGHT = 40; // covers the top of the row including the dot + curves
+const DOT_Y = 20;      // dot vertical center inside the SVG (also relative to LI top)
+const DOT_R = 4;
+const MERGE_R = 5;
+
+export function CommitItem({ row, width, isFirst, isLast, highlight, isHead }: Props) {
   const [open, setOpen] = useState(false);
-  const isMerge = commit.parents.length >= 2;
-  const hasBody = (commit.body ?? '').trim().length > 0;
+  const isMerge = row.parents.length >= 2;
+  const hasBody = (row.body ?? '').trim().length > 0;
+
+  const railWidth = (width + 0.5) * LANE_WIDTH;
+  const cx = row.myLane * LANE_WIDTH + LANE_WIDTH / 2;
+  const myColor = laneColor(row.myLane);
 
   return (
-    <li
-      className={cn(
-        'relative flex gap-3 transition-colors',
-        highlight && 'bg-amber-950/20',
-      )}
-    >
+    <li className={cn('relative flex transition-colors', highlight && 'bg-amber-950/20')}>
       {/* Rail */}
-      <div className="relative w-7 shrink-0">
-        {/* Top half line — hidden on first row */}
-        {!isFirst && (
-          <span
-            className="absolute left-1/2 top-0 w-px -translate-x-1/2 bg-slate-700"
-            style={{ height: '18px' }}
-          />
-        )}
-        {/* Bottom half line — hidden on last row */}
-        {!isLast && (
-          <span
-            className="absolute left-1/2 w-px -translate-x-1/2 bg-slate-700"
-            style={{ top: '18px', bottom: 0 }}
-          />
-        )}
-        {/* HEAD pulse halo */}
-        {isHead && (
-          <span
-            className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 h-5 w-5 animate-pulse rounded-full border border-sky-500/60 bg-sky-500/10"
-            style={{ top: '18px' }}
-          />
-        )}
-        {/* Dot */}
-        <span
-          className={cn(
-            'absolute left-1/2 z-10 -translate-x-1/2 -translate-y-1/2 rounded-full',
-            isMerge
-              ? 'flex h-4 w-4 items-center justify-center border-2 border-amber-500 bg-slate-950 text-amber-400'
-              : 'h-2.5 w-2.5 bg-emerald-500',
-            highlight && 'ring-2 ring-amber-400/50 ring-offset-2 ring-offset-slate-950',
-          )}
-          style={{ top: '18px' }}
+      <div className="relative shrink-0 self-stretch" style={{ width: railWidth }}>
+        {/* SVG with curves + dot, anchored to the top */}
+        <svg
+          width={railWidth}
+          height={SVG_HEIGHT}
+          className="absolute left-0 top-0"
+          style={{ overflow: 'visible' }}
         >
-          {isMerge && <GitMerge size={9} strokeWidth={2.5} />}
-        </span>
+          {/* TOP HALF — lanes coming in */}
+          {!isFirst &&
+            row.topLanes.map((sha, i) => {
+              if (!sha) return null;
+              const lx = i * LANE_WIDTH + LANE_WIDTH / 2;
+              const color = laneColor(i);
+              if (sha === row.sha && i !== row.myLane) {
+                return (
+                  <path
+                    key={`tc-${i}`}
+                    d={`M ${lx} 0 C ${lx} ${DOT_Y * 0.6}, ${cx} ${DOT_Y * 0.4}, ${cx} ${DOT_Y}`}
+                    stroke={color}
+                    strokeWidth={1.5}
+                    fill="none"
+                  />
+                );
+              }
+              return (
+                <line
+                  key={`tl-${i}`}
+                  x1={lx}
+                  y1={0}
+                  x2={lx}
+                  y2={DOT_Y}
+                  stroke={color}
+                  strokeWidth={1.5}
+                />
+              );
+            })}
+
+          {/* BOTTOM HALF (within SVG) — lanes going out */}
+          {!isLast &&
+            row.bottomLanes.map((sha, i) => {
+              if (!sha) return null;
+              const lx = i * LANE_WIDTH + LANE_WIDTH / 2;
+              const color = laneColor(i);
+              const wasInTopAtSameIdx = row.topLanes[i] === sha;
+              const isFreshFromCommit =
+                !wasInTopAtSameIdx && (i === row.myLane || row.parents.includes(sha));
+
+              if (isFreshFromCommit && i !== row.myLane) {
+                return (
+                  <path
+                    key={`bc-${i}`}
+                    d={`M ${cx} ${DOT_Y} C ${cx} ${DOT_Y + (SVG_HEIGHT - DOT_Y) * 0.4}, ${lx} ${DOT_Y + (SVG_HEIGHT - DOT_Y) * 0.6}, ${lx} ${SVG_HEIGHT}`}
+                    stroke={color}
+                    strokeWidth={1.5}
+                    fill="none"
+                  />
+                );
+              }
+              return (
+                <line
+                  key={`bl-${i}`}
+                  x1={lx}
+                  y1={DOT_Y}
+                  x2={lx}
+                  y2={SVG_HEIGHT}
+                  stroke={color}
+                  strokeWidth={1.5}
+                />
+              );
+            })}
+
+          {/* Highlight halo (since last build) */}
+          {highlight && (
+            <circle
+              cx={cx}
+              cy={DOT_Y}
+              r={MERGE_R + 3}
+              fill="none"
+              stroke="#fbbf24"
+              strokeOpacity={0.55}
+              strokeWidth={1.25}
+            />
+          )}
+          {/* HEAD halo */}
+          {isHead && (
+            <circle
+              cx={cx}
+              cy={DOT_Y}
+              r={MERGE_R + 5}
+              fill="none"
+              stroke="#38bdf8"
+              strokeOpacity={0.55}
+              strokeWidth={1.25}
+              className="animate-pulse"
+            />
+          )}
+          {/* Dot */}
+          {isMerge ? (
+            <circle cx={cx} cy={DOT_Y} r={MERGE_R} fill="#0f172a" stroke={myColor} strokeWidth={2.25} />
+          ) : (
+            <circle cx={cx} cy={DOT_Y} r={DOT_R} fill={myColor} />
+          )}
+        </svg>
+
+        {/* CSS continuation lines: from end of SVG to bottom of LI (any height). */}
+        {!isLast &&
+          row.bottomLanes.map((sha, i) => {
+            if (!sha) return null;
+            const lx = i * LANE_WIDTH + LANE_WIDTH / 2;
+            return (
+              <span
+                key={`bcss-${i}`}
+                className="absolute w-px"
+                style={{
+                  top: SVG_HEIGHT,
+                  bottom: 0,
+                  left: lx - 0.5,
+                  backgroundColor: laneColor(i),
+                }}
+              />
+            );
+          })}
       </div>
 
       {/* Content */}
-      <div className="min-w-0 flex-1 pb-2 pt-1.5">
+      <div className="min-w-0 flex-1 py-1.5 pr-3">
         <button
           type="button"
           onClick={() => hasBody && setOpen(!open)}
@@ -83,22 +177,23 @@ export function CommitItem({ commit, isFirst, isLast, highlight, isHead }: Props
           )}
           <div className="min-w-0 flex-1">
             <div className="flex items-baseline gap-2">
-              <code className="font-mono text-[11px] text-sky-400">{commit.shortSha}</code>
+              <code className="font-mono text-[11px] text-sky-400">{row.shortSha}</code>
               {isHead && (
                 <span className="rounded-sm bg-sky-500/20 px-1.5 py-0 text-[9px] font-semibold uppercase tracking-wider text-sky-300">
                   HEAD
                 </span>
               )}
-              <span className="truncate text-sm text-slate-100">{commit.subject}</span>
+              {isMerge && <GitMerge size={11} className="text-amber-400" />}
+              <span className="truncate text-sm text-slate-100">{row.subject}</span>
             </div>
-            <div className="mt-0.5 flex items-baseline gap-2 text-[11px] text-slate-500">
-              <span className="truncate">{commit.author}</span>
+            <div className="mt-0.5 flex items-baseline gap-2 whitespace-nowrap text-[11px] text-slate-500">
+              <span className="truncate">{row.author}</span>
               <span>·</span>
-              <span>{formatDistanceToNow(commit.date, { addSuffix: true })}</span>
+              <span>{formatDistanceToNow(row.date, { addSuffix: true })}</span>
               {isMerge && (
                 <>
                   <span>·</span>
-                  <span className="text-amber-400/80">merge of {commit.parents.length}</span>
+                  <span className="text-amber-400/80">merge of {row.parents.length}</span>
                 </>
               )}
             </div>
@@ -106,7 +201,7 @@ export function CommitItem({ commit, isFirst, isLast, highlight, isHead }: Props
         </button>
         {open && hasBody && (
           <pre className="mt-1.5 ml-4 overflow-x-auto whitespace-pre-wrap rounded-md border border-slate-800 bg-slate-950 px-3 py-2 text-[12px] text-slate-300">
-{commit.body}
+{row.body}
           </pre>
         )}
       </div>

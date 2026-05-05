@@ -107,7 +107,8 @@ export type ServerEvent =
   | { type: 'buildLog'; buildId: string; chunk: string }
   | { type: 'buildFinished'; build: Build }
   | { type: 'projectAdded'; project: Project }
-  | { type: 'projectRemoved'; projectId: string };
+  | { type: 'projectRemoved'; projectId: string }
+  | { type: 'pipelineChanged'; pipelineId: string; action: 'created' | 'updated' | 'deleted' };
 
 // ── Server config ───────────────────────────────────────────────────────────
 export interface ServerConfig {

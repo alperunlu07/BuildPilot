@@ -12,11 +12,14 @@ import { useStore } from '../store/store';
 import { api } from '../lib/api';
 import { CommitItem } from '../components/CommitItem';
 import { CreatePipelineDialog } from '../components/CreatePipelineDialog';
+import { computeGraph } from '../lib/graph';
 import { cn } from '../lib/cn';
 
 interface Props {
   projectId: string;
 }
+
+const ALL_BRANCHES = '*';
 
 export function ProjectDetailPage({ projectId }: Props) {
   const project = useStore((s) => s.projects.find((p) => p.id === projectId));
@@ -36,13 +39,13 @@ export function ProjectDetailPage({ projectId }: Props) {
   const loadBuilds = useStore((s) => s.loadBuilds);
 
   const [currentBranch, setCurrentBranch] = useState<string>('');
-  const [browseBranch, setBrowseBranch] = useState<string>('');
-  const [commits, setCommits] = useState<Commit[]>([]);
   const [headSha, setHeadSha] = useState<string>('');
+  const [browseBranch, setBrowseBranch] = useState<string>(ALL_BRANCHES);
+  const [commits, setCommits] = useState<Commit[]>([]);
   const [pulling, setPulling] = useState(false);
   const [openCreate, setOpenCreate] = useState(false);
 
-  // Initial: fetch the actual git HEAD branch and use it as default browse branch.
+  // Pull the actual git HEAD branch + sha so we can mark the commit and the chip.
   useEffect(() => {
     if (!project) return;
     let alive = true;
@@ -50,28 +53,27 @@ export function ProjectDetailPage({ projectId }: Props) {
       .currentBranch(project.id)
       .then((r) => {
         if (!alive) return;
-        const branch = r.branch || project.defaultBranch;
-        setCurrentBranch(branch);
-        setBrowseBranch((prev) => prev || branch);
+        setCurrentBranch(r.branch);
+        if (r.sha) setHeadSha(r.sha);
       })
-      .catch(() => {
-        if (alive) setBrowseBranch((prev) => prev || project.defaultBranch);
-      });
+      .catch(() => null);
     return () => {
       alive = false;
     };
   }, [project?.id]);
 
-  // Fetch commits whenever browse branch changes.
+  // Fetch commits when the browse mode changes.
   useEffect(() => {
-    if (!project || !browseBranch) return;
+    if (!project) return;
     let alive = true;
+    const opts =
+      browseBranch === ALL_BRANCHES
+        ? { all: true, limit: 200 }
+        : { branch: browseBranch, limit: 200 };
     api
-      .commits(project.id, { branch: browseBranch, limit: 100 })
+      .commits(project.id, opts)
       .then((c) => {
-        if (!alive) return;
-        setCommits(c);
-        setHeadSha(c[0]?.sha ?? '');
+        if (alive) setCommits(c);
       })
       .catch(() => null);
     return () => {
@@ -84,27 +86,37 @@ export function ProjectDetailPage({ projectId }: Props) {
     void loadBuilds({ projectId: project.id });
   }, [project?.id, loadBuilds]);
 
-  if (!project) return null;
+  const layout = useMemo(() => computeGraph(commits), [commits]);
 
-  const lastSuccessfulSha = builds.find((b) => b.status === 'success')?.triggerSha;
-  const highlightStartIdx =
-    lastSuccessfulSha == null
-      ? -1
-      : commits.findIndex((c) => c.sha === lastSuccessfulSha);
-  const highlightShas = new Set<string>(
-    highlightStartIdx > 0 ? commits.slice(0, highlightStartIdx).map((c) => c.sha) : [],
+  const lastSuccessfulSha = useMemo(
+    () => builds.find((b) => b.status === 'success')?.triggerSha,
+    [builds],
   );
+  const highlightShas = useMemo(() => {
+    const startIdx =
+      lastSuccessfulSha == null ? -1 : commits.findIndex((c) => c.sha === lastSuccessfulSha);
+    return new Set<string>(
+      startIdx > 0 ? commits.slice(0, startIdx).map((c) => c.sha) : [],
+    );
+  }, [commits, lastSuccessfulSha]);
+
+  if (!project) return null;
 
   const onPull = async () => {
     setPulling(true);
     try {
       await api.pullProject(project.id);
-      const refreshed = await api.commits(project.id, { branch: browseBranch, limit: 100 });
+      const opts =
+        browseBranch === ALL_BRANCHES
+          ? { all: true as const, limit: 200 }
+          : { branch: browseBranch, limit: 200 };
+      const refreshed = await api.commits(project.id, opts);
       setCommits(refreshed);
-      setHeadSha(refreshed[0]?.sha ?? '');
-      // Refresh current branch display in case pull changed it.
       const cb = await api.currentBranch(project.id).catch(() => null);
-      if (cb?.branch) setCurrentBranch(cb.branch);
+      if (cb) {
+        if (cb.branch) setCurrentBranch(cb.branch);
+        if (cb.sha) setHeadSha(cb.sha);
+      }
     } finally {
       setPulling(false);
     }
@@ -162,6 +174,7 @@ export function ProjectDetailPage({ projectId }: Props) {
             onChange={(e) => setBrowseBranch(e.target.value)}
             className="ml-1 rounded-md border border-slate-700 bg-slate-900 px-2 py-1 font-mono text-xs text-slate-100 focus:border-sky-500 focus:outline-none"
           >
+            <option value={ALL_BRANCHES}>(all branches)</option>
             {project.watchedBranches.map((b) => (
               <option key={b} value={b}>
                 {b}
@@ -170,11 +183,13 @@ export function ProjectDetailPage({ projectId }: Props) {
           </select>
         </span>
 
-        {browseBranch && currentBranch && browseBranch !== currentBranch && (
-          <span className="rounded-md bg-slate-800 px-2 py-0.5 text-[10px] uppercase tracking-wider text-slate-400">
-            different branch
-          </span>
-        )}
+        {browseBranch !== ALL_BRANCHES &&
+          currentBranch &&
+          browseBranch !== currentBranch && (
+            <span className="rounded-md bg-slate-800 px-2 py-0.5 text-[10px] uppercase tracking-wider text-slate-400">
+              different branch
+            </span>
+          )}
 
         {highlightShas.size > 0 && (
           <span className="rounded-md bg-amber-950/50 px-2 py-0.5 text-[11px] text-amber-300">
@@ -195,19 +210,20 @@ export function ProjectDetailPage({ projectId }: Props) {
       {/* TWO-COLUMN BODY */}
       <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[minmax(0,1fr)_360px] xl:grid-cols-[minmax(0,1fr)_400px]">
         {/* Commits — scrollable */}
-        <div className="scrollbar-thin min-h-0 overflow-y-auto border-r border-slate-800 px-4 py-3">
+        <div className="scrollbar-thin min-h-0 overflow-y-auto border-r border-slate-800 px-2 py-2">
           {commits.length === 0 ? (
             <div className="py-10 text-center text-sm text-slate-500">No commits found.</div>
           ) : (
             <ol className="relative">
-              {commits.map((c, idx) => (
+              {layout.rows.map((r, idx) => (
                 <CommitItem
-                  key={c.sha}
-                  commit={c}
+                  key={r.sha}
+                  row={r}
+                  width={layout.width}
                   isFirst={idx === 0}
-                  isLast={idx === commits.length - 1}
-                  isHead={c.sha === headSha && browseBranch === currentBranch}
-                  highlight={highlightShas.has(c.sha)}
+                  isLast={idx === layout.rows.length - 1}
+                  isHead={r.sha === headSha}
+                  highlight={highlightShas.has(r.sha)}
                 />
               ))}
             </ol>

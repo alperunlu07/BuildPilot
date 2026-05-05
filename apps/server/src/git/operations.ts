@@ -51,6 +51,7 @@ export async function listCommits(
   ref: string,
   limit = 50,
   sinceSha?: string,
+  all = false,
 ): Promise<Commit[]> {
   // Use control-character separators (US/RS) so commit subjects/bodies that
   // contain pipes, tabs, or newlines don't break parsing.
@@ -58,8 +59,15 @@ export async function listCommits(
   const RS = '\x1e'; // record separator
   const fmt = ['%H', '%P', '%aI', '%aN', '%aE', '%s', '%b'].join(FS) + RS;
 
-  const range = sinceSha ? `${sinceSha}..${ref}` : ref;
-  const args = ['log', `--format=${fmt}`, '-n', String(limit), range];
+  const args = ['log', `--format=${fmt}`, '-n', String(limit), '--topo-order'];
+  if (all) {
+    args.push('--all');
+    if (sinceSha) args.push(`${sinceSha}..HEAD`);
+  } else if (sinceSha) {
+    args.push(`${sinceSha}..${ref}`);
+  } else {
+    args.push(ref);
+  }
 
   try {
     const raw = await git(repoPath).raw(args);

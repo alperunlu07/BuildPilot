@@ -55,7 +55,8 @@ async function main(): Promise<void> {
   eventBus.subscribe((e) => {
     if (
       e.type === 'projectAdded' ||
-      e.type === 'projectRemoved'
+      e.type === 'projectRemoved' ||
+      e.type === 'pipelineChanged'
     ) {
       reloadSchedules();
     }

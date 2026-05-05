@@ -15,6 +15,7 @@ import {
   detectDefaultBranch,
   fetchAll,
   getCurrentBranch,
+  getHeadSha,
   listBranches,
   listCommits,
   pull,
@@ -30,6 +31,10 @@ const commitsQuery = z.object({
   branch: z.string().optional(),
   limit: z.coerce.number().int().positive().max(500).optional(),
   sinceSha: z.string().optional(),
+  all: z
+    .union([z.literal('true'), z.literal('false'), z.boolean()])
+    .transform((v) => v === true || v === 'true')
+    .optional(),
 });
 
 export async function projectsRoutes(app: FastifyInstance): Promise<void> {
@@ -100,7 +105,7 @@ export async function projectsRoutes(app: FastifyInstance): Promise<void> {
     if (!q.success) return reply.code(400).send({ error: q.error.flatten() });
     const branch = q.data.branch ?? project.defaultBranch;
     const limit = q.data.limit ?? 50;
-    return await listCommits(project.path, branch, limit, q.data.sinceSha);
+    return await listCommits(project.path, branch, limit, q.data.sinceSha, q.data.all);
   });
 
   app.post('/api/projects/:id/fetch', async (req, reply) => {
@@ -124,6 +129,8 @@ export async function projectsRoutes(app: FastifyInstance): Promise<void> {
     const { id } = req.params as { id: string };
     const project = getProject(id);
     if (!project) return reply.code(404).send({ error: 'not found' });
-    return { branch: await getCurrentBranch(project.path) };
+    const branch = await getCurrentBranch(project.path);
+    const sha = branch ? await getHeadSha(project.path, branch) : null;
+    return { branch, sha };
   });
 }

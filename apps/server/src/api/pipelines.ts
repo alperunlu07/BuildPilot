@@ -8,6 +8,7 @@ import {
   updatePipeline,
 } from '../store/pipelines';
 import { getProject } from '../store/projects';
+import { eventBus } from '../events/bus';
 
 const stepTypes = ['checkout', 'pull', 'shell', 'unityBatch'] as const;
 
@@ -65,7 +66,9 @@ export async function pipelinesRoutes(app: FastifyInstance): Promise<void> {
     if (!getProject(parsed.data.projectId)) {
       return reply.code(400).send({ error: 'project not found' });
     }
-    return createPipeline(parsed.data);
+    const created = createPipeline(parsed.data);
+    eventBus.publish({ type: 'pipelineChanged', pipelineId: created.id, action: 'created' });
+    return created;
   });
 
   app.patch('/api/pipelines/:id', async (req, reply) => {
@@ -74,6 +77,7 @@ export async function pipelinesRoutes(app: FastifyInstance): Promise<void> {
     if (!parsed.success) return reply.code(400).send({ error: parsed.error.flatten() });
     const updated = updatePipeline(id, parsed.data);
     if (!updated) return reply.code(404).send({ error: 'not found' });
+    eventBus.publish({ type: 'pipelineChanged', pipelineId: id, action: 'updated' });
     return updated;
   });
 
@@ -81,6 +85,7 @@ export async function pipelinesRoutes(app: FastifyInstance): Promise<void> {
     const { id } = req.params as { id: string };
     if (!getPipeline(id)) return reply.code(404).send({ error: 'not found' });
     deletePipeline(id);
+    eventBus.publish({ type: 'pipelineChanged', pipelineId: id, action: 'deleted' });
     return { ok: true };
   });
 }

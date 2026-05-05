@@ -81,7 +81,22 @@ async function runOnce(entry: ScheduledWatch): Promise<void> {
   try {
     await fetchAll(project.path);
     const head = await getRemoteHeadSha(project.path, entry.branch);
-    if (!head) return;
+    if (!head) {
+      logger.info({ project: project.name, branch: entry.branch }, 'poll (no remote ref)');
+      return;
+    }
+
+    const lastSeen = getLastSeenSha(project.id, entry.branch);
+    const isNew = lastSeen !== null && lastSeen !== head;
+    logger.info(
+      {
+        project: project.name,
+        branch: entry.branch,
+        head: head.slice(0, 7),
+        change: isNew ? `${lastSeen!.slice(0, 7)} → ${head.slice(0, 7)}` : undefined,
+      },
+      isNew ? 'poll: new commits' : 'poll',
+    );
 
     eventBus.publish({
       type: 'pollerTick',
@@ -90,7 +105,6 @@ async function runOnce(entry: ScheduledWatch): Promise<void> {
       head,
     });
 
-    const lastSeen = getLastSeenSha(project.id, entry.branch);
     if (lastSeen === head) return;
 
     if (lastSeen === null) {

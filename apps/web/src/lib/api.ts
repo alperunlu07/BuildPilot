@@ -35,11 +35,15 @@ export const api = {
   removeProject: (id: string) =>
     http<{ ok: true }>(`/projects/${id}`, { method: 'DELETE' }),
   branches: (id: string) => http<string[]>(`/projects/${id}/branches`),
-  commits: (id: string, opts: { branch?: string; limit?: number; sinceSha?: string } = {}) => {
+  commits: (
+    id: string,
+    opts: { branch?: string; limit?: number; sinceSha?: string; all?: boolean } = {},
+  ) => {
     const qs = new URLSearchParams();
     if (opts.branch) qs.set('branch', opts.branch);
     if (opts.limit !== undefined) qs.set('limit', String(opts.limit));
     if (opts.sinceSha) qs.set('sinceSha', opts.sinceSha);
+    if (opts.all) qs.set('all', 'true');
     const q = qs.toString();
     return http<Commit[]>(`/projects/${id}/commits${q ? `?${q}` : ''}`);
   },
@@ -48,7 +52,7 @@ export const api = {
   fetchProject: (id: string) =>
     http<{ ok: true }>(`/projects/${id}/fetch`, { method: 'POST' }),
   currentBranch: (id: string) =>
-    http<{ branch: string }>(`/projects/${id}/current-branch`),
+    http<{ branch: string; sha: string | null }>(`/projects/${id}/current-branch`),
 
   // ── Pipelines ────────────────────────────────────────────
   listPipelines: (projectId?: string) =>
