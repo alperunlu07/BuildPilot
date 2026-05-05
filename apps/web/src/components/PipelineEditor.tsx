@@ -1,0 +1,333 @@
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  Background,
+  Controls,
+  ReactFlow,
+  ReactFlowProvider,
+  addEdge,
+  applyEdgeChanges,
+  applyNodeChanges,
+  useReactFlow,
+  type Connection,
+  type Edge,
+  type EdgeChange,
+  type Node,
+  type NodeChange,
+} from '@xyflow/react';
+import { Hammer, Save } from 'lucide-react';
+import type {
+  Pipeline,
+  PipelineEdge,
+  PipelineNode,
+  PipelineWatch,
+  StepType,
+} from '@buildpilot/shared-types';
+import { STEP_DEFINITIONS, STEP_TYPES } from '@buildpilot/step-registry';
+import { api } from '../lib/api';
+import { useStore } from '../store/store';
+import { StepNode } from './StepNode';
+import { StepPropertyPanel } from './StepPropertyPanel';
+
+const nodeTypes = {
+  checkout: StepNode,
+  pull: StepNode,
+  shell: StepNode,
+  unityBatch: StepNode,
+};
+
+interface Props {
+  pipeline: Pipeline;
+}
+
+export function PipelineEditor(props: Props) {
+  return (
+    <ReactFlowProvider>
+      <Editor {...props} />
+    </ReactFlowProvider>
+  );
+}
+
+function Editor({ pipeline }: Props) {
+  const upsertPipeline = useStore((s) => s.upsertPipeline);
+  const triggerBuild = useStore((s) => s.triggerBuild);
+
+  const [nodes, setNodes] = useState<Node[]>(() => pipelineNodesToReactFlow(pipeline.nodes));
+  const [edges, setEdges] = useState<Edge[]>(() => pipelineEdgesToReactFlow(pipeline.edges));
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [name, setName] = useState(pipeline.name);
+  const [watch, setWatch] = useState<PipelineWatch>(pipeline.watch);
+  const [saving, setSaving] = useState(false);
+  const [dirty, setDirty] = useState(false);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const { screenToFlowPosition } = useReactFlow();
+
+  // Reset when the underlying pipeline changes (user navigated).
+  useEffect(() => {
+    setNodes(pipelineNodesToReactFlow(pipeline.nodes));
+    setEdges(pipelineEdgesToReactFlow(pipeline.edges));
+    setName(pipeline.name);
+    setWatch(pipeline.watch);
+    setDirty(false);
+    setSelectedNodeId(null);
+  }, [pipeline.id]);
+
+  const selectedNode = useMemo(
+    () => nodes.find((n) => n.id === selectedNodeId) ?? null,
+    [nodes, selectedNodeId],
+  );
+
+  const onNodesChange = useCallback(
+    (changes: NodeChange[]) => {
+      setNodes((nds) => applyNodeChanges(changes, nds));
+      if (changes.some((c) => c.type === 'position' || c.type === 'remove')) setDirty(true);
+    },
+    [],
+  );
+
+  const onEdgesChange = useCallback(
+    (changes: EdgeChange[]) => {
+      setEdges((eds) => applyEdgeChanges(changes, eds));
+      if (changes.length > 0) setDirty(true);
+    },
+    [],
+  );
+
+  const onConnect = useCallback((connection: Connection) => {
+    setEdges((eds) => addEdge({ ...connection, animated: true }, eds));
+    setDirty(true);
+  }, []);
+
+  const handleSelectionChange = useCallback(
+    ({ nodes: selected }: { nodes: Node[]; edges: Edge[] }) => {
+      setSelectedNodeId(selected[0]?.id ?? null);
+    },
+    [],
+  );
+
+  const updateNodeData = useCallback((nodeId: string, data: Record<string, unknown>) => {
+    setNodes((nds) => nds.map((n) => (n.id === nodeId ? { ...n, data } : n)));
+    setDirty(true);
+  }, []);
+
+  const deleteNode = useCallback((nodeId: string) => {
+    setNodes((nds) => nds.filter((n) => n.id !== nodeId));
+    setEdges((eds) => eds.filter((e) => e.source !== nodeId && e.target !== nodeId));
+    setSelectedNodeId(null);
+    setDirty(true);
+  }, []);
+
+  const onDragOver = useCallback((event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+  }, []);
+
+  const onDrop = useCallback(
+    (event: React.DragEvent<HTMLDivElement>) => {
+      event.preventDefault();
+      const stepType = event.dataTransfer.getData('application/buildpilot-step') as StepType;
+      if (!stepType || !STEP_DEFINITIONS[stepType]) return;
+      const position = screenToFlowPosition({ x: event.clientX, y: event.clientY });
+      const id = `n_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 5)}`;
+      setNodes((nds) => [
+        ...nds,
+        {
+          id,
+          type: stepType,
+          position,
+          data: defaultData(stepType),
+        },
+      ]);
+      setDirty(true);
+    },
+    [screenToFlowPosition],
+  );
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      const updated = await api.updatePipeline(pipeline.id, {
+        name,
+        watch,
+        nodes: reactFlowNodesToPipeline(nodes),
+        edges: reactFlowEdgesToPipeline(edges),
+      });
+      upsertPipeline(updated);
+      setDirty(false);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const runNow = async () => {
+    if (dirty) await save();
+    await triggerBuild(pipeline.id);
+  };
+
+  return (
+    <div className="flex h-full min-h-0 flex-col">
+      <header className="flex items-center justify-between border-b border-slate-800 bg-slate-900/50 px-4 py-2">
+        <div className="flex items-center gap-3">
+          <input
+            value={name}
+            onChange={(e) => {
+              setName(e.target.value);
+              setDirty(true);
+            }}
+            className="bg-transparent text-base font-semibold text-slate-100 outline-none"
+          />
+          <span className="rounded-md bg-slate-800 px-2 py-0.5 text-[11px] uppercase tracking-wider text-slate-400">
+            Watch:{' '}
+            <input
+              value={watch.branch}
+              onChange={(e) => {
+                setWatch({ ...watch, branch: e.target.value });
+                setDirty(true);
+              }}
+              className="ml-1 w-32 bg-transparent font-mono text-emerald-400 outline-none"
+            />
+          </span>
+          <span className="rounded-md bg-slate-800 px-2 py-0.5 text-[11px] text-slate-400">
+            every{' '}
+            <input
+              type="number"
+              min={5}
+              value={watch.intervalSec}
+              onChange={(e) => {
+                setWatch({ ...watch, intervalSec: Math.max(5, Number(e.target.value)) });
+                setDirty(true);
+              }}
+              className="w-12 bg-transparent text-center text-slate-100 outline-none"
+            />
+            s
+          </span>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {dirty && <span className="text-[11px] text-amber-400">unsaved</span>}
+          <button
+            type="button"
+            onClick={save}
+            disabled={!dirty || saving}
+            className="inline-flex items-center gap-1 rounded-md border border-slate-700 px-2.5 py-1 text-xs text-slate-200 hover:border-sky-500 hover:text-sky-400 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <Save size={12} /> {saving ? 'Saving…' : 'Save'}
+          </button>
+          <button
+            type="button"
+            onClick={runNow}
+            className="inline-flex items-center gap-1 rounded-md bg-sky-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-sky-500"
+          >
+            <Hammer size={12} /> Run
+          </button>
+        </div>
+      </header>
+
+      <div className="flex min-h-0 flex-1">
+        <Palette />
+
+        <div ref={wrapperRef} className="relative min-h-0 flex-1" onDragOver={onDragOver} onDrop={onDrop}>
+          <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            nodeTypes={nodeTypes}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            onConnect={onConnect}
+            onSelectionChange={handleSelectionChange}
+            fitView
+            colorMode="dark"
+          >
+            <Background gap={16} color="#1e293b" />
+            <Controls position="bottom-right" showInteractive={false} />
+          </ReactFlow>
+        </div>
+
+        <StepPropertyPanel node={selectedNode} onChange={updateNodeData} onDelete={deleteNode} />
+      </div>
+    </div>
+  );
+}
+
+function Palette() {
+  return (
+    <div className="flex w-44 shrink-0 flex-col gap-2 border-r border-slate-800 bg-slate-950 p-3">
+      <div className="text-[11px] uppercase tracking-wider text-slate-500">Drag to canvas</div>
+      {STEP_TYPES.map((type) => {
+        const def = STEP_DEFINITIONS[type];
+        return (
+          <div
+            key={type}
+            draggable
+            onDragStart={(e) => {
+              e.dataTransfer.setData('application/buildpilot-step', type);
+              e.dataTransfer.effectAllowed = 'move';
+            }}
+            className="cursor-grab rounded-md border bg-slate-900 px-2.5 py-1.5 text-[12px] text-slate-200 hover:border-slate-500"
+            style={{ borderColor: def.color }}
+            title={def.description}
+          >
+            {def.label}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function defaultData(type: StepType): Record<string, unknown> {
+  switch (type) {
+    case 'checkout':
+      return { branch: 'main' };
+    case 'pull':
+      return { remote: 'origin' };
+    case 'shell':
+      return { command: '' };
+    case 'unityBatch':
+      return {
+        unityPath: '',
+        buildTarget: 'StandaloneLinux64',
+        executeMethod: '',
+        extraArgs: '',
+        logPath: '',
+      };
+  }
+}
+
+function pipelineNodesToReactFlow(nodes: PipelineNode[]): Node[] {
+  return nodes.map((n) => ({
+    id: n.id,
+    type: n.type,
+    position: n.position,
+    data: n.data,
+  }));
+}
+
+function pipelineEdgesToReactFlow(edges: PipelineEdge[]): Edge[] {
+  return edges.map((e) => ({
+    id: e.id,
+    source: e.source,
+    target: e.target,
+    animated: true,
+    data: e.condition ? { condition: e.condition } : undefined,
+  }));
+}
+
+function reactFlowNodesToPipeline(nodes: Node[]): PipelineNode[] {
+  return nodes.map((n) => ({
+    id: n.id,
+    type: n.type as StepType,
+    position: n.position,
+    data: n.data as Record<string, unknown>,
+  }));
+}
+
+function reactFlowEdgesToPipeline(edges: Edge[]): PipelineEdge[] {
+  return edges.map((e) => ({
+    id: e.id,
+    source: e.source,
+    target: e.target,
+    condition:
+      (e.data as { condition?: 'success' | 'failure' | 'always' } | undefined)?.condition ??
+      'success',
+  }));
+}
