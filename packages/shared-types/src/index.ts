@@ -47,7 +47,9 @@ export type StepType =
   | 'provisioningProfileInstall'
   | 'notarize'
   | 'stapleNotarization'
-  | 'fastlaneMatch';
+  | 'fastlaneMatch'
+  | 'cocoapodsInstall'
+  | 'swiftPackageResolve';
 
 export type AiTool = 'claude' | 'codex' | 'aider' | 'gemini' | 'custom';
 
@@ -342,6 +344,32 @@ export interface StapleNotarizationStepData extends RunsOnMaybeRemote {
   // Bundle that already passed notarization. Stapling embeds the ticket
   // so Gatekeeper can verify the bundle offline.
   bundlePath: string;
+}
+
+export interface CocoapodsInstallStepData extends RunsOnMaybeRemote {
+  // 'install' (default) or 'update'.
+  command?: 'install' | 'update';
+  // 'true' adds --repo-update — useful when you want to make sure the
+  // specs repo is current. Costs network on every build.
+  repoUpdate?: string;
+  // 'true' prefixes `bundle exec ` so we use the project-pinned cocoapods
+  // gem rather than the system one. Requires Gemfile.lock with cocoapods.
+  useBundleExec?: string;
+  // Working dir for the pod invocation. Defaults to the project root.
+  cwd?: string;
+  additionalArgs?: string;
+}
+
+export interface SwiftPackageResolveStepData extends RunsOnMaybeRemote {
+  // Either workspacePath or projectPath. Both bundle into the same
+  // -workspace / -project flag on xcodebuild.
+  workspacePath?: string;
+  projectPath?: string;
+  scheme?: string;
+  // Override the SPM cache directory. Empty = xcodebuild default
+  // (~/Library/Developer/Xcode/DerivedData/<…>/SourcePackages).
+  clonedSourcePackagesDirPath?: string;
+  additionalArgs?: string;
 }
 
 export interface FastlaneMatchStepData extends RunsOnMaybeRemote {

@@ -91,8 +91,8 @@ quality-of-life pieces.
 - [x] `fastlaneMatch` step — fetches certs/profiles via `fastlane match`
 
 ### Cluster D · iOS dependency steps
-- [ ] `cocoapodsInstall` step (`pod install`)
-- [ ] `swiftPackageResolve` step (`xcodebuild -resolvePackageDependencies`)
+- [x] `cocoapodsInstall` step (`pod install` / `pod update`, `--repo-update`, `bundle exec`)
+- [x] `swiftPackageResolve` step (`xcodebuild -resolvePackageDependencies`)
 
 ### Cluster E · Test + observability
 - [ ] `dsymUpload` step (Crashlytics / Sentry / Bugsnag select + per-backend invocation)

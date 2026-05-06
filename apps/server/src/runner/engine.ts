@@ -33,6 +33,8 @@ import { runProvisioningProfileInstall } from './steps/provisioningProfileInstal
 import { runNotarize } from './steps/notarize';
 import { runStapleNotarization } from './steps/stapleNotarization';
 import { runFastlaneMatch } from './steps/fastlaneMatch';
+import { runCocoapodsInstall } from './steps/cocoapodsInstall';
+import { runSwiftPackageResolve } from './steps/swiftPackageResolve';
 
 export interface StepContext {
   project: Project;
@@ -69,6 +71,8 @@ const RUNNERS: Record<StepType, StepRunner> = {
   notarize: runNotarize,
   stapleNotarization: runStapleNotarization,
   fastlaneMatch: runFastlaneMatch,
+  cocoapodsInstall: runCocoapodsInstall,
+  swiftPackageResolve: runSwiftPackageResolve,
 };
 
 interface DagNode {

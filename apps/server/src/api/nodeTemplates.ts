@@ -31,6 +31,8 @@ const stepTypes = [
   'notarize',
   'stapleNotarization',
   'fastlaneMatch',
+  'cocoapodsInstall',
+  'swiftPackageResolve',
 ] as const;
 
 const createSchema = z.object({

@@ -53,6 +53,8 @@ const nodeTypes = {
   notarize: StepNode,
   stapleNotarization: StepNode,
   fastlaneMatch: StepNode,
+  cocoapodsInstall: StepNode,
+  swiftPackageResolve: StepNode,
 };
 
 interface Props {
@@ -704,6 +706,30 @@ function defaultData(type: StepType): Record<string, unknown> {
         keychainPassword: '',
         readonly: 'true',
         cwd: '',
+        additionalArgs: '',
+      };
+    case 'cocoapodsInstall':
+      return {
+        hostId: '',
+        host: '',
+        identityFile: '',
+        password: '',
+        command: 'install',
+        repoUpdate: 'false',
+        useBundleExec: 'false',
+        cwd: '',
+        additionalArgs: '',
+      };
+    case 'swiftPackageResolve':
+      return {
+        hostId: '',
+        host: '',
+        identityFile: '',
+        password: '',
+        workspacePath: '',
+        projectPath: '',
+        scheme: '',
+        clonedSourcePackagesDirPath: '',
         additionalArgs: '',
       };
     case 's3Upload':

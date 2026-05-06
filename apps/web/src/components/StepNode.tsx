@@ -3,6 +3,8 @@ import {
   Apple,
   ArrowDownToLine,
   BadgeCheck,
+  Box,
+  Boxes,
   CloudUpload,
   GitBranch,
   GitMerge,
@@ -48,6 +50,8 @@ const ICONS: Record<string, LucideIcon> = {
   ShieldCheck,
   Stamp,
   Wrench,
+  Box,
+  Boxes,
 };
 
 type RuntimeStatus = 'running' | 'success' | 'failed' | 'skipped' | undefined;
@@ -240,6 +244,14 @@ function summariseData(type: StepType, data: Record<string, unknown>): string {
       return data.matchType
         ? `${data.matchType}${data.readonly === 'true' ? ' (readonly)' : ''}`
         : '';
+    case 'cocoapodsInstall':
+      return `${data.useBundleExec === 'true' ? 'bundle exec ' : ''}pod ${(data.command as string) ?? 'install'}${data.repoUpdate === 'true' ? ' --repo-update' : ''}`;
+    case 'swiftPackageResolve':
+      return data.workspacePath
+        ? String(data.workspacePath)
+        : data.projectPath
+          ? String(data.projectPath)
+          : '';
     default:
       return '';
   }
