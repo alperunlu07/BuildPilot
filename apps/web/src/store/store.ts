@@ -61,6 +61,7 @@ interface State {
   setView(view: View): void;
   upsertPipeline(p: Pipeline): void;
   removePipeline(id: string): void;
+  deletePipeline(id: string): Promise<void>;
   triggerBuild(pipelineId: string, fromNodeId?: string): Promise<Build>;
   cancelBuild(id: string): Promise<void>;
   pullProject(id: string): Promise<void>;
@@ -114,6 +115,18 @@ export const useStore = create<State>((set, get) => ({
   },
   removePipeline(id) {
     set({ pipelines: get().pipelines.filter((p) => p.id !== id) });
+  },
+  async deletePipeline(id) {
+    const target = get().pipelines.find((p) => p.id === id);
+    await api.deletePipeline(id);
+    // Remove from local list immediately for snappy UX; the SSE
+    // pipelineChanged event will reconcile too.
+    set({ pipelines: get().pipelines.filter((p) => p.id !== id) });
+    // If the editor was open on this pipeline, hop back to its project.
+    const view = get().view;
+    if (view.type === 'pipeline' && view.id === id) {
+      set({ view: target ? { type: 'project', id: target.projectId } : { type: 'projects' } });
+    }
   },
   async triggerBuild(pipelineId, fromNodeId) {
     const b = await api.triggerBuild(pipelineId, fromNodeId);

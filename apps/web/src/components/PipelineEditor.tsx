@@ -14,7 +14,7 @@ import {
   type Node,
   type NodeChange,
 } from '@xyflow/react';
-import { Hammer, Save, Square } from 'lucide-react';
+import { Hammer, Save, Square, Trash2 } from 'lucide-react';
 import type {
   Pipeline,
   PipelineEdge,
@@ -61,6 +61,7 @@ function Editor({ pipeline }: Props) {
   const upsertPipeline = useStore((s) => s.upsertPipeline);
   const triggerBuild = useStore((s) => s.triggerBuild);
   const cancelBuildAction = useStore((s) => s.cancelBuild);
+  const deletePipelineAction = useStore((s) => s.deletePipeline);
   const stepStatus = useStore((s) => s.stepStatus[pipeline.id]);
   const stepTimings = useStore((s) => s.stepTimings[pipeline.id]);
   // Pull entries for the most recent build of this pipeline so the per-node
@@ -328,6 +329,18 @@ function Editor({ pipeline }: Props) {
               <Hammer size={12} /> Run
             </button>
           )}
+          <button
+            type="button"
+            onClick={() => {
+              if (confirm(`Delete pipeline "${pipeline.name}"? This can't be undone (build history is kept).`)) {
+                void deletePipelineAction(pipeline.id);
+              }
+            }}
+            className="inline-flex items-center gap-1 rounded-md border border-slate-700 px-2 py-1 text-xs text-rose-400 hover:border-rose-500 hover:text-rose-300"
+            title="Delete this pipeline"
+          >
+            <Trash2 size={11} />
+          </button>
         </div>
       </header>
 

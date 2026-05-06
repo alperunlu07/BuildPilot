@@ -292,6 +292,11 @@ export function ProjectDetailPage({ projectId }: Props) {
                     useStore.getState().upsertPipeline(cloned);
                     setView({ type: 'pipeline', id: cloned.id });
                   }}
+                  onDelete={async () => {
+                    if (confirm(`Delete pipeline "${pl.name}"? This can't be undone (build history is kept).`)) {
+                      await useStore.getState().deletePipeline(pl.id);
+                    }
+                  }}
                 />
               ))}
             </ul>
@@ -316,12 +321,14 @@ function PipelineRow({
   onOpen,
   onRun,
   onClone,
+  onDelete,
 }: {
   pipeline: Pipeline;
   watchActive: boolean;
   onOpen(): void;
   onRun(): void;
   onClone(): void | Promise<void>;
+  onDelete(): void | Promise<void>;
 }) {
   return (
     <li className="rounded-md border border-slate-800 bg-slate-900/60 px-3 py-2.5">
@@ -367,6 +374,14 @@ function PipelineRow({
             title="Duplicate this pipeline"
           >
             <Copy size={11} />
+          </button>
+          <button
+            type="button"
+            onClick={() => void onDelete()}
+            className="inline-flex items-center gap-1 rounded-md border border-slate-700 px-2 py-1 text-xs text-rose-400 hover:border-rose-500 hover:text-rose-300"
+            title="Delete this pipeline"
+          >
+            <Trash2 size={11} />
           </button>
           <button
             type="button"
