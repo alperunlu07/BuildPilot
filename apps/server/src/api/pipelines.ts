@@ -10,7 +10,15 @@ import {
 import { getProject } from '../store/projects';
 import { eventBus } from '../events/bus';
 
-const stepTypes = ['checkout', 'pull', 'shell', 'unityBatch'] as const;
+const stepTypes = [
+  'checkout',
+  'pull',
+  'shell',
+  'unityBatch',
+  'httpRequest',
+  'slackNotify',
+  'discordNotify',
+] as const;
 
 const nodeSchema = z.object({
   id: z.string().min(1),

@@ -31,8 +31,8 @@ async function main(): Promise<void> {
 
   const allowedOrigins = new Set<string>();
   if (config.webOrigin) allowedOrigins.add(config.webOrigin);
-  allowedOrigins.add('http://127.0.0.1:5173');
-  allowedOrigins.add('http://localhost:5173');
+  allowedOrigins.add('http://127.0.0.1:49832');
+  allowedOrigins.add('http://localhost:49832');
 
   await app.register(cors, {
     origin: (origin, cb) => {

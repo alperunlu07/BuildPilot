@@ -14,7 +14,7 @@ import {
   type Node,
   type NodeChange,
 } from '@xyflow/react';
-import { Hammer, Save } from 'lucide-react';
+import { Hammer, Save, Square } from 'lucide-react';
 import type {
   Pipeline,
   PipelineEdge,
@@ -25,14 +25,18 @@ import type {
 import { STEP_DEFINITIONS, STEP_TYPES } from '@buildpilot/step-registry';
 import { api } from '../lib/api';
 import { useStore } from '../store/store';
+import { BranchSelect } from './BranchSelect';
 import { StepNode } from './StepNode';
-import { StepPropertyPanel } from './StepPropertyPanel';
+import { StepPropertyPanel, EMPTY_ENTRIES } from './StepPropertyPanel';
 
 const nodeTypes = {
   checkout: StepNode,
   pull: StepNode,
   shell: StepNode,
   unityBatch: StepNode,
+  httpRequest: StepNode,
+  slackNotify: StepNode,
+  discordNotify: StepNode,
 };
 
 interface Props {
@@ -50,6 +54,25 @@ export function PipelineEditor(props: Props) {
 function Editor({ pipeline }: Props) {
   const upsertPipeline = useStore((s) => s.upsertPipeline);
   const triggerBuild = useStore((s) => s.triggerBuild);
+  const cancelBuildAction = useStore((s) => s.cancelBuild);
+  const stepStatus = useStore((s) => s.stepStatus[pipeline.id]);
+  const stepTimings = useStore((s) => s.stepTimings[pipeline.id]);
+  // Pull entries for the most recent build of this pipeline so the per-node
+  // Logs tab in the property panel can show that step's output.
+  const latestBuildId = useStore((s) => {
+    const b = s.builds.find((b) => b.pipelineId === pipeline.id);
+    return b?.id;
+  });
+  const latestEntries = useStore((s) =>
+    latestBuildId ? (s.entriesByBuild[latestBuildId] ?? EMPTY_ENTRIES) : EMPTY_ENTRIES,
+  );
+  const activeBuild = useStore((s) =>
+    s.activeBuild &&
+    s.activeBuild.pipelineId === pipeline.id &&
+    (s.activeBuild.status === 'running' || s.activeBuild.status === 'pending')
+      ? s.activeBuild
+      : null,
+  );
 
   const [nodes, setNodes] = useState<Node[]>(() => pipelineNodesToReactFlow(pipeline.nodes));
   const [edges, setEdges] = useState<Edge[]>(() => pipelineEdgesToReactFlow(pipeline.edges));
@@ -58,6 +81,7 @@ function Editor({ pipeline }: Props) {
   const [watch, setWatch] = useState<PipelineWatch>(pipeline.watch);
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
+  const [branches, setBranches] = useState<string[]>([]);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const { screenToFlowPosition } = useReactFlow();
 
@@ -70,6 +94,53 @@ function Editor({ pipeline }: Props) {
     setDirty(false);
     setSelectedNodeId(null);
   }, [pipeline.id]);
+
+  // Push the current per-node runtime status + timing into each node's data
+  // so the StepNode component can render glow + duration without us having
+  // to re-mount or re-shape nodes when the run state ticks.
+  useEffect(() => {
+    setNodes((nds) =>
+      nds.map((n) => {
+        const status = stepStatus?.[n.id];
+        const timing = stepTimings?.[n.id];
+        const data = n.data as {
+          runtimeStatus?: string;
+          runtimeStartedAt?: number;
+          runtimeFinishedAt?: number;
+        };
+        if (
+          data.runtimeStatus === status &&
+          data.runtimeStartedAt === timing?.startedAt &&
+          data.runtimeFinishedAt === timing?.finishedAt
+        ) {
+          return n;
+        }
+        return {
+          ...n,
+          data: {
+            ...(n.data as Record<string, unknown>),
+            runtimeStatus: status,
+            runtimeStartedAt: timing?.startedAt,
+            runtimeFinishedAt: timing?.finishedAt,
+          },
+        };
+      }),
+    );
+  }, [stepStatus, stepTimings]);
+
+  // Load branches for the project so the watch + checkout combobox have data.
+  useEffect(() => {
+    let alive = true;
+    api
+      .branches(pipeline.projectId)
+      .then((bs) => {
+        if (alive) setBranches(bs);
+      })
+      .catch(() => null);
+    return () => {
+      alive = false;
+    };
+  }, [pipeline.projectId]);
 
   const selectedNode = useMemo(
     () => nodes.find((n) => n.id === selectedNodeId) ?? null,
@@ -175,15 +246,15 @@ function Editor({ pipeline }: Props) {
             }}
             className="bg-transparent text-base font-semibold text-slate-100 outline-none"
           />
-          <span className="rounded-md bg-slate-800 px-2 py-0.5 text-[11px] uppercase tracking-wider text-slate-400">
-            Watch:{' '}
-            <input
+          <span className="inline-flex items-center gap-1.5 rounded-md bg-slate-800 px-2 py-0.5 text-[11px] uppercase tracking-wider text-slate-400">
+            Watch:
+            <BranchSelect
               value={watch.branch}
-              onChange={(e) => {
-                setWatch({ ...watch, branch: e.target.value });
+              onChange={(b) => {
+                setWatch({ ...watch, branch: b });
                 setDirty(true);
               }}
-              className="ml-1 w-32 bg-transparent font-mono text-emerald-400 outline-none"
+              branches={branches}
             />
           </span>
           <span className="rounded-md bg-slate-800 px-2 py-0.5 text-[11px] text-slate-400">
@@ -212,13 +283,24 @@ function Editor({ pipeline }: Props) {
           >
             <Save size={12} /> {saving ? 'Saving…' : 'Save'}
           </button>
-          <button
-            type="button"
-            onClick={runNow}
-            className="inline-flex items-center gap-1 rounded-md bg-sky-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-sky-500"
-          >
-            <Hammer size={12} /> Run
-          </button>
+          {activeBuild ? (
+            <button
+              type="button"
+              onClick={() => void cancelBuildAction(activeBuild.id)}
+              className="inline-flex items-center gap-1 rounded-md border border-rose-700 bg-rose-950/40 px-2.5 py-1 text-xs font-medium text-rose-200 hover:border-rose-500"
+              title={`Cancel running build ${activeBuild.id.slice(0, 8)}`}
+            >
+              <Square size={11} /> Cancel
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={runNow}
+              className="inline-flex items-center gap-1 rounded-md bg-sky-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-sky-500"
+            >
+              <Hammer size={12} /> Run
+            </button>
+          )}
         </div>
       </header>
 
@@ -242,7 +324,17 @@ function Editor({ pipeline }: Props) {
           </ReactFlow>
         </div>
 
-        <StepPropertyPanel node={selectedNode} onChange={updateNodeData} onDelete={deleteNode} />
+        <StepPropertyPanel
+          node={selectedNode}
+          branches={branches}
+          entries={latestEntries}
+          onChange={updateNodeData}
+          onDelete={deleteNode}
+          onRunFrom={async (nodeId) => {
+            if (dirty) await save();
+            await triggerBuild(pipeline.id, nodeId);
+          }}
+        />
       </div>
     </div>
   );
@@ -290,6 +382,12 @@ function defaultData(type: StepType): Record<string, unknown> {
         extraArgs: '',
         logPath: '',
       };
+    case 'httpRequest':
+      return { method: 'POST', url: '', headers: '', body: '', expectedStatus: '' };
+    case 'slackNotify':
+      return { webhookUrl: '', text: '' };
+    case 'discordNotify':
+      return { webhookUrl: '', content: '' };
   }
 }
 
@@ -313,12 +411,28 @@ function pipelineEdgesToReactFlow(edges: PipelineEdge[]): Edge[] {
 }
 
 function reactFlowNodesToPipeline(nodes: Node[]): PipelineNode[] {
-  return nodes.map((n) => ({
-    id: n.id,
-    type: n.type as StepType,
-    position: n.position,
-    data: n.data as Record<string, unknown>,
-  }));
+  return nodes.map((n) => {
+    // Strip transient UI-only state before persisting.
+    const {
+      runtimeStatus: _s,
+      runtimeStartedAt: _a,
+      runtimeFinishedAt: _b,
+      ...persisted
+    } = n.data as Record<string, unknown> & {
+      runtimeStatus?: unknown;
+      runtimeStartedAt?: unknown;
+      runtimeFinishedAt?: unknown;
+    };
+    void _s;
+    void _a;
+    void _b;
+    return {
+      id: n.id,
+      type: n.type as StepType,
+      position: n.position,
+      data: persisted,
+    };
+  });
 }
 
 function reactFlowEdgesToPipeline(edges: Edge[]): PipelineEdge[] {

@@ -3,7 +3,9 @@ import type { StepType } from '@buildpilot/shared-types';
 export interface StepFieldSchema {
   name: string;
   label: string;
-  type: 'text' | 'textarea' | 'select' | 'number';
+  // 'branchSelect' = a project-aware combobox populated with the project's
+  // local + remote branches. The host UI supplies the branch list.
+  type: 'text' | 'textarea' | 'select' | 'number' | 'branchSelect';
   options?: readonly string[];
   required?: boolean;
   placeholder?: string;
@@ -37,7 +39,7 @@ export const STEP_DEFINITIONS: Record<StepType, StepDefinition> = {
     color: '#0ea5e9',
     icon: 'GitBranch',
     fields: [
-      { name: 'branch', label: 'Branch', type: 'text', required: true, placeholder: 'main' },
+      { name: 'branch', label: 'Branch', type: 'branchSelect', required: true },
     ],
   },
   pull: {
@@ -111,6 +113,94 @@ export const STEP_DEFINITIONS: Record<StepType, StepDefinition> = {
         label: 'Log file path',
         type: 'text',
         placeholder: '(optional — otherwise streamed to stdout)',
+      },
+    ],
+  },
+  httpRequest: {
+    type: 'httpRequest',
+    label: 'HTTP Request',
+    description: 'Make an HTTP call and fail the step on a non-success status.',
+    color: '#06b6d4',
+    icon: 'Globe',
+    fields: [
+      {
+        name: 'method',
+        label: 'Method',
+        type: 'select',
+        required: true,
+        options: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'] as const,
+        defaultValue: 'POST',
+      },
+      {
+        name: 'url',
+        label: 'URL',
+        type: 'text',
+        required: true,
+        placeholder: 'https://api.example.com/build-finished',
+      },
+      {
+        name: 'headers',
+        label: 'Headers (one per line, "Key: Value")',
+        type: 'textarea',
+        placeholder: 'Authorization: Bearer ${env.TOKEN}\nContent-Type: application/json',
+      },
+      {
+        name: 'body',
+        label: 'Body',
+        type: 'textarea',
+        placeholder: '{"status":"green"}',
+      },
+      {
+        name: 'expectedStatus',
+        label: 'Expected status (comma-separated)',
+        type: 'text',
+        placeholder: '200,201,204 (defaults to 2xx)',
+      },
+    ],
+  },
+  slackNotify: {
+    type: 'slackNotify',
+    label: 'Slack Notify',
+    description: 'Post a message to a Slack incoming webhook.',
+    color: '#22d3ee',
+    icon: 'MessageSquare',
+    fields: [
+      {
+        name: 'webhookUrl',
+        label: 'Webhook URL',
+        type: 'text',
+        required: true,
+        placeholder: 'https://hooks.slack.com/services/T.../B.../...',
+      },
+      {
+        name: 'text',
+        label: 'Message',
+        type: 'textarea',
+        required: true,
+        placeholder: ':white_check_mark: Build finished',
+      },
+    ],
+  },
+  discordNotify: {
+    type: 'discordNotify',
+    label: 'Discord Notify',
+    description: 'Post a message to a Discord webhook.',
+    color: '#8b5cf6',
+    icon: 'MessageCircle',
+    fields: [
+      {
+        name: 'webhookUrl',
+        label: 'Webhook URL',
+        type: 'text',
+        required: true,
+        placeholder: 'https://discord.com/api/webhooks/.../...',
+      },
+      {
+        name: 'content',
+        label: 'Message',
+        type: 'textarea',
+        required: true,
+        placeholder: '✅ Build finished',
       },
     ],
   },

@@ -7,7 +7,10 @@ export async function runPull(
   data: Record<string, unknown>,
 ): Promise<void> {
   const remote = (data as Partial<PullStepData>).remote ?? 'origin';
-  ctx.log(`git pull ${remote}\n`);
+  ctx.log(`git pull ${remote}`);
   const result = await pull(ctx.project.path, remote);
-  ctx.log(`${result}\n`);
+  // simple-git returns a JSON-y summary string; emit it as one stdout line.
+  for (const line of result.split(/\r?\n/)) {
+    if (line.length > 0) ctx.log(line, 'stdout');
+  }
 }

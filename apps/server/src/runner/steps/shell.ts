@@ -10,7 +10,8 @@ export async function runShell(
   const d = data as Partial<ShellStepData>;
   if (!d.command) throw new Error('shell: missing "command"');
   const cwd = d.cwd ? join(ctx.project.path, d.cwd) : ctx.project.path;
-  ctx.log(`$ ${d.command}\n  (cwd: ${cwd})\n`);
+  ctx.log(`$ ${d.command}`);
+  ctx.log(`cwd: ${cwd}`);
 
   const isWindows = process.platform === 'win32';
   const shell = isWindows ? 'cmd.exe' : '/bin/sh';
@@ -18,8 +19,7 @@ export async function runShell(
 
   await new Promise<void>((resolve, reject) => {
     const child = spawn(shell, args, { cwd, env: process.env });
-    child.stdout.on('data', (chunk: Buffer) => ctx.log(chunk.toString()));
-    child.stderr.on('data', (chunk: Buffer) => ctx.log(chunk.toString()));
+    ctx.attachProcess(child);
     child.on('error', reject);
     child.on('close', (code) => {
       if (code === 0) resolve();

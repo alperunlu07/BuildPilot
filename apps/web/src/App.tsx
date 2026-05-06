@@ -6,8 +6,11 @@ import { ToastContainer } from './components/ToastContainer';
 import { ProjectsPage } from './pages/ProjectsPage';
 import { ProjectDetailPage } from './pages/ProjectDetailPage';
 import { PipelinePage } from './pages/PipelinePage';
+import { BuildsPage } from './pages/BuildsPage';
+import { BuildDetailPage } from './pages/BuildDetailPage';
 import { useStore } from './store/store';
 import { onConnected, subscribe } from './lib/events';
+import { ensurePermission } from './lib/notifications';
 
 export function App() {
   const view = useStore((s) => s.view);
@@ -22,6 +25,7 @@ export function App() {
     void loadProjects();
     void loadPipelines();
     void loadBuilds();
+    void ensurePermission();
   }, [loadProjects, loadPipelines, loadBuilds]);
 
   useEffect(() => subscribe(handleEvent), [handleEvent]);
@@ -46,6 +50,8 @@ export function App() {
           {view.type === 'projects' && <ProjectsPage onAdd={() => setOpenAdd(true)} />}
           {view.type === 'project' && <ProjectDetailPage projectId={view.id} />}
           {view.type === 'pipeline' && <PipelinePage pipelineId={view.id} />}
+          {view.type === 'builds' && <BuildsPage />}
+          {view.type === 'build' && <BuildDetailPage buildId={view.id} />}
         </div>
         <BuildLogPanel />
       </main>

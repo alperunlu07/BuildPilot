@@ -62,6 +62,18 @@ export function initDb(path: string): DB {
       last_built_sha TEXT NOT NULL,
       updated_at INTEGER NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS build_log_entries (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      build_id TEXT NOT NULL,
+      ts INTEGER NOT NULL,
+      level TEXT NOT NULL,
+      node_id TEXT,
+      step_type TEXT,
+      message TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_build_log_entries_build_id
+      ON build_log_entries(build_id, id);
   `);
 
   _db = db;

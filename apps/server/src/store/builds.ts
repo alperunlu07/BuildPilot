@@ -98,6 +98,3 @@ export function updateBuildStatus(id: string, status: BuildStatus): void {
     .run(status, finishedAt, id);
 }
 
-export function appendBuildLog(id: string, chunk: string): void {
-  getDb().prepare('UPDATE builds SET log = log || ? WHERE id = ?').run(chunk, id);
-}

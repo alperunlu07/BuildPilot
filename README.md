@@ -53,8 +53,11 @@ pnpm dev
 ```
 
 This starts:
-- **Server** on `http://127.0.0.1:7777` (REST + SSE)
-- **Web** on `http://127.0.0.1:5173` (Vite dev server, opens automatically)
+- **Server** on `http://127.0.0.1:49831` (REST + SSE)
+- **Web** on `http://127.0.0.1:49832` (Vite dev server, opens automatically)
+
+Both ports sit in the IANA dynamic range (49152–65535) so they're very
+unlikely to clash with other services.
 
 The web app proxies `/api/*` and `/events` to the server. If you see a flash
 of "no data" on first load, give the server one extra second and the
@@ -90,12 +93,15 @@ On first run a default config is written to `~/.buildpilot/config.json`:
 ```json
 {
   "host": "127.0.0.1",
-  "port": 7777,
+  "port": 49831,
   "pollIntervalSec": 60,
   "dbPath": "~/.buildpilot/db.sqlite",
-  "webOrigin": "http://127.0.0.1:5173"
+  "webOrigin": "http://127.0.0.1:49832"
 }
 ```
+
+If you previously ran an older build that used ports 7777/5173, BuildPilot
+auto-migrates the config on startup; restart the dev server after upgrading.
 
 Set `host` to `0.0.0.0` to expose the dashboard on your LAN. **There is no
 authentication** — only do this on a network you trust (or front it with
@@ -113,10 +119,110 @@ Removing a project cascades to its pipelines; build history is kept.
 ## Scripts
 
 ```bash
-pnpm dev        # start server (:7777) + web (:5173) in parallel and open the browser
+pnpm dev        # start server (:49831) + web (:49832) in parallel and open the browser
 pnpm build      # production build of both apps
 pnpm typecheck  # tsc --noEmit across the workspace
 ```
+
+## HTTP API
+
+Everything the dashboard does is also exposed as plain JSON over HTTP, so you
+can register projects, design pipelines, and trigger builds entirely from
+scripts. The dashboard listens on the SSE feed and refreshes itself whenever
+something changes — projects/pipelines/builds you create from `curl` show up
+live without a manual reload.
+
+Base URL: `http://127.0.0.1:49831`
+
+### Projects
+
+```bash
+# Register a local git repo
+curl -X POST http://127.0.0.1:49831/api/projects \
+  -H 'content-type: application/json' \
+  -d '{"path": "C:/work/my-game", "name": "MyGame"}'
+
+# List / get / delete
+curl http://127.0.0.1:49831/api/projects
+curl http://127.0.0.1:49831/api/projects/<id>
+curl -X DELETE http://127.0.0.1:49831/api/projects/<id>
+
+# Branches + commit history
+curl http://127.0.0.1:49831/api/projects/<id>/branches
+curl 'http://127.0.0.1:49831/api/projects/<id>/commits?branch=main&limit=50'
+
+# git fetch / git pull
+curl -X POST http://127.0.0.1:49831/api/projects/<id>/fetch
+curl -X POST http://127.0.0.1:49831/api/projects/<id>/pull
+```
+
+### Pipelines
+
+A pipeline is a DAG of step nodes (`checkout`, `pull`, `shell`, `unityBatch`)
+connected by edges. Position fields are only used by the visual editor; you
+can pass arbitrary x/y values from a script.
+
+```bash
+curl -X POST http://127.0.0.1:49831/api/pipelines \
+  -H 'content-type: application/json' \
+  -d '{
+    "projectId": "<project-id>",
+    "name": "Linux dedicated server",
+    "watch": { "branch": "development", "intervalSec": 60, "autoTrigger": "ask" },
+    "nodes": [
+      { "id": "n1", "type": "checkout",   "position": {"x":0,  "y":0}, "data": {"branch":"development"} },
+      { "id": "n2", "type": "pull",       "position": {"x":240,"y":0}, "data": {"remote":"origin"} },
+      { "id": "n3", "type": "shell",      "position": {"x":480,"y":0}, "data": {"command":"pnpm install"} },
+      { "id": "n4", "type": "unityBatch", "position": {"x":720,"y":0},
+        "data": {
+          "unityPath":"C:/Program Files/Unity/Hub/Editor/2022.3.40f1/Editor/Unity.exe",
+          "buildTarget":"StandaloneLinux64",
+          "executeMethod":"BuildScript.BuildDedicatedServer"
+        }}
+    ],
+    "edges": [
+      { "id":"e1", "source":"n1", "target":"n2", "condition":"success" },
+      { "id":"e2", "source":"n2", "target":"n3", "condition":"success" },
+      { "id":"e3", "source":"n3", "target":"n4", "condition":"success" }
+    ]
+  }'
+
+# List / patch / delete
+curl http://127.0.0.1:49831/api/pipelines
+curl http://127.0.0.1:49831/api/pipelines/<id>
+curl -X PATCH http://127.0.0.1:49831/api/pipelines/<id> \
+  -H 'content-type: application/json' \
+  -d '{"watch":{"branch":"main","intervalSec":120,"autoTrigger":"pullAndBuild"}}'
+curl -X DELETE http://127.0.0.1:49831/api/pipelines/<id>
+```
+
+### Builds
+
+```bash
+# Trigger a build
+curl -X POST http://127.0.0.1:49831/api/builds \
+  -H 'content-type: application/json' \
+  -d '{"pipelineId":"<id>"}'
+
+# History (all builds, every log preserved)
+curl 'http://127.0.0.1:49831/api/builds?limit=50'
+curl 'http://127.0.0.1:49831/api/builds?projectId=<id>'
+curl 'http://127.0.0.1:49831/api/builds?pipelineId=<id>'
+
+# Single build with full log
+curl http://127.0.0.1:49831/api/builds/<build-id>
+```
+
+### Live event stream
+
+```bash
+curl -N http://127.0.0.1:49831/events
+```
+
+Emits `newCommit`, `pollerTick`, `buildStarted`, `buildLog`, `buildFinished`,
+`projectAdded`, `projectRemoved`, `pipelineChanged`. The dashboard reloads
+its lists on every relevant event, so anything you create via the API
+appears immediately.
 
 ## Roadmap
 

@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
 import type { Pipeline, PipelineEdge, PipelineNode } from '@buildpilot/shared-types';
 import { useStore } from '../store/store';
 import { api } from '../lib/api';
+import { BranchSelect } from './BranchSelect';
 
 interface Props {
   open: boolean;
@@ -18,8 +19,27 @@ export function CreatePipelineDialog({ open, projectId, defaultBranch, onClose, 
   const [branch, setBranch] = useState(defaultBranch);
   const [intervalSec, setIntervalSec] = useState(60);
   const [includeUnity, setIncludeUnity] = useState(true);
+  const [branches, setBranches] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    let alive = true;
+    api
+      .branches(projectId)
+      .then((bs) => {
+        if (alive) setBranches(bs);
+      })
+      .catch(() => null);
+    return () => {
+      alive = false;
+    };
+  }, [open, projectId]);
+
+  useEffect(() => {
+    if (open) setBranch(defaultBranch);
+  }, [open, defaultBranch]);
 
   if (!open) return null;
 
@@ -78,11 +98,12 @@ export function CreatePipelineDialog({ open, projectId, defaultBranch, onClose, 
             <span className="mb-1 block text-xs uppercase tracking-wide text-slate-500">
               Watch branch
             </span>
-            <input
+            <BranchSelect
               value={branch}
-              onChange={(e) => setBranch(e.target.value)}
+              onChange={setBranch}
+              branches={branches}
               required
-              className="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 font-mono text-sm text-slate-100"
+              className="w-full [&>select]:w-full [&>select]:px-3 [&>select]:py-2 [&>select]:text-sm"
             />
           </label>
           <label className="block">

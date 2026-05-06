@@ -1,4 +1,4 @@
-import { ArrowDownToLine, Hammer, X } from 'lucide-react';
+import { ArrowDownToLine, Hammer, RefreshCw, X } from 'lucide-react';
 import { useStore } from '../store/store';
 import { api } from '../lib/api';
 
@@ -72,6 +72,16 @@ export function ToastContainer() {
                 Open project
               </button>
               <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await api.fetchProject(t.projectId);
+                  }}
+                  className="inline-flex items-center gap-1 rounded-md border border-slate-700 px-2.5 py-1 text-xs text-slate-200 hover:border-sky-500 hover:text-sky-400"
+                  title="git fetch --all --prune"
+                >
+                  <RefreshCw size={12} /> Fetch
+                </button>
                 <button
                   type="button"
                   onClick={async () => {

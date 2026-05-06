@@ -1,5 +1,6 @@
 import type {
   Build,
+  BuildLogEntry,
   Commit,
   Pipeline,
   Project,
@@ -75,6 +76,15 @@ export const api = {
     return http<Build[]>(`/builds${q ? `?${q}` : ''}`);
   },
   getBuild: (id: string) => http<Build>(`/builds/${id}`),
-  triggerBuild: (pipelineId: string) =>
-    http<Build>('/builds', { method: 'POST', body: JSON.stringify({ pipelineId }) }),
+  getBuildEntries: (id: string, sinceSeq?: number) => {
+    const qs = sinceSeq !== undefined ? `?sinceSeq=${sinceSeq}` : '';
+    return http<BuildLogEntry[]>(`/builds/${id}/entries${qs}`);
+  },
+  triggerBuild: (pipelineId: string, fromNodeId?: string) =>
+    http<Build>('/builds', {
+      method: 'POST',
+      body: JSON.stringify({ pipelineId, ...(fromNodeId ? { fromNodeId } : {}) }),
+    }),
+  cancelBuild: (id: string) =>
+    http<{ ok: true }>(`/builds/${id}/cancel`, { method: 'POST' }),
 };

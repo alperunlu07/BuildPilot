@@ -1,14 +1,19 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { createBuild, getBuild, listBuilds } from '../store/builds';
+import { createBuild, getBuild, listBuilds, updateBuildStatus } from '../store/builds';
+import { listBuildLogEntries } from '../store/buildLogs';
 import { getPipeline } from '../store/pipelines';
 import { getProject } from '../store/projects';
 import { getCurrentBranch, getHeadSha } from '../git/operations';
-import { runPipeline } from '../runner/engine';
+import { cancelBuild, enqueueBuild } from '../runner/coordinator';
+import { eventBus } from '../events/bus';
 import { logger } from '../logger';
 
 const triggerSchema = z.object({
   pipelineId: z.string().min(1),
+  // Optional: only run this node and its descendants (BFS over outgoing edges).
+  // Lets you "Retry from failed step" without re-running earlier steps.
+  fromNodeId: z.string().min(1).optional(),
 });
 
 export async function buildsRoutes(app: FastifyInstance): Promise<void> {
@@ -28,6 +33,17 @@ export async function buildsRoutes(app: FastifyInstance): Promise<void> {
     return build;
   });
 
+  app.get('/api/builds/:id/entries', async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const build = getBuild(id);
+    if (!build) return reply.code(404).send({ error: 'not found' });
+    const q = (req.query as { sinceSeq?: string; limit?: string }) ?? {};
+    return listBuildLogEntries(id, {
+      sinceSeq: q.sinceSeq ? Number(q.sinceSeq) : undefined,
+      limit: q.limit ? Number(q.limit) : undefined,
+    });
+  });
+
   app.post('/api/builds', async (req, reply) => {
     const parsed = triggerSchema.safeParse(req.body);
     if (!parsed.success) return reply.code(400).send({ error: parsed.error.flatten() });
@@ -35,6 +51,10 @@ export async function buildsRoutes(app: FastifyInstance): Promise<void> {
     if (!pipeline) return reply.code(404).send({ error: 'pipeline not found' });
     const project = getProject(pipeline.projectId);
     if (!project) return reply.code(404).send({ error: 'project not found' });
+
+    if (parsed.data.fromNodeId && !pipeline.nodes.some((n) => n.id === parsed.data.fromNodeId)) {
+      return reply.code(400).send({ error: 'fromNodeId not in pipeline' });
+    }
 
     const branch = await getCurrentBranch(project.path).catch(() => project.defaultBranch);
     const head = (await getHeadSha(project.path, branch)) ?? '';
@@ -46,10 +66,33 @@ export async function buildsRoutes(app: FastifyInstance): Promise<void> {
       triggerBranch: branch,
     });
 
-    void runPipeline({ pipeline, project, build }).catch((err) => {
+    void enqueueBuild({
+      pipeline,
+      project,
+      build,
+      fromNodeId: parsed.data.fromNodeId,
+    }).catch((err) => {
       logger.error({ err }, 'pipeline crashed');
     });
 
     return build;
+  });
+
+  app.post('/api/builds/:id/cancel', async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const build = getBuild(id);
+    if (!build) return reply.code(404).send({ error: 'not found' });
+    if (build.status !== 'running' && build.status !== 'pending') {
+      return reply.code(409).send({ error: `build is ${build.status}, cannot cancel` });
+    }
+    const { wasRunning } = cancelBuild(id);
+    // For builds still queued (no active children) we have to flip the DB
+    // status ourselves — the engine won't get a chance to do it.
+    if (!wasRunning) {
+      updateBuildStatus(id, 'cancelled');
+      const fresh = getBuild(id);
+      if (fresh) eventBus.publish({ type: 'buildFinished', build: fresh });
+    }
+    return { ok: true };
   });
 }

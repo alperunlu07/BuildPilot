@@ -6,8 +6,18 @@ function git(repoPath: string): SimpleGit {
 }
 
 export async function listBranches(repoPath: string): Promise<string[]> {
-  const branches = await git(repoPath).branchLocal();
-  return branches.all;
+  const local = (await git(repoPath).branchLocal()).all;
+  // Include remote-tracking branches too — useful for pipelines that watch a
+  // branch we haven't checked out locally. Strip the "<remote>/" prefix and
+  // drop any "origin/HEAD -> origin/main" symbolic ref entries.
+  const remote = await git(repoPath)
+    .branch(['-r'])
+    .then((r) => r.all)
+    .catch(() => [] as string[]);
+  const remoteCleaned = remote
+    .filter((b) => !b.includes('->'))
+    .map((b) => b.replace(/^[^/]+\//, ''));
+  return Array.from(new Set([...local, ...remoteCleaned])).sort();
 }
 
 export async function detectDefaultBranch(repoPath: string): Promise<string> {

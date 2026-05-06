@@ -1,14 +1,42 @@
+import { useMemo, useState } from 'react';
 import type { Node } from '@xyflow/react';
-import type { StepType } from '@buildpilot/shared-types';
+import type { BuildLogEntry, StepType } from '@buildpilot/shared-types';
 import { STEP_DEFINITIONS, type StepFieldSchema } from '@buildpilot/step-registry';
+import { BranchSelect } from './BranchSelect';
+import { LogTable } from './LogTable';
+import { cn } from '../lib/cn';
+
+const EMPTY: BuildLogEntry[] = [];
 
 interface Props {
   node: Node | null;
+  branches: string[];
+  // Live entries from the latest build for this pipeline (any nodeId).
+  entries: BuildLogEntry[];
   onChange(nodeId: string, data: Record<string, unknown>): void;
   onDelete(nodeId: string): void;
+  onRunFrom?(nodeId: string): void;
 }
 
-export function StepPropertyPanel({ node, onChange, onDelete }: Props) {
+type Tab = 'properties' | 'logs';
+
+export function StepPropertyPanel({
+  node,
+  branches,
+  entries,
+  onChange,
+  onDelete,
+  onRunFrom,
+}: Props) {
+  // All hooks must run unconditionally (React rules of hooks), so they live
+  // above the null/missing-def early returns.
+  const [tab, setTab] = useState<Tab>('properties');
+  const nodeId = node?.id ?? null;
+  const nodeEntries = useMemo(
+    () => (nodeId ? entries.filter((e) => e.nodeId === nodeId) : EMPTY),
+    [entries, nodeId],
+  );
+
   if (!node) {
     return (
       <aside className="flex h-full w-80 shrink-0 flex-col border-l border-slate-800 bg-slate-950 p-4 text-sm text-slate-500">
@@ -31,40 +59,109 @@ export function StepPropertyPanel({ node, onChange, onDelete }: Props) {
         <div className="text-[11px] uppercase tracking-wider text-slate-500">
           Step properties
         </div>
-        <div className="mt-1 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-slate-100">{def.label}</h3>
-          <button
-            type="button"
-            onClick={() => onDelete(node.id)}
-            className="text-xs text-rose-400 hover:text-rose-300"
-          >
-            Delete
-          </button>
+        <div className="mt-1 flex items-center justify-between gap-2">
+          <h3 className="truncate text-sm font-semibold text-slate-100">{def.label}</h3>
+          <div className="flex items-center gap-2">
+            {onRunFrom && (
+              <button
+                type="button"
+                onClick={() => onRunFrom(node.id)}
+                className="text-[11px] text-emerald-400 hover:text-emerald-300"
+                title="Trigger a build that runs this step and everything after it"
+              >
+                Run from here
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => onDelete(node.id)}
+              className="text-xs text-rose-400 hover:text-rose-300"
+            >
+              Delete
+            </button>
+          </div>
         </div>
         <p className="mt-1 text-xs text-slate-400">{def.description}</p>
+
+        <div className="mt-3 flex gap-1 text-[11px] uppercase tracking-wider">
+          <TabButton active={tab === 'properties'} onClick={() => setTab('properties')}>
+            Properties
+          </TabButton>
+          <TabButton active={tab === 'logs'} onClick={() => setTab('logs')}>
+            Logs
+            {nodeEntries.length > 0 && (
+              <span className="ml-1 rounded bg-slate-800 px-1 font-mono text-[10px] text-slate-300">
+                {nodeEntries.length}
+              </span>
+            )}
+          </TabButton>
+        </div>
       </div>
 
-      <div className="flex-1 space-y-3 overflow-y-auto px-4 py-3">
-        {def.fields.map((field) => (
-          <Field
-            key={field.name}
-            field={field}
-            value={(node.data as Record<string, unknown>)[field.name]}
-            onChange={(v) => updateField(field.name, v)}
-          />
-        ))}
-      </div>
+      {tab === 'properties' ? (
+        <div className="flex-1 space-y-3 overflow-y-auto px-4 py-3">
+          {def.fields.map((field) => (
+            <Field
+              key={field.name}
+              field={field}
+              value={(node.data as Record<string, unknown>)[field.name]}
+              branches={branches}
+              onChange={(v) => updateField(field.name, v)}
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="min-h-0 flex-1">
+          {nodeEntries.length === 0 ? (
+            <div className="px-4 py-6 text-xs text-slate-500">
+              No log entries for this node yet. Run the pipeline to see step output here.
+            </div>
+          ) : (
+            <LogTable entries={nodeEntries} compact emptyMessage="No entries." />
+          )}
+        </div>
+      )}
     </aside>
   );
 }
 
+function TabButton({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick(): void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        'rounded-md px-2 py-0.5 font-semibold transition-colors',
+        active
+          ? 'bg-slate-800 text-slate-100'
+          : 'text-slate-500 hover:bg-slate-900 hover:text-slate-300',
+      )}
+    >
+      {children}
+    </button>
+  );
+}
+
+// re-export EMPTY so PipelineEditor can use the same stable reference
+export { EMPTY as EMPTY_ENTRIES };
+
 function Field({
   field,
   value,
+  branches,
   onChange,
 }: {
   field: StepFieldSchema;
   value: unknown;
+  branches: string[];
   onChange(v: string | number): void;
 }) {
   const stringValue = value === undefined || value === null ? '' : String(value);
@@ -98,6 +195,14 @@ function Field({
             </option>
           ))}
         </select>
+      ) : field.type === 'branchSelect' ? (
+        <BranchSelect
+          value={stringValue}
+          onChange={onChange}
+          branches={branches}
+          required={field.required}
+          className="w-full [&>select]:w-full [&>select]:px-2.5 [&>select]:py-1.5 [&>select]:text-[13px]"
+        />
       ) : (
         <input
           type={field.type === 'number' ? 'number' : 'text'}

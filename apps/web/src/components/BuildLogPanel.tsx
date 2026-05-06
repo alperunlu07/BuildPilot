@@ -1,22 +1,31 @@
-import { useEffect, useRef } from 'react';
+import { Square } from 'lucide-react';
+import type { BuildLogEntry } from '@buildpilot/shared-types';
 import { useStore } from '../store/store';
+import { LogTable } from './LogTable';
 import { cn } from '../lib/cn';
+
+// Stable empty-array reference: returning a fresh `[]` from a Zustand
+// selector triggers an infinite re-render loop because every call produces
+// a new array identity.
+const EMPTY: BuildLogEntry[] = [];
 
 export function BuildLogPanel() {
   const activeBuild = useStore((s) => s.activeBuild);
-  const liveLog = useStore((s) => s.liveLog);
-  const ref = useRef<HTMLPreElement>(null);
-
-  useEffect(() => {
-    ref.current?.scrollTo({ top: ref.current.scrollHeight });
-  }, [liveLog]);
+  const entries = useStore((s) =>
+    activeBuild ? (s.entriesByBuild[activeBuild.id] ?? EMPTY) : EMPTY,
+  );
+  const cancelBuild = useStore((s) => s.cancelBuild);
+  const setView = useStore((s) => s.setView);
 
   if (!activeBuild) return null;
 
-  const finished = activeBuild.status === 'success' || activeBuild.status === 'failed';
+  const finished =
+    activeBuild.status === 'success' ||
+    activeBuild.status === 'failed' ||
+    activeBuild.status === 'cancelled';
 
   return (
-    <div className="flex h-64 shrink-0 flex-col border-t border-slate-800 bg-slate-950">
+    <div className="flex h-72 shrink-0 flex-col border-t border-slate-800 bg-slate-950">
       <div className="flex items-center justify-between border-b border-slate-800 px-4 py-2 text-xs">
         <div className="flex items-center gap-2">
           <span
@@ -25,6 +34,7 @@ export function BuildLogPanel() {
               activeBuild.status === 'running' && 'animate-pulse bg-amber-400',
               activeBuild.status === 'success' && 'bg-emerald-400',
               activeBuild.status === 'failed' && 'bg-rose-400',
+              activeBuild.status === 'cancelled' && 'bg-slate-500',
               activeBuild.status === 'pending' && 'bg-slate-500',
             )}
           />
@@ -32,26 +42,47 @@ export function BuildLogPanel() {
             Build {activeBuild.status}
           </span>
           <span className="text-slate-500">·</span>
-          <span className="font-mono text-slate-500">{activeBuild.id.slice(0, 8)}</span>
+          <button
+            type="button"
+            onClick={() => setView({ type: 'build', id: activeBuild.id })}
+            className="font-mono text-slate-500 hover:text-sky-400"
+            title="Open full log"
+          >
+            {activeBuild.id.slice(0, 8)}
+          </button>
           {activeBuild.triggerSha && (
             <>
               <span className="text-slate-500">·</span>
               <span className="font-mono text-sky-400">{activeBuild.triggerSha.slice(0, 7)}</span>
             </>
           )}
+          <span className="text-slate-500">·</span>
+          <span className="text-slate-500">{entries.length} entries</span>
         </div>
-        {finished && (
-          <span className="text-slate-500">
-            Finished {activeBuild.finishedAt ? new Date(activeBuild.finishedAt).toLocaleTimeString() : ''}
-          </span>
-        )}
+        <div className="flex items-center gap-2">
+          {!finished && (
+            <button
+              type="button"
+              onClick={() => void cancelBuild(activeBuild.id)}
+              className="inline-flex items-center gap-1 rounded-md border border-rose-700/60 px-2 py-0.5 text-[11px] text-rose-300 hover:border-rose-500 hover:text-rose-200"
+              title="Stop the running build"
+            >
+              <Square size={10} /> Cancel
+            </button>
+          )}
+          {finished && (
+            <span className="text-slate-500">
+              Finished{' '}
+              {activeBuild.finishedAt
+                ? new Date(activeBuild.finishedAt).toLocaleTimeString()
+                : ''}
+            </span>
+          )}
+        </div>
       </div>
-      <pre
-        ref={ref}
-        className="scrollbar-thin flex-1 overflow-y-auto px-4 py-3 font-mono text-[12px] leading-relaxed text-slate-300"
-      >
-{liveLog || activeBuild.log || 'Waiting for output…'}
-      </pre>
+      <div className="min-h-0 flex-1">
+        <LogTable entries={entries} compact />
+      </div>
     </div>
   );
 }

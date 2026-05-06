@@ -26,7 +26,14 @@ export interface Commit {
 }
 
 // ── Pipeline ────────────────────────────────────────────────────────────────
-export type StepType = 'checkout' | 'pull' | 'shell' | 'unityBatch';
+export type StepType =
+  | 'checkout'
+  | 'pull'
+  | 'shell'
+  | 'unityBatch'
+  | 'httpRequest'
+  | 'slackNotify'
+  | 'discordNotify';
 
 export interface PipelineNode {
   id: string;
@@ -99,12 +106,64 @@ export interface UnityBatchStepData {
   logPath?: string;
 }
 
+export interface HttpRequestStepData {
+  method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+  url: string;
+  // One header per line, in "Key: Value" form.
+  headers?: string;
+  body?: string;
+  // Comma-separated list of acceptable status codes (e.g. "200,201,204").
+  // Defaults to "2xx" handling: any 200–299 passes.
+  expectedStatus?: string;
+}
+
+export interface SlackNotifyStepData {
+  webhookUrl: string;
+  text: string;
+}
+
+export interface DiscordNotifyStepData {
+  webhookUrl: string;
+  content: string;
+}
+
+// ── Structured build logs ───────────────────────────────────────────────────
+// Each entry is one logical line, tagged with the originating pipeline node
+// and a coarse log level. The dashboard renders these as a logcat-style table.
+export type BuildLogLevel =
+  | 'system'   // pipeline-level marker (started, finished)
+  | 'info'     // engine note about the step (the command being executed)
+  | 'stdout'   // child process stdout line
+  | 'stderr'   // child process stderr line
+  | 'success'  // step completed successfully
+  | 'failure'; // step failed
+
+export interface BuildLogEntry {
+  // Monotonic per-build seq from the DB; clients use it for ordering and
+  // de-duping between an initial fetch and live SSE chunks.
+  seq: number;
+  ts: number;
+  level: BuildLogLevel;
+  nodeId: string | null;
+  stepType: StepType | null;
+  message: string;
+}
+
 // ── Server-Sent Events ──────────────────────────────────────────────────────
 export type ServerEvent =
   | { type: 'newCommit'; projectId: string; pipelineId: string; branch: string; commits: Commit[] }
   | { type: 'pollerTick'; projectId: string; branch: string; head: string }
   | { type: 'buildStarted'; build: Build }
-  | { type: 'buildLog'; buildId: string; chunk: string }
+  | { type: 'buildLogEntry'; buildId: string; entry: BuildLogEntry }
+  | { type: 'buildStepStarted'; buildId: string; pipelineId: string; nodeId: string; stepType: StepType }
+  | {
+      type: 'buildStepFinished';
+      buildId: string;
+      pipelineId: string;
+      nodeId: string;
+      stepType: StepType;
+      status: 'success' | 'failed';
+    }
   | { type: 'buildFinished'; build: Build }
   | { type: 'projectAdded'; project: Project }
   | { type: 'projectRemoved'; projectId: string }

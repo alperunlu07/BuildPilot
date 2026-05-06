@@ -5,6 +5,7 @@ import {
   GitBranch,
   Hammer,
   Plus,
+  RefreshCw,
   Trash2,
 } from 'lucide-react';
 import type { Commit, Pipeline } from '@buildpilot/shared-types';
@@ -43,6 +44,7 @@ export function ProjectDetailPage({ projectId }: Props) {
   const [browseBranch, setBrowseBranch] = useState<string>(ALL_BRANCHES);
   const [commits, setCommits] = useState<Commit[]>([]);
   const [pulling, setPulling] = useState(false);
+  const [fetching, setFetching] = useState(false);
   const [openCreate, setOpenCreate] = useState(false);
 
   // Pull the actual git HEAD branch + sha so we can mark the commit and the chip.
@@ -102,21 +104,36 @@ export function ProjectDetailPage({ projectId }: Props) {
 
   if (!project) return null;
 
+  const refreshCommits = async () => {
+    if (!project) return;
+    const opts =
+      browseBranch === ALL_BRANCHES
+        ? { all: true as const, limit: 200 }
+        : { branch: browseBranch, limit: 200 };
+    const refreshed = await api.commits(project.id, opts);
+    setCommits(refreshed);
+    const cb = await api.currentBranch(project.id).catch(() => null);
+    if (cb) {
+      if (cb.branch) setCurrentBranch(cb.branch);
+      if (cb.sha) setHeadSha(cb.sha);
+    }
+  };
+
+  const onFetch = async () => {
+    setFetching(true);
+    try {
+      await api.fetchProject(project.id);
+      await refreshCommits();
+    } finally {
+      setFetching(false);
+    }
+  };
+
   const onPull = async () => {
     setPulling(true);
     try {
       await api.pullProject(project.id);
-      const opts =
-        browseBranch === ALL_BRANCHES
-          ? { all: true as const, limit: 200 }
-          : { branch: browseBranch, limit: 200 };
-      const refreshed = await api.commits(project.id, opts);
-      setCommits(refreshed);
-      const cb = await api.currentBranch(project.id).catch(() => null);
-      if (cb) {
-        if (cb.branch) setCurrentBranch(cb.branch);
-        if (cb.sha) setHeadSha(cb.sha);
-      }
+      await refreshCommits();
     } finally {
       setPulling(false);
     }
@@ -197,14 +214,25 @@ export function ProjectDetailPage({ projectId }: Props) {
           </span>
         )}
 
-        <button
-          type="button"
-          onClick={onPull}
-          disabled={pulling}
-          className="ml-auto inline-flex items-center gap-1 rounded-md border border-slate-700 px-2.5 py-1 text-xs text-slate-200 hover:border-emerald-500 hover:text-emerald-400 disabled:opacity-50"
-        >
-          <ArrowDownToLine size={12} /> {pulling ? 'Pulling…' : 'Pull'}
-        </button>
+        <div className="ml-auto flex items-center gap-2">
+          <button
+            type="button"
+            onClick={onFetch}
+            disabled={fetching}
+            className="inline-flex items-center gap-1 rounded-md border border-slate-700 px-2.5 py-1 text-xs text-slate-200 hover:border-sky-500 hover:text-sky-400 disabled:opacity-50"
+            title="git fetch --all --prune"
+          >
+            <RefreshCw size={12} /> {fetching ? 'Fetching…' : 'Fetch'}
+          </button>
+          <button
+            type="button"
+            onClick={onPull}
+            disabled={pulling}
+            className="inline-flex items-center gap-1 rounded-md border border-slate-700 px-2.5 py-1 text-xs text-slate-200 hover:border-emerald-500 hover:text-emerald-400 disabled:opacity-50"
+          >
+            <ArrowDownToLine size={12} /> {pulling ? 'Pulling…' : 'Pull'}
+          </button>
+        </div>
       </div>
 
       {/* TWO-COLUMN BODY */}

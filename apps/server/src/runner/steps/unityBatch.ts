@@ -26,12 +26,11 @@ export async function runUnityBatch(
   ];
   if (d.extraArgs) args.push(...d.extraArgs.split(/\s+/).filter(Boolean));
 
-  ctx.log(`> "${d.unityPath}" ${args.map((a) => (a.includes(' ') ? `"${a}"` : a)).join(' ')}\n`);
+  ctx.log(`> "${d.unityPath}" ${args.map((a) => (a.includes(' ') ? `"${a}"` : a)).join(' ')}`);
 
   await new Promise<void>((resolve, reject) => {
     const child = spawn(d.unityPath!, args, { env: process.env });
-    child.stdout.on('data', (chunk: Buffer) => ctx.log(chunk.toString()));
-    child.stderr.on('data', (chunk: Buffer) => ctx.log(chunk.toString()));
+    ctx.attachProcess(child);
     child.on('error', reject);
     child.on('close', (code) => {
       if (code === 0) resolve();

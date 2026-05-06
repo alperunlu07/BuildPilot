@@ -1,4 +1,4 @@
-import { Plus, Folder, GitBranch } from 'lucide-react';
+import { Plus, Folder, GitBranch, History } from 'lucide-react';
 import { useStore } from '../store/store';
 import { cn } from '../lib/cn';
 
@@ -30,6 +30,22 @@ export function Sidebar({ onAddProject }: Props) {
           title="Add project"
         >
           <Plus size={16} />
+        </button>
+      </div>
+
+      <div className="px-2 pt-3">
+        <button
+          type="button"
+          onClick={() => setView({ type: 'builds' })}
+          className={cn(
+            'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm',
+            view.type === 'builds' || view.type === 'build'
+              ? 'bg-slate-800 text-slate-100'
+              : 'text-slate-300 hover:bg-slate-800/60',
+          )}
+        >
+          <History size={14} className="text-amber-400" />
+          <span>Builds &amp; Logs</span>
         </button>
       </div>
 

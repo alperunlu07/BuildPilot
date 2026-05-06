@@ -1,0 +1,333 @@
+import { useEffect, useMemo, useState } from 'react';
+import { ChevronLeft, Download, Filter, RotateCcw, Square } from 'lucide-react';
+import type {
+  Build,
+  BuildLogEntry,
+  BuildLogLevel,
+  StepType,
+} from '@buildpilot/shared-types';
+import { useStore } from '../store/store';
+import { api } from '../lib/api';
+import { cn } from '../lib/cn';
+import { LogTable } from '../components/LogTable';
+import { StepGantt } from '../components/StepGantt';
+
+const EMPTY: BuildLogEntry[] = [];
+
+interface Props {
+  buildId: string;
+}
+
+const ALL_LEVELS: BuildLogLevel[] = [
+  'system',
+  'info',
+  'stdout',
+  'stderr',
+  'success',
+  'failure',
+];
+
+export function BuildDetailPage({ buildId }: Props) {
+  const projects = useStore((s) => s.projects);
+  const pipelines = useStore((s) => s.pipelines);
+  const setView = useStore((s) => s.setView);
+  const seedBuildEntries = useStore((s) => s.seedBuildEntries);
+  const cancelBuild = useStore((s) => s.cancelBuild);
+  const triggerBuild = useStore((s) => s.triggerBuild);
+  const entries = useStore((s) => s.entriesByBuild[buildId] ?? EMPTY);
+
+  const [build, setBuild] = useState<Build | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const [activeLevels, setActiveLevels] = useState<Set<BuildLogLevel>>(
+    () => new Set(ALL_LEVELS),
+  );
+  const [activeNodeId, setActiveNodeId] = useState<string | 'all'>('all');
+
+  useEffect(() => {
+    let alive = true;
+    setLoading(true);
+    setBuild(null);
+
+    Promise.all([api.getBuild(buildId), api.getBuildEntries(buildId)])
+      .then(([b, ents]) => {
+        if (!alive) return;
+        setBuild(b);
+        // Legacy builds (created before the structured-log table) only have
+        // the flat `build.log` text. Synthesize one stdout-level entry per
+        // line so the table view still shows them.
+        let toSeed = ents;
+        if (ents.length === 0 && b.log && b.log.length > 0) {
+          toSeed = b.log
+            .split(/\r?\n/)
+            .filter((l) => l.length > 0)
+            .map((message, i) => ({
+              seq: -(i + 1),
+              ts: b.startedAt + i,
+              level: 'stdout' as BuildLogLevel,
+              nodeId: null,
+              stepType: null,
+              message,
+            }));
+        }
+        seedBuildEntries(buildId, toSeed);
+      })
+      .catch(() => {
+        if (alive) setBuild(null);
+      })
+      .finally(() => {
+        if (alive) setLoading(false);
+      });
+
+    return () => {
+      alive = false;
+    };
+  }, [buildId, seedBuildEntries]);
+
+  const proj = build ? projects.find((p) => p.id === build.projectId) : null;
+  const pipe = build ? pipelines.find((p) => p.id === build.pipelineId) : null;
+
+  // Build a label map nodeId → "stepType:idShort" using the pipeline definition
+  // when available so the Node column reads naturally.
+  const nodeLabelMap = useMemo(() => {
+    const map = new Map<string, string>();
+    if (pipe) {
+      for (const n of pipe.nodes) {
+        map.set(n.id, `${n.type}`);
+      }
+    }
+    return map;
+  }, [pipe]);
+
+  // Find the failed step (last entry with level === 'failure' that has a nodeId)
+  // so we can offer a "Retry from failed step" button.
+  const failedNodeId = useMemo(() => {
+    for (let i = entries.length - 1; i >= 0; i--) {
+      const e = entries[i]!;
+      if (e.level === 'failure' && e.nodeId) return e.nodeId;
+    }
+    return null;
+  }, [entries]);
+
+  const distinctNodes = useMemo(() => {
+    const seen = new Map<string, StepType | null>();
+    for (const e of entries) {
+      if (e.nodeId && !seen.has(e.nodeId)) seen.set(e.nodeId, e.stepType);
+    }
+    return [...seen.entries()];
+  }, [entries]);
+
+  const filtered = useMemo(() => {
+    return entries.filter((e) => {
+      if (!activeLevels.has(e.level)) return false;
+      if (activeNodeId !== 'all') {
+        if (activeNodeId === '__pipeline__') {
+          if (e.nodeId !== null) return false;
+        } else if (e.nodeId !== activeNodeId) {
+          return false;
+        }
+      }
+      return true;
+    });
+  }, [entries, activeLevels, activeNodeId]);
+
+  const downloadLog = () => {
+    if (!build) return;
+    const lines = entries.map(
+      (e) =>
+        `[${new Date(e.ts).toISOString()}] [${e.level.toUpperCase()}] [${
+          e.nodeId ? `${e.stepType ?? '?'}:${e.nodeId}` : 'pipeline'
+        }] ${e.message}`,
+    );
+    const blob = new Blob([lines.join('\n')], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `build-${build.id.slice(0, 8)}.log`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const toggleLevel = (lvl: BuildLogLevel) => {
+    const next = new Set(activeLevels);
+    if (next.has(lvl)) next.delete(lvl);
+    else next.add(lvl);
+    setActiveLevels(next);
+  };
+
+  if (loading && !build) {
+    return <div className="p-8 text-sm text-slate-500">Loading build…</div>;
+  }
+  if (!build) {
+    return (
+      <div className="p-8 text-sm text-slate-500">
+        Build not found.{' '}
+        <button
+          type="button"
+          className="text-sky-400 hover:underline"
+          onClick={() => setView({ type: 'builds' })}
+        >
+          Back to builds
+        </button>
+      </div>
+    );
+  }
+
+  const finished =
+    build.status === 'success' ||
+    build.status === 'failed' ||
+    build.status === 'cancelled';
+
+  return (
+    <div className="flex h-full min-h-0 flex-col">
+      <header className="border-b border-slate-800 bg-slate-900/40 px-6 py-3">
+        <button
+          type="button"
+          onClick={() => setView({ type: 'builds' })}
+          className="inline-flex items-center gap-1 text-[11px] uppercase tracking-wider text-slate-500 hover:text-slate-300"
+        >
+          <ChevronLeft size={12} /> Builds
+        </button>
+        <div className="mt-1 flex flex-wrap items-baseline gap-x-4 gap-y-1">
+          <h1 className="text-lg font-semibold text-slate-100">
+            {pipe?.name ?? 'Unknown pipeline'}
+          </h1>
+          <span
+            className={cn(
+              'rounded-md px-2 py-0.5 text-[11px] font-medium uppercase tracking-wider',
+              build.status === 'running' && 'bg-amber-950/50 text-amber-300',
+              build.status === 'success' && 'bg-emerald-950/50 text-emerald-300',
+              build.status === 'failed' && 'bg-rose-950/50 text-rose-300',
+              build.status === 'pending' && 'bg-slate-800 text-slate-400',
+              build.status === 'cancelled' && 'bg-slate-800 text-slate-500',
+            )}
+          >
+            {build.status}
+          </span>
+          <span className="text-xs text-slate-500">
+            in <span className="text-slate-300">{proj?.name ?? '—'}</span>
+          </span>
+        </div>
+        <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
+          <span className="font-mono">{build.id}</span>
+          <span>·</span>
+          <span>
+            branch{' '}
+            <span className="font-mono text-emerald-400">{build.triggerBranch || '—'}</span>
+          </span>
+          <span>·</span>
+          <span>
+            commit{' '}
+            <span className="font-mono text-sky-400">
+              {build.triggerSha ? build.triggerSha.slice(0, 7) : '—'}
+            </span>
+          </span>
+          <span>·</span>
+          <span>started {new Date(build.startedAt).toLocaleString()}</span>
+          {finished && build.finishedAt && (
+            <>
+              <span>·</span>
+              <span>finished {new Date(build.finishedAt).toLocaleString()}</span>
+            </>
+          )}
+          <div className="ml-auto flex items-center gap-2">
+            {!finished && (
+              <button
+                type="button"
+                onClick={() => void cancelBuild(build.id)}
+                className="inline-flex items-center gap-1 rounded-md border border-rose-700/60 px-2 py-0.5 text-rose-300 hover:border-rose-500 hover:text-rose-200"
+              >
+                <Square size={10} /> Cancel
+              </button>
+            )}
+            {build.status === 'failed' && failedNodeId && (
+              <button
+                type="button"
+                onClick={async () => {
+                  const next = await triggerBuild(build.pipelineId, failedNodeId);
+                  setView({ type: 'build', id: next.id });
+                }}
+                className="inline-flex items-center gap-1 rounded-md border border-amber-700/60 px-2 py-0.5 text-amber-300 hover:border-amber-500 hover:text-amber-200"
+                title={`Re-run from the failed step (${failedNodeId.slice(0, 8)}) and onwards`}
+              >
+                <RotateCcw size={11} /> Retry from failed step
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={downloadLog}
+              className="inline-flex items-center gap-1 rounded-md border border-slate-700 px-2 py-0.5 text-slate-300 hover:border-sky-500 hover:text-sky-400"
+              title="Download log as .txt"
+            >
+              <Download size={11} /> Download
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <StepGantt
+        entries={entries}
+        startedAt={build.startedAt}
+        finishedAt={build.finishedAt ?? undefined}
+        nodeLabel={(id, type) =>
+          `${nodeLabelMap.get(id) ?? type ?? '?'} · ${id.slice(0, 8)}`
+        }
+        selectedNodeId={activeNodeId === 'all' || activeNodeId === '__pipeline__' ? null : activeNodeId}
+        onSelect={(id) => setActiveNodeId(id === activeNodeId ? 'all' : id)}
+      />
+
+      <div className="flex flex-wrap items-center gap-3 border-b border-t border-slate-800 bg-slate-900/30 px-6 py-2 text-xs">
+        <Filter size={12} className="text-slate-500" />
+        <span className="text-slate-400">Levels</span>
+        <div className="flex flex-wrap gap-1">
+          {ALL_LEVELS.map((lvl) => {
+            const on = activeLevels.has(lvl);
+            return (
+              <button
+                key={lvl}
+                type="button"
+                onClick={() => toggleLevel(lvl)}
+                className={cn(
+                  'rounded-md border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider transition-colors',
+                  on
+                    ? 'border-slate-600 bg-slate-800 text-slate-100'
+                    : 'border-slate-800 bg-slate-950 text-slate-600 hover:text-slate-400',
+                )}
+              >
+                {lvl}
+              </button>
+            );
+          })}
+        </div>
+        <span className="ml-2 text-slate-400">Node</span>
+        <select
+          value={activeNodeId}
+          onChange={(e) => setActiveNodeId(e.target.value as typeof activeNodeId)}
+          className="rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-slate-100 focus:border-sky-500 focus:outline-none"
+        >
+          <option value="all">(all)</option>
+          <option value="__pipeline__">pipeline-level</option>
+          {distinctNodes.map(([id, type]) => (
+            <option key={id} value={id}>
+              {type ?? '?'} · {id.slice(0, 8)}
+            </option>
+          ))}
+        </select>
+        <span className="ml-auto text-slate-500">
+          {filtered.length} / {entries.length} rows
+          {entries.length >= 5000 && ' (capped at 5000 in memory)'}
+        </span>
+      </div>
+
+      <div className="min-h-0 flex-1 px-2 pb-2">
+        <LogTable
+          entries={filtered}
+          nodeLabel={(id, type) =>
+            `${nodeLabelMap.get(id) ?? type ?? '?'} · ${id.slice(0, 8)}`
+          }
+          emptyMessage={entries.length === 0 ? 'Build queued / no output yet.' : 'No rows match these filters.'}
+        />
+      </div>
+    </div>
+  );
+}
