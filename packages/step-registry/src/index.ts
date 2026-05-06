@@ -477,10 +477,33 @@ export const STEP_DEFINITIONS: Record<StepType, StepDefinition> = {
   xcodebuild: {
     type: 'xcodebuild',
     label: 'xcodebuild',
-    description: 'Drive xcodebuild for iOS / macOS builds (must run on a Mac — see Remote SSH).',
+    description: 'Drive xcodebuild for iOS / macOS builds. Local or via a saved Mac host.',
     color: '#0891b2',
     icon: 'Apple',
     fields: [
+      {
+        name: 'hostId',
+        label: 'Saved Mac host (or pick "(inline)" / leave blank for local)',
+        type: 'hostSelect',
+      },
+      {
+        name: 'host',
+        label: 'Inline host (used when no saved host is picked)',
+        type: 'text',
+        placeholder: 'build@mac-builder.local',
+      },
+      {
+        name: 'identityFile',
+        label: 'Identity file',
+        type: 'text',
+        placeholder: '~/.ssh/id_ed25519',
+      },
+      {
+        name: 'password',
+        label: 'Password',
+        type: 'text',
+        placeholder: '(use this OR identityFile)',
+      },
       {
         name: 'workspacePath',
         label: 'Workspace (.xcworkspace, optional)',
@@ -495,9 +518,8 @@ export const STEP_DEFINITIONS: Record<StepType, StepDefinition> = {
       },
       {
         name: 'scheme',
-        label: 'Scheme',
+        label: 'Scheme (required for build / archive / test / clean)',
         type: 'text',
-        required: true,
         placeholder: 'MyGame',
       },
       {
@@ -511,7 +533,7 @@ export const STEP_DEFINITIONS: Record<StepType, StepDefinition> = {
         name: 'buildAction',
         label: 'Action',
         type: 'select',
-        options: ['build', 'archive', 'test', 'clean'] as const,
+        options: ['build', 'archive', 'test', 'clean', 'exportArchive'] as const,
         defaultValue: 'archive',
       },
       {
@@ -522,9 +544,21 @@ export const STEP_DEFINITIONS: Record<StepType, StepDefinition> = {
       },
       {
         name: 'archivePath',
-        label: 'Archive path (when action=archive)',
+        label: 'Archive path (archive: output, exportArchive: input)',
         type: 'text',
         placeholder: 'build/MyGame.xcarchive',
+      },
+      {
+        name: 'exportPath',
+        label: 'Export output dir (exportArchive only)',
+        type: 'text',
+        placeholder: 'build/export',
+      },
+      {
+        name: 'exportOptionsPlist',
+        label: 'ExportOptions.plist path (exportArchive only)',
+        type: 'text',
+        placeholder: 'signing/ExportOptions.plist',
       },
       {
         name: 'additionalArgs',

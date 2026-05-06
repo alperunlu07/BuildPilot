@@ -603,6 +603,10 @@ function defaultData(type: StepType): Record<string, unknown> {
       };
     case 'xcodebuild':
       return {
+        hostId: '',
+        host: '',
+        identityFile: '',
+        password: '',
         workspacePath: '',
         projectPath: '',
         scheme: '',
@@ -610,6 +614,8 @@ function defaultData(type: StepType): Record<string, unknown> {
         buildAction: 'archive',
         destination: 'generic/platform=iOS',
         archivePath: '',
+        exportPath: '',
+        exportOptionsPlist: '',
         additionalArgs: '',
       };
     case 'gitMerge':

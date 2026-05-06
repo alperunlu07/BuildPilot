@@ -74,9 +74,9 @@ hand-off, expands to macOS distribution, and adds the missing developer
 quality-of-life pieces.
 
 ### Cluster A · iOS pipeline gap closures
-- [ ] `xcodebuild` step gets `exportArchive` action + `exportOptionsPlist` field
-- [ ] `xcodebuild` step accepts `hostId` (run on a saved Mac host without wrapping in remoteSsh)
-- [ ] `testflightUpload` gets a `whatToTest` field (post-upload App Store Connect PATCH)
+- [x] `xcodebuild` step gets `exportArchive` action + `exportOptionsPlist` field
+- [x] `xcodebuild` step accepts `hostId` (run on a saved Mac host without wrapping in remoteSsh)
+- [ ] `testflightUpload` gets a `whatToTest` field (post-upload App Store Connect PATCH) — deferred to future cluster (needs JWT/ASC API integration)
 
 ### Cluster C · Host management quality of life
 - [ ] HostsDialog "Test connection" button (`POST /api/hosts/:id/ping`)

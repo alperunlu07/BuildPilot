@@ -251,19 +251,6 @@ export interface GitMergeStepData {
   message?: string;
 }
 
-export interface XcodebuildStepData {
-  // Either workspacePath (.xcworkspace) OR projectPath (.xcodeproj).
-  workspacePath?: string;
-  projectPath?: string;
-  scheme: string;
-  configuration?: 'Debug' | 'Release';
-  // e.g. "generic/platform=iOS"
-  destination?: string;
-  archivePath?: string;
-  buildAction?: 'build' | 'archive' | 'test' | 'clean';
-  additionalArgs?: string;
-}
-
 // All three Mac-only steps below share the same "where to run" pattern: pick
 // a saved host (runs via ssh2) OR leave blank (runs locally with
 // child_process). The local path is what you want when BuildPilot itself is
@@ -274,6 +261,27 @@ export interface RunsOnMaybeRemote {
   identityFile?: string;
   password?: string;
   skipStrictHostKey?: string;
+}
+
+export interface XcodebuildStepData extends RunsOnMaybeRemote {
+  // Either workspacePath (.xcworkspace) OR projectPath (.xcodeproj).
+  // Both may be omitted for buildAction=exportArchive (which only needs
+  // archivePath + exportPath + exportOptionsPlist).
+  workspacePath?: string;
+  projectPath?: string;
+  // Required for build/archive/test/clean; ignored by exportArchive.
+  scheme?: string;
+  configuration?: 'Debug' | 'Release';
+  // e.g. "generic/platform=iOS"
+  destination?: string;
+  // Where the .xcarchive lands (archive action) or is read from (exportArchive).
+  archivePath?: string;
+  // exportArchive only — output directory the .ipa is written into.
+  exportPath?: string;
+  // exportArchive only — path to ExportOptions.plist.
+  exportOptionsPlist?: string;
+  buildAction?: 'build' | 'archive' | 'test' | 'clean' | 'exportArchive';
+  additionalArgs?: string;
 }
 
 export interface TestflightUploadStepData extends RunsOnMaybeRemote {
