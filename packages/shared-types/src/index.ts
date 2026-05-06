@@ -49,7 +49,9 @@ export type StepType =
   | 'stapleNotarization'
   | 'fastlaneMatch'
   | 'cocoapodsInstall'
-  | 'swiftPackageResolve';
+  | 'swiftPackageResolve'
+  | 'dsymUpload'
+  | 'xcresultParse';
 
 export type AiTool = 'claude' | 'codex' | 'aider' | 'gemini' | 'custom';
 
@@ -370,6 +372,46 @@ export interface SwiftPackageResolveStepData extends RunsOnMaybeRemote {
   // (~/Library/Developer/Xcode/DerivedData/<…>/SourcePackages).
   clonedSourcePackagesDirPath?: string;
   additionalArgs?: string;
+}
+
+export interface DsymUploadStepData extends RunsOnMaybeRemote {
+  // Which crash-reporting service we're uploading symbols to. Each one
+  // shells out to a different CLI; the runner picks the right argv shape.
+  backend: 'crashlytics' | 'sentry' | 'bugsnag';
+  // Path to the .xcarchive, .dSYM, or directory of dSYMs (interpretation
+  // depends on the backend — most accept all three).
+  dsymPath: string;
+  // ── Crashlytics fields ───────────────────────────────────────────────
+  // GoogleService-Info.plist used to identify the Firebase project.
+  googleServicePlistPath?: string;
+  // Path to the Crashlytics upload-symbols binary. Fallback: relies on
+  // PATH lookup, which usually works after `pod install`.
+  uploadSymbolsBinary?: string;
+  // 'ios' (default), 'macos', 'tvos', 'watchos'.
+  platform?: 'ios' | 'macos' | 'tvos' | 'watchos';
+  // ── Sentry fields ────────────────────────────────────────────────────
+  sentryOrg?: string;
+  sentryProject?: string;
+  // Plaintext until the secrets vault lands. Passed via SENTRY_AUTH_TOKEN
+  // env so it doesn't show on argv.
+  sentryAuthToken?: string;
+  // ── Bugsnag fields ───────────────────────────────────────────────────
+  bugsnagApiKey?: string;
+  // Custom CLI path; defaults to `bugsnag-cli` on PATH.
+  bugsnagCliPath?: string;
+  // Shared additionalArgs slot for whichever backend is in play.
+  additionalArgs?: string;
+}
+
+export interface XcresultParseStepData extends RunsOnMaybeRemote {
+  // Path to the .xcresult bundle xcodebuild test wrote out. Set
+  // -resultBundlePath on the upstream xcodebuild step to control where
+  // it lands.
+  bundlePath: string;
+  // 'true' (default) — fail the step if any test failed. Useful for
+  // surfacing test failures as red pipeline edges even when xcodebuild
+  // itself was run with `|| true` to keep the build going.
+  failOnTestFailure?: string;
 }
 
 export interface FastlaneMatchStepData extends RunsOnMaybeRemote {

@@ -55,6 +55,8 @@ const nodeTypes = {
   fastlaneMatch: StepNode,
   cocoapodsInstall: StepNode,
   swiftPackageResolve: StepNode,
+  dsymUpload: StepNode,
+  xcresultParse: StepNode,
 };
 
 interface Props {
@@ -731,6 +733,33 @@ function defaultData(type: StepType): Record<string, unknown> {
         scheme: '',
         clonedSourcePackagesDirPath: '',
         additionalArgs: '',
+      };
+    case 'dsymUpload':
+      return {
+        hostId: '',
+        host: '',
+        identityFile: '',
+        password: '',
+        backend: 'sentry',
+        dsymPath: '',
+        googleServicePlistPath: '',
+        uploadSymbolsBinary: '',
+        platform: 'ios',
+        sentryOrg: '',
+        sentryProject: '',
+        sentryAuthToken: '',
+        bugsnagApiKey: '',
+        bugsnagCliPath: '',
+        additionalArgs: '',
+      };
+    case 'xcresultParse':
+      return {
+        hostId: '',
+        host: '',
+        identityFile: '',
+        password: '',
+        bundlePath: '',
+        failOnTestFailure: 'true',
       };
     case 's3Upload':
       return {

@@ -87,3 +87,81 @@ export function shellQuote(s: string): string {
   // on a Mac shell where xcrun & friends already accept normal POSIX quoting.
   return `'${s.replace(/'/g, "'\\''")}'`;
 }
+
+// Same shape as execMaybeRemote but buffers stdout instead of streaming it
+// to ctx.log line-by-line. Useful for step runners that need to *parse*
+// command output (xcresulttool JSON, etc.) rather than just surface it.
+// Stderr is still routed to ctx.log so the operator can see warnings.
+export async function captureMaybeRemote(opts: {
+  ctx: StepContext;
+  d: MaybeRemote;
+  command: string;
+  cwd?: string;
+  label?: string;
+}): Promise<string> {
+  const { ctx, d, command, cwd, label } = opts;
+  if (!command || command.trim().length === 0) {
+    throw new Error('capture: empty command');
+  }
+
+  if (isRemote(d)) {
+    const resolved = resolveHost(d);
+    const cfg = await buildConnectConfig(resolved.spec, {
+      identityFile: resolved.identityFile,
+      password: resolved.password,
+      skipStrictHostKey: resolved.skipStrictHostKey,
+    });
+    const { user, host, port } = parseHost(resolved.spec);
+    let remoteCmd = command;
+    if (cwd && cwd.trim().length > 0) remoteCmd = `cd ${shellQuote(cwd)} && ${remoteCmd}`;
+    ctx.log(`ssh ${user}@${host}:${port}`);
+    ctx.log(`remote (capture): ${label ?? remoteCmd}`);
+    const conn = await connect(cfg);
+    try {
+      const stream = await new Promise<ClientChannel>((resolve, reject) => {
+        conn.exec(remoteCmd, (err, s) => (err ? reject(err) : resolve(s)));
+      });
+      let stdout = '';
+      const code = await new Promise<number>((resolve, reject) => {
+        stream.on('data', (c: Buffer) => {
+          stdout += c.toString();
+        });
+        stream.stderr?.on('data', (c: Buffer) => {
+          // Mirror stderr into ctx.log so it shows up in the build feed.
+          for (const line of c.toString().split(/\r?\n/)) {
+            if (line.length > 0) ctx.log(line, 'stderr');
+          }
+        });
+        stream.on('close', (rc: number) => resolve(rc ?? 0));
+        stream.on('error', reject);
+      });
+      if (code !== 0) throw new Error(`ssh exited with code ${code}`);
+      return stdout;
+    } finally {
+      conn.end();
+    }
+  }
+
+  ctx.log(`local (capture): ${label ?? command}`);
+  return await new Promise<string>((resolve, reject) => {
+    const child = spawn(command, {
+      shell: true,
+      cwd: cwd && cwd.trim().length > 0 ? cwd : ctx.project.path,
+      env: process.env,
+    });
+    let stdout = '';
+    child.stdout?.on('data', (c: Buffer) => {
+      stdout += c.toString();
+    });
+    child.stderr?.on('data', (c: Buffer) => {
+      for (const line of c.toString().split(/\r?\n/)) {
+        if (line.length > 0) ctx.log(line, 'stderr');
+      }
+    });
+    child.on('error', reject);
+    child.on('close', (code) => {
+      if (code === 0) resolve(stdout);
+      else reject(new Error(`exited with code ${code}`));
+    });
+  });
+}

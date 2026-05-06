@@ -35,6 +35,8 @@ import { runStapleNotarization } from './steps/stapleNotarization';
 import { runFastlaneMatch } from './steps/fastlaneMatch';
 import { runCocoapodsInstall } from './steps/cocoapodsInstall';
 import { runSwiftPackageResolve } from './steps/swiftPackageResolve';
+import { runDsymUpload } from './steps/dsymUpload';
+import { runXcresultParse } from './steps/xcresultParse';
 
 export interface StepContext {
   project: Project;
@@ -73,6 +75,8 @@ const RUNNERS: Record<StepType, StepRunner> = {
   fastlaneMatch: runFastlaneMatch,
   cocoapodsInstall: runCocoapodsInstall,
   swiftPackageResolve: runSwiftPackageResolve,
+  dsymUpload: runDsymUpload,
+  xcresultParse: runXcresultParse,
 };
 
 interface DagNode {

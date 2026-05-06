@@ -66,7 +66,7 @@ both Linux dedicated-server and iOS / TestFlight artifacts.
 - [x] `keychainUnlock` step — wraps `security set-keychain-settings` + `unlock-keychain`
 - [x] `provisioningProfileInstall` step — drops a `.mobileprovision` into `~/Library/MobileDevice/Provisioning Profiles` (locally OR remote with SFTP-then-mv)
 
-## 🟡 Phase 2.5 — iOS pipeline production-readiness
+## ✅ Phase 2.5 — iOS pipeline production-readiness
 
 Goal: take the Phase 2 foundations from "demo-able" to "actually usable in
 a real iOS release pipeline". Closes the broken `archive → ipa → upload`
@@ -95,12 +95,12 @@ quality-of-life pieces.
 - [x] `swiftPackageResolve` step (`xcodebuild -resolvePackageDependencies`)
 
 ### Cluster E · Test + observability
-- [ ] `dsymUpload` step (Crashlytics / Sentry / Bugsnag select + per-backend invocation)
-- [ ] `xcodebuild test` post-process — parse `.xcresult` and emit "X/Y tests passed" log entry
+- [x] `dsymUpload` step (Crashlytics / Sentry / Bugsnag select + per-backend invocation)
+- [x] `xcresultParse` step — runs `xcrun xcresulttool get test-results summary --format json` and emits a "X/Y tests passed" log entry; fails the step on any test failure unless toggled off
 
 ### Test infrastructure
-- [ ] Bootstrap vitest in the workspace + tests for existing `_ssh` / `_exec` helpers
-- [ ] Each Phase 2.5 commit ships unit tests for the new step's argv assembly / pure logic
+- [x] Bootstrap vitest in the workspace + tests for existing `_ssh` / `_exec` helpers
+- [x] Each Phase 2.5 commit ships unit tests for the new step's argv assembly / pure logic
 
 ## ✅ Phase 3 — Notifications & integrations
 
@@ -140,9 +140,10 @@ Not started. Pulled out as discrete deliverables for future sessions.
 | 1. MVP                             |  10  |    0    | ✅ 100% |
 | 1.5. Dashboard overhaul            |  25  |    0    | ✅ 100% |
 | 2. Cross-OS / iOS                  |   6  |    0    | ✅ 100% |
+| 2.5. iOS production-readiness      |  11  |    2    | 🟢  85% (testflight whatToTest + ssh known_hosts deferred) |
 | 3. Notifications & integrations    |   4  |    2    | 🟢  67% |
 | 4. Hardening                       |   0  |   10    | ⏸    0% |
-| **Overall**                        | **45** | **12** | **🟢 79%** |
+| **Overall**                        | **56** | **14** | **🟢 80%** |
 
 **Next up (recommended order):**
 1. **Auth** — gate LAN exposure before anything multi-user happens

@@ -33,6 +33,8 @@ const stepTypes = [
   'fastlaneMatch',
   'cocoapodsInstall',
   'swiftPackageResolve',
+  'dsymUpload',
+  'xcresultParse',
 ] as const;
 
 const createSchema = z.object({

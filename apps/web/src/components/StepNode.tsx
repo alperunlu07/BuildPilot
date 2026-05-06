@@ -5,12 +5,14 @@ import {
   BadgeCheck,
   Box,
   Boxes,
+  Bug,
   CloudUpload,
   GitBranch,
   GitMerge,
   Gamepad2,
   Globe,
   KeyRound,
+  ListChecks,
   MessageCircle,
   MessageSquare,
   Package,
@@ -52,6 +54,8 @@ const ICONS: Record<string, LucideIcon> = {
   Wrench,
   Box,
   Boxes,
+  Bug,
+  ListChecks,
 };
 
 type RuntimeStatus = 'running' | 'success' | 'failed' | 'skipped' | undefined;
@@ -252,6 +256,12 @@ function summariseData(type: StepType, data: Record<string, unknown>): string {
         : data.projectPath
           ? String(data.projectPath)
           : '';
+    case 'dsymUpload':
+      return data.dsymPath
+        ? `${(data.backend as string) ?? 'sentry'} ← ${String(data.dsymPath).split('/').pop()}`
+        : '';
+    case 'xcresultParse':
+      return data.bundlePath ? String(data.bundlePath).split('/').pop() ?? '' : '';
     default:
       return '';
   }
