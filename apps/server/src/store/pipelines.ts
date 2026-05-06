@@ -142,6 +142,31 @@ export function deletePipeline(id: string): void {
   getDb().prepare('DELETE FROM pipelines WHERE id = ?').run(id);
 }
 
+export function clonePipeline(sourceId: string, newName?: string): Pipeline | null {
+  const original = getPipeline(sourceId);
+  if (!original) return null;
+  // Re-id every node so the clone is independent. Remap edges to the new ids.
+  const idMap = new Map<string, string>();
+  const newNodes: PipelineNode[] = original.nodes.map((n) => {
+    const newId = `n_${randomUUID().slice(0, 8)}`;
+    idMap.set(n.id, newId);
+    return { ...n, id: newId };
+  });
+  const newEdges: PipelineEdge[] = original.edges.map((e) => ({
+    ...e,
+    id: `e_${randomUUID().slice(0, 8)}`,
+    source: idMap.get(e.source) ?? e.source,
+    target: idMap.get(e.target) ?? e.target,
+  }));
+  return createPipeline({
+    projectId: original.projectId,
+    name: newName && newName.trim().length > 0 ? newName : `${original.name} (copy)`,
+    watch: original.watch,
+    nodes: newNodes,
+    edges: newEdges,
+  });
+}
+
 export function setPipelineLastBuiltSha(pipelineId: string, sha: string): void {
   getDb()
     .prepare(

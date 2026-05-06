@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   ArrowDownToLine,
   ChevronRight,
+  Copy,
   GitBranch,
   Hammer,
   Plus,
@@ -286,6 +287,11 @@ export function ProjectDetailPage({ projectId }: Props) {
                   watchActive={pl.watch.branch === currentBranch}
                   onOpen={() => setView({ type: 'pipeline', id: pl.id })}
                   onRun={() => triggerBuild(pl.id)}
+                  onClone={async () => {
+                    const cloned = await api.clonePipeline(pl.id);
+                    useStore.getState().upsertPipeline(cloned);
+                    setView({ type: 'pipeline', id: cloned.id });
+                  }}
                 />
               ))}
             </ul>
@@ -309,11 +315,13 @@ function PipelineRow({
   watchActive,
   onOpen,
   onRun,
+  onClone,
 }: {
   pipeline: Pipeline;
   watchActive: boolean;
   onOpen(): void;
   onRun(): void;
+  onClone(): void | Promise<void>;
 }) {
   return (
     <li className="rounded-md border border-slate-800 bg-slate-900/60 px-3 py-2.5">
@@ -351,14 +359,24 @@ function PipelineRow({
             )}
           </div>
         </button>
-        <button
-          type="button"
-          onClick={onRun}
-          className="inline-flex shrink-0 items-center gap-1 rounded-md border border-slate-700 px-2 py-1 text-xs text-slate-200 hover:border-sky-500 hover:text-sky-400"
-          title="Trigger build now"
-        >
-          <Hammer size={11} /> Run
-        </button>
+        <div className="flex shrink-0 items-center gap-1">
+          <button
+            type="button"
+            onClick={() => void onClone()}
+            className="inline-flex items-center gap-1 rounded-md border border-slate-700 px-2 py-1 text-xs text-slate-300 hover:border-sky-500 hover:text-sky-400"
+            title="Duplicate this pipeline"
+          >
+            <Copy size={11} />
+          </button>
+          <button
+            type="button"
+            onClick={onRun}
+            className="inline-flex items-center gap-1 rounded-md border border-slate-700 px-2 py-1 text-xs text-slate-200 hover:border-sky-500 hover:text-sky-400"
+            title="Trigger build now"
+          >
+            <Hammer size={11} /> Run
+          </button>
+        </div>
       </div>
     </li>
   );

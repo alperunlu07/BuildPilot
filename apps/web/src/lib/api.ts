@@ -65,6 +65,11 @@ export const api = {
     http<Pipeline>(`/pipelines/${id}`, { method: 'PATCH', body: JSON.stringify(input) }),
   deletePipeline: (id: string) =>
     http<{ ok: true }>(`/pipelines/${id}`, { method: 'DELETE' }),
+  clonePipeline: (id: string, name?: string) =>
+    http<Pipeline>(`/pipelines/${id}/clone`, {
+      method: 'POST',
+      body: JSON.stringify(name ? { name } : {}),
+    }),
 
   // ── Builds ───────────────────────────────────────────────
   listBuilds: (filter: { projectId?: string; pipelineId?: string; limit?: number } = {}) => {

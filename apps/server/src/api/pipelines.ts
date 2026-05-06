@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import {
+  clonePipeline,
   createPipeline,
   deletePipeline,
   getPipeline,
@@ -96,5 +97,14 @@ export async function pipelinesRoutes(app: FastifyInstance): Promise<void> {
     deletePipeline(id);
     eventBus.publish({ type: 'pipelineChanged', pipelineId: id, action: 'deleted' });
     return { ok: true };
+  });
+
+  app.post('/api/pipelines/:id/clone', async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const body = (req.body ?? {}) as { name?: string };
+    const cloned = clonePipeline(id, body.name);
+    if (!cloned) return reply.code(404).send({ error: 'not found' });
+    eventBus.publish({ type: 'pipelineChanged', pipelineId: cloned.id, action: 'created' });
+    return cloned;
   });
 }
