@@ -18,6 +18,7 @@ import { runUnityBatch } from './steps/unityBatch';
 import { runHttpRequest } from './steps/httpRequest';
 import { runSlackNotify } from './steps/slackNotify';
 import { runDiscordNotify } from './steps/discordNotify';
+import { runAiPrompt } from './steps/aiPrompt';
 
 export interface StepContext {
   project: Project;
@@ -40,6 +41,7 @@ const RUNNERS: Record<StepType, StepRunner> = {
   httpRequest: runHttpRequest,
   slackNotify: runSlackNotify,
   discordNotify: runDiscordNotify,
+  aiPrompt: runAiPrompt,
 };
 
 interface DagNode {

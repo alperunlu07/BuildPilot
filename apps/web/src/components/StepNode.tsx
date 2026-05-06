@@ -6,6 +6,7 @@ import {
   Globe,
   MessageCircle,
   MessageSquare,
+  Sparkles,
   Terminal,
   type LucideIcon,
 } from 'lucide-react';
@@ -20,6 +21,7 @@ const ICONS: Record<string, LucideIcon> = {
   Globe,
   MessageSquare,
   MessageCircle,
+  Sparkles,
 };
 
 type RuntimeStatus = 'running' | 'success' | 'failed' | undefined;
@@ -151,6 +153,10 @@ function summariseData(type: StepType, data: Record<string, unknown>): string {
     case 'slackNotify':
     case 'discordNotify':
       return data.webhookUrl ? '→ webhook' : '';
+    case 'aiPrompt':
+      return data.tool
+        ? `${data.tool}: ${String(data.prompt ?? '').split('\n')[0]!.slice(0, 60)}`
+        : '';
     default:
       return '';
   }

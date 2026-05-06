@@ -204,6 +204,49 @@ export const STEP_DEFINITIONS: Record<StepType, StepDefinition> = {
       },
     ],
   },
+  aiPrompt: {
+    type: 'aiPrompt',
+    label: 'AI Prompt',
+    description: 'Run a non-interactive prompt through claude / codex / aider / gemini / custom CLI.',
+    color: '#ec4899',
+    icon: 'Sparkles',
+    fields: [
+      {
+        name: 'tool',
+        label: 'Tool',
+        type: 'select',
+        required: true,
+        options: ['claude', 'codex', 'aider', 'gemini', 'custom'] as const,
+        defaultValue: 'claude',
+      },
+      {
+        name: 'command',
+        label: 'Custom command (only when tool=custom)',
+        type: 'text',
+        placeholder: 'mycli --flag',
+      },
+      {
+        name: 'prompt',
+        label: 'Prompt',
+        type: 'textarea',
+        required: true,
+        placeholder: 'Fix the failing test in src/utils.ts so that pnpm test passes.',
+      },
+      {
+        name: 'cwd',
+        label: 'Working dir (relative)',
+        type: 'text',
+        placeholder: '. (defaults to project root)',
+      },
+      {
+        name: 'allowFailure',
+        label: 'Allow failure (continue on non-zero exit)',
+        type: 'select',
+        options: ['false', 'true'] as const,
+        defaultValue: 'false',
+      },
+    ],
+  },
 };
 
 export const STEP_TYPES: readonly StepType[] = Object.keys(STEP_DEFINITIONS) as StepType[];

@@ -33,7 +33,10 @@ export type StepType =
   | 'unityBatch'
   | 'httpRequest'
   | 'slackNotify'
-  | 'discordNotify';
+  | 'discordNotify'
+  | 'aiPrompt';
+
+export type AiTool = 'claude' | 'codex' | 'aider' | 'gemini' | 'custom';
 
 export interface PipelineNode {
   id: string;
@@ -125,6 +128,18 @@ export interface SlackNotifyStepData {
 export interface DiscordNotifyStepData {
   webhookUrl: string;
   content: string;
+}
+
+export interface AiPromptStepData {
+  tool: AiTool;
+  // Used only when tool === 'custom'. The prompt is passed as a final arg.
+  command?: string;
+  prompt: string;
+  // Optional cwd relative to the project root.
+  cwd?: string;
+  // Treat a non-zero exit code as success — useful for "best effort" fixes
+  // where you want the pipeline to continue regardless.
+  allowFailure?: boolean;
 }
 
 // ── Structured build logs ───────────────────────────────────────────────────

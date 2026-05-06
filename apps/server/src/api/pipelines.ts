@@ -18,6 +18,7 @@ const stepTypes = [
   'httpRequest',
   'slackNotify',
   'discordNotify',
+  'aiPrompt',
 ] as const;
 
 const nodeSchema = z.object({
