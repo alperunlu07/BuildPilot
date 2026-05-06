@@ -23,6 +23,7 @@ const stepTypes = [
   'artifact',
   'remoteSsh',
   'xcodebuild',
+  'gitMerge',
 ] as const;
 
 const nodeSchema = z.object({

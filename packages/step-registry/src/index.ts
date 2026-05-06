@@ -52,6 +52,29 @@ export const STEP_DEFINITIONS: Record<StepType, StepDefinition> = {
       { name: 'remote', label: 'Remote', type: 'text', placeholder: 'origin' },
     ],
   },
+  gitMerge: {
+    type: 'gitMerge',
+    label: 'Git Merge',
+    description: 'Merge another branch into the current one (compose with AI auto-fix to resolve conflicts).',
+    color: '#14b8a6',
+    icon: 'GitMerge',
+    fields: [
+      { name: 'sourceBranch', label: 'Source branch', type: 'branchSelect', required: true },
+      {
+        name: 'noFastForward',
+        label: 'Always create a merge commit (--no-ff)',
+        type: 'select',
+        options: ['false', 'true'] as const,
+        defaultValue: 'false',
+      },
+      {
+        name: 'message',
+        label: 'Commit message (optional)',
+        type: 'text',
+        placeholder: 'Merge {{source}} into {{current}}',
+      },
+    ],
+  },
   shell: {
     type: 'shell',
     label: 'Shell',

@@ -23,6 +23,7 @@ import { runAiPrompt } from './steps/aiPrompt';
 import { runArtifact } from './steps/artifact';
 import { runRemoteSsh } from './steps/remoteSsh';
 import { runXcodebuild } from './steps/xcodebuild';
+import { runGitMerge } from './steps/gitMerge';
 
 export interface StepContext {
   project: Project;
@@ -49,6 +50,7 @@ const RUNNERS: Record<StepType, StepRunner> = {
   artifact: runArtifact,
   remoteSsh: runRemoteSsh,
   xcodebuild: runXcodebuild,
+  gitMerge: runGitMerge,
 };
 
 interface DagNode {

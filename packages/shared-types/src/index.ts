@@ -37,7 +37,8 @@ export type StepType =
   | 'aiPrompt'
   | 'artifact'
   | 'remoteSsh'
-  | 'xcodebuild';
+  | 'xcodebuild'
+  | 'gitMerge';
 
 export type AiTool = 'claude' | 'codex' | 'aider' | 'gemini' | 'custom';
 
@@ -175,6 +176,17 @@ export interface RemoteSshStepData {
   // When 'true' (string for select-field compatibility), passes
   // -o StrictHostKeyChecking=no — convenient for fresh Mac agents.
   skipStrictHostKey?: string;
+}
+
+export interface GitMergeStepData {
+  // Branch to pull commits from. Local (e.g. "development") or remote
+  // (e.g. "origin/development"). The combobox lists both.
+  sourceBranch: string;
+  // 'true' (string for select-field compatibility) → pass --no-ff so a merge
+  // commit is always created, even when fast-forward would be possible.
+  noFastForward?: string;
+  // Optional override of the merge commit message.
+  message?: string;
 }
 
 export interface XcodebuildStepData {

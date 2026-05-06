@@ -3,6 +3,7 @@ import {
   Apple,
   ArrowDownToLine,
   GitBranch,
+  GitMerge,
   Gamepad2,
   Globe,
   MessageCircle,
@@ -18,6 +19,7 @@ import { STEP_DEFINITIONS } from '@buildpilot/step-registry';
 
 const ICONS: Record<string, LucideIcon> = {
   GitBranch,
+  GitMerge,
   ArrowDownToLine,
   Terminal,
   Gamepad2,
@@ -178,6 +180,8 @@ function summariseData(type: StepType, data: Record<string, unknown>): string {
       return data.host ? `${data.host} → ${String(data.command ?? '').split('\n')[0]!.slice(0, 40)}` : '';
     case 'xcodebuild':
       return data.scheme ? `${data.buildAction ?? 'build'} ${data.scheme}` : '';
+    case 'gitMerge':
+      return data.sourceBranch ? `merge ${data.sourceBranch}${data.noFastForward === 'true' ? ' --no-ff' : ''}` : '';
     default:
       return '';
   }

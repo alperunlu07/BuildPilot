@@ -41,6 +41,7 @@ const nodeTypes = {
   artifact: StepNode,
   remoteSsh: StepNode,
   xcodebuild: StepNode,
+  gitMerge: StepNode,
 };
 
 interface Props {
@@ -432,6 +433,8 @@ function defaultData(type: StepType): Record<string, unknown> {
         archivePath: '',
         additionalArgs: '',
       };
+    case 'gitMerge':
+      return { sourceBranch: '', noFastForward: 'false', message: '' };
   }
 }
 
