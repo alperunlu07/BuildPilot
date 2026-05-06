@@ -66,6 +66,42 @@ both Linux dedicated-server and iOS / TestFlight artifacts.
 - [x] `keychainUnlock` step — wraps `security set-keychain-settings` + `unlock-keychain`
 - [x] `provisioningProfileInstall` step — drops a `.mobileprovision` into `~/Library/MobileDevice/Provisioning Profiles` (locally OR remote with SFTP-then-mv)
 
+## 🟡 Phase 2.5 — iOS pipeline production-readiness
+
+Goal: take the Phase 2 foundations from "demo-able" to "actually usable in
+a real iOS release pipeline". Closes the broken `archive → ipa → upload`
+hand-off, expands to macOS distribution, and adds the missing developer
+quality-of-life pieces.
+
+### Cluster A · iOS pipeline gap closures
+- [ ] `xcodebuild` step gets `exportArchive` action + `exportOptionsPlist` field
+- [ ] `xcodebuild` step accepts `hostId` (run on a saved Mac host without wrapping in remoteSsh)
+- [ ] `testflightUpload` gets a `whatToTest` field (post-upload App Store Connect PATCH)
+
+### Cluster C · Host management quality of life
+- [ ] HostsDialog "Test connection" button (`POST /api/hosts/:id/ping`)
+- [ ] Per-host capability snapshot (`xcodebuild -version`, `sw_vers`, `uname -m`) shown as badges
+- [ ] SSH `known_hosts` integration so non-`skipStrictHostKey` hosts don't error on first connect
+
+### Cluster B · macOS distribution
+- [ ] `notarize` step — `xcrun notarytool submit … --wait`
+- [ ] `stapleNotarization` step — `xcrun stapler staple <bundle>`
+
+### Cluster F · Apple Developer Portal automation
+- [ ] `fastlaneMatch` step — fetches certs/profiles via `fastlane match`
+
+### Cluster D · iOS dependency steps
+- [ ] `cocoapodsInstall` step (`pod install`)
+- [ ] `swiftPackageResolve` step (`xcodebuild -resolvePackageDependencies`)
+
+### Cluster E · Test + observability
+- [ ] `dsymUpload` step (Crashlytics / Sentry / Bugsnag select + per-backend invocation)
+- [ ] `xcodebuild test` post-process — parse `.xcresult` and emit "X/Y tests passed" log entry
+
+### Test infrastructure
+- [ ] Bootstrap vitest in the workspace + tests for existing `_ssh` / `_exec` helpers
+- [ ] Each Phase 2.5 commit ships unit tests for the new step's argv assembly / pure logic
+
 ## ✅ Phase 3 — Notifications & integrations
 
 - [x] Native browser Notification API on commits (suppressed when tab focused) — `1d04201`
