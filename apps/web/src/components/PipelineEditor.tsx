@@ -43,8 +43,10 @@ const nodeTypes = {
   aiPrompt: StepNode,
   artifact: StepNode,
   remoteSsh: StepNode,
+  sftpUpload: StepNode,
   xcodebuild: StepNode,
   gitMerge: StepNode,
+  s3Upload: StepNode,
 };
 
 interface Props {
@@ -601,6 +603,30 @@ function defaultData(type: StepType): Record<string, unknown> {
       };
     case 'gitMerge':
       return { sourceBranch: '', noFastForward: 'false', message: '' };
+    case 'sftpUpload':
+      return {
+        host: '',
+        identityFile: '',
+        password: '',
+        localPath: '',
+        remotePath: '',
+        skipStrictHostKey: 'false',
+      };
+    case 's3Upload':
+      return {
+        accessKeyId: '',
+        secretAccessKey: '',
+        region: 'eu-central-1',
+        bucket: '',
+        localPath: '',
+        key: '',
+        storageClass: 'STANDARD',
+        makePresignedUrl: 'false',
+        presignedExpiresSec: 604800,
+        manifestKey: '',
+        manifestChannel: 'stable',
+        manifestPlatform: 'linux-x86_64',
+      };
   }
 }
 

@@ -38,8 +38,10 @@ export type StepType =
   | 'aiPrompt'
   | 'artifact'
   | 'remoteSsh'
+  | 'sftpUpload'
   | 'xcodebuild'
-  | 'gitMerge';
+  | 'gitMerge'
+  | 's3Upload';
 
 export type AiTool = 'claude' | 'codex' | 'aider' | 'gemini' | 'custom';
 
@@ -183,8 +185,11 @@ export interface ArtifactStepData {
 export interface RemoteSshStepData {
   // user@host or user@host:port
   host: string;
-  // Optional path to a private key file.
+  // Optional path to a private key file. Mutually exclusive with `password`.
   identityFile?: string;
+  // Optional password (used in lieu of identityFile). Plaintext in the
+  // pipeline definition until the secrets vault lands — handle with care.
+  password?: string;
   // Remote working directory; the command runs after `cd <cwd>`.
   cwd?: string;
   // Shell command to run on the remote host.
@@ -192,6 +197,39 @@ export interface RemoteSshStepData {
   // When 'true' (string for select-field compatibility), passes
   // -o StrictHostKeyChecking=no — convenient for fresh Mac agents.
   skipStrictHostKey?: string;
+}
+
+export interface SftpUploadStepData {
+  host: string;
+  identityFile?: string;
+  password?: string;
+  // Local file path (relative to project root or absolute).
+  localPath: string;
+  // Remote destination path (absolute).
+  remotePath: string;
+  skipStrictHostKey?: string;
+}
+
+export interface S3UploadStepData {
+  // AWS credentials. Plaintext in the pipeline definition until the
+  // secrets vault lands.
+  accessKeyId: string;
+  secretAccessKey: string;
+  region: string;
+  bucket: string;
+  // Local file path (relative or absolute).
+  localPath: string;
+  // S3 object key (path inside the bucket).
+  key: string;
+  storageClass?: 'STANDARD' | 'STANDARD_IA' | 'REDUCED_REDUNDANCY' | 'GLACIER' | 'DEEP_ARCHIVE';
+  makePresignedUrl?: string;
+  presignedExpiresSec?: number;
+  // When set, after the main upload the step PUTs a JSON manifest at this
+  // key with { channel, platform, version, url, sha256, size, archive_format,
+  // released_at }. Empty string disables.
+  manifestKey?: string;
+  manifestChannel?: string;
+  manifestPlatform?: string;
 }
 
 export interface GitMergeStepData {

@@ -23,8 +23,10 @@ import { runTelegramNotify } from './steps/telegramNotify';
 import { runAiPrompt } from './steps/aiPrompt';
 import { runArtifact } from './steps/artifact';
 import { runRemoteSsh } from './steps/remoteSsh';
+import { runSftpUpload } from './steps/sftpUpload';
 import { runXcodebuild } from './steps/xcodebuild';
 import { runGitMerge } from './steps/gitMerge';
+import { runS3Upload } from './steps/s3Upload';
 
 export interface StepContext {
   project: Project;
@@ -51,8 +53,10 @@ const RUNNERS: Record<StepType, StepRunner> = {
   aiPrompt: runAiPrompt,
   artifact: runArtifact,
   remoteSsh: runRemoteSsh,
+  sftpUpload: runSftpUpload,
   xcodebuild: runXcodebuild,
   gitMerge: runGitMerge,
+  s3Upload: runS3Upload,
 };
 
 interface DagNode {

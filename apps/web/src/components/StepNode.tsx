@@ -2,6 +2,7 @@ import { Handle, Position, type NodeProps } from '@xyflow/react';
 import {
   Apple,
   ArrowDownToLine,
+  CloudUpload,
   GitBranch,
   GitMerge,
   Gamepad2,
@@ -13,6 +14,7 @@ import {
   Server,
   Sparkles,
   Terminal,
+  Upload,
   type LucideIcon,
 } from 'lucide-react';
 import type { StepType } from '@buildpilot/shared-types';
@@ -32,6 +34,8 @@ const ICONS: Record<string, LucideIcon> = {
   Send,
   Server,
   Apple,
+  CloudUpload,
+  Upload,
 };
 
 type RuntimeStatus = 'running' | 'success' | 'failed' | 'skipped' | undefined;
@@ -198,6 +202,14 @@ function summariseData(type: StepType, data: Record<string, unknown>): string {
       return data.scheme ? `${data.buildAction ?? 'build'} ${data.scheme}` : '';
     case 'gitMerge':
       return data.sourceBranch ? `merge ${data.sourceBranch}${data.noFastForward === 'true' ? ' --no-ff' : ''}` : '';
+    case 'sftpUpload':
+      return data.host
+        ? `${data.host} ← ${String(data.localPath ?? '')}`
+        : '';
+    case 's3Upload':
+      return data.bucket && data.key
+        ? `s3://${data.bucket}/${data.key}`
+        : '';
     default:
       return '';
   }

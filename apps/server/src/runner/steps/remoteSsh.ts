@@ -1,15 +1,12 @@
-import { spawn } from 'node:child_process';
+import type { ClientChannel } from 'ssh2';
 import type { RemoteSshStepData } from '@buildpilot/shared-types';
 import type { StepContext } from '../engine';
+import { buildConnectConfig, connect, parseHost, pipeStream } from './_ssh';
 
 function asBool(v: unknown): boolean {
   return v === true || v === 'true';
 }
 
-// Quote a path for use inside a remote single-line shell command. We embed
-// the value inside double quotes and escape only the characters that would
-// break out of them ("`$\). Backslashes survive untouched, which matches
-// /bin/sh's behavior inside double quotes.
 function shellQuote(s: string): string {
   return `"${s.replace(/(["`$\\])/g, '\\$1')}"`;
 }
@@ -24,41 +21,29 @@ export async function runRemoteSsh(
     throw new Error('remoteSsh: missing "command"');
   }
 
-  let host = d.host;
-  let port: string | null = null;
-  const colonIdx = host.lastIndexOf(':');
-  if (colonIdx > 0 && /^\d+$/.test(host.slice(colonIdx + 1))) {
-    port = host.slice(colonIdx + 1);
-    host = host.slice(0, colonIdx);
-  }
-
-  const args: string[] = [];
-  if (d.identityFile && d.identityFile.trim().length > 0) {
-    args.push('-i', d.identityFile);
-  }
-  if (asBool(d.skipStrictHostKey)) {
-    args.push('-o', 'StrictHostKeyChecking=no', '-o', 'UserKnownHostsFile=/dev/null');
-  }
-  args.push('-o', 'BatchMode=yes');
-  if (port) args.push('-p', port);
-  args.push(host);
+  const { host, port, user } = parseHost(d.host);
+  const cfg = await buildConnectConfig(d.host, {
+    identityFile: d.identityFile,
+    password: d.password,
+    skipStrictHostKey: asBool(d.skipStrictHostKey),
+  });
 
   let remoteCmd = d.command;
   if (d.cwd && d.cwd.trim().length > 0) {
     remoteCmd = `cd ${shellQuote(d.cwd)} && ${remoteCmd}`;
   }
-  args.push(remoteCmd);
 
-  ctx.log(`ssh ${host}${port ? `:${port}` : ''}`);
+  ctx.log(`ssh ${user}@${host}:${port}`);
   ctx.log(`remote: ${remoteCmd}`);
 
-  await new Promise<void>((resolve, reject) => {
-    const child = spawn('ssh', args, { env: process.env });
-    ctx.attachProcess(child);
-    child.on('error', reject);
-    child.on('close', (code) => {
-      if (code === 0) resolve();
-      else reject(new Error(`ssh exited with code ${code}`));
+  const conn = await connect(cfg);
+  try {
+    const stream = await new Promise<ClientChannel>((resolve, reject) => {
+      conn.exec(remoteCmd, (err, s) => (err ? reject(err) : resolve(s)));
     });
-  });
+    const code = await pipeStream(stream as never, (line, level) => ctx.log(line, level));
+    if (code !== 0) throw new Error(`ssh exited with code ${code}`);
+  } finally {
+    conn.end();
+  }
 }

@@ -21,8 +21,10 @@ const stepTypes = [
   'aiPrompt',
   'artifact',
   'remoteSsh',
+  'sftpUpload',
   'xcodebuild',
   'gitMerge',
+  's3Upload',
 ] as const;
 
 const createSchema = z.object({

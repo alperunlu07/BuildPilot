@@ -49,6 +49,9 @@ Goal: pro-grade run visibility, control, and AI-assisted recovery.
 - [x] Pipeline delete UI (header trash + project-detail row trash) — `8981806`
 - [x] Project + pipeline hover-delete in ProjectsPage cards and Sidebar — `6f93ac7`
 - [x] User-defined node templates (save preset → palette entry, drag onto canvas) — `982d431`
+- [x] Native `s3Upload` step (AWS SDK v3 multipart + presigned URL + manifest) — `38ee065`
+- [x] Native `sftpUpload` step (ssh2 with key OR password auth, progress reporting) — `38ee065`
+- [x] `remoteSsh` now supports password auth (ssh2 instead of ssh CLI) — `38ee065`
 
 ## ✅ Phase 2 — Cross-OS / iOS foundations
 
@@ -98,11 +101,11 @@ Not started. Pulled out as discrete deliverables for future sessions.
 | Phase                              | Done | Pending | Status |
 | ---------------------------------- | ---: | ------: | ------ |
 | 1. MVP                             |  10  |    0    | ✅ 100% |
-| 1.5. Dashboard overhaul            |  22  |    0    | ✅ 100% |
+| 1.5. Dashboard overhaul            |  25  |    0    | ✅ 100% |
 | 2. Cross-OS / iOS                  |   3  |    3    | 🟡  50% |
 | 3. Notifications & integrations    |   4  |    2    | 🟢  67% |
 | 4. Hardening                       |   0  |   10    | ⏸    0% |
-| **Overall**                        | **39** | **15** | **🟢 72%** |
+| **Overall**                        | **42** | **15** | **🟢 74%** |
 
 **Next up (recommended order):**
 1. **TestFlight upload step** — closes Phase 2 for the iOS path
