@@ -1,4 +1,4 @@
-import { Plus, Folder, GitBranch, History } from 'lucide-react';
+import { Plus, Folder, GitBranch, History, Trash2 } from 'lucide-react';
 import { useStore } from '../store/store';
 import { cn } from '../lib/cn';
 
@@ -11,6 +11,8 @@ export function Sidebar({ onAddProject }: Props) {
   const pipelines = useStore((s) => s.pipelines);
   const view = useStore((s) => s.view);
   const setView = useStore((s) => s.setView);
+  const removeProject = useStore((s) => s.removeProject);
+  const deletePipelineAction = useStore((s) => s.deletePipeline);
 
   return (
     <aside className="flex h-full w-72 shrink-0 flex-col border-r border-slate-800 bg-slate-950">
@@ -62,38 +64,72 @@ export function Sidebar({ onAddProject }: Props) {
             const projectPipelines = pipelines.filter((pl) => pl.projectId === p.id);
             return (
               <li key={p.id}>
-                <button
-                  type="button"
-                  onClick={() => setView({ type: 'project', id: p.id })}
+                <div
                   className={cn(
-                    'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm',
+                    'group flex w-full items-center gap-1 rounded-md px-2 py-1.5 text-left text-sm',
                     active
                       ? 'bg-slate-800 text-slate-100'
                       : 'text-slate-300 hover:bg-slate-800/60',
                   )}
                 >
-                  <Folder size={14} className="text-sky-400" />
-                  <span className="truncate">{p.name}</span>
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => setView({ type: 'project', id: p.id })}
+                    className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                  >
+                    <Folder size={14} className="text-sky-400" />
+                    <span className="truncate">{p.name}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (confirm(`Remove "${p.name}" from BuildPilot? Pipelines will be deleted; build history is kept.`)) {
+                        void removeProject(p.id);
+                      }
+                    }}
+                    className="rounded p-0.5 text-slate-500 opacity-0 transition-opacity hover:text-rose-400 group-hover:opacity-100"
+                    title="Remove this project"
+                  >
+                    <Trash2 size={12} />
+                  </button>
+                </div>
                 {projectPipelines.length > 0 && (
                   <ul className="ml-6 mt-0.5 space-y-0.5">
                     {projectPipelines.map((pl) => {
                       const plActive = view.type === 'pipeline' && view.id === pl.id;
                       return (
                         <li key={pl.id}>
-                          <button
-                            type="button"
-                            onClick={() => setView({ type: 'pipeline', id: pl.id })}
+                          <div
                             className={cn(
-                              'flex w-full items-center gap-2 rounded-md px-2 py-1 text-left text-xs',
+                              'group flex w-full items-center gap-1 rounded-md px-2 py-1 text-left text-xs',
                               plActive
                                 ? 'bg-slate-800 text-slate-100'
                                 : 'text-slate-400 hover:bg-slate-800/60',
                             )}
                           >
-                            <GitBranch size={12} className="text-emerald-400" />
-                            <span className="truncate">{pl.name}</span>
-                          </button>
+                            <button
+                              type="button"
+                              onClick={() => setView({ type: 'pipeline', id: pl.id })}
+                              className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                            >
+                              <GitBranch size={12} className="text-emerald-400" />
+                              <span className="truncate">{pl.name}</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (confirm(`Delete pipeline "${pl.name}"? Build history is kept.`)) {
+                                  void deletePipelineAction(pl.id);
+                                }
+                              }}
+                              className="rounded p-0.5 text-slate-500 opacity-0 transition-opacity hover:text-rose-400 group-hover:opacity-100"
+                              title="Delete this pipeline"
+                            >
+                              <Trash2 size={11} />
+                            </button>
+                          </div>
                         </li>
                       );
                     })}

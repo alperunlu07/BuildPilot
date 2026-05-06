@@ -1,4 +1,4 @@
-import { Folder, Plus } from 'lucide-react';
+import { Folder, Plus, Trash2 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { useStore } from '../store/store';
 
@@ -9,6 +9,7 @@ interface Props {
 export function ProjectsPage({ onAdd }: Props) {
   const projects = useStore((s) => s.projects);
   const setView = useStore((s) => s.setView);
+  const removeProject = useStore((s) => s.removeProject);
 
   return (
     <div className="mx-auto max-w-4xl p-8">
@@ -38,10 +39,23 @@ export function ProjectsPage({ onAdd }: Props) {
           {projects.map((p) => (
             <li
               key={p.id}
-              className="cursor-pointer rounded-md border border-slate-800 bg-slate-900/60 px-4 py-3 hover:border-sky-700"
+              className="group relative cursor-pointer rounded-md border border-slate-800 bg-slate-900/60 px-4 py-3 hover:border-sky-700"
               onClick={() => setView({ type: 'project', id: p.id })}
             >
-              <div className="flex items-baseline justify-between">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (confirm(`Remove "${p.name}" from BuildPilot? Pipelines will be deleted; build history is kept.`)) {
+                    void removeProject(p.id);
+                  }
+                }}
+                className="absolute right-3 top-3 rounded-md border border-transparent p-1 text-slate-500 opacity-0 transition-opacity hover:border-rose-700 hover:text-rose-400 group-hover:opacity-100"
+                title="Remove this project"
+              >
+                <Trash2 size={14} />
+              </button>
+              <div className="flex items-baseline justify-between pr-8">
                 <h3 className="text-base font-medium text-slate-100">{p.name}</h3>
                 <span className="text-[11px] text-slate-500">
                   added {formatDistanceToNow(p.createdAt, { addSuffix: true })}

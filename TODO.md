@@ -47,6 +47,7 @@ Goal: pro-grade run visibility, control, and AI-assisted recovery.
 - [x] Build artifacts (collect step + download endpoint) — `ebecc66`
 - [x] `gitMerge` step (compose with AI for conflict resolution) — `477ecea`
 - [x] Pipeline delete UI (header trash + project-detail row trash) — `8981806`
+- [x] Project + pipeline hover-delete in ProjectsPage cards and Sidebar — `6f93ac7`
 
 ## ✅ Phase 2 — Cross-OS / iOS foundations
 
@@ -96,11 +97,11 @@ Not started. Pulled out as discrete deliverables for future sessions.
 | Phase                              | Done | Pending | Status |
 | ---------------------------------- | ---: | ------: | ------ |
 | 1. MVP                             |  10  |    0    | ✅ 100% |
-| 1.5. Dashboard overhaul            |  20  |    0    | ✅ 100% |
+| 1.5. Dashboard overhaul            |  21  |    0    | ✅ 100% |
 | 2. Cross-OS / iOS                  |   3  |    3    | 🟡  50% |
 | 3. Notifications & integrations    |   4  |    2    | 🟢  67% |
 | 4. Hardening                       |   0  |   10    | ⏸    0% |
-| **Overall**                        | **37** | **15** | **🟢 71%** |
+| **Overall**                        | **38** | **15** | **🟢 72%** |
 
 **Next up (recommended order):**
 1. **TestFlight upload step** — closes Phase 2 for the iOS path
