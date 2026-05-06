@@ -1,5 +1,6 @@
 import type { ChildProcess } from 'node:child_process';
 import type {
+  AiAutoFixConfig,
   Build,
   BuildLogLevel,
   Pipeline,
@@ -48,6 +49,45 @@ interface DagNode {
   id: string;
   type: StepType;
   data: Record<string, unknown>;
+}
+
+function readAiAutoFix(data: Record<string, unknown>): AiAutoFixConfig | null {
+  const raw = data.aiAutoFix as unknown;
+  if (!raw || typeof raw !== 'object') return null;
+  const r = raw as Record<string, unknown>;
+  const enabled = r.enabled === true || r.enabled === 'true';
+  if (!enabled) return null;
+  const prompt =
+    typeof r.prompt === 'string' && r.prompt.trim().length > 0
+      ? (r.prompt as string)
+      : DEFAULT_AI_FIX_PROMPT;
+  return {
+    enabled: true,
+    tool: (typeof r.tool === 'string' ? r.tool : 'claude') as AiAutoFixConfig['tool'],
+    prompt,
+    maxRetries: typeof r.maxRetries === 'number' ? r.maxRetries : 3,
+  };
+}
+
+const DEFAULT_AI_FIX_PROMPT = [
+  'The pipeline step "{{step}}" (node {{nodeId}}) just failed with this error:',
+  '',
+  '{{error}}',
+  '',
+  'Read the relevant files in the working tree to understand the failure, then',
+  'make the smallest set of changes that would let the step succeed on retry.',
+  'Do not run the build yourself — exit when done and the pipeline will retry',
+  'the step automatically.',
+].join('\n');
+
+function renderAiFixPrompt(
+  template: string,
+  vars: { step: string; error: string; nodeId: string },
+): string {
+  return template
+    .replace(/\{\{\s*step\s*\}\}/g, vars.step)
+    .replace(/\{\{\s*error\s*\}\}/g, vars.error)
+    .replace(/\{\{\s*nodeId\s*\}\}/g, vars.nodeId);
 }
 
 function descendantsOf(pipeline: Pipeline, nodeId: string): Set<string> {
@@ -177,20 +217,74 @@ export async function runPipeline(args: {
     persist('system', `▶ step started`, node.id, node.type);
 
     const ctx = makeStepContext(build, project, node, persist);
-    try {
-      await runner(ctx, node.data);
-      if (isCancelled(build.id)) {
-        cancelled = true;
-        eventBus.publish({
-          type: 'buildStepFinished',
-          buildId: build.id,
-          pipelineId: pipeline.id,
-          nodeId: node.id,
-          stepType: node.type,
-          status: 'failed',
-        });
-        break;
+    const aiFix = readAiAutoFix(node.data);
+    const maxAttempts = aiFix?.enabled ? Math.max(1, aiFix.maxRetries ?? 3) + 1 : 1;
+    let stepOk = false;
+    let lastErr: unknown = null;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      if (attempt > 1) {
+        persist(
+          'system',
+          `↻ retry ${attempt - 1}/${maxAttempts - 1} after AI fix`,
+          node.id,
+          node.type,
+        );
       }
+      try {
+        await runner(ctx, node.data);
+        if (isCancelled(build.id)) {
+          cancelled = true;
+          break;
+        }
+        stepOk = true;
+        break;
+      } catch (err) {
+        lastErr = err;
+        if (isCancelled(build.id)) {
+          cancelled = true;
+          break;
+        }
+        const msg = err instanceof Error ? err.message : String(err);
+        if (attempt < maxAttempts && aiFix?.enabled) {
+          persist(
+            'failure',
+            `✖ step failed (attempt ${attempt}): ${msg} — invoking AI fix`,
+            node.id,
+            node.type,
+          );
+          try {
+            await runAiPrompt(ctx, {
+              tool: aiFix.tool ?? 'claude',
+              prompt: renderAiFixPrompt(aiFix.prompt, {
+                step: node.type,
+                error: msg,
+                nodeId: node.id,
+              }),
+              allowFailure: 'true' as unknown as boolean,
+            });
+          } catch (aiErr) {
+            const aiMsg = aiErr instanceof Error ? aiErr.message : String(aiErr);
+            persist('failure', `AI fix invocation failed: ${aiMsg}`, node.id, node.type);
+          }
+          // fall through to next attempt
+        }
+      }
+    }
+
+    if (cancelled) {
+      eventBus.publish({
+        type: 'buildStepFinished',
+        buildId: build.id,
+        pipelineId: pipeline.id,
+        nodeId: node.id,
+        stepType: node.type,
+        status: 'failed',
+      });
+      const cancelMsg = lastErr instanceof Error ? lastErr.message : String(lastErr ?? 'cancelled');
+      persist('system', `✖ step cancelled (${cancelMsg})`, node.id, node.type);
+      break;
+    }
+    if (stepOk) {
       persist('success', '✔ step ok', node.id, node.type);
       eventBus.publish({
         type: 'buildStepFinished',
@@ -200,14 +294,14 @@ export async function runPipeline(args: {
         stepType: node.type,
         status: 'success',
       });
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      if (isCancelled(build.id)) {
-        cancelled = true;
-        persist('system', `✖ step cancelled (${msg})`, node.id, node.type);
-      } else {
-        persist('failure', `✖ step failed: ${msg}`, node.id, node.type);
-      }
+    } else {
+      const msg = lastErr instanceof Error ? lastErr.message : String(lastErr ?? 'unknown error');
+      persist(
+        'failure',
+        `✖ step failed after ${maxAttempts} attempt${maxAttempts === 1 ? '' : 's'}: ${msg}`,
+        node.id,
+        node.type,
+      );
       eventBus.publish({
         type: 'buildStepFinished',
         buildId: build.id,

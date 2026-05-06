@@ -142,6 +142,17 @@ export interface AiPromptStepData {
   allowFailure?: boolean;
 }
 
+// Optional field present on any step's `data` to enable a retry-with-AI
+// loop on failure. The engine will run the AI tool with a template prompt,
+// then re-run the step. Loop up to maxRetries times before giving up.
+export interface AiAutoFixConfig {
+  enabled: boolean;
+  tool: AiTool;
+  // Available placeholders: {{step}}, {{error}}, {{nodeId}}.
+  prompt: string;
+  maxRetries: number;
+}
+
 // ── Structured build logs ───────────────────────────────────────────────────
 // Each entry is one logical line, tagged with the originating pipeline node
 // and a coarse log level. The dashboard renders these as a logcat-style table.

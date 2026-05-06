@@ -109,6 +109,12 @@ export function StepPropertyPanel({
               onChange={(v) => updateField(field.name, v)}
             />
           ))}
+          <AiAutoFixSection
+            value={(node.data as Record<string, unknown>).aiAutoFix as Record<string, unknown> | undefined}
+            onChange={(next) =>
+              onChange(node.id, { ...(node.data as Record<string, unknown>), aiAutoFix: next })
+            }
+          />
         </div>
       ) : (
         <div className="min-h-0 flex-1">
@@ -147,6 +153,86 @@ function TabButton({
     >
       {children}
     </button>
+  );
+}
+
+function AiAutoFixSection({
+  value,
+  onChange,
+}: {
+  value: Record<string, unknown> | undefined;
+  onChange(next: Record<string, unknown> | undefined): void;
+}) {
+  const enabled = value?.enabled === true || value?.enabled === 'true';
+  const tool = (value?.tool as string) ?? 'claude';
+  const prompt = (value?.prompt as string) ?? '';
+  const maxRetries = typeof value?.maxRetries === 'number' ? (value.maxRetries as number) : 3;
+
+  const update = (patch: Record<string, unknown>) =>
+    onChange({ enabled, tool, prompt, maxRetries, ...value, ...patch });
+
+  return (
+    <div className="mt-2 rounded-md border border-slate-800 bg-slate-900/40 p-3">
+      <label className="flex items-center gap-2 text-[11px] uppercase tracking-wider text-slate-300">
+        <input
+          type="checkbox"
+          checked={enabled}
+          onChange={(e) => update({ enabled: e.target.checked })}
+          className="h-3.5 w-3.5"
+        />
+        AI Auto-Fix on failure
+      </label>
+      {enabled && (
+        <div className="mt-3 space-y-2">
+          <label className="block">
+            <span className="mb-1 block text-[10px] uppercase tracking-wider text-slate-500">
+              Tool
+            </span>
+            <select
+              value={tool}
+              onChange={(e) => update({ tool: e.target.value })}
+              className="w-full rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-[12px] text-slate-100"
+            >
+              {['claude', 'codex', 'aider', 'gemini'].map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="block">
+            <span className="mb-1 block text-[10px] uppercase tracking-wider text-slate-500">
+              Max retries
+            </span>
+            <input
+              type="number"
+              min={1}
+              max={10}
+              value={maxRetries}
+              onChange={(e) => update({ maxRetries: Math.max(1, Number(e.target.value)) })}
+              className="w-full rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-[12px] text-slate-100"
+            />
+          </label>
+          <label className="block">
+            <span className="mb-1 block text-[10px] uppercase tracking-wider text-slate-500">
+              Prompt template ({"{{"}step{"}}"}, {"{{"}error{"}}"}, {"{{"}nodeId{"}}"})
+            </span>
+            <textarea
+              value={prompt}
+              onChange={(e) => update({ prompt: e.target.value })}
+              placeholder={`The pipeline step "{{step}}" failed with:\n{{error}}\nFix the issue minimally and exit.`}
+              rows={5}
+              spellCheck={false}
+              className="w-full rounded-md border border-slate-700 bg-slate-900 px-2 py-1 font-mono text-[11px] text-slate-100 placeholder:text-slate-600"
+            />
+          </label>
+          <p className="text-[10px] text-slate-500">
+            On failure the pipeline runs the chosen CLI with this prompt, then re-runs
+            the step. Loops up to maxRetries times before bailing out.
+          </p>
+        </div>
+      )}
+    </div>
   );
 }
 
