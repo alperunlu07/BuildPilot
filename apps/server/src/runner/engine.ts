@@ -51,6 +51,11 @@ interface DagNode {
   data: Record<string, unknown>;
 }
 
+// Hard cap on parallel steps within a single pipeline run. Independent DAG
+// branches schedule concurrently up to this limit; convergence points still
+// wait for all parents.
+const MAX_CONCURRENCY = 4;
+
 interface StepResult {
   ok: boolean;
   cancelled: boolean;
@@ -283,107 +288,142 @@ export async function runPipeline(args: {
   }
 
   const outcomes = new Map<string, Outcome>();
+  // Steps currently in-flight. Independent branches of the DAG can execute
+  // concurrently up to MAX_CONCURRENCY at a time.
+  const inflight = new Map<string, Promise<{ nodeId: string; result: StepResult }>>();
   let cancelled = false;
   let anyFailed = false;
 
-  while (outcomes.size < allNodes.size) {
-    if (isCancelled(build.id)) {
-      cancelled = true;
-      break;
-    }
+  function evaluateCandidate(
+    node: DagNode,
+  ): 'ready' | 'skip' | 'wait' {
+    if (outcomes.has(node.id) || inflight.has(node.id)) return 'wait';
+    const incoming = incomingByNode.get(node.id) ?? [];
+    if (!incoming.every((e) => outcomes.has(e.source))) return 'wait';
+    const allMatch = incoming.every((e) => {
+      const parent = outcomes.get(e.source);
+      if (parent === 'skipped') return false;
+      const cond = e.condition ?? 'success';
+      if (cond === 'always') return true;
+      if (cond === 'success') return parent === 'success';
+      if (cond === 'failure') return parent === 'failed';
+      return false;
+    });
+    return allMatch ? 'ready' : 'skip';
+  }
 
-    // Find a node whose incoming dependencies are all decided.
-    let next: DagNode | null = null;
-    let action: 'run' | 'skip' = 'run';
-    for (const node of allNodes.values()) {
-      if (outcomes.has(node.id)) continue;
-      const incoming = incomingByNode.get(node.id) ?? [];
-      if (!incoming.every((e) => outcomes.has(e.source))) continue;
-      const allMatch = incoming.every((e) => {
-        const parent = outcomes.get(e.source);
-        if (parent === 'skipped') return false;
-        const cond = e.condition ?? 'success';
-        if (cond === 'always') return true;
-        if (cond === 'success') return parent === 'success';
-        if (cond === 'failure') return parent === 'failed';
-        return false;
-      });
-      next = node;
-      action = allMatch ? 'run' : 'skip';
-      break;
-    }
-    if (!next) break; // unresolvable (cycle or all done)
-
-    if (action === 'skip') {
-      persist('system', '⊘ step skipped (condition not met)', next.id, next.type);
-      eventBus.publish({
-        type: 'buildStepFinished',
-        buildId: build.id,
-        pipelineId: pipeline.id,
-        nodeId: next.id,
-        stepType: next.type,
-        status: 'skipped',
-      });
-      outcomes.set(next.id, 'skipped');
-      continue;
-    }
-
+  function spawn(node: DagNode) {
     eventBus.publish({
       type: 'buildStepStarted',
       buildId: build.id,
       pipelineId: pipeline.id,
-      nodeId: next.id,
-      stepType: next.type,
+      nodeId: node.id,
+      stepType: node.type,
     });
-    persist('system', `▶ step started`, next.id, next.type);
+    persist('system', `▶ step started`, node.id, node.type);
+    const p = executeStep(build, project, node, persist).then((result) => ({
+      nodeId: node.id,
+      result,
+    }));
+    inflight.set(node.id, p);
+  }
 
-    const result = await executeStep(build, project, next, persist);
+  scheduling: while (true) {
+    if (cancelled) break;
+
+    // 1. Drain skip decisions (pure sync, may unlock more skips downstream).
+    let progressed = true;
+    while (progressed) {
+      progressed = false;
+      for (const node of allNodes.values()) {
+        if (evaluateCandidate(node) === 'skip') {
+          persist('system', '⊘ step skipped (condition not met)', node.id, node.type);
+          eventBus.publish({
+            type: 'buildStepFinished',
+            buildId: build.id,
+            pipelineId: pipeline.id,
+            nodeId: node.id,
+            stepType: node.type,
+            status: 'skipped',
+          });
+          outcomes.set(node.id, 'skipped');
+          progressed = true;
+        }
+      }
+    }
+
+    // 2. Schedule ready candidates up to the concurrency cap.
+    for (const node of allNodes.values()) {
+      if (inflight.size >= MAX_CONCURRENCY) break;
+      if (isCancelled(build.id)) {
+        cancelled = true;
+        break scheduling;
+      }
+      if (evaluateCandidate(node) === 'ready') spawn(node);
+    }
+
+    // 3. Done?
+    if (inflight.size === 0) break; // no candidates left; either everything done or stuck (cycle)
+
+    // 4. Wait for any one in-flight step to finish.
+    const settled = await Promise.race(inflight.values());
+    inflight.delete(settled.nodeId);
+    const { nodeId, result } = settled;
+    const node = allNodes.get(nodeId)!;
+
     if (result.cancelled) {
       cancelled = true;
       eventBus.publish({
         type: 'buildStepFinished',
         buildId: build.id,
         pipelineId: pipeline.id,
-        nodeId: next.id,
-        stepType: next.type,
+        nodeId,
+        stepType: node.type,
         status: 'failed',
       });
       const cancelMsg = result.error instanceof Error ? result.error.message : String(result.error ?? 'cancelled');
-      persist('system', `✖ step cancelled (${cancelMsg})`, next.id, next.type);
+      persist('system', `✖ step cancelled (${cancelMsg})`, nodeId, node.type);
       break;
     }
     if (result.ok) {
-      persist('success', '✔ step ok', next.id, next.type);
+      persist('success', '✔ step ok', nodeId, node.type);
       eventBus.publish({
         type: 'buildStepFinished',
         buildId: build.id,
         pipelineId: pipeline.id,
-        nodeId: next.id,
-        stepType: next.type,
+        nodeId,
+        stepType: node.type,
         status: 'success',
       });
-      outcomes.set(next.id, 'success');
+      outcomes.set(nodeId, 'success');
     } else {
       const msg = result.error instanceof Error ? result.error.message : String(result.error ?? 'unknown');
       persist(
         'failure',
         `✖ step failed after ${result.attempts} attempt${result.attempts === 1 ? '' : 's'}: ${msg}`,
-        next.id,
-        next.type,
+        nodeId,
+        node.type,
       );
       eventBus.publish({
         type: 'buildStepFinished',
         buildId: build.id,
         pipelineId: pipeline.id,
-        nodeId: next.id,
-        stepType: next.type,
+        nodeId,
+        stepType: node.type,
         status: 'failed',
       });
-      outcomes.set(next.id, 'failed');
+      outcomes.set(nodeId, 'failed');
       anyFailed = true;
-      // Don't break — there may be a failure-edge that needs to fire (e.g.
-      // notify-on-failure path). The conditional traversal handles it.
+      // Don't break — failure-edges may still need to fire and other parallel
+      // branches keep running.
     }
+  }
+
+  // On cancellation, let any still-running steps settle so child processes
+  // (which cancelBuild has already SIGTERM'd) close cleanly.
+  if (inflight.size > 0) {
+    await Promise.allSettled(inflight.values());
+    inflight.clear();
   }
 
   const finalStatus = cancelled ? 'cancelled' : anyFailed ? 'failed' : 'success';
