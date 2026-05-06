@@ -79,9 +79,9 @@ quality-of-life pieces.
 - [ ] `testflightUpload` gets a `whatToTest` field (post-upload App Store Connect PATCH) — deferred to future cluster (needs JWT/ASC API integration)
 
 ### Cluster C · Host management quality of life
-- [ ] HostsDialog "Test connection" button (`POST /api/hosts/:id/ping`)
-- [ ] Per-host capability snapshot (`xcodebuild -version`, `sw_vers`, `uname -m`) shown as badges
-- [ ] SSH `known_hosts` integration so non-`skipStrictHostKey` hosts don't error on first connect
+- [x] HostsDialog "Test connection" button (`POST /api/hosts/:id/ping`)
+- [x] Per-host capability snapshot (`xcodebuild -version`, `sw_vers`, `uname -m`) shown as badges
+- [ ] SSH `known_hosts` integration — re-evaluated as Phase 4 hardening (ssh2 is permissive by default; needs a real design discussion before changing)
 
 ### Cluster B · macOS distribution
 - [ ] `notarize` step — `xcrun notarytool submit … --wait`

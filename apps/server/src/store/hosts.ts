@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
-import type { SshHost } from '@buildpilot/shared-types';
+import type { HostCapabilities, SshHost } from '@buildpilot/shared-types';
 
 // Hosts live alongside config.json — single global list, not per-project.
 // File-backed (not SQLite) so a user can hand-edit / version-control it.
@@ -93,4 +93,19 @@ export function deleteHost(id: string): boolean {
   if (file.hosts.length === before) return false;
   writeFile(file);
   return true;
+}
+
+export function setHostCapabilities(id: string, caps: HostCapabilities | null): SshHost | null {
+  const file = readFile();
+  const idx = file.hosts.findIndex((h) => h.id === id);
+  if (idx < 0) return null;
+  const existing = file.hosts[idx]!;
+  const merged: SshHost = {
+    ...existing,
+    capabilities: caps ?? undefined,
+    updatedAt: Date.now(),
+  };
+  file.hosts[idx] = merged;
+  writeFile(file);
+  return merged;
 }

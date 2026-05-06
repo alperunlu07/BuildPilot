@@ -3,6 +3,7 @@ import type {
   Build,
   BuildLogEntry,
   Commit,
+  HostCapabilities,
   NodeTemplate,
   Pipeline,
   ProjectSummary,
@@ -102,6 +103,7 @@ interface State {
     }>,
   ): Promise<SshHost | null>;
   deleteHost(id: string): Promise<void>;
+  pingHost(id: string): Promise<{ ok: boolean; capabilities?: HostCapabilities; error?: string }>;
   addProject(input: { path: string; name?: string }): Promise<void>;
   removeProject(id: string): Promise<void>;
   setView(view: View): void;
@@ -173,6 +175,12 @@ export const useStore = create<State>((set, get) => ({
   async deleteHost(id) {
     await api.deleteHost(id);
     set({ hosts: get().hosts.filter((h) => h.id !== id) });
+  },
+  async pingHost(id) {
+    const res = await api.pingHost(id);
+    // The hostChanged SSE event from the server reloads the list so the new
+    // capabilities show up everywhere; no need to mutate locally too.
+    return res;
   },
   async addProject(input) {
     await api.addProject(input);

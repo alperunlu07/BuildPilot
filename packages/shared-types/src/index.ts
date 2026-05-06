@@ -316,6 +316,26 @@ export interface ProvisioningProfileInstallStepData extends RunsOnMaybeRemote {
   profilePath: string;
 }
 
+// Snapshot of what a saved host can run. Populated lazily by the
+// "Test connection" button in HostsDialog and the POST /api/hosts/:id/ping
+// endpoint. Used by the editor to badge a host with its Xcode + macOS
+// version + architecture.
+export interface HostCapabilities {
+  // First line of `xcodebuild -version` (e.g. "Xcode 16.1"). Undefined when
+  // xcodebuild isn't on PATH for the SSH login shell — the host is
+  // probably a Linux box.
+  xcodeVersion?: string;
+  // `sw_vers -productVersion` (e.g. "14.5"). Undefined on non-macOS hosts.
+  macosVersion?: string;
+  // `uname -m` (e.g. "arm64", "x86_64"). Always populated on a successful
+  // ping; identifies Apple Silicon vs Intel.
+  arch?: string;
+  // Anything that printed before/after the markers, kept for diagnostics.
+  rawSnippet?: string;
+  // Unix ms — when the snapshot was taken.
+  lastCheckedAt: number;
+}
+
 // A reusable SSH host saved in ~/.buildpilot/hosts.json. The dropdown in
 // remote-running steps lists these by name so credentials don't have to be
 // retyped across pipelines.
@@ -328,6 +348,7 @@ export interface SshHost {
   password?: string | null;
   skipStrictHostKey?: boolean;
   description?: string | null;
+  capabilities?: HostCapabilities;
   createdAt: number;
   updatedAt: number;
 }

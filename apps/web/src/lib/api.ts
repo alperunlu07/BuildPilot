@@ -154,4 +154,9 @@ export const api = {
   ) => http<SshHost>(`/hosts/${id}`, { method: 'PATCH', body: JSON.stringify(patch) }),
   deleteHost: (id: string) =>
     http<{ ok: true }>(`/hosts/${id}`, { method: 'DELETE' }),
+  pingHost: (id: string) =>
+    http<{ ok: boolean; capabilities?: import('@buildpilot/shared-types').HostCapabilities; error?: string }>(
+      `/hosts/${id}/ping`,
+      { method: 'POST' },
+    ),
 };

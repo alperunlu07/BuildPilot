@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Plus, Trash2, X } from 'lucide-react';
-import type { SshHost } from '@buildpilot/shared-types';
+import { Activity, Plus, Trash2, X } from 'lucide-react';
+import type { HostCapabilities, SshHost } from '@buildpilot/shared-types';
 import { useStore } from '../store/store';
 
 interface Props {
@@ -33,19 +33,41 @@ export function HostsDialog({ open, onClose }: Props) {
   const saveHost = useStore((s) => s.saveHost);
   const updateHost = useStore((s) => s.updateHost);
   const deleteHost = useStore((s) => s.deleteHost);
+  const pingHost = useStore((s) => s.pingHost);
   const requestConfirmation = useStore((s) => s.requestConfirmation);
 
   const [draft, setDraft] = useState<DraftHost>(EMPTY_DRAFT);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Per-host transient probe state. Survives between selections; gets
+  // wiped only on dialog close.
+  const [probing, setProbing] = useState<Record<string, boolean>>({});
+  const [probeResult, setProbeResult] = useState<Record<string, { ok: boolean; error?: string }>>({});
 
   useEffect(() => {
     if (open) {
       setDraft(EMPTY_DRAFT);
       setError(null);
       setBusy(false);
+      setProbing({});
+      setProbeResult({});
     }
   }, [open]);
+
+  const probeOne = async (id: string) => {
+    setProbing((p) => ({ ...p, [id]: true }));
+    try {
+      const res = await pingHost(id);
+      setProbeResult((r) => ({ ...r, [id]: { ok: res.ok, error: res.error } }));
+    } catch (err) {
+      setProbeResult((r) => ({
+        ...r,
+        [id]: { ok: false, error: err instanceof Error ? err.message : String(err) },
+      }));
+    } finally {
+      setProbing((p) => ({ ...p, [id]: false }));
+    }
+  };
 
   const editing = draft.id !== null;
   const sortedHosts = useMemo(() => hosts, [hosts]);
@@ -135,42 +157,67 @@ export function HostsDialog({ open, onClose }: Props) {
             <ul className="space-y-1">
               {sortedHosts.map((h) => {
                 const active = draft.id === h.id;
+                const isProbing = probing[h.id] ?? false;
+                const result = probeResult[h.id];
                 return (
                   <li key={h.id}>
                     <div
-                      className={`group flex items-center gap-2 rounded-md border px-2.5 py-2 text-left ${
+                      className={`group rounded-md border p-2 text-left ${
                         active
                           ? 'border-sky-500 bg-slate-800/60'
                           : 'border-slate-800 bg-slate-900 hover:border-slate-600'
                       }`}
                     >
-                      <button
-                        type="button"
-                        onClick={() => beginEdit(h)}
-                        className="flex min-w-0 flex-1 flex-col text-left"
-                      >
-                        <span className="truncate text-xs font-semibold text-slate-100">
-                          {h.name}
-                        </span>
-                        <span className="truncate text-[11px] text-slate-500">{h.host}</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          requestConfirmation({
-                            title: `Delete host "${h.name}"?`,
-                            body: 'Steps that reference this host by id will fall back to their inline fields, or fail if both are empty.',
-                            variant: 'destructive',
-                            confirmLabel: 'Delete host',
-                            onConfirm: () => deleteHost(h.id),
-                          });
-                        }}
-                        className="rounded p-0.5 text-slate-500 opacity-0 transition-opacity hover:text-rose-400 group-hover:opacity-100"
-                        title="Delete this host"
-                      >
-                        <Trash2 size={11} />
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => beginEdit(h)}
+                          className="flex min-w-0 flex-1 flex-col text-left"
+                        >
+                          <span className="truncate text-xs font-semibold text-slate-100">
+                            {h.name}
+                          </span>
+                          <span className="truncate text-[11px] text-slate-500">{h.host}</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            void probeOne(h.id);
+                          }}
+                          disabled={isProbing}
+                          className="rounded p-0.5 text-slate-500 hover:text-sky-300 disabled:opacity-50"
+                          title="Test SSH connection + read host capabilities"
+                        >
+                          <Activity size={12} className={isProbing ? 'animate-pulse' : ''} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            requestConfirmation({
+                              title: `Delete host "${h.name}"?`,
+                              body: 'Steps that reference this host by id will fall back to their inline fields, or fail if both are empty.',
+                              variant: 'destructive',
+                              confirmLabel: 'Delete host',
+                              onConfirm: () => deleteHost(h.id),
+                            });
+                          }}
+                          className="rounded p-0.5 text-slate-500 opacity-0 transition-opacity hover:text-rose-400 group-hover:opacity-100"
+                          title="Delete this host"
+                        >
+                          <Trash2 size={11} />
+                        </button>
+                      </div>
+                      <CapabilityRow caps={h.capabilities} />
+                      {result && !result.ok && (
+                        <div className="mt-1 truncate text-[10px] text-rose-300" title={result.error}>
+                          ✖ {result.error}
+                        </div>
+                      )}
+                      {result && result.ok && (
+                        <div className="mt-1 text-[10px] text-emerald-300">✔ reachable</div>
+                      )}
                     </div>
                   </li>
                 );
@@ -275,4 +322,31 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       {children}
     </label>
   );
+}
+
+function CapabilityRow({ caps }: { caps?: HostCapabilities }) {
+  if (!caps) return null;
+  const ageMins = Math.max(0, Math.round((Date.now() - caps.lastCheckedAt) / 60_000));
+  const ageLabel = ageMins < 1 ? 'just now' : ageMins < 60 ? `${ageMins}m ago` : `${Math.round(ageMins / 60)}h ago`;
+  return (
+    <div className="mt-1.5 flex flex-wrap gap-1">
+      {caps.xcodeVersion && <Badge color="cyan">{caps.xcodeVersion}</Badge>}
+      {caps.macosVersion && <Badge color="violet">macOS {caps.macosVersion}</Badge>}
+      {caps.arch && <Badge color="slate">{caps.arch}</Badge>}
+      <span className="ml-auto text-[9px] uppercase tracking-wider text-slate-600" title={new Date(caps.lastCheckedAt).toLocaleString()}>
+        {ageLabel}
+      </span>
+    </div>
+  );
+}
+
+const BADGE_PALETTE: Record<string, string> = {
+  cyan: 'bg-cyan-900/40 text-cyan-200 border-cyan-700/50',
+  violet: 'bg-violet-900/40 text-violet-200 border-violet-700/50',
+  slate: 'bg-slate-800 text-slate-300 border-slate-700',
+};
+
+function Badge({ color, children }: { color: keyof typeof BADGE_PALETTE | string; children: React.ReactNode }) {
+  const cls = BADGE_PALETTE[color] ?? BADGE_PALETTE.slate;
+  return <span className={`rounded border px-1.5 py-px text-[10px] font-medium ${cls}`}>{children}</span>;
 }

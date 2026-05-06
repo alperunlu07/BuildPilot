@@ -7,6 +7,7 @@ import {
   listHosts,
   updateHost,
 } from '../store/hosts';
+import { pingHost } from '../runner/hostPing';
 import { eventBus } from '../events/bus';
 
 const createSchema = z.object({
@@ -54,5 +55,19 @@ export async function hostsRoutes(app: FastifyInstance): Promise<void> {
     deleteHost(id);
     eventBus.publish({ type: 'hostChanged', hostId: id, action: 'deleted' });
     return { ok: true };
+  });
+
+  app.post('/api/hosts/:id/ping', async (req, reply) => {
+    const { id } = req.params as { id: string };
+    if (!getHost(id)) return reply.code(404).send({ error: 'not found' });
+    // 200 with ok:false on probe failure (rather than 502) — the dashboard
+    // wants to render the error inline, not raise a network error toast.
+    try {
+      const capabilities = await pingHost(id);
+      eventBus.publish({ type: 'hostChanged', hostId: id, action: 'updated' });
+      return { ok: true, capabilities };
+    } catch (err) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) };
+    }
   });
 }
