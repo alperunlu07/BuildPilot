@@ -31,17 +31,60 @@ packages/
 
 ## Step types
 
-Four built-in pipeline node types:
+Eleven built-in pipeline node types:
 
-| Type         | What it does                                                  |
-| ------------ | ------------------------------------------------------------- |
-| `checkout`   | `git checkout <branch>`                                       |
-| `pull`       | `git pull <remote>`                                           |
-| `shell`      | Runs an arbitrary shell command in the project directory      |
-| `unityBatch` | `Unity -batchmode -nographics -quit -executeMethod <Method>`  |
+| Type            | What it does                                                                       |
+| --------------- | ---------------------------------------------------------------------------------- |
+| `checkout`      | `git checkout <branch>`                                                            |
+| `pull`          | `git pull <remote>`                                                                |
+| `shell`         | Runs an arbitrary shell command in the project directory                           |
+| `unityBatch`    | `Unity -batchmode -nographics -quit -executeMethod <Method>`                       |
+| `httpRequest`   | Generic HTTP call (POST/GET/…) with headers and body                               |
+| `slackNotify`   | Posts a message to a Slack incoming webhook                                        |
+| `discordNotify` | Posts a message to a Discord webhook                                               |
+| `aiPrompt`      | Runs `claude` / `codex` / `aider` / `gemini` (or a custom CLI) with a prompt       |
+| `artifact`      | Records build outputs into a downloadable artifact catalog                         |
+| `remoteSsh`     | Runs a shell command on a remote host via `ssh` (foundation for Mac iOS builds)   |
+| `xcodebuild`    | Drives `xcodebuild` for iOS / macOS — must run on a Mac (compose with `remoteSsh`) |
 
 Pipelines watch one branch and run on a configurable cadence; the build target
-branch can differ from the watched branch via the `checkout` step.
+branch can differ from the watched branch via the `checkout` step. Edges between
+nodes carry a condition (`success` / `failure` / `always`) — failure paths
+let you wire up notify-on-break flows. Independent DAG branches run in
+parallel up to a per-pipeline limit.
+
+### AI auto-fix
+
+Every step has an optional **AI Auto-Fix on failure** section. When enabled,
+a step failure triggers the chosen AI tool (claude / codex / aider / gemini)
+with a templated prompt (`{{step}}`, `{{error}}`, `{{nodeId}}`); after the
+AI exits, BuildPilot retries the step. Loops up to `maxRetries` times
+before bailing out. Useful for self-healing flake fixes, conflict
+resolution, and "try the obvious thing" recovery.
+
+### iOS / Mac builds (Phase 2)
+
+The Windows host can drive a Mac builder over SSH. Typical pipeline:
+
+```
+checkout → pull → remoteSsh ──► (Mac runs git pull + xcodebuild archive)
+                              └► artifact (records the .ipa for download)
+```
+
+Fields you'll fill in on the `remoteSsh` step:
+- **Host:** `build@mac-builder.local` (optionally `:port`)
+- **Identity file:** path to a private key the host has authorized
+- **Remote working dir:** the Mac-side clone of the same project
+- **Command:**
+
+  ```sh
+  git pull && xcodebuild -workspace MyGame.xcworkspace -scheme MyGame \
+    -configuration Release -destination 'generic/platform=iOS' \
+    archive -archivePath build/MyGame.xcarchive
+  ```
+
+For BuildPilot running directly on a Mac, the `xcodebuild` step is a typed
+shortcut for the same invocation.
 
 ## Getting started
 

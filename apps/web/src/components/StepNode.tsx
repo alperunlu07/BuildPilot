@@ -1,5 +1,6 @@
 import { Handle, Position, type NodeProps } from '@xyflow/react';
 import {
+  Apple,
   ArrowDownToLine,
   GitBranch,
   Gamepad2,
@@ -7,6 +8,7 @@ import {
   MessageCircle,
   MessageSquare,
   Package,
+  Server,
   Sparkles,
   Terminal,
   type LucideIcon,
@@ -24,6 +26,8 @@ const ICONS: Record<string, LucideIcon> = {
   MessageCircle,
   Sparkles,
   Package,
+  Server,
+  Apple,
 };
 
 type RuntimeStatus = 'running' | 'success' | 'failed' | 'skipped' | undefined;
@@ -170,6 +174,10 @@ function summariseData(type: StepType, data: Record<string, unknown>): string {
       return data.paths
         ? `${String(data.paths).split('\n').filter((l) => l.trim().length > 0).length} path(s)`
         : '';
+    case 'remoteSsh':
+      return data.host ? `${data.host} → ${String(data.command ?? '').split('\n')[0]!.slice(0, 40)}` : '';
+    case 'xcodebuild':
+      return data.scheme ? `${data.buildAction ?? 'build'} ${data.scheme}` : '';
     default:
       return '';
   }

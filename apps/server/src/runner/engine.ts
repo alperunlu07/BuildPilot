@@ -21,6 +21,8 @@ import { runSlackNotify } from './steps/slackNotify';
 import { runDiscordNotify } from './steps/discordNotify';
 import { runAiPrompt } from './steps/aiPrompt';
 import { runArtifact } from './steps/artifact';
+import { runRemoteSsh } from './steps/remoteSsh';
+import { runXcodebuild } from './steps/xcodebuild';
 
 export interface StepContext {
   project: Project;
@@ -45,6 +47,8 @@ const RUNNERS: Record<StepType, StepRunner> = {
   discordNotify: runDiscordNotify,
   aiPrompt: runAiPrompt,
   artifact: runArtifact,
+  remoteSsh: runRemoteSsh,
+  xcodebuild: runXcodebuild,
 };
 
 interface DagNode {

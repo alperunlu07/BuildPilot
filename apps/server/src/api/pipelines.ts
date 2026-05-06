@@ -21,6 +21,8 @@ const stepTypes = [
   'discordNotify',
   'aiPrompt',
   'artifact',
+  'remoteSsh',
+  'xcodebuild',
 ] as const;
 
 const nodeSchema = z.object({

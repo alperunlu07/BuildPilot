@@ -35,7 +35,9 @@ export type StepType =
   | 'slackNotify'
   | 'discordNotify'
   | 'aiPrompt'
-  | 'artifact';
+  | 'artifact'
+  | 'remoteSsh'
+  | 'xcodebuild';
 
 export type AiTool = 'claude' | 'codex' | 'aider' | 'gemini' | 'custom';
 
@@ -159,6 +161,33 @@ export interface ArtifactStepData {
   // be a file, a directory (lists files inside non-recursively), or a
   // directory with the suffix "/**" for a recursive walk.
   paths: string;
+}
+
+export interface RemoteSshStepData {
+  // user@host or user@host:port
+  host: string;
+  // Optional path to a private key file.
+  identityFile?: string;
+  // Remote working directory; the command runs after `cd <cwd>`.
+  cwd?: string;
+  // Shell command to run on the remote host.
+  command: string;
+  // When 'true' (string for select-field compatibility), passes
+  // -o StrictHostKeyChecking=no — convenient for fresh Mac agents.
+  skipStrictHostKey?: string;
+}
+
+export interface XcodebuildStepData {
+  // Either workspacePath (.xcworkspace) OR projectPath (.xcodeproj).
+  workspacePath?: string;
+  projectPath?: string;
+  scheme: string;
+  configuration?: 'Debug' | 'Release';
+  // e.g. "generic/platform=iOS"
+  destination?: string;
+  archivePath?: string;
+  buildAction?: 'build' | 'archive' | 'test' | 'clean';
+  additionalArgs?: string;
 }
 
 export interface BuildArtifact {

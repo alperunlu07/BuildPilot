@@ -39,6 +39,8 @@ const nodeTypes = {
   discordNotify: StepNode,
   aiPrompt: StepNode,
   artifact: StepNode,
+  remoteSsh: StepNode,
+  xcodebuild: StepNode,
 };
 
 interface Props {
@@ -417,6 +419,19 @@ function defaultData(type: StepType): Record<string, unknown> {
       return { tool: 'claude', command: '', prompt: '', cwd: '', allowFailure: 'false' };
     case 'artifact':
       return { paths: '' };
+    case 'remoteSsh':
+      return { host: '', identityFile: '', cwd: '', command: '', skipStrictHostKey: 'false' };
+    case 'xcodebuild':
+      return {
+        workspacePath: '',
+        projectPath: '',
+        scheme: '',
+        configuration: 'Release',
+        buildAction: 'archive',
+        destination: 'generic/platform=iOS',
+        archivePath: '',
+        additionalArgs: '',
+      };
   }
 }
 
