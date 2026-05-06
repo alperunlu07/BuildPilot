@@ -6,6 +6,7 @@ import {
   Globe,
   MessageCircle,
   MessageSquare,
+  Package,
   Sparkles,
   Terminal,
   type LucideIcon,
@@ -22,6 +23,7 @@ const ICONS: Record<string, LucideIcon> = {
   MessageSquare,
   MessageCircle,
   Sparkles,
+  Package,
 };
 
 type RuntimeStatus = 'running' | 'success' | 'failed' | 'skipped' | undefined;
@@ -163,6 +165,10 @@ function summariseData(type: StepType, data: Record<string, unknown>): string {
     case 'aiPrompt':
       return data.tool
         ? `${data.tool}: ${String(data.prompt ?? '').split('\n')[0]!.slice(0, 60)}`
+        : '';
+    case 'artifact':
+      return data.paths
+        ? `${String(data.paths).split('\n').filter((l) => l.trim().length > 0).length} path(s)`
         : '';
     default:
       return '';

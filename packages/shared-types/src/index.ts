@@ -34,7 +34,8 @@ export type StepType =
   | 'httpRequest'
   | 'slackNotify'
   | 'discordNotify'
-  | 'aiPrompt';
+  | 'aiPrompt'
+  | 'artifact';
 
 export type AiTool = 'claude' | 'codex' | 'aider' | 'gemini' | 'custom';
 
@@ -151,6 +152,22 @@ export interface AiAutoFixConfig {
   // Available placeholders: {{step}}, {{error}}, {{nodeId}}.
   prompt: string;
   maxRetries: number;
+}
+
+export interface ArtifactStepData {
+  // One path per line, relative to project root (or absolute). Each path can
+  // be a file, a directory (lists files inside non-recursively), or a
+  // directory with the suffix "/**" for a recursive walk.
+  paths: string;
+}
+
+export interface BuildArtifact {
+  id: number;
+  buildId: string;
+  path: string;
+  size: number;
+  mtime: number;
+  createdAt: number;
 }
 
 // ── Structured build logs ───────────────────────────────────────────────────

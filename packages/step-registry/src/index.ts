@@ -204,6 +204,24 @@ export const STEP_DEFINITIONS: Record<StepType, StepDefinition> = {
       },
     ],
   },
+  artifact: {
+    type: 'artifact',
+    label: 'Artifact',
+    description: 'Record build outputs (paths or globs) so they can be downloaded later.',
+    color: '#facc15',
+    icon: 'Package',
+    fields: [
+      {
+        name: 'paths',
+        label: 'Paths (one per line)',
+        type: 'textarea',
+        required: true,
+        placeholder:
+          'Builds/Linux/server.x86_64\nBuilds/Linux/server_Data/**\nartifacts/dist/**',
+        help: 'A path can be a file, a directory (one level), or end with /** for recursive walk.',
+      },
+    ],
+  },
   aiPrompt: {
     type: 'aiPrompt',
     label: 'AI Prompt',

@@ -1,7 +1,10 @@
 import type { FastifyInstance } from 'fastify';
+import { createReadStream, statSync } from 'node:fs';
+import { basename } from 'node:path';
 import { z } from 'zod';
 import { createBuild, getBuild, listBuilds, updateBuildStatus } from '../store/builds';
 import { listBuildLogEntries } from '../store/buildLogs';
+import { getBuildArtifact, listBuildArtifacts } from '../store/buildArtifacts';
 import { getPipeline } from '../store/pipelines';
 import { getProject } from '../store/projects';
 import { getCurrentBranch, getHeadSha } from '../git/operations';
@@ -42,6 +45,32 @@ export async function buildsRoutes(app: FastifyInstance): Promise<void> {
       sinceSeq: q.sinceSeq ? Number(q.sinceSeq) : undefined,
       limit: q.limit ? Number(q.limit) : undefined,
     });
+  });
+
+  app.get('/api/builds/:id/artifacts', async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const build = getBuild(id);
+    if (!build) return reply.code(404).send({ error: 'not found' });
+    return listBuildArtifacts(id);
+  });
+
+  app.get('/api/artifacts/:id/download', async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const artifact = getBuildArtifact(Number(id));
+    if (!artifact) return reply.code(404).send({ error: 'not found' });
+    const stat = (() => {
+      try { return statSync(artifact.path); } catch { return null; }
+    })();
+    if (!stat || !stat.isFile()) {
+      return reply.code(410).send({ error: 'artifact file no longer exists at recorded path' });
+    }
+    reply.header('content-type', 'application/octet-stream');
+    reply.header('content-length', String(stat.size));
+    reply.header(
+      'content-disposition',
+      `attachment; filename="${basename(artifact.path).replace(/"/g, '')}"`,
+    );
+    return reply.send(createReadStream(artifact.path));
   });
 
   app.post('/api/builds', async (req, reply) => {

@@ -1,5 +1,6 @@
 import type {
   Build,
+  BuildArtifact,
   BuildLogEntry,
   Commit,
   Pipeline,
@@ -85,6 +86,8 @@ export const api = {
     const qs = sinceSeq !== undefined ? `?sinceSeq=${sinceSeq}` : '';
     return http<BuildLogEntry[]>(`/builds/${id}/entries${qs}`);
   },
+  getBuildArtifacts: (id: string) => http<BuildArtifact[]>(`/builds/${id}/artifacts`),
+  artifactDownloadUrl: (id: number) => `${API}/artifacts/${id}/download`,
   triggerBuild: (pipelineId: string, fromNodeId?: string) =>
     http<Build>('/builds', {
       method: 'POST',

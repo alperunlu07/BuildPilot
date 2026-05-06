@@ -20,6 +20,7 @@ import { runHttpRequest } from './steps/httpRequest';
 import { runSlackNotify } from './steps/slackNotify';
 import { runDiscordNotify } from './steps/discordNotify';
 import { runAiPrompt } from './steps/aiPrompt';
+import { runArtifact } from './steps/artifact';
 
 export interface StepContext {
   project: Project;
@@ -43,6 +44,7 @@ const RUNNERS: Record<StepType, StepRunner> = {
   slackNotify: runSlackNotify,
   discordNotify: runDiscordNotify,
   aiPrompt: runAiPrompt,
+  artifact: runArtifact,
 };
 
 interface DagNode {

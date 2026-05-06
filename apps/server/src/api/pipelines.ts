@@ -20,6 +20,7 @@ const stepTypes = [
   'slackNotify',
   'discordNotify',
   'aiPrompt',
+  'artifact',
 ] as const;
 
 const nodeSchema = z.object({

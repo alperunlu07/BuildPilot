@@ -74,6 +74,17 @@ export function initDb(path: string): DB {
     );
     CREATE INDEX IF NOT EXISTS idx_build_log_entries_build_id
       ON build_log_entries(build_id, id);
+
+    CREATE TABLE IF NOT EXISTS build_artifacts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      build_id TEXT NOT NULL,
+      path TEXT NOT NULL,
+      size INTEGER NOT NULL,
+      mtime INTEGER NOT NULL,
+      created_at INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_build_artifacts_build_id
+      ON build_artifacts(build_id);
   `);
 
   _db = db;

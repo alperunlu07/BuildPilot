@@ -38,6 +38,7 @@ const nodeTypes = {
   slackNotify: StepNode,
   discordNotify: StepNode,
   aiPrompt: StepNode,
+  artifact: StepNode,
 };
 
 interface Props {
@@ -414,6 +415,8 @@ function defaultData(type: StepType): Record<string, unknown> {
       return { webhookUrl: '', content: '' };
     case 'aiPrompt':
       return { tool: 'claude', command: '', prompt: '', cwd: '', allowFailure: 'false' };
+    case 'artifact':
+      return { paths: '' };
   }
 }
 

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ChevronLeft, Download, Filter, RotateCcw, Square } from 'lucide-react';
 import type {
   Build,
+  BuildArtifact,
   BuildLogEntry,
   BuildLogLevel,
   StepType,
@@ -13,6 +14,13 @@ import { LogTable } from '../components/LogTable';
 import { StepGantt } from '../components/StepGantt';
 
 const EMPTY: BuildLogEntry[] = [];
+
+function formatBytes(n: number): string {
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KiB`;
+  if (n < 1024 * 1024 * 1024) return `${(n / 1024 / 1024).toFixed(1)} MiB`;
+  return `${(n / 1024 / 1024 / 1024).toFixed(2)} GiB`;
+}
 
 interface Props {
   buildId: string;
@@ -38,6 +46,7 @@ export function BuildDetailPage({ buildId }: Props) {
 
   const [build, setBuild] = useState<Build | null>(null);
   const [loading, setLoading] = useState(true);
+  const [artifacts, setArtifacts] = useState<BuildArtifact[]>([]);
 
   const [activeLevels, setActiveLevels] = useState<Set<BuildLogLevel>>(
     () => new Set(ALL_LEVELS),
@@ -49,10 +58,15 @@ export function BuildDetailPage({ buildId }: Props) {
     setLoading(true);
     setBuild(null);
 
-    Promise.all([api.getBuild(buildId), api.getBuildEntries(buildId)])
-      .then(([b, ents]) => {
+    Promise.all([
+      api.getBuild(buildId),
+      api.getBuildEntries(buildId),
+      api.getBuildArtifacts(buildId).catch(() => []),
+    ])
+      .then(([b, ents, arts]) => {
         if (!alive) return;
         setBuild(b);
+        setArtifacts(arts);
         // Legacy builds (created before the structured-log table) only have
         // the flat `build.log` text. Synthesize one stdout-level entry per
         // line so the table view still shows them.
@@ -264,6 +278,41 @@ export function BuildDetailPage({ buildId }: Props) {
           </div>
         </div>
       </header>
+
+      {artifacts.length > 0 && (
+        <div className="border-b border-slate-800 bg-slate-900/30 px-6 py-3">
+          <div className="mb-2 flex items-baseline justify-between">
+            <span className="text-[10px] uppercase tracking-wider text-slate-500">
+              Artifacts ({artifacts.length})
+            </span>
+            <span className="text-[10px] text-slate-500">
+              {formatBytes(artifacts.reduce((acc, a) => acc + a.size, 0))} total
+            </span>
+          </div>
+          <ul className="grid grid-cols-1 gap-1 md:grid-cols-2">
+            {artifacts.map((a) => (
+              <li
+                key={a.id}
+                className="flex items-center justify-between gap-2 rounded-md border border-slate-800 bg-slate-950 px-2 py-1 text-[11px]"
+              >
+                <span className="truncate font-mono text-slate-200" title={a.path}>
+                  {a.path}
+                </span>
+                <span className="flex shrink-0 items-center gap-2">
+                  <span className="text-slate-500">{formatBytes(a.size)}</span>
+                  <a
+                    href={api.artifactDownloadUrl(a.id)}
+                    className="text-sky-400 hover:text-sky-300"
+                    download
+                  >
+                    download
+                  </a>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <StepGantt
         entries={entries}
