@@ -61,9 +61,10 @@ both Linux dedicated-server and iOS / TestFlight artifacts.
 - [x] `remoteSsh` step (BatchMode, identity file, optional skip-strict-host-key) — `bfda82e`
 - [x] `xcodebuild` step (workspace/project, scheme, action, destination, archive) — `bfda82e`
 - [x] README iOS pipeline pattern — `bfda82e`
-- [ ] **TestFlight upload step** — `xcrun altool` wrapper or App Store Connect API client
-- [ ] **Mac agent quality-of-life** — host config in `~/.buildpilot/hosts.json`, host dropdown in `remoteSsh`
-- [ ] **Code signing helpers** — keychain unlock step, provisioning profile install step
+- [x] `testflightUpload` step — `xcrun altool --upload-app` wrapper (apiKey OR appleId auth)
+- [x] Mac agent QoL — `~/.buildpilot/hosts.json` + REST CRUD + Sidebar "SSH Hosts" dialog + host dropdown in remoteSsh / sftpUpload / Mac steps
+- [x] `keychainUnlock` step — wraps `security set-keychain-settings` + `unlock-keychain`
+- [x] `provisioningProfileInstall` step — drops a `.mobileprovision` into `~/Library/MobileDevice/Provisioning Profiles` (locally OR remote with SFTP-then-mv)
 
 ## ✅ Phase 3 — Notifications & integrations
 
@@ -102,13 +103,13 @@ Not started. Pulled out as discrete deliverables for future sessions.
 | ---------------------------------- | ---: | ------: | ------ |
 | 1. MVP                             |  10  |    0    | ✅ 100% |
 | 1.5. Dashboard overhaul            |  25  |    0    | ✅ 100% |
-| 2. Cross-OS / iOS                  |   3  |    3    | 🟡  50% |
+| 2. Cross-OS / iOS                  |   6  |    0    | ✅ 100% |
 | 3. Notifications & integrations    |   4  |    2    | 🟢  67% |
 | 4. Hardening                       |   0  |   10    | ⏸    0% |
-| **Overall**                        | **42** | **15** | **🟢 74%** |
+| **Overall**                        | **45** | **12** | **🟢 79%** |
 
 **Next up (recommended order):**
-1. **TestFlight upload step** — closes Phase 2 for the iOS path
-2. **Auth** — gate LAN exposure before anything multi-user happens
-3. **PWA + Web Push** — true closed-tab notifications, the last gap in the notification story
-4. **Pipeline templates + versioning** — productivity multipliers once a few real pipelines exist
+1. **Auth** — gate LAN exposure before anything multi-user happens
+2. **PWA + Web Push** — true closed-tab notifications, the last gap in the notification story
+3. **Pipeline templates + versioning** — productivity multipliers once a few real pipelines exist
+4. **Step inputs / outputs** — `${{checkout.sha}}` interpolation; touches every existing step

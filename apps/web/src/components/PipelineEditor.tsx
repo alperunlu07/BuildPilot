@@ -47,6 +47,9 @@ const nodeTypes = {
   xcodebuild: StepNode,
   gitMerge: StepNode,
   s3Upload: StepNode,
+  testflightUpload: StepNode,
+  keychainUnlock: StepNode,
+  provisioningProfileInstall: StepNode,
 };
 
 interface Props {
@@ -589,7 +592,15 @@ function defaultData(type: StepType): Record<string, unknown> {
     case 'artifact':
       return { paths: '' };
     case 'remoteSsh':
-      return { host: '', identityFile: '', cwd: '', command: '', skipStrictHostKey: 'false' };
+      return {
+        hostId: '',
+        host: '',
+        identityFile: '',
+        password: '',
+        cwd: '',
+        command: '',
+        skipStrictHostKey: 'false',
+      };
     case 'xcodebuild':
       return {
         workspacePath: '',
@@ -605,12 +616,45 @@ function defaultData(type: StepType): Record<string, unknown> {
       return { sourceBranch: '', noFastForward: 'false', message: '' };
     case 'sftpUpload':
       return {
+        hostId: '',
         host: '',
         identityFile: '',
         password: '',
         localPath: '',
         remotePath: '',
         skipStrictHostKey: 'false',
+      };
+    case 'testflightUpload':
+      return {
+        hostId: '',
+        host: '',
+        identityFile: '',
+        password: '',
+        ipaPath: '',
+        platform: 'ios',
+        authMethod: 'apiKey',
+        apiKeyId: '',
+        apiIssuerId: '',
+        appleId: '',
+        appPassword: '',
+        additionalArgs: '',
+      };
+    case 'keychainUnlock':
+      return {
+        hostId: '',
+        host: '',
+        identityFile: '',
+        password: '',
+        keychain: '',
+        unlockTimeoutSec: 3600,
+      };
+    case 'provisioningProfileInstall':
+      return {
+        hostId: '',
+        host: '',
+        identityFile: '',
+        password: '',
+        profilePath: '',
       };
     case 's3Upload':
       return {

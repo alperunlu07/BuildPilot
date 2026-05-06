@@ -1,11 +1,7 @@
 import type { ClientChannel } from 'ssh2';
 import type { RemoteSshStepData } from '@buildpilot/shared-types';
 import type { StepContext } from '../engine';
-import { buildConnectConfig, connect, parseHost, pipeStream } from './_ssh';
-
-function asBool(v: unknown): boolean {
-  return v === true || v === 'true';
-}
+import { buildConnectConfig, connect, parseHost, pipeStream, resolveHost } from './_ssh';
 
 function shellQuote(s: string): string {
   return `"${s.replace(/(["`$\\])/g, '\\$1')}"`;
@@ -16,17 +12,25 @@ export async function runRemoteSsh(
   data: Record<string, unknown>,
 ): Promise<void> {
   const d = data as Partial<RemoteSshStepData>;
-  if (!d.host) throw new Error('remoteSsh: missing "host"');
   if (!d.command || d.command.trim().length === 0) {
     throw new Error('remoteSsh: missing "command"');
   }
 
-  const { host, port, user } = parseHost(d.host);
-  const cfg = await buildConnectConfig(d.host, {
+  // hostId picks a saved host; otherwise we honour the inline fields. Either
+  // way we end up with a single ResolvedHost the ssh2 client understands.
+  const resolved = resolveHost({
+    hostId: d.hostId,
+    host: d.host,
     identityFile: d.identityFile,
     password: d.password,
-    skipStrictHostKey: asBool(d.skipStrictHostKey),
+    skipStrictHostKey: d.skipStrictHostKey,
   });
+  const cfg = await buildConnectConfig(resolved.spec, {
+    identityFile: resolved.identityFile,
+    password: resolved.password,
+    skipStrictHostKey: resolved.skipStrictHostKey,
+  });
+  const { user, host, port } = parseHost(resolved.spec);
 
   let remoteCmd = d.command;
   if (d.cwd && d.cwd.trim().length > 0) {

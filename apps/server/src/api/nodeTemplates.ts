@@ -25,6 +25,9 @@ const stepTypes = [
   'xcodebuild',
   'gitMerge',
   's3Upload',
+  'testflightUpload',
+  'keychainUnlock',
+  'provisioningProfileInstall',
 ] as const;
 
 const createSchema = z.object({

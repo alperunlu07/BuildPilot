@@ -7,6 +7,7 @@ import type {
   Pipeline,
   Project,
   ProjectSummary,
+  SshHost,
   StepType,
 } from '@buildpilot/shared-types';
 
@@ -129,4 +130,28 @@ export const api = {
     }),
   deleteNodeTemplate: (id: string) =>
     http<{ ok: true }>(`/node-templates/${id}`, { method: 'DELETE' }),
+
+  // ── Saved SSH hosts ──────────────────────────────────────
+  listHosts: () => http<SshHost[]>('/hosts'),
+  createHost: (input: {
+    name: string;
+    host: string;
+    identityFile?: string | null;
+    password?: string | null;
+    skipStrictHostKey?: boolean;
+    description?: string | null;
+  }) => http<SshHost>('/hosts', { method: 'POST', body: JSON.stringify(input) }),
+  updateHost: (
+    id: string,
+    patch: Partial<{
+      name: string;
+      host: string;
+      identityFile: string | null;
+      password: string | null;
+      skipStrictHostKey: boolean;
+      description: string | null;
+    }>,
+  ) => http<SshHost>(`/hosts/${id}`, { method: 'PATCH', body: JSON.stringify(patch) }),
+  deleteHost: (id: string) =>
+    http<{ ok: true }>(`/hosts/${id}`, { method: 'DELETE' }),
 };

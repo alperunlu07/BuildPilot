@@ -27,6 +27,9 @@ import { runSftpUpload } from './steps/sftpUpload';
 import { runXcodebuild } from './steps/xcodebuild';
 import { runGitMerge } from './steps/gitMerge';
 import { runS3Upload } from './steps/s3Upload';
+import { runTestflightUpload } from './steps/testflightUpload';
+import { runKeychainUnlock } from './steps/keychainUnlock';
+import { runProvisioningProfileInstall } from './steps/provisioningProfileInstall';
 
 export interface StepContext {
   project: Project;
@@ -57,6 +60,9 @@ const RUNNERS: Record<StepType, StepRunner> = {
   xcodebuild: runXcodebuild,
   gitMerge: runGitMerge,
   s3Upload: runS3Upload,
+  testflightUpload: runTestflightUpload,
+  keychainUnlock: runKeychainUnlock,
+  provisioningProfileInstall: runProvisioningProfileInstall,
 };
 
 interface DagNode {

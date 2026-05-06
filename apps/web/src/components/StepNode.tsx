@@ -2,14 +2,17 @@ import { Handle, Position, type NodeProps } from '@xyflow/react';
 import {
   Apple,
   ArrowDownToLine,
+  BadgeCheck,
   CloudUpload,
   GitBranch,
   GitMerge,
   Gamepad2,
   Globe,
+  KeyRound,
   MessageCircle,
   MessageSquare,
   Package,
+  PlaneTakeoff,
   Send,
   Server,
   Sparkles,
@@ -36,6 +39,9 @@ const ICONS: Record<string, LucideIcon> = {
   Apple,
   CloudUpload,
   Upload,
+  PlaneTakeoff,
+  KeyRound,
+  BadgeCheck,
 };
 
 type RuntimeStatus = 'running' | 'success' | 'failed' | 'skipped' | undefined;
@@ -210,6 +216,14 @@ function summariseData(type: StepType, data: Record<string, unknown>): string {
       return data.bucket && data.key
         ? `s3://${data.bucket}/${data.key}`
         : '';
+    case 'testflightUpload':
+      return data.ipaPath
+        ? `${data.platform ?? 'ios'} ← ${String(data.ipaPath).split('/').pop()}`
+        : '';
+    case 'keychainUnlock':
+      return data.keychain ? String(data.keychain) : 'login.keychain-db';
+    case 'provisioningProfileInstall':
+      return data.profilePath ? String(data.profilePath).split('/').pop() ?? '' : '';
     default:
       return '';
   }

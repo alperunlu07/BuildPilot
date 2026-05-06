@@ -3,9 +3,13 @@ import type { StepType } from '@buildpilot/shared-types';
 export interface StepFieldSchema {
   name: string;
   label: string;
-  // 'branchSelect' = a project-aware combobox populated with the project's
-  // local + remote branches. The host UI supplies the branch list.
-  type: 'text' | 'textarea' | 'select' | 'number' | 'branchSelect';
+  // 'branchSelect'  = project-aware combobox populated with the project's
+  //                   local + remote branches.
+  // 'hostSelect'    = combobox listing entries from ~/.buildpilot/hosts.json
+  //                   plus an "(inline)" option that hands control back to
+  //                   the host/identityFile/password fields below it.
+  // The host UI supplies both lists.
+  type: 'text' | 'textarea' | 'select' | 'number' | 'branchSelect' | 'hostSelect';
   options?: readonly string[];
   required?: boolean;
   placeholder?: string;
@@ -277,10 +281,14 @@ export const STEP_DEFINITIONS: Record<StepType, StepDefinition> = {
     icon: 'Server',
     fields: [
       {
+        name: 'hostId',
+        label: 'Saved host (or pick "(inline)" to type one below)',
+        type: 'hostSelect',
+      },
+      {
         name: 'host',
-        label: 'Host',
+        label: 'Host (used when no saved host is picked)',
         type: 'text',
-        required: true,
         placeholder: 'user@mac-builder.local',
         help: 'Optionally include a port: user@host:2222',
       },
@@ -326,10 +334,14 @@ export const STEP_DEFINITIONS: Record<StepType, StepDefinition> = {
     icon: 'Upload',
     fields: [
       {
+        name: 'hostId',
+        label: 'Saved host (or pick "(inline)" to type one below)',
+        type: 'hostSelect',
+      },
+      {
         name: 'host',
-        label: 'Host',
+        label: 'Host (used when no saved host is picked)',
         type: 'text',
-        required: true,
         placeholder: 'root@game-server.example:22',
       },
       {
@@ -519,6 +531,175 @@ export const STEP_DEFINITIONS: Record<StepType, StepDefinition> = {
         label: 'Extra args',
         type: 'text',
         placeholder: 'CODE_SIGNING_ALLOWED=NO',
+      },
+    ],
+  },
+  testflightUpload: {
+    type: 'testflightUpload',
+    label: 'TestFlight Upload',
+    description: 'Upload an .ipa to App Store Connect / TestFlight via xcrun altool.',
+    color: '#0ea5e9',
+    icon: 'PlaneTakeoff',
+    fields: [
+      {
+        name: 'hostId',
+        label: 'Saved Mac host (or pick "(inline)" / leave blank for local)',
+        type: 'hostSelect',
+      },
+      {
+        name: 'host',
+        label: 'Inline host (used when no saved host is picked)',
+        type: 'text',
+        placeholder: 'build@mac-builder.local',
+      },
+      {
+        name: 'identityFile',
+        label: 'Identity file',
+        type: 'text',
+        placeholder: '~/.ssh/id_ed25519',
+      },
+      {
+        name: 'password',
+        label: 'Password',
+        type: 'text',
+        placeholder: '(use this OR identityFile)',
+      },
+      {
+        name: 'ipaPath',
+        label: '.ipa path',
+        type: 'text',
+        required: true,
+        placeholder: 'build/MyGame.ipa',
+      },
+      {
+        name: 'platform',
+        label: 'Platform',
+        type: 'select',
+        options: ['ios', 'macos', 'tvos'] as const,
+        defaultValue: 'ios',
+      },
+      {
+        name: 'authMethod',
+        label: 'Auth method',
+        type: 'select',
+        options: ['apiKey', 'appleId'] as const,
+        defaultValue: 'apiKey',
+      },
+      {
+        name: 'apiKeyId',
+        label: 'API Key ID (apiKey auth)',
+        type: 'text',
+        placeholder: 'ABC123XYZ',
+        help: 'Place AuthKey_<id>.p8 at ~/.appstoreconnect/private_keys/ on the host.',
+      },
+      {
+        name: 'apiIssuerId',
+        label: 'API Issuer ID (apiKey auth)',
+        type: 'text',
+        placeholder: '57246542-96fe-1a63-e053-0824d011072a',
+      },
+      {
+        name: 'appleId',
+        label: 'Apple ID (appleId auth)',
+        type: 'text',
+        placeholder: 'developer@example.com',
+      },
+      {
+        name: 'appPassword',
+        label: 'App-specific password (appleId auth — plaintext)',
+        type: 'text',
+        placeholder: 'xxxx-xxxx-xxxx-xxxx',
+      },
+      {
+        name: 'additionalArgs',
+        label: 'Extra altool args',
+        type: 'text',
+        placeholder: '--verbose',
+      },
+    ],
+  },
+  keychainUnlock: {
+    type: 'keychainUnlock',
+    label: 'Keychain Unlock',
+    description: 'Unlock a macOS keychain so codesign / xcodebuild don’t prompt.',
+    color: '#f97316',
+    icon: 'KeyRound',
+    fields: [
+      {
+        name: 'hostId',
+        label: 'Saved Mac host (or pick "(inline)" / leave blank for local)',
+        type: 'hostSelect',
+      },
+      {
+        name: 'host',
+        label: 'Inline host',
+        type: 'text',
+        placeholder: 'build@mac-builder.local',
+      },
+      {
+        name: 'identityFile',
+        label: 'Identity file',
+        type: 'text',
+        placeholder: '~/.ssh/id_ed25519',
+      },
+      {
+        name: 'password',
+        label: 'Keychain password (plaintext)',
+        type: 'text',
+        required: true,
+        placeholder: '(matches the user login password by default)',
+      },
+      {
+        name: 'keychain',
+        label: 'Keychain path',
+        type: 'text',
+        placeholder: 'login.keychain-db (default)',
+      },
+      {
+        name: 'unlockTimeoutSec',
+        label: 'Re-lock after (seconds, optional)',
+        type: 'number',
+        placeholder: '3600',
+      },
+    ],
+  },
+  provisioningProfileInstall: {
+    type: 'provisioningProfileInstall',
+    label: 'Install Provisioning Profile',
+    description:
+      'Drop a .mobileprovision into ~/Library/MobileDevice/Provisioning Profiles (locally or remote).',
+    color: '#a3e635',
+    icon: 'BadgeCheck',
+    fields: [
+      {
+        name: 'hostId',
+        label: 'Saved Mac host (or pick "(inline)" / leave blank for local)',
+        type: 'hostSelect',
+      },
+      {
+        name: 'host',
+        label: 'Inline host',
+        type: 'text',
+        placeholder: 'build@mac-builder.local',
+      },
+      {
+        name: 'identityFile',
+        label: 'Identity file',
+        type: 'text',
+        placeholder: '~/.ssh/id_ed25519',
+      },
+      {
+        name: 'password',
+        label: 'Password',
+        type: 'text',
+        placeholder: '(use this OR identityFile)',
+      },
+      {
+        name: 'profilePath',
+        label: '.mobileprovision file (local — uploaded automatically when remote)',
+        type: 'text',
+        required: true,
+        placeholder: 'signing/MyGame_AdHoc.mobileprovision',
       },
     ],
   },

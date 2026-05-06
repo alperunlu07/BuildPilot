@@ -7,6 +7,7 @@ import type {
   Pipeline,
   ProjectSummary,
   ServerEvent,
+  SshHost,
 } from '@buildpilot/shared-types';
 import { api } from '../lib/api';
 import { notify } from '../lib/notifications';
@@ -52,6 +53,7 @@ interface State {
   pipelines: Pipeline[];
   builds: Build[];
   nodeTemplates: NodeTemplate[];
+  hosts: SshHost[];
   activeBuild: Build | null;
   view: View;
   toasts: CommitToast[];
@@ -79,6 +81,27 @@ interface State {
     data: Record<string, unknown>;
   }): Promise<NodeTemplate>;
   deleteNodeTemplate(id: string): Promise<void>;
+  loadHosts(): Promise<void>;
+  saveHost(input: {
+    name: string;
+    host: string;
+    identityFile?: string | null;
+    password?: string | null;
+    skipStrictHostKey?: boolean;
+    description?: string | null;
+  }): Promise<SshHost>;
+  updateHost(
+    id: string,
+    patch: Partial<{
+      name: string;
+      host: string;
+      identityFile: string | null;
+      password: string | null;
+      skipStrictHostKey: boolean;
+      description: string | null;
+    }>,
+  ): Promise<SshHost | null>;
+  deleteHost(id: string): Promise<void>;
   addProject(input: { path: string; name?: string }): Promise<void>;
   removeProject(id: string): Promise<void>;
   setView(view: View): void;
@@ -100,6 +123,7 @@ export const useStore = create<State>((set, get) => ({
   pipelines: [],
   builds: [],
   nodeTemplates: [],
+  hosts: [],
   activeBuild: null,
   view: { type: 'projects' },
   toasts: [],
@@ -128,6 +152,27 @@ export const useStore = create<State>((set, get) => ({
   async deleteNodeTemplate(id) {
     await api.deleteNodeTemplate(id);
     set({ nodeTemplates: get().nodeTemplates.filter((t) => t.id !== id) });
+  },
+  async loadHosts() {
+    set({ hosts: await api.listHosts() });
+  },
+  async saveHost(input) {
+    const created = await api.createHost(input);
+    set({ hosts: [...get().hosts, created].sort((a, b) => a.name.localeCompare(b.name)) });
+    return created;
+  },
+  async updateHost(id, patch) {
+    const updated = await api.updateHost(id, patch);
+    set({
+      hosts: get()
+        .hosts.map((h) => (h.id === id ? updated : h))
+        .sort((a, b) => a.name.localeCompare(b.name)),
+    });
+    return updated;
+  },
+  async deleteHost(id) {
+    await api.deleteHost(id);
+    set({ hosts: get().hosts.filter((h) => h.id !== id) });
   },
   async addProject(input) {
     await api.addProject(input);
@@ -318,6 +363,9 @@ export const useStore = create<State>((set, get) => ({
         break;
       case 'nodeTemplateChanged':
         void get().loadNodeTemplates();
+        break;
+      case 'hostChanged':
+        void get().loadHosts();
         break;
       case 'pollerTick':
         // Quiet event; could surface "last checked" timestamps later.

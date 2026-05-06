@@ -41,7 +41,10 @@ export type StepType =
   | 'sftpUpload'
   | 'xcodebuild'
   | 'gitMerge'
-  | 's3Upload';
+  | 's3Upload'
+  | 'testflightUpload'
+  | 'keychainUnlock'
+  | 'provisioningProfileInstall';
 
 export type AiTool = 'claude' | 'codex' | 'aider' | 'gemini' | 'custom';
 
@@ -183,6 +186,10 @@ export interface ArtifactStepData {
 }
 
 export interface RemoteSshStepData {
+  // When set, refers to an entry in ~/.buildpilot/hosts.json — the runner
+  // uses that host's saved credentials and the inline host/identity/password
+  // fields below are ignored. Empty string = use the inline fields.
+  hostId?: string;
   // user@host or user@host:port
   host: string;
   // Optional path to a private key file. Mutually exclusive with `password`.
@@ -200,6 +207,7 @@ export interface RemoteSshStepData {
 }
 
 export interface SftpUploadStepData {
+  hostId?: string;
   host: string;
   identityFile?: string;
   password?: string;
@@ -254,6 +262,66 @@ export interface XcodebuildStepData {
   archivePath?: string;
   buildAction?: 'build' | 'archive' | 'test' | 'clean';
   additionalArgs?: string;
+}
+
+// All three Mac-only steps below share the same "where to run" pattern: pick
+// a saved host (runs via ssh2) OR leave blank (runs locally with
+// child_process). The local path is what you want when BuildPilot itself is
+// running on the Mac; the remote path keeps a Windows host in the loop.
+export interface RunsOnMaybeRemote {
+  hostId?: string;
+  host?: string;
+  identityFile?: string;
+  password?: string;
+  skipStrictHostKey?: string;
+}
+
+export interface TestflightUploadStepData extends RunsOnMaybeRemote {
+  // Path to the .ipa to upload (relative to project root or absolute).
+  ipaPath: string;
+  // 'apiKey' uses an App Store Connect API key (apiKeyId + apiIssuerId,
+  // .p8 placed in ~/.appstoreconnect/private_keys). 'appleId' uses a
+  // username + app-specific password.
+  authMethod?: 'apiKey' | 'appleId';
+  apiKeyId?: string;
+  apiIssuerId?: string;
+  appleId?: string;
+  appPassword?: string;
+  // 'ios' (default) or 'macos' / 'tvos'.
+  platform?: 'ios' | 'macos' | 'tvos';
+  additionalArgs?: string;
+}
+
+export interface KeychainUnlockStepData extends RunsOnMaybeRemote {
+  // Path to the keychain (e.g. ~/Library/Keychains/login.keychain-db).
+  // Defaults to login.keychain-db on the running user.
+  keychain?: string;
+  password: string;
+  // Set lock timeout in seconds. Empty leaves the existing setting untouched.
+  unlockTimeoutSec?: number;
+}
+
+export interface ProvisioningProfileInstallStepData extends RunsOnMaybeRemote {
+  // Path to the .mobileprovision (relative to project root or absolute).
+  // For local installs this is read from the BuildPilot host; for remote
+  // it's read locally then copied via SFTP to the Mac before installing.
+  profilePath: string;
+}
+
+// A reusable SSH host saved in ~/.buildpilot/hosts.json. The dropdown in
+// remote-running steps lists these by name so credentials don't have to be
+// retyped across pipelines.
+export interface SshHost {
+  id: string;
+  name: string;
+  // user@host[:port]
+  host: string;
+  identityFile?: string | null;
+  password?: string | null;
+  skipStrictHostKey?: boolean;
+  description?: string | null;
+  createdAt: number;
+  updatedAt: number;
 }
 
 export interface BuildArtifact {
@@ -321,7 +389,8 @@ export type ServerEvent =
   | { type: 'projectAdded'; project: Project }
   | { type: 'projectRemoved'; projectId: string }
   | { type: 'pipelineChanged'; pipelineId: string; action: 'created' | 'updated' | 'deleted' }
-  | { type: 'nodeTemplateChanged'; templateId: string; action: 'created' | 'updated' | 'deleted' };
+  | { type: 'nodeTemplateChanged'; templateId: string; action: 'created' | 'updated' | 'deleted' }
+  | { type: 'hostChanged'; hostId: string; action: 'created' | 'updated' | 'deleted' };
 
 // ── Server config ───────────────────────────────────────────────────────────
 export interface TelegramConfig {
