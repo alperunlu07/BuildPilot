@@ -30,6 +30,7 @@ const stepTypes = [
   'provisioningProfileInstall',
   'notarize',
   'stapleNotarization',
+  'fastlaneMatch',
 ] as const;
 
 const createSchema = z.object({

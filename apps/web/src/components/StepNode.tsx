@@ -20,6 +20,7 @@ import {
   Stamp,
   Terminal,
   Upload,
+  Wrench,
   type LucideIcon,
 } from 'lucide-react';
 import type { StepType } from '@buildpilot/shared-types';
@@ -46,6 +47,7 @@ const ICONS: Record<string, LucideIcon> = {
   BadgeCheck,
   ShieldCheck,
   Stamp,
+  Wrench,
 };
 
 type RuntimeStatus = 'running' | 'success' | 'failed' | 'skipped' | undefined;
@@ -234,6 +236,10 @@ function summariseData(type: StepType, data: Record<string, unknown>): string {
         : '';
     case 'stapleNotarization':
       return data.bundlePath ? String(data.bundlePath).split('/').pop() ?? '' : '';
+    case 'fastlaneMatch':
+      return data.matchType
+        ? `${data.matchType}${data.readonly === 'true' ? ' (readonly)' : ''}`
+        : '';
     default:
       return '';
   }

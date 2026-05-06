@@ -46,7 +46,8 @@ export type StepType =
   | 'keychainUnlock'
   | 'provisioningProfileInstall'
   | 'notarize'
-  | 'stapleNotarization';
+  | 'stapleNotarization'
+  | 'fastlaneMatch';
 
 export type AiTool = 'claude' | 'codex' | 'aider' | 'gemini' | 'custom';
 
@@ -341,6 +342,31 @@ export interface StapleNotarizationStepData extends RunsOnMaybeRemote {
   // Bundle that already passed notarization. Stapling embeds the ticket
   // so Gatekeeper can verify the bundle offline.
   bundlePath: string;
+}
+
+export interface FastlaneMatchStepData extends RunsOnMaybeRemote {
+  // Cert/profile type fastlane match should sync.
+  matchType: 'appstore' | 'adhoc' | 'development' | 'enterprise' | 'developer_id';
+  // Bundle id(s). Comma-separated when multiple — fastlane accepts that form.
+  appIdentifier?: string;
+  // Git repo where match stores encrypted certs / profiles. Can also live
+  // in Matchfile, in which case leave this blank.
+  gitUrl?: string;
+  gitBranch?: string;
+  // Match's symmetric encryption password. Passed via MATCH_PASSWORD env
+  // so it doesn't appear in `ps aux`. Plaintext on the step until the
+  // secrets vault lands.
+  password?: string;
+  // Which keychain certs land in. Empty = login.keychain-db default.
+  keychainName?: string;
+  keychainPassword?: string;
+  // 'true' adds --readonly. Highly recommended for CI — it errors instead
+  // of trying to create new certs on the developer portal.
+  readonly?: string;
+  additionalArgs?: string;
+  // 'cwd' for the fastlane invocation. Falls back to the project root on
+  // local runs; ignored on remote (use `cd` chains in additionalArgs).
+  cwd?: string;
 }
 
 // Snapshot of what a saved host can run. Populated lazily by the

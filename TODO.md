@@ -88,7 +88,7 @@ quality-of-life pieces.
 - [x] `stapleNotarization` step — `xcrun stapler staple <bundle>`
 
 ### Cluster F · Apple Developer Portal automation
-- [ ] `fastlaneMatch` step — fetches certs/profiles via `fastlane match`
+- [x] `fastlaneMatch` step — fetches certs/profiles via `fastlane match`
 
 ### Cluster D · iOS dependency steps
 - [ ] `cocoapodsInstall` step (`pod install`)

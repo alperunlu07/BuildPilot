@@ -32,6 +32,7 @@ import { runKeychainUnlock } from './steps/keychainUnlock';
 import { runProvisioningProfileInstall } from './steps/provisioningProfileInstall';
 import { runNotarize } from './steps/notarize';
 import { runStapleNotarization } from './steps/stapleNotarization';
+import { runFastlaneMatch } from './steps/fastlaneMatch';
 
 export interface StepContext {
   project: Project;
@@ -67,6 +68,7 @@ const RUNNERS: Record<StepType, StepRunner> = {
   provisioningProfileInstall: runProvisioningProfileInstall,
   notarize: runNotarize,
   stapleNotarization: runStapleNotarization,
+  fastlaneMatch: runFastlaneMatch,
 };
 
 interface DagNode {

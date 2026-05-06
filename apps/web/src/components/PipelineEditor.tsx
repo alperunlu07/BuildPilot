@@ -52,6 +52,7 @@ const nodeTypes = {
   provisioningProfileInstall: StepNode,
   notarize: StepNode,
   stapleNotarization: StepNode,
+  fastlaneMatch: StepNode,
 };
 
 interface Props {
@@ -688,6 +689,22 @@ function defaultData(type: StepType): Record<string, unknown> {
         identityFile: '',
         password: '',
         bundlePath: '',
+      };
+    case 'fastlaneMatch':
+      return {
+        hostId: '',
+        host: '',
+        identityFile: '',
+        password: '',
+        matchType: 'appstore',
+        appIdentifier: '',
+        gitUrl: '',
+        gitBranch: '',
+        keychainName: '',
+        keychainPassword: '',
+        readonly: 'true',
+        cwd: '',
+        additionalArgs: '',
       };
     case 's3Upload':
       return {
