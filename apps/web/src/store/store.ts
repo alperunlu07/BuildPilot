@@ -37,6 +37,15 @@ export interface StepTiming {
   finishedAt?: number;
 }
 
+export interface ConfirmationRequest {
+  title: string;
+  body: string;
+  confirmLabel?: string;
+  cancelLabel?: string;
+  variant?: 'default' | 'destructive';
+  onConfirm(): void | Promise<void>;
+}
+
 interface State {
   projects: ProjectSummary[];
   pipelines: Pipeline[];
@@ -52,6 +61,10 @@ interface State {
   // Live log entries keyed by build id — populated by SSE buildLogEntry.
   // Pages can also seed this from the initial fetch.
   entriesByBuild: Record<string, BuildLogEntry[]>;
+  // Currently-open confirmation dialog. Replaces window.confirm so popup
+  // blockers / enterprise policies can't silently swallow destructive
+  // actions.
+  confirmation: ConfirmationRequest | null;
 
   loadProjects(): Promise<void>;
   loadPipelines(projectId?: string): Promise<void>;
@@ -67,6 +80,8 @@ interface State {
   pullProject(id: string): Promise<void>;
   dismissToast(id: string): void;
   seedBuildEntries(buildId: string, entries: BuildLogEntry[]): void;
+  requestConfirmation(req: ConfirmationRequest): void;
+  closeConfirmation(): void;
   handleEvent(event: ServerEvent): void;
 }
 
@@ -80,6 +95,7 @@ export const useStore = create<State>((set, get) => ({
   stepStatus: {},
   stepTimings: {},
   entriesByBuild: {},
+  confirmation: null,
 
   async loadProjects() {
     set({ projects: await api.listProjects() });
@@ -146,6 +162,12 @@ export const useStore = create<State>((set, get) => ({
   },
   dismissToast(id) {
     set({ toasts: get().toasts.filter((t) => t.id !== id) });
+  },
+  requestConfirmation(req) {
+    set({ confirmation: req });
+  },
+  closeConfirmation() {
+    set({ confirmation: null });
   },
   seedBuildEntries(buildId, entries) {
     // Merge with anything already arrived via SSE; dedupe by seq, keep order.

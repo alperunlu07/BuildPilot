@@ -13,6 +13,7 @@ export function Sidebar({ onAddProject }: Props) {
   const setView = useStore((s) => s.setView);
   const removeProject = useStore((s) => s.removeProject);
   const deletePipelineAction = useStore((s) => s.deletePipeline);
+  const requestConfirmation = useStore((s) => s.requestConfirmation);
 
   return (
     <aside className="flex h-full w-72 shrink-0 flex-col border-r border-slate-800 bg-slate-950">
@@ -84,9 +85,15 @@ export function Sidebar({ onAddProject }: Props) {
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
-                      if (confirm(`Remove "${p.name}" from BuildPilot? Pipelines will be deleted; build history is kept.`)) {
-                        void removeProject(p.id);
-                      }
+                      requestConfirmation({
+                        title: `Remove project "${p.name}"?`,
+                        body:
+                          'Pipelines belonging to this project will also be deleted. ' +
+                          'Build history is kept.',
+                        variant: 'destructive',
+                        confirmLabel: 'Remove project',
+                        onConfirm: () => removeProject(p.id),
+                      });
                     }}
                     className="rounded p-0.5 text-slate-500 opacity-0 transition-opacity hover:text-rose-400 group-hover:opacity-100"
                     title="Remove this project"
@@ -120,9 +127,13 @@ export function Sidebar({ onAddProject }: Props) {
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                if (confirm(`Delete pipeline "${pl.name}"? Build history is kept.`)) {
-                                  void deletePipelineAction(pl.id);
-                                }
+                                requestConfirmation({
+                                  title: `Delete pipeline "${pl.name}"?`,
+                                  body: "Build history for this pipeline is kept; only the pipeline definition is removed.",
+                                  variant: 'destructive',
+                                  confirmLabel: 'Delete pipeline',
+                                  onConfirm: () => deletePipelineAction(pl.id),
+                                });
                               }}
                               className="rounded p-0.5 text-slate-500 opacity-0 transition-opacity hover:text-rose-400 group-hover:opacity-100"
                               title="Delete this pipeline"

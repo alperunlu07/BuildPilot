@@ -11,13 +11,17 @@ import type {
 const API = '/api';
 
 async function http<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${API}${path}`, {
-    ...init,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(init?.headers ?? {}),
-    },
-  });
+  // Only advertise a JSON content type when there's a body — Fastify's
+  // built-in JSON parser refuses an empty body when the header is set,
+  // which silently broke every body-less DELETE / POST in the dashboard
+  // (cancel build, fetch project, pull project, delete project / pipeline).
+  const headers: Record<string, string> = {};
+  if (init?.body !== undefined && init.body !== null) {
+    headers['Content-Type'] = 'application/json';
+  }
+  if (init?.headers) Object.assign(headers, init.headers);
+
+  const res = await fetch(`${API}${path}`, { ...init, headers });
   if (!res.ok) {
     const text = await res.text().catch(() => '');
     throw new Error(`${res.status} ${res.statusText}${text ? `: ${text}` : ''}`);

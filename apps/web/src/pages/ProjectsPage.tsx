@@ -10,6 +10,7 @@ export function ProjectsPage({ onAdd }: Props) {
   const projects = useStore((s) => s.projects);
   const setView = useStore((s) => s.setView);
   const removeProject = useStore((s) => s.removeProject);
+  const requestConfirmation = useStore((s) => s.requestConfirmation);
 
   return (
     <div className="mx-auto max-w-4xl p-8">
@@ -46,9 +47,15 @@ export function ProjectsPage({ onAdd }: Props) {
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
-                  if (confirm(`Remove "${p.name}" from BuildPilot? Pipelines will be deleted; build history is kept.`)) {
-                    void removeProject(p.id);
-                  }
+                  requestConfirmation({
+                    title: `Remove project "${p.name}"?`,
+                    body:
+                      'Pipelines belonging to this project will also be deleted. ' +
+                      'Build history is kept.',
+                    variant: 'destructive',
+                    confirmLabel: 'Remove project',
+                    onConfirm: () => removeProject(p.id),
+                  });
                 }}
                 className="absolute right-3 top-3 rounded-md border border-transparent p-1 text-slate-500 opacity-0 transition-opacity hover:border-rose-700 hover:text-rose-400 group-hover:opacity-100"
                 title="Remove this project"

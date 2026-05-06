@@ -39,6 +39,7 @@ export function ProjectDetailPage({ projectId }: Props) {
   const removeProject = useStore((s) => s.removeProject);
   const triggerBuild = useStore((s) => s.triggerBuild);
   const loadBuilds = useStore((s) => s.loadBuilds);
+  const requestConfirmation = useStore((s) => s.requestConfirmation);
 
   const [currentBranch, setCurrentBranch] = useState<string>('');
   const [headSha, setHeadSha] = useState<string>('');
@@ -155,10 +156,16 @@ export function ProjectDetailPage({ projectId }: Props) {
           <h1 className="text-lg font-semibold text-slate-100">{project.name}</h1>
           <button
             type="button"
-            onClick={async () => {
-              if (confirm(`Remove "${project.name}" from BuildPilot?`)) {
-                await removeProject(project.id);
-              }
+            onClick={() => {
+              requestConfirmation({
+                title: `Remove project "${project.name}"?`,
+                body:
+                  'Pipelines belonging to this project will also be deleted. ' +
+                  'Build history is kept.',
+                variant: 'destructive',
+                confirmLabel: 'Remove project',
+                onConfirm: () => removeProject(project.id),
+              });
             }}
             className="text-[11px] text-rose-400 hover:text-rose-300"
             title="Remove project"
@@ -292,10 +299,14 @@ export function ProjectDetailPage({ projectId }: Props) {
                     useStore.getState().upsertPipeline(cloned);
                     setView({ type: 'pipeline', id: cloned.id });
                   }}
-                  onDelete={async () => {
-                    if (confirm(`Delete pipeline "${pl.name}"? This can't be undone (build history is kept).`)) {
-                      await useStore.getState().deletePipeline(pl.id);
-                    }
+                  onDelete={() => {
+                    requestConfirmation({
+                      title: `Delete pipeline "${pl.name}"?`,
+                      body: "Build history for this pipeline is kept; only the pipeline definition is removed.",
+                      variant: 'destructive',
+                      confirmLabel: 'Delete pipeline',
+                      onConfirm: () => useStore.getState().deletePipeline(pl.id),
+                    });
                   }}
                 />
               ))}

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { AddProjectDialog } from './components/AddProjectDialog';
 import { BuildLogPanel } from './components/BuildLogPanel';
+import { ConfirmDialog } from './components/ConfirmDialog';
 import { ToastContainer } from './components/ToastContainer';
 import { ProjectsPage } from './pages/ProjectsPage';
 import { ProjectDetailPage } from './pages/ProjectDetailPage';
@@ -18,6 +19,8 @@ export function App() {
   const loadPipelines = useStore((s) => s.loadPipelines);
   const loadBuilds = useStore((s) => s.loadBuilds);
   const handleEvent = useStore((s) => s.handleEvent);
+  const confirmation = useStore((s) => s.confirmation);
+  const closeConfirmation = useStore((s) => s.closeConfirmation);
 
   const [openAdd, setOpenAdd] = useState(false);
 
@@ -58,6 +61,20 @@ export function App() {
 
       <ToastContainer />
       <AddProjectDialog open={openAdd} onClose={() => setOpenAdd(false)} />
+      <ConfirmDialog
+        open={confirmation !== null}
+        title={confirmation?.title ?? ''}
+        body={confirmation?.body ?? ''}
+        confirmLabel={confirmation?.confirmLabel}
+        cancelLabel={confirmation?.cancelLabel}
+        variant={confirmation?.variant}
+        onCancel={closeConfirmation}
+        onConfirm={async () => {
+          const cb = confirmation?.onConfirm;
+          closeConfirmation();
+          if (cb) await cb();
+        }}
+      />
     </div>
   );
 }
