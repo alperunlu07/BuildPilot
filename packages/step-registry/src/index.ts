@@ -227,6 +227,48 @@ export const STEP_DEFINITIONS: Record<StepType, StepDefinition> = {
       },
     ],
   },
+  telegramNotify: {
+    type: 'telegramNotify',
+    label: 'Telegram Notify',
+    description: 'Send a message via Telegram Bot API (token + chat fall back to ~/.buildpilot/config.json).',
+    color: '#38bdf8',
+    icon: 'Send',
+    fields: [
+      {
+        name: 'botToken',
+        label: 'Bot token (leave blank for default)',
+        type: 'text',
+        placeholder: '123456:ABC-DEF…',
+      },
+      {
+        name: 'chatId',
+        label: 'Chat id (leave blank for default)',
+        type: 'text',
+        placeholder: '@yourchannel or 12345678',
+      },
+      {
+        name: 'text',
+        label: 'Message',
+        type: 'textarea',
+        required: true,
+        placeholder: '✅ NetworkTest server build finished\n<i>commit</i> <code>{{sha}}</code>',
+      },
+      {
+        name: 'parseMode',
+        label: 'Parse mode',
+        type: 'select',
+        options: ['plain', 'HTML', 'MarkdownV2'] as const,
+        defaultValue: 'plain',
+      },
+      {
+        name: 'silent',
+        label: 'Send silently (no sound)',
+        type: 'select',
+        options: ['false', 'true'] as const,
+        defaultValue: 'false',
+      },
+    ],
+  },
   remoteSsh: {
     type: 'remoteSsh',
     label: 'Remote SSH',

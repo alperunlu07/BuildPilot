@@ -19,6 +19,7 @@ interface PipelineRow {
   created_at: number;
   updated_at: number;
   last_built_sha: string | null;
+  telegram_approvals: number;
 }
 
 function rowToPipeline(row: PipelineRow): Pipeline {
@@ -30,6 +31,7 @@ function rowToPipeline(row: PipelineRow): Pipeline {
       branch: row.watch_branch,
       intervalSec: row.watch_interval_sec,
       autoTrigger: row.auto_trigger as PipelineWatch['autoTrigger'],
+      telegramApprovals: row.telegram_approvals === 1,
     },
     nodes: JSON.parse(row.nodes_json) as PipelineNode[],
     edges: JSON.parse(row.edges_json) as PipelineEdge[],
@@ -76,8 +78,8 @@ export function createPipeline(input: PipelineInput): Pipeline {
     .prepare(
       `INSERT INTO pipelines
        (id, project_id, name, watch_branch, watch_interval_sec, auto_trigger,
-        nodes_json, edges_json, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        nodes_json, edges_json, created_at, updated_at, telegram_approvals)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     .run(
       id,
@@ -90,6 +92,7 @@ export function createPipeline(input: PipelineInput): Pipeline {
       JSON.stringify(input.edges),
       now,
       now,
+      input.watch.telegramApprovals ? 1 : 0,
     );
   return {
     id,
@@ -122,7 +125,7 @@ export function updatePipeline(
     .prepare(
       `UPDATE pipelines SET
          name = ?, watch_branch = ?, watch_interval_sec = ?, auto_trigger = ?,
-         nodes_json = ?, edges_json = ?, updated_at = ?
+         nodes_json = ?, edges_json = ?, updated_at = ?, telegram_approvals = ?
        WHERE id = ?`,
     )
     .run(
@@ -133,6 +136,7 @@ export function updatePipeline(
       JSON.stringify(merged.nodes),
       JSON.stringify(merged.edges),
       merged.updatedAt,
+      merged.watch.telegramApprovals ? 1 : 0,
       id,
     );
   return merged;

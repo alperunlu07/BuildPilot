@@ -37,6 +37,7 @@ const nodeTypes = {
   httpRequest: StepNode,
   slackNotify: StepNode,
   discordNotify: StepNode,
+  telegramNotify: StepNode,
   aiPrompt: StepNode,
   artifact: StepNode,
   remoteSsh: StepNode,
@@ -282,6 +283,21 @@ function Editor({ pipeline }: Props) {
             />
             s
           </span>
+          <label
+            className="inline-flex items-center gap-1 rounded-md bg-slate-800 px-2 py-0.5 text-[11px] text-slate-400"
+            title="When the watched branch advances, send a Telegram message asking whether to build (requires bot configured in ~/.buildpilot/config.json)"
+          >
+            <input
+              type="checkbox"
+              checked={watch.telegramApprovals ?? false}
+              onChange={(e) => {
+                setWatch({ ...watch, telegramApprovals: e.target.checked });
+                setDirty(true);
+              }}
+              className="h-3 w-3"
+            />
+            Telegram ask
+          </label>
         </div>
 
         <div className="flex items-center gap-2">
@@ -416,6 +432,8 @@ function defaultData(type: StepType): Record<string, unknown> {
       return { webhookUrl: '', text: '' };
     case 'discordNotify':
       return { webhookUrl: '', content: '' };
+    case 'telegramNotify':
+      return { botToken: '', chatId: '', text: '', parseMode: 'plain', silent: 'false' };
     case 'aiPrompt':
       return { tool: 'claude', command: '', prompt: '', cwd: '', allowFailure: 'false' };
     case 'artifact':

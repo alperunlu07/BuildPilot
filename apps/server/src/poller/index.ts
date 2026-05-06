@@ -1,9 +1,10 @@
-import { listPipelines } from '../store/pipelines';
+import { getPipeline, listPipelines } from '../store/pipelines';
 import { getProject } from '../store/projects';
 import { getLastSeenSha, setLastSeenSha } from '../store/state';
 import { fetchAll, getRemoteHeadSha, listCommits } from '../git/operations';
 import { eventBus } from '../events/bus';
 import { logger } from '../logger';
+import { getTelegramConfig, isTelegramEnabled, sendApprovalRequest } from '../runner/telegramBot';
 
 interface ScheduledWatch {
   pipelineId: string;
@@ -123,8 +124,34 @@ async function runOnce(entry: ScheduledWatch): Promise<void> {
         branch: entry.branch,
         commits,
       });
+
+      // If this pipeline opted into Telegram approvals + a bot is wired up,
+      // ask via Telegram with Build / Skip inline buttons.
+      const pipeline = getPipeline(entry.pipelineId);
+      if (pipeline?.watch.telegramApprovals && isTelegramEnabled()) {
+        const cfg = getTelegramConfig();
+        if (cfg && cfg.defaultChatId) {
+          const head4 = commits[0]!.shortSha;
+          const subj = commits[0]!.subject.slice(0, 80);
+          const more = commits.length > 1 ? ` (+${commits.length - 1} more)` : '';
+          await sendApprovalRequest({
+            chatId: cfg.defaultChatId,
+            pipelineId: entry.pipelineId,
+            text:
+              `🔔 <b>${escapeHtml(project.name)}</b> · ${commits.length} new commit` +
+              `${commits.length === 1 ? '' : 's'} on <code>${escapeHtml(entry.branch)}</code>\n` +
+              `<i>pipeline:</i> ${escapeHtml(pipeline.name)}\n` +
+              `<code>${head4}</code> ${escapeHtml(subj)}${more}\n\n` +
+              `Build now?`,
+          });
+        }
+      }
     }
   } catch (err) {
     logger.warn({ err: String(err), project: project.path, branch: entry.branch }, 'poll failed');
   }
+}
+
+function escapeHtml(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }

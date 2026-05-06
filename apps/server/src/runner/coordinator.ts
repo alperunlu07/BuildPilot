@@ -2,6 +2,10 @@ import type { ChildProcess } from 'node:child_process';
 import type { Build, Pipeline, Project } from '@buildpilot/shared-types';
 import { runPipeline } from './engine';
 import { logger } from '../logger';
+import { getPipeline } from '../store/pipelines';
+import { getProject } from '../store/projects';
+import { createBuild } from '../store/builds';
+import { getCurrentBranch, getHeadSha } from '../git/operations';
 
 interface RunArgs {
   pipeline: Pipeline;
@@ -81,4 +85,28 @@ export function isCancelled(buildId: string): boolean {
 
 export function clearCancellation(buildId: string): void {
   cancelledBuilds.delete(buildId);
+}
+
+// Reusable "trigger a build for this pipeline" helper used by the API route,
+// the Telegram bot's approval flow, and the upcoming auto-trigger paths.
+export async function startBuildForPipeline(
+  pipelineId: string,
+  opts: { fromNodeId?: string } = {},
+): Promise<Build | null> {
+  const pipeline = getPipeline(pipelineId);
+  if (!pipeline) return null;
+  const project = getProject(pipeline.projectId);
+  if (!project) return null;
+  const branch = await getCurrentBranch(project.path).catch(() => project.defaultBranch);
+  const head = (await getHeadSha(project.path, branch)) ?? '';
+  const build = createBuild({
+    pipelineId: pipeline.id,
+    projectId: project.id,
+    triggerSha: head,
+    triggerBranch: branch,
+  });
+  void enqueueBuild({ pipeline, project, build, fromNodeId: opts.fromNodeId }).catch((err) => {
+    logger.error({ err }, 'pipeline crashed');
+  });
+  return build;
 }

@@ -19,6 +19,7 @@ const stepTypes = [
   'httpRequest',
   'slackNotify',
   'discordNotify',
+  'telegramNotify',
   'aiPrompt',
   'artifact',
   'remoteSsh',
@@ -44,6 +45,7 @@ const watchSchema = z.object({
   branch: z.string().min(1),
   intervalSec: z.number().int().positive(),
   autoTrigger: z.enum(['off', 'ask', 'pull', 'pullAndBuild']),
+  telegramApprovals: z.boolean().optional(),
 });
 
 const createSchema = z.object({

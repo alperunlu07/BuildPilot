@@ -9,6 +9,7 @@ import { buildsRoutes } from './api/builds';
 import { eventsRoutes } from './api/events';
 import { reloadSchedules, startPoller } from './poller';
 import { eventBus } from './events/bus';
+import { startTelegramBot } from './runner/telegramBot';
 
 async function main(): Promise<void> {
   const config = loadConfig();
@@ -66,6 +67,7 @@ async function main(): Promise<void> {
   logger.info({ host: config.host, port: config.port }, 'BuildPilot server listening');
 
   startPoller();
+  if (config.telegram) startTelegramBot(config.telegram);
 }
 
 main().catch((err) => {

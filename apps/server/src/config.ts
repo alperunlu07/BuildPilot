@@ -14,6 +14,11 @@ const DEFAULT_CONFIG: ServerConfig = {
   pollIntervalSec: 60,
   dbPath: join(CONFIG_DIR, 'db.sqlite'),
   webOrigin: 'http://127.0.0.1:49832',
+  telegram: {
+    enabled: false,
+    botToken: '',
+    defaultChatId: '',
+  },
 };
 
 // Configs written by older builds that still carry the previous well-known

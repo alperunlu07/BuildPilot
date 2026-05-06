@@ -34,6 +34,7 @@ export type StepType =
   | 'httpRequest'
   | 'slackNotify'
   | 'discordNotify'
+  | 'telegramNotify'
   | 'aiPrompt'
   | 'artifact'
   | 'remoteSsh'
@@ -62,6 +63,10 @@ export interface PipelineWatch {
   branch: string;
   intervalSec: number;
   autoTrigger: AutoTriggerMode;
+  // When true, the poller sends a Telegram message with Build / Skip
+  // inline-keyboard buttons whenever this pipeline's watched branch
+  // advances. Requires a bot configured in ~/.buildpilot/config.json.
+  telegramApprovals?: boolean;
 }
 
 export interface Pipeline {
@@ -132,6 +137,17 @@ export interface SlackNotifyStepData {
 export interface DiscordNotifyStepData {
   webhookUrl: string;
   content: string;
+}
+
+export interface TelegramNotifyStepData {
+  // Leave blank to fall back to the bot configured in
+  // ~/.buildpilot/config.json (telegram.botToken / telegram.defaultChatId).
+  botToken?: string;
+  chatId?: string;
+  text: string;
+  parseMode?: 'HTML' | 'MarkdownV2' | 'plain';
+  // 'true' = disable notification sound
+  silent?: string;
 }
 
 export interface AiPromptStepData {
@@ -254,10 +270,28 @@ export type ServerEvent =
   | { type: 'pipelineChanged'; pipelineId: string; action: 'created' | 'updated' | 'deleted' };
 
 // ── Server config ───────────────────────────────────────────────────────────
+export interface TelegramConfig {
+  enabled: boolean;
+  botToken: string;
+  // Default chat used by telegramNotify steps that don't specify one of
+  // their own, and the destination for new-commit approval prompts.
+  defaultChatId: string;
+}
+
 export interface ServerConfig {
   host: string;
   port: number;
   pollIntervalSec: number;
   dbPath: string;
   webOrigin: string | null;
+  telegram?: TelegramConfig;
+}
+
+// Optional per-pipeline flag exposed on PipelineWatch — when set + a bot
+// is configured, new commits trigger an interactive Telegram message
+// asking whether to build.
+export interface TelegramApprovalConfig {
+  enabled: boolean;
+  // When unset, falls back to telegram.defaultChatId.
+  chatId?: string;
 }

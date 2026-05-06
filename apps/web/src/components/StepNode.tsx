@@ -9,6 +9,7 @@ import {
   MessageCircle,
   MessageSquare,
   Package,
+  Send,
   Server,
   Sparkles,
   Terminal,
@@ -28,6 +29,7 @@ const ICONS: Record<string, LucideIcon> = {
   MessageCircle,
   Sparkles,
   Package,
+  Send,
   Server,
   Apple,
 };
@@ -168,6 +170,8 @@ function summariseData(type: StepType, data: Record<string, unknown>): string {
     case 'slackNotify':
     case 'discordNotify':
       return data.webhookUrl ? '→ webhook' : '';
+    case 'telegramNotify':
+      return `chat ${data.chatId || '(default)'}`;
     case 'aiPrompt':
       return data.tool
         ? `${data.tool}: ${String(data.prompt ?? '').split('\n')[0]!.slice(0, 60)}`

@@ -19,6 +19,7 @@ import { runUnityBatch } from './steps/unityBatch';
 import { runHttpRequest } from './steps/httpRequest';
 import { runSlackNotify } from './steps/slackNotify';
 import { runDiscordNotify } from './steps/discordNotify';
+import { runTelegramNotify } from './steps/telegramNotify';
 import { runAiPrompt } from './steps/aiPrompt';
 import { runArtifact } from './steps/artifact';
 import { runRemoteSsh } from './steps/remoteSsh';
@@ -46,6 +47,7 @@ const RUNNERS: Record<StepType, StepRunner> = {
   httpRequest: runHttpRequest,
   slackNotify: runSlackNotify,
   discordNotify: runDiscordNotify,
+  telegramNotify: runTelegramNotify,
   aiPrompt: runAiPrompt,
   artifact: runArtifact,
   remoteSsh: runRemoteSsh,

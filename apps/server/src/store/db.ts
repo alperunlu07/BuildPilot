@@ -31,7 +31,8 @@ export function initDb(path: string): DB {
       nodes_json TEXT NOT NULL,
       edges_json TEXT NOT NULL,
       created_at INTEGER NOT NULL,
-      updated_at INTEGER NOT NULL
+      updated_at INTEGER NOT NULL,
+      telegram_approvals INTEGER NOT NULL DEFAULT 0
     );
 
     CREATE TABLE IF NOT EXISTS builds (
@@ -86,6 +87,15 @@ export function initDb(path: string): DB {
     CREATE INDEX IF NOT EXISTS idx_build_artifacts_build_id
       ON build_artifacts(build_id);
   `);
+
+  // Lightweight migration for existing installs: SQLite's CREATE TABLE IF
+  // NOT EXISTS doesn't add new columns, so additive schema changes need an
+  // explicit ALTER. We swallow the error if the column already exists.
+  try {
+    db.exec('ALTER TABLE pipelines ADD COLUMN telegram_approvals INTEGER NOT NULL DEFAULT 0');
+  } catch {
+    /* column already present */
+  }
 
   _db = db;
   return db;
