@@ -227,6 +227,21 @@ export interface BuildArtifact {
   createdAt: number;
 }
 
+// User-defined "save this configured node as a reusable palette entry"
+// preset. At runtime a templated node behaves exactly like a regular node
+// of `baseStepType`; the template only matters at design time.
+export interface NodeTemplate {
+  id: string;
+  name: string;
+  description: string | null;
+  baseStepType: StepType;
+  // Pre-filled field values cloned into a new node when the user drags this
+  // template onto the canvas.
+  data: Record<string, unknown>;
+  createdAt: number;
+  updatedAt: number;
+}
+
 // ── Structured build logs ───────────────────────────────────────────────────
 // Each entry is one logical line, tagged with the originating pipeline node
 // and a coarse log level. The dashboard renders these as a logcat-style table.
@@ -267,7 +282,8 @@ export type ServerEvent =
   | { type: 'buildFinished'; build: Build }
   | { type: 'projectAdded'; project: Project }
   | { type: 'projectRemoved'; projectId: string }
-  | { type: 'pipelineChanged'; pipelineId: string; action: 'created' | 'updated' | 'deleted' };
+  | { type: 'pipelineChanged'; pipelineId: string; action: 'created' | 'updated' | 'deleted' }
+  | { type: 'nodeTemplateChanged'; templateId: string; action: 'created' | 'updated' | 'deleted' };
 
 // ── Server config ───────────────────────────────────────────────────────────
 export interface TelegramConfig {

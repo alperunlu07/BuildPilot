@@ -3,9 +3,11 @@ import type {
   BuildArtifact,
   BuildLogEntry,
   Commit,
+  NodeTemplate,
   Pipeline,
   Project,
   ProjectSummary,
+  StepType,
 } from '@buildpilot/shared-types';
 
 const API = '/api';
@@ -99,4 +101,32 @@ export const api = {
     }),
   cancelBuild: (id: string) =>
     http<{ ok: true }>(`/builds/${id}/cancel`, { method: 'POST' }),
+
+  // ── Node templates ───────────────────────────────────────
+  listNodeTemplates: () => http<NodeTemplate[]>('/node-templates'),
+  createNodeTemplate: (input: {
+    name: string;
+    description?: string | null;
+    baseStepType: StepType;
+    data: Record<string, unknown>;
+  }) =>
+    http<NodeTemplate>('/node-templates', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
+  updateNodeTemplate: (
+    id: string,
+    patch: Partial<{
+      name: string;
+      description: string | null;
+      baseStepType: StepType;
+      data: Record<string, unknown>;
+    }>,
+  ) =>
+    http<NodeTemplate>(`/node-templates/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(patch),
+    }),
+  deleteNodeTemplate: (id: string) =>
+    http<{ ok: true }>(`/node-templates/${id}`, { method: 'DELETE' }),
 };

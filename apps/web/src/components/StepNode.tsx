@@ -40,6 +40,9 @@ interface StepNodeData {
   runtimeStatus?: RuntimeStatus;
   runtimeStartedAt?: number;
   runtimeFinishedAt?: number;
+  // Optional friendly name when the node was spawned from a saved template.
+  // Falls back to the step type's built-in label.
+  templateLabel?: string;
   [key: string]: unknown;
 }
 
@@ -76,7 +79,16 @@ export function StepNode({ type, data, selected }: NodeProps) {
             <span className="absolute inset-0 animate-ping rounded-md ring-2 ring-amber-400/50" />
           )}
         </span>
-        <span className="text-[13px] font-medium text-slate-100">{def.label}</span>
+        <span className="flex min-w-0 flex-1 flex-col">
+          <span className="truncate text-[13px] font-medium text-slate-100">
+            {d.templateLabel || def.label}
+          </span>
+          {d.templateLabel && (
+            <span className="truncate text-[9px] uppercase tracking-wider text-slate-500">
+              {def.label}
+            </span>
+          )}
+        </span>
         {status && (
           <span
             className={`ml-auto rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider ${runtime.badgeClass}`}

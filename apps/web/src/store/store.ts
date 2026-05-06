@@ -3,6 +3,7 @@ import type {
   Build,
   BuildLogEntry,
   Commit,
+  NodeTemplate,
   Pipeline,
   ProjectSummary,
   ServerEvent,
@@ -50,6 +51,7 @@ interface State {
   projects: ProjectSummary[];
   pipelines: Pipeline[];
   builds: Build[];
+  nodeTemplates: NodeTemplate[];
   activeBuild: Build | null;
   view: View;
   toasts: CommitToast[];
@@ -69,6 +71,14 @@ interface State {
   loadProjects(): Promise<void>;
   loadPipelines(projectId?: string): Promise<void>;
   loadBuilds(filter?: { projectId?: string; pipelineId?: string }): Promise<void>;
+  loadNodeTemplates(): Promise<void>;
+  saveNodeTemplate(input: {
+    name: string;
+    description?: string | null;
+    baseStepType: import('@buildpilot/shared-types').StepType;
+    data: Record<string, unknown>;
+  }): Promise<NodeTemplate>;
+  deleteNodeTemplate(id: string): Promise<void>;
   addProject(input: { path: string; name?: string }): Promise<void>;
   removeProject(id: string): Promise<void>;
   setView(view: View): void;
@@ -89,6 +99,7 @@ export const useStore = create<State>((set, get) => ({
   projects: [],
   pipelines: [],
   builds: [],
+  nodeTemplates: [],
   activeBuild: null,
   view: { type: 'projects' },
   toasts: [],
@@ -105,6 +116,18 @@ export const useStore = create<State>((set, get) => ({
   },
   async loadBuilds(filter = {}) {
     set({ builds: await api.listBuilds({ ...filter, limit: 30 }) });
+  },
+  async loadNodeTemplates() {
+    set({ nodeTemplates: await api.listNodeTemplates() });
+  },
+  async saveNodeTemplate(input) {
+    const created = await api.createNodeTemplate(input);
+    set({ nodeTemplates: [...get().nodeTemplates, created].sort((a, b) => a.name.localeCompare(b.name)) });
+    return created;
+  },
+  async deleteNodeTemplate(id) {
+    await api.deleteNodeTemplate(id);
+    set({ nodeTemplates: get().nodeTemplates.filter((t) => t.id !== id) });
   },
   async addProject(input) {
     await api.addProject(input);
@@ -292,6 +315,9 @@ export const useStore = create<State>((set, get) => ({
         // Reload pipelines so API-created/edited/deleted entities show up
         // in the dashboard without manual refresh.
         void get().loadPipelines();
+        break;
+      case 'nodeTemplateChanged':
+        void get().loadNodeTemplates();
         break;
       case 'pollerTick':
         // Quiet event; could surface "last checked" timestamps later.

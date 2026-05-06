@@ -48,6 +48,7 @@ Goal: pro-grade run visibility, control, and AI-assisted recovery.
 - [x] `gitMerge` step (compose with AI for conflict resolution) — `477ecea`
 - [x] Pipeline delete UI (header trash + project-detail row trash) — `8981806`
 - [x] Project + pipeline hover-delete in ProjectsPage cards and Sidebar — `6f93ac7`
+- [x] User-defined node templates (save preset → palette entry, drag onto canvas) — `982d431`
 
 ## ✅ Phase 2 — Cross-OS / iOS foundations
 
@@ -75,7 +76,7 @@ both Linux dedicated-server and iOS / TestFlight artifacts.
 Not started. Pulled out as discrete deliverables for future sessions.
 
 - [ ] **Auth** for LAN exposure — Basic auth or token; required when binding `host: 0.0.0.0`
-- [ ] **Pipeline templates** — save a node group as a reusable block, drop into other pipelines
+- [ ] **Pipeline templates** — save a *group* of nodes as a reusable block (single-node templates already shipped, see Phase 1.5)
 - [ ] **Pipeline versioning** — snapshot on save, diff between versions, rollback
 - [ ] **Step inputs / outputs** — `${{checkout.sha}}` style interpolation, env var injection between steps
 - [ ] **Webhook-driven polling** — receive GitHub/Gitea push webhooks instead of poll
@@ -97,11 +98,11 @@ Not started. Pulled out as discrete deliverables for future sessions.
 | Phase                              | Done | Pending | Status |
 | ---------------------------------- | ---: | ------: | ------ |
 | 1. MVP                             |  10  |    0    | ✅ 100% |
-| 1.5. Dashboard overhaul            |  21  |    0    | ✅ 100% |
+| 1.5. Dashboard overhaul            |  22  |    0    | ✅ 100% |
 | 2. Cross-OS / iOS                  |   3  |    3    | 🟡  50% |
 | 3. Notifications & integrations    |   4  |    2    | 🟢  67% |
 | 4. Hardening                       |   0  |   10    | ⏸    0% |
-| **Overall**                        | **38** | **15** | **🟢 72%** |
+| **Overall**                        | **39** | **15** | **🟢 72%** |
 
 **Next up (recommended order):**
 1. **TestFlight upload step** — closes Phase 2 for the iOS path

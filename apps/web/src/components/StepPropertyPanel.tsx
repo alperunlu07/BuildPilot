@@ -16,6 +16,7 @@ interface Props {
   onChange(nodeId: string, data: Record<string, unknown>): void;
   onDelete(nodeId: string): void;
   onRunFrom?(nodeId: string): void;
+  onSaveAsTemplate?(nodeId: string): void;
 }
 
 type Tab = 'properties' | 'logs';
@@ -27,6 +28,7 @@ export function StepPropertyPanel({
   onChange,
   onDelete,
   onRunFrom,
+  onSaveAsTemplate,
 }: Props) {
   // All hooks must run unconditionally (React rules of hooks), so they live
   // above the null/missing-def early returns.
@@ -62,6 +64,16 @@ export function StepPropertyPanel({
         <div className="mt-1 flex items-center justify-between gap-2">
           <h3 className="truncate text-sm font-semibold text-slate-100">{def.label}</h3>
           <div className="flex items-center gap-2">
+            {onSaveAsTemplate && (
+              <button
+                type="button"
+                onClick={() => onSaveAsTemplate(node.id)}
+                className="text-[11px] text-sky-400 hover:text-sky-300"
+                title="Save this node's configuration as a reusable palette entry"
+              >
+                Save as template
+              </button>
+            )}
             {onRunFrom && (
               <button
                 type="button"

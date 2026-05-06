@@ -16,6 +16,7 @@ import {
 } from '@xyflow/react';
 import { Hammer, Save, Square, Trash2 } from 'lucide-react';
 import type {
+  NodeTemplate,
   Pipeline,
   PipelineEdge,
   PipelineNode,
@@ -26,6 +27,7 @@ import { STEP_DEFINITIONS, STEP_TYPES } from '@buildpilot/step-registry';
 import { api } from '../lib/api';
 import { useStore } from '../store/store';
 import { BranchSelect } from './BranchSelect';
+import { SaveTemplateDialog } from './SaveTemplateDialog';
 import { StepNode } from './StepNode';
 import { StepPropertyPanel, EMPTY_ENTRIES } from './StepPropertyPanel';
 
@@ -63,6 +65,9 @@ function Editor({ pipeline }: Props) {
   const cancelBuildAction = useStore((s) => s.cancelBuild);
   const deletePipelineAction = useStore((s) => s.deletePipeline);
   const requestConfirmation = useStore((s) => s.requestConfirmation);
+  const nodeTemplates = useStore((s) => s.nodeTemplates);
+  const saveNodeTemplate = useStore((s) => s.saveNodeTemplate);
+  const deleteNodeTemplate = useStore((s) => s.deleteNodeTemplate);
   const stepStatus = useStore((s) => s.stepStatus[pipeline.id]);
   const stepTimings = useStore((s) => s.stepTimings[pipeline.id]);
   // Pull entries for the most recent build of this pipeline so the per-node
@@ -90,6 +95,9 @@ function Editor({ pipeline }: Props) {
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [branches, setBranches] = useState<string[]>([]);
+  // Save-as-template dialog state. Holds the source node id whose data we
+  // will snapshot when the user confirms.
+  const [saveTemplateNodeId, setSaveTemplateNodeId] = useState<string | null>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const { screenToFlowPosition } = useReactFlow();
 
@@ -209,10 +217,31 @@ function Editor({ pipeline }: Props) {
   const onDrop = useCallback(
     (event: React.DragEvent<HTMLDivElement>) => {
       event.preventDefault();
-      const stepType = event.dataTransfer.getData('application/buildpilot-step') as StepType;
-      if (!stepType || !STEP_DEFINITIONS[stepType]) return;
       const position = screenToFlowPosition({ x: event.clientX, y: event.clientY });
       const id = `n_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 5)}`;
+
+      // Templates take precedence — the dragged item carries the template id.
+      const templateId = event.dataTransfer.getData('application/buildpilot-template');
+      if (templateId) {
+        const tpl = nodeTemplates.find((t) => t.id === templateId);
+        if (!tpl) return;
+        setNodes((nds) => [
+          ...nds,
+          {
+            id,
+            type: tpl.baseStepType,
+            position,
+            // Clone template data + tag with templateLabel so the canvas
+            // shows the template name. templateId is informational.
+            data: { ...tpl.data, templateLabel: tpl.name, templateId: tpl.id },
+          },
+        ]);
+        setDirty(true);
+        return;
+      }
+
+      const stepType = event.dataTransfer.getData('application/buildpilot-step') as StepType;
+      if (!stepType || !STEP_DEFINITIONS[stepType]) return;
       setNodes((nds) => [
         ...nds,
         {
@@ -224,7 +253,7 @@ function Editor({ pipeline }: Props) {
       ]);
       setDirty(true);
     },
-    [screenToFlowPosition],
+    [screenToFlowPosition, nodeTemplates],
   );
 
   const save = async () => {
@@ -349,8 +378,62 @@ function Editor({ pipeline }: Props) {
         </div>
       </header>
 
+      <SaveTemplateDialog
+        open={saveTemplateNodeId !== null}
+        baseStepType={
+          (nodes.find((n) => n.id === saveTemplateNodeId)?.type as StepType) ?? 'shell'
+        }
+        initialName={
+          (nodes.find((n) => n.id === saveTemplateNodeId)?.data as { templateLabel?: string })
+            ?.templateLabel ?? ''
+        }
+        onClose={() => setSaveTemplateNodeId(null)}
+        onSubmit={async ({ name, description }) => {
+          const node = nodes.find((n) => n.id === saveTemplateNodeId);
+          if (!node) return;
+          // Strip runtime + template-bookkeeping fields from the snapshot —
+          // those are per-instance metadata, not part of the preset.
+          const {
+            runtimeStatus: _s,
+            runtimeStartedAt: _a,
+            runtimeFinishedAt: _b,
+            templateLabel: _tl,
+            templateId: _ti,
+            ...persisted
+          } = node.data as Record<string, unknown> & {
+            runtimeStatus?: unknown;
+            runtimeStartedAt?: unknown;
+            runtimeFinishedAt?: unknown;
+            templateLabel?: unknown;
+            templateId?: unknown;
+          };
+          void _s;
+          void _a;
+          void _b;
+          void _tl;
+          void _ti;
+          await saveNodeTemplate({
+            name,
+            description,
+            baseStepType: node.type as StepType,
+            data: persisted,
+          });
+        }}
+      />
+
       <div className="flex min-h-0 flex-1">
-        <Palette />
+        <Palette
+          templates={nodeTemplates}
+          onDeleteTemplate={(t) =>
+            requestConfirmation({
+              title: `Delete template "${t.name}"?`,
+              body: 'Pipelines that already have this template placed will keep the existing nodes.',
+              variant: 'destructive',
+              confirmLabel: 'Delete template',
+              onConfirm: () => deleteNodeTemplate(t.id),
+            })
+          }
+        />
 
         <div ref={wrapperRef} className="relative min-h-0 flex-1" onDragOver={onDragOver} onDrop={onDrop}>
           <ReactFlow
@@ -396,15 +479,22 @@ function Editor({ pipeline }: Props) {
             if (dirty) await save();
             await triggerBuild(pipeline.id, nodeId);
           }}
+          onSaveAsTemplate={(nodeId) => setSaveTemplateNodeId(nodeId)}
         />
       </div>
     </div>
   );
 }
 
-function Palette() {
+function Palette({
+  templates,
+  onDeleteTemplate,
+}: {
+  templates: NodeTemplate[];
+  onDeleteTemplate(t: NodeTemplate): void;
+}) {
   return (
-    <div className="flex w-44 shrink-0 flex-col gap-2 border-r border-slate-800 bg-slate-950 p-3">
+    <div className="scrollbar-thin flex w-44 shrink-0 flex-col gap-2 overflow-y-auto border-r border-slate-800 bg-slate-950 p-3">
       <div className="text-[11px] uppercase tracking-wider text-slate-500">Drag to canvas</div>
       {STEP_TYPES.map((type) => {
         const def = STEP_DEFINITIONS[type];
@@ -424,6 +514,46 @@ function Palette() {
           </div>
         );
       })}
+
+      {templates.length > 0 && (
+        <>
+          <div className="mt-2 text-[11px] uppercase tracking-wider text-slate-500">
+            Custom templates
+          </div>
+          {templates.map((t) => {
+            const def = STEP_DEFINITIONS[t.baseStepType];
+            return (
+              <div
+                key={t.id}
+                draggable
+                onDragStart={(e) => {
+                  e.dataTransfer.setData('application/buildpilot-template', t.id);
+                  e.dataTransfer.effectAllowed = 'move';
+                }}
+                className="group relative cursor-grab rounded-md border bg-slate-900 px-2.5 py-1.5 text-[12px] text-slate-200 hover:border-slate-500"
+                style={{ borderColor: def.color, borderStyle: 'dashed' }}
+                title={t.description ?? `${def.label} preset`}
+              >
+                <div className="truncate">{t.name}</div>
+                <div className="text-[9px] uppercase tracking-wider text-slate-500">
+                  {def.label}
+                </div>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDeleteTemplate(t);
+                  }}
+                  className="absolute right-1 top-1 rounded p-0.5 text-slate-500 opacity-0 hover:text-rose-400 group-hover:opacity-100"
+                  title="Delete this template"
+                >
+                  ×
+                </button>
+              </div>
+            );
+          })}
+        </>
+      )}
     </div>
   );
 }

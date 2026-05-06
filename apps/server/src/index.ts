@@ -7,6 +7,7 @@ import { projectsRoutes } from './api/projects';
 import { pipelinesRoutes } from './api/pipelines';
 import { buildsRoutes } from './api/builds';
 import { eventsRoutes } from './api/events';
+import { nodeTemplatesRoutes } from './api/nodeTemplates';
 import { reloadSchedules, startPoller } from './poller';
 import { eventBus } from './events/bus';
 import { startTelegramBot } from './runner/telegramBot';
@@ -49,6 +50,7 @@ async function main(): Promise<void> {
   await pipelinesRoutes(app);
   await buildsRoutes(app);
   await eventsRoutes(app);
+  await nodeTemplatesRoutes(app);
 
   // Re-sync poller whenever projects change. Pipeline mutations also trigger sync;
   // for now we just sync on any project event and rely on listPipelines() returning

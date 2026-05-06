@@ -86,6 +86,16 @@ export function initDb(path: string): DB {
     );
     CREATE INDEX IF NOT EXISTS idx_build_artifacts_build_id
       ON build_artifacts(build_id);
+
+    CREATE TABLE IF NOT EXISTS node_templates (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      description TEXT,
+      base_step_type TEXT NOT NULL,
+      data_json TEXT NOT NULL,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
   `);
 
   // Lightweight migration for existing installs: SQLite's CREATE TABLE IF

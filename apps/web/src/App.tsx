@@ -18,6 +18,7 @@ export function App() {
   const loadProjects = useStore((s) => s.loadProjects);
   const loadPipelines = useStore((s) => s.loadPipelines);
   const loadBuilds = useStore((s) => s.loadBuilds);
+  const loadNodeTemplates = useStore((s) => s.loadNodeTemplates);
   const handleEvent = useStore((s) => s.handleEvent);
   const confirmation = useStore((s) => s.confirmation);
   const closeConfirmation = useStore((s) => s.closeConfirmation);
@@ -28,8 +29,9 @@ export function App() {
     void loadProjects();
     void loadPipelines();
     void loadBuilds();
+    void loadNodeTemplates();
     void ensurePermission();
-  }, [loadProjects, loadPipelines, loadBuilds]);
+  }, [loadProjects, loadPipelines, loadBuilds, loadNodeTemplates]);
 
   useEffect(() => subscribe(handleEvent), [handleEvent]);
 
@@ -41,8 +43,9 @@ export function App() {
         void loadProjects();
         void loadPipelines();
         void loadBuilds();
+        void loadNodeTemplates();
       }),
-    [loadProjects, loadPipelines, loadBuilds],
+    [loadProjects, loadPipelines, loadBuilds, loadNodeTemplates],
   );
 
   return (
