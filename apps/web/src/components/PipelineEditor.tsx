@@ -50,6 +50,8 @@ const nodeTypes = {
   testflightUpload: StepNode,
   keychainUnlock: StepNode,
   provisioningProfileInstall: StepNode,
+  notarize: StepNode,
+  stapleNotarization: StepNode,
 };
 
 interface Props {
@@ -661,6 +663,31 @@ function defaultData(type: StepType): Record<string, unknown> {
         identityFile: '',
         password: '',
         profilePath: '',
+      };
+    case 'notarize':
+      return {
+        hostId: '',
+        host: '',
+        identityFile: '',
+        password: '',
+        bundlePath: '',
+        authMethod: 'apiKey',
+        apiKeyPath: '',
+        apiKeyId: '',
+        apiIssuerId: '',
+        appleId: '',
+        appPassword: '',
+        teamId: '',
+        wait: 'true',
+        additionalArgs: '',
+      };
+    case 'stapleNotarization':
+      return {
+        hostId: '',
+        host: '',
+        identityFile: '',
+        password: '',
+        bundlePath: '',
       };
     case 's3Upload':
       return {

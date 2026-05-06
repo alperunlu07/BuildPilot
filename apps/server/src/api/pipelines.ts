@@ -30,6 +30,8 @@ const stepTypes = [
   'testflightUpload',
   'keychainUnlock',
   'provisioningProfileInstall',
+  'notarize',
+  'stapleNotarization',
 ] as const;
 
 const nodeSchema = z.object({

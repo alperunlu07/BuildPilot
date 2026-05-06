@@ -30,6 +30,8 @@ import { runS3Upload } from './steps/s3Upload';
 import { runTestflightUpload } from './steps/testflightUpload';
 import { runKeychainUnlock } from './steps/keychainUnlock';
 import { runProvisioningProfileInstall } from './steps/provisioningProfileInstall';
+import { runNotarize } from './steps/notarize';
+import { runStapleNotarization } from './steps/stapleNotarization';
 
 export interface StepContext {
   project: Project;
@@ -63,6 +65,8 @@ const RUNNERS: Record<StepType, StepRunner> = {
   testflightUpload: runTestflightUpload,
   keychainUnlock: runKeychainUnlock,
   provisioningProfileInstall: runProvisioningProfileInstall,
+  notarize: runNotarize,
+  stapleNotarization: runStapleNotarization,
 };
 
 interface DagNode {

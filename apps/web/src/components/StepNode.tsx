@@ -15,7 +15,9 @@ import {
   PlaneTakeoff,
   Send,
   Server,
+  ShieldCheck,
   Sparkles,
+  Stamp,
   Terminal,
   Upload,
   type LucideIcon,
@@ -42,6 +44,8 @@ const ICONS: Record<string, LucideIcon> = {
   PlaneTakeoff,
   KeyRound,
   BadgeCheck,
+  ShieldCheck,
+  Stamp,
 };
 
 type RuntimeStatus = 'running' | 'success' | 'failed' | 'skipped' | undefined;
@@ -224,6 +228,12 @@ function summariseData(type: StepType, data: Record<string, unknown>): string {
       return data.keychain ? String(data.keychain) : 'login.keychain-db';
     case 'provisioningProfileInstall':
       return data.profilePath ? String(data.profilePath).split('/').pop() ?? '' : '';
+    case 'notarize':
+      return data.bundlePath
+        ? `${(data.authMethod as string) ?? 'apiKey'}: ${String(data.bundlePath).split('/').pop()}`
+        : '';
+    case 'stapleNotarization':
+      return data.bundlePath ? String(data.bundlePath).split('/').pop() ?? '' : '';
     default:
       return '';
   }

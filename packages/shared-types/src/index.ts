@@ -44,7 +44,9 @@ export type StepType =
   | 's3Upload'
   | 'testflightUpload'
   | 'keychainUnlock'
-  | 'provisioningProfileInstall';
+  | 'provisioningProfileInstall'
+  | 'notarize'
+  | 'stapleNotarization';
 
 export type AiTool = 'claude' | 'codex' | 'aider' | 'gemini' | 'custom';
 
@@ -314,6 +316,31 @@ export interface ProvisioningProfileInstallStepData extends RunsOnMaybeRemote {
   // For local installs this is read from the BuildPilot host; for remote
   // it's read locally then copied via SFTP to the Mac before installing.
   profilePath: string;
+}
+
+export interface NotarizeStepData extends RunsOnMaybeRemote {
+  // The bundle to notarize: .app, .dmg, .pkg, or .zip.
+  bundlePath: string;
+  authMethod?: 'apiKey' | 'appleId';
+  // apiKey auth — `--key <p8>` + `--key-id <kid>` + `--issuer <iid>`.
+  apiKeyPath?: string;
+  apiKeyId?: string;
+  apiIssuerId?: string;
+  // appleId auth — `--apple-id <id>` + `--password <p>` + `--team-id <t>`.
+  appleId?: string;
+  appPassword?: string;
+  teamId?: string;
+  // 'true' (default) blocks the step until Apple's verdict comes back.
+  // 'false' returns as soon as the upload is accepted — pair with a
+  // separate stapleNotarization step that runs later.
+  wait?: string;
+  additionalArgs?: string;
+}
+
+export interface StapleNotarizationStepData extends RunsOnMaybeRemote {
+  // Bundle that already passed notarization. Stapling embeds the ticket
+  // so Gatekeeper can verify the bundle offline.
+  bundlePath: string;
 }
 
 // Snapshot of what a saved host can run. Populated lazily by the

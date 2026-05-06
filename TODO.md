@@ -84,8 +84,8 @@ quality-of-life pieces.
 - [ ] SSH `known_hosts` integration — re-evaluated as Phase 4 hardening (ssh2 is permissive by default; needs a real design discussion before changing)
 
 ### Cluster B · macOS distribution
-- [ ] `notarize` step — `xcrun notarytool submit … --wait`
-- [ ] `stapleNotarization` step — `xcrun stapler staple <bundle>`
+- [x] `notarize` step — `xcrun notarytool submit … --wait`
+- [x] `stapleNotarization` step — `xcrun stapler staple <bundle>`
 
 ### Cluster F · Apple Developer Portal automation
 - [ ] `fastlaneMatch` step — fetches certs/profiles via `fastlane match`
