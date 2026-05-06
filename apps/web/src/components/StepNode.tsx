@@ -24,7 +24,7 @@ const ICONS: Record<string, LucideIcon> = {
   Sparkles,
 };
 
-type RuntimeStatus = 'running' | 'success' | 'failed' | undefined;
+type RuntimeStatus = 'running' | 'success' | 'failed' | 'skipped' | undefined;
 
 interface StepNodeData {
   runtimeStatus?: RuntimeStatus;
@@ -130,6 +130,13 @@ function runtimeAppearance(status: RuntimeStatus): {
         borderColor: '#fb7185',
         boxShadow: '0 0 0 2px rgba(251,113,133,0.30), 0 0 18px rgba(251,113,133,0.40)',
         badgeClass: 'bg-rose-500/20 text-rose-300',
+      };
+    case 'skipped':
+      return {
+        className: 'opacity-60',
+        borderColor: '#475569',
+        boxShadow: undefined,
+        badgeClass: 'bg-slate-700/40 text-slate-400',
       };
     default:
       return { className: '', badgeClass: '' };

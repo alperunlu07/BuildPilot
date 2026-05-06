@@ -165,7 +165,13 @@ function Editor({ pipeline }: Props) {
   );
 
   const onConnect = useCallback((connection: Connection) => {
-    setEdges((eds) => addEdge({ ...connection, animated: true }, eds));
+    const newEdge: Edge = pipelineEdgeToReactFlow({
+      id: `e_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 5)}`,
+      source: connection.source!,
+      target: connection.target!,
+      condition: 'success',
+    });
+    setEdges((eds) => addEdge(newEdge, eds));
     setDirty(true);
   }, []);
 
@@ -317,6 +323,23 @@ function Editor({ pipeline }: Props) {
             onEdgesChange={onEdgesChange}
             onConnect={onConnect}
             onSelectionChange={handleSelectionChange}
+            onEdgeClick={(_e, edge) => {
+              setEdges((eds) =>
+                eds.map((x) => {
+                  if (x.id !== edge.id) return x;
+                  const cur = ((x.data as { condition?: 'success' | 'failure' | 'always' } | undefined)?.condition) ?? 'success';
+                  const next: 'success' | 'failure' | 'always' =
+                    cur === 'success' ? 'failure' : cur === 'failure' ? 'always' : 'success';
+                  return pipelineEdgeToReactFlow({
+                    id: x.id,
+                    source: x.source,
+                    target: x.target,
+                    condition: next,
+                  });
+                }),
+              );
+              setDirty(true);
+            }}
             fitView
             colorMode="dark"
           >
@@ -403,14 +426,31 @@ function pipelineNodesToReactFlow(nodes: PipelineNode[]): Node[] {
   }));
 }
 
-function pipelineEdgesToReactFlow(edges: PipelineEdge[]): Edge[] {
-  return edges.map((e) => ({
+const EDGE_STYLE: Record<'success' | 'failure' | 'always', { stroke: string; label: string }> = {
+  success: { stroke: '#10b981', label: '' },
+  failure: { stroke: '#fb7185', label: 'on failure' },
+  always:  { stroke: '#94a3b8', label: 'always' },
+};
+
+function pipelineEdgeToReactFlow(e: PipelineEdge): Edge {
+  const cond = e.condition ?? 'success';
+  const style = EDGE_STYLE[cond];
+  return {
     id: e.id,
     source: e.source,
     target: e.target,
     animated: true,
-    data: e.condition ? { condition: e.condition } : undefined,
-  }));
+    label: style.label || undefined,
+    labelStyle: { fill: style.stroke, fontSize: 10, fontWeight: 600 },
+    labelBgStyle: { fill: '#0f172a' },
+    labelBgPadding: [4, 2],
+    style: { stroke: style.stroke, strokeWidth: 1.5 },
+    data: { condition: cond },
+  };
+}
+
+function pipelineEdgesToReactFlow(edges: PipelineEdge[]): Edge[] {
+  return edges.map(pipelineEdgeToReactFlow);
 }
 
 function reactFlowNodesToPipeline(nodes: Node[]): PipelineNode[] {

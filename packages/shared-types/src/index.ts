@@ -188,7 +188,7 @@ export type ServerEvent =
       pipelineId: string;
       nodeId: string;
       stepType: StepType;
-      status: 'success' | 'failed';
+      status: 'success' | 'failed' | 'skipped';
     }
   | { type: 'buildFinished'; build: Build }
   | { type: 'projectAdded'; project: Project }

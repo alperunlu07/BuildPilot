@@ -51,6 +51,72 @@ interface DagNode {
   data: Record<string, unknown>;
 }
 
+interface StepResult {
+  ok: boolean;
+  cancelled: boolean;
+  attempts: number;
+  error: unknown;
+}
+
+async function executeStep(
+  build: Build,
+  project: Project,
+  node: DagNode,
+  persist: (level: BuildLogLevel, message: string, nodeId: string | null, stepType: StepType | null) => void,
+): Promise<StepResult> {
+  const runner = RUNNERS[node.type];
+  const ctx = makeStepContext(build, project, node, persist);
+  const aiFix = readAiAutoFix(node.data);
+  const maxAttempts = aiFix?.enabled ? Math.max(1, aiFix.maxRetries ?? 3) + 1 : 1;
+  let lastErr: unknown = null;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    if (attempt > 1) {
+      persist(
+        'system',
+        `↻ retry ${attempt - 1}/${maxAttempts - 1} after AI fix`,
+        node.id,
+        node.type,
+      );
+    }
+    try {
+      await runner(ctx, node.data);
+      if (isCancelled(build.id)) {
+        return { ok: false, cancelled: true, attempts: attempt, error: lastErr };
+      }
+      return { ok: true, cancelled: false, attempts: attempt, error: null };
+    } catch (err) {
+      lastErr = err;
+      if (isCancelled(build.id)) {
+        return { ok: false, cancelled: true, attempts: attempt, error: lastErr };
+      }
+      const msg = err instanceof Error ? err.message : String(err);
+      if (attempt < maxAttempts && aiFix?.enabled) {
+        persist(
+          'failure',
+          `✖ step failed (attempt ${attempt}): ${msg} — invoking AI fix`,
+          node.id,
+          node.type,
+        );
+        try {
+          await runAiPrompt(ctx, {
+            tool: aiFix.tool ?? 'claude',
+            prompt: renderAiFixPrompt(aiFix.prompt, {
+              step: node.type,
+              error: msg,
+              nodeId: node.id,
+            }),
+            allowFailure: 'true' as unknown as boolean,
+          });
+        } catch (aiErr) {
+          const aiMsg = aiErr instanceof Error ? aiErr.message : String(aiErr);
+          persist('failure', `AI fix invocation failed: ${aiMsg}`, node.id, node.type);
+        }
+      }
+    }
+  }
+  return { ok: false, cancelled: false, attempts: maxAttempts, error: lastErr };
+}
+
 function readAiAutoFix(data: Record<string, unknown>): AiAutoFixConfig | null {
   const raw = data.aiAutoFix as unknown;
   if (!raw || typeof raw !== 'object') return null;
@@ -184,138 +250,143 @@ export async function runPipeline(args: {
     );
   }
 
-  const fullOrder = topologicalOrder(pipeline);
-  let order = fullOrder;
+  // DAG traversal: for each node we track the outcome (success / failed /
+  // skipped) once it's been visited. A node becomes a candidate when all its
+  // incoming edges whose source is allowed have a known outcome. Each
+  // incoming edge gates execution by its condition (default 'success').
+  type Outcome = 'success' | 'failed' | 'skipped';
+  const allowed = fromNodeId
+    ? descendantsOf(pipeline, fromNodeId)
+    : new Set<string>(pipeline.nodes.map((n) => n.id));
   if (fromNodeId) {
-    const allowed = descendantsOf(pipeline, fromNodeId);
-    order = fullOrder.filter((n) => allowed.has(n.id));
     persist(
       'info',
-      `Restart-from: ${fromNodeId} (${order.length} of ${fullOrder.length} steps)`,
+      `Restart-from: ${fromNodeId} (${allowed.size} of ${pipeline.nodes.length} steps)`,
       null,
       null,
     );
   }
-  if (order.length === 0) persist('info', 'Pipeline has no nodes.', null, null);
+  const allNodes = new Map<string, DagNode>(
+    pipeline.nodes
+      .filter((n) => allowed.has(n.id))
+      .map((n) => [n.id, { id: n.id, type: n.type, data: n.data }]),
+  );
+  if (allNodes.size === 0) persist('info', 'Pipeline has no nodes.', null, null);
 
-  let success = true;
+  // Pre-compute incoming edges per node (only edges from allowed sources).
+  const incomingByNode = new Map<string, typeof pipeline.edges>();
+  for (const e of pipeline.edges) {
+    if (!allNodes.has(e.target) || !allNodes.has(e.source)) continue;
+    const arr = incomingByNode.get(e.target) ?? [];
+    arr.push(e);
+    incomingByNode.set(e.target, arr);
+  }
+
+  const outcomes = new Map<string, Outcome>();
   let cancelled = false;
-  for (const node of order) {
+  let anyFailed = false;
+
+  while (outcomes.size < allNodes.size) {
     if (isCancelled(build.id)) {
       cancelled = true;
       break;
     }
-    const runner = RUNNERS[node.type];
+
+    // Find a node whose incoming dependencies are all decided.
+    let next: DagNode | null = null;
+    let action: 'run' | 'skip' = 'run';
+    for (const node of allNodes.values()) {
+      if (outcomes.has(node.id)) continue;
+      const incoming = incomingByNode.get(node.id) ?? [];
+      if (!incoming.every((e) => outcomes.has(e.source))) continue;
+      const allMatch = incoming.every((e) => {
+        const parent = outcomes.get(e.source);
+        if (parent === 'skipped') return false;
+        const cond = e.condition ?? 'success';
+        if (cond === 'always') return true;
+        if (cond === 'success') return parent === 'success';
+        if (cond === 'failure') return parent === 'failed';
+        return false;
+      });
+      next = node;
+      action = allMatch ? 'run' : 'skip';
+      break;
+    }
+    if (!next) break; // unresolvable (cycle or all done)
+
+    if (action === 'skip') {
+      persist('system', '⊘ step skipped (condition not met)', next.id, next.type);
+      eventBus.publish({
+        type: 'buildStepFinished',
+        buildId: build.id,
+        pipelineId: pipeline.id,
+        nodeId: next.id,
+        stepType: next.type,
+        status: 'skipped',
+      });
+      outcomes.set(next.id, 'skipped');
+      continue;
+    }
 
     eventBus.publish({
       type: 'buildStepStarted',
       buildId: build.id,
       pipelineId: pipeline.id,
-      nodeId: node.id,
-      stepType: node.type,
+      nodeId: next.id,
+      stepType: next.type,
     });
-    persist('system', `▶ step started`, node.id, node.type);
+    persist('system', `▶ step started`, next.id, next.type);
 
-    const ctx = makeStepContext(build, project, node, persist);
-    const aiFix = readAiAutoFix(node.data);
-    const maxAttempts = aiFix?.enabled ? Math.max(1, aiFix.maxRetries ?? 3) + 1 : 1;
-    let stepOk = false;
-    let lastErr: unknown = null;
-    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-      if (attempt > 1) {
-        persist(
-          'system',
-          `↻ retry ${attempt - 1}/${maxAttempts - 1} after AI fix`,
-          node.id,
-          node.type,
-        );
-      }
-      try {
-        await runner(ctx, node.data);
-        if (isCancelled(build.id)) {
-          cancelled = true;
-          break;
-        }
-        stepOk = true;
-        break;
-      } catch (err) {
-        lastErr = err;
-        if (isCancelled(build.id)) {
-          cancelled = true;
-          break;
-        }
-        const msg = err instanceof Error ? err.message : String(err);
-        if (attempt < maxAttempts && aiFix?.enabled) {
-          persist(
-            'failure',
-            `✖ step failed (attempt ${attempt}): ${msg} — invoking AI fix`,
-            node.id,
-            node.type,
-          );
-          try {
-            await runAiPrompt(ctx, {
-              tool: aiFix.tool ?? 'claude',
-              prompt: renderAiFixPrompt(aiFix.prompt, {
-                step: node.type,
-                error: msg,
-                nodeId: node.id,
-              }),
-              allowFailure: 'true' as unknown as boolean,
-            });
-          } catch (aiErr) {
-            const aiMsg = aiErr instanceof Error ? aiErr.message : String(aiErr);
-            persist('failure', `AI fix invocation failed: ${aiMsg}`, node.id, node.type);
-          }
-          // fall through to next attempt
-        }
-      }
-    }
-
-    if (cancelled) {
+    const result = await executeStep(build, project, next, persist);
+    if (result.cancelled) {
+      cancelled = true;
       eventBus.publish({
         type: 'buildStepFinished',
         buildId: build.id,
         pipelineId: pipeline.id,
-        nodeId: node.id,
-        stepType: node.type,
+        nodeId: next.id,
+        stepType: next.type,
         status: 'failed',
       });
-      const cancelMsg = lastErr instanceof Error ? lastErr.message : String(lastErr ?? 'cancelled');
-      persist('system', `✖ step cancelled (${cancelMsg})`, node.id, node.type);
+      const cancelMsg = result.error instanceof Error ? result.error.message : String(result.error ?? 'cancelled');
+      persist('system', `✖ step cancelled (${cancelMsg})`, next.id, next.type);
       break;
     }
-    if (stepOk) {
-      persist('success', '✔ step ok', node.id, node.type);
+    if (result.ok) {
+      persist('success', '✔ step ok', next.id, next.type);
       eventBus.publish({
         type: 'buildStepFinished',
         buildId: build.id,
         pipelineId: pipeline.id,
-        nodeId: node.id,
-        stepType: node.type,
+        nodeId: next.id,
+        stepType: next.type,
         status: 'success',
       });
+      outcomes.set(next.id, 'success');
     } else {
-      const msg = lastErr instanceof Error ? lastErr.message : String(lastErr ?? 'unknown error');
+      const msg = result.error instanceof Error ? result.error.message : String(result.error ?? 'unknown');
       persist(
         'failure',
-        `✖ step failed after ${maxAttempts} attempt${maxAttempts === 1 ? '' : 's'}: ${msg}`,
-        node.id,
-        node.type,
+        `✖ step failed after ${result.attempts} attempt${result.attempts === 1 ? '' : 's'}: ${msg}`,
+        next.id,
+        next.type,
       );
       eventBus.publish({
         type: 'buildStepFinished',
         buildId: build.id,
         pipelineId: pipeline.id,
-        nodeId: node.id,
-        stepType: node.type,
+        nodeId: next.id,
+        stepType: next.type,
         status: 'failed',
       });
-      success = false;
-      break;
+      outcomes.set(next.id, 'failed');
+      anyFailed = true;
+      // Don't break — there may be a failure-edge that needs to fire (e.g.
+      // notify-on-failure path). The conditional traversal handles it.
     }
   }
 
-  const finalStatus = cancelled ? 'cancelled' : success ? 'success' : 'failed';
+  const finalStatus = cancelled ? 'cancelled' : anyFailed ? 'failed' : 'success';
   if (finalStatus === 'success' && build.triggerSha) {
     setPipelineLastBuiltSha(pipeline.id, build.triggerSha);
   }

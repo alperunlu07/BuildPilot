@@ -30,7 +30,7 @@ export interface CommitToast {
   createdAt: number;
 }
 
-export type StepRuntimeStatus = 'running' | 'success' | 'failed';
+export type StepRuntimeStatus = 'running' | 'success' | 'failed' | 'skipped';
 
 export interface StepTiming {
   startedAt: number;
