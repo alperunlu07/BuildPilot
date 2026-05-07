@@ -39,6 +39,8 @@ const stepTypes = [
   'ensureGitStatusClean',
   'incrementBuildNumber',
   'getBuildNumber',
+  'changelogFromGitCommits',
+  'updateInfoPlist',
 ] as const;
 
 const createSchema = z.object({

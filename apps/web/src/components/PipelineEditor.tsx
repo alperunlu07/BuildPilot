@@ -61,6 +61,8 @@ const nodeTypes = {
   ensureGitStatusClean: StepNode,
   incrementBuildNumber: StepNode,
   getBuildNumber: StepNode,
+  changelogFromGitCommits: StepNode,
+  updateInfoPlist: StepNode,
 };
 
 interface Props {
@@ -800,6 +802,29 @@ function defaultData(type: StepType): Record<string, unknown> {
         password: '',
         mode: 'agvtool',
         plistPath: '',
+        cwd: '',
+      };
+    case 'changelogFromGitCommits':
+      return {
+        hostId: '',
+        host: '',
+        identityFile: '',
+        password: '',
+        fromRef: '',
+        toRef: '',
+        format: 'subject',
+        cwd: '',
+      };
+    case 'updateInfoPlist':
+      return {
+        hostId: '',
+        host: '',
+        identityFile: '',
+        password: '',
+        plistPath: '',
+        key: '',
+        operation: 'set',
+        value: '',
         cwd: '',
       };
     case 's3Upload':

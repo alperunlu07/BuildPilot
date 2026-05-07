@@ -55,7 +55,9 @@ export type StepType =
   | 'xcodeSelect'
   | 'ensureGitStatusClean'
   | 'incrementBuildNumber'
-  | 'getBuildNumber';
+  | 'getBuildNumber'
+  | 'changelogFromGitCommits'
+  | 'updateInfoPlist';
 
 export type AiTool = 'claude' | 'codex' | 'aider' | 'gemini' | 'custom';
 
@@ -453,6 +455,36 @@ export interface GetBuildNumberStepData extends RunsOnMaybeRemote {
   // Required when mode='plistBuddy'. Path to the Info.plist to read.
   plistPath?: string;
   // Working dir. Required for agvtool — must contain the .xcodeproj.
+  cwd?: string;
+}
+
+export interface ChangelogFromGitCommitsStepData extends RunsOnMaybeRemote {
+  // Start of the commit range — exclusive (the commit at this ref is NOT
+  // included). A tag like "v1.4.0" or a SHA both work.
+  fromRef: string;
+  // End of the commit range — inclusive. Defaults to HEAD.
+  toRef?: string;
+  // Maps to a `git log --pretty=format:` template:
+  //   subject       → '%s'           (one subject per line)
+  //   subject-body  → '%s%n%n%b%n---' (separated by --- markers)
+  //   oneline       → '%h %s'        (short SHA + subject)
+  format?: 'subject' | 'subject-body' | 'oneline';
+  // Working dir for `git log`. Defaults to the project root on local runs.
+  cwd?: string;
+}
+
+export interface UpdateInfoPlistStepData extends RunsOnMaybeRemote {
+  // Plist file path (relative to cwd or absolute).
+  plistPath: string;
+  // PlistBuddy key path, e.g. ":CFBundleDisplayName" or
+  // ":CFBundleURLTypes:0:CFBundleURLSchemes:0".
+  key: string;
+  // New value (string). Required for set / add-string; ignored for delete.
+  value?: string;
+  // 'set' (default) errors if the key doesn't exist. 'add-string' errors if
+  // it already exists. 'delete' removes the key.
+  operation?: 'set' | 'add-string' | 'delete';
+  // Working dir for the PlistBuddy call. Defaults to the project root.
   cwd?: string;
 }
 

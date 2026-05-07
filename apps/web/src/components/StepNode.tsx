@@ -7,6 +7,7 @@ import {
   Boxes,
   Bug,
   CloudUpload,
+  FileCog,
   GitBranch,
   GitMerge,
   Gamepad2,
@@ -19,6 +20,7 @@ import {
   Package,
   PlaneTakeoff,
   Plus,
+  ScrollText,
   Send,
   Server,
   ShieldCheck,
@@ -64,6 +66,8 @@ const ICONS: Record<string, LucideIcon> = {
   ListChecks,
   Plus,
   Hash,
+  ScrollText,
+  FileCog,
 };
 
 type RuntimeStatus = 'running' | 'success' | 'failed' | 'skipped' | undefined;
@@ -289,6 +293,18 @@ function summariseData(type: StepType, data: Record<string, unknown>): string {
         return data.plistPath ? `plistBuddy ← ${String(data.plistPath).split('/').pop()}` : 'plistBuddy';
       }
       return 'agvtool what-version';
+    }
+    case 'changelogFromGitCommits': {
+      if (!data.fromRef) return '';
+      const to = data.toRef ? String(data.toRef) : 'HEAD';
+      const fmt = (data.format as string) || 'subject';
+      return `${data.fromRef}..${to} (${fmt})`;
+    }
+    case 'updateInfoPlist': {
+      const op = (data.operation as string) || 'set';
+      if (!data.key) return op;
+      const path = data.plistPath ? String(data.plistPath).split('/').pop() : '';
+      return path ? `${op} ${data.key} → ${path}` : `${op} ${data.key}`;
     }
     default:
       return '';

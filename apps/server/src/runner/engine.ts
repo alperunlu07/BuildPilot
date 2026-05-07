@@ -41,6 +41,8 @@ import { runXcodeSelect } from './steps/xcodeSelect';
 import { runEnsureGitStatusClean } from './steps/ensureGitStatusClean';
 import { runIncrementBuildNumber } from './steps/incrementBuildNumber';
 import { runGetBuildNumber } from './steps/getBuildNumber';
+import { runChangelogFromGitCommits } from './steps/changelogFromGitCommits';
+import { runUpdateInfoPlist } from './steps/updateInfoPlist';
 
 export interface StepContext {
   project: Project;
@@ -85,6 +87,8 @@ const RUNNERS: Record<StepType, StepRunner> = {
   ensureGitStatusClean: runEnsureGitStatusClean,
   incrementBuildNumber: runIncrementBuildNumber,
   getBuildNumber: runGetBuildNumber,
+  changelogFromGitCommits: runChangelogFromGitCommits,
+  updateInfoPlist: runUpdateInfoPlist,
 };
 
 interface DagNode {
