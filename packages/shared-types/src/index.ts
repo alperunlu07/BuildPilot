@@ -61,7 +61,9 @@ export type StepType =
   | 'swiftlint'
   | 'swiftFormat'
   | 'xcodebuildAnalyze'
-  | 'peripheryScan';
+  | 'peripheryScan'
+  | 'slatherCoverage'
+  | 'xcovGate';
 
 export type AiTool = 'claude' | 'codex' | 'aider' | 'gemini' | 'custom';
 
@@ -563,6 +565,45 @@ export interface PeripheryScanStepData extends RunsOnMaybeRemote {
   strict?: string;
   // Path to a .periphery.yml — passed via --config when set.
   configFile?: string;
+  additionalArgs?: string;
+  cwd?: string;
+}
+
+export interface SlatherCoverageStepData extends RunsOnMaybeRemote {
+  // Required — slather's trailing positional arg is the .xcodeproj path.
+  projectPath?: string;
+  // Optional .xcworkspace — passed via --workspace.
+  workspacePath?: string;
+  // Optional scheme — passed via --scheme.
+  scheme?: string;
+  // Output format. Maps to one of slather's mutually-exclusive format flags
+  // (--html / --json / --cobertura-xml / --simple-output / --sonarqube-xml).
+  format?: 'html' | 'json' | 'cobertura' | 'simple' | 'sonarqube';
+  // Where slather drops generated reports — passed via --output-directory.
+  outputDirectory?: string;
+  // DerivedData root — passed via --build-directory.
+  buildDirectory?: string;
+  additionalArgs?: string;
+  cwd?: string;
+}
+
+export interface XcovGateStepData extends RunsOnMaybeRemote {
+  // Either workspacePath OR projectPath. One is required.
+  workspacePath?: string;
+  projectPath?: string;
+  // Required — the xcov scheme.
+  scheme?: string;
+  // Where xcov drops its HTML/JSON report. Defaults to 'xcov_report'.
+  outputDirectory?: string;
+  // Numeric threshold; the build fails below this percent. Defaults to 0.
+  minimumCoveragePercentage?: number;
+  // Comma-separated. Maps to xcov's --include_targets / --exclude_targets.
+  includeTargets?: string;
+  excludeTargets?: string;
+  // 'true' adds --json_report.
+  jsonReport?: string;
+  // 'true' adds --markdown_report.
+  markdownReport?: string;
   additionalArgs?: string;
   cwd?: string;
 }

@@ -47,6 +47,8 @@ import { runSwiftlint } from './steps/swiftlint';
 import { runSwiftFormat } from './steps/swiftFormat';
 import { runXcodebuildAnalyze } from './steps/xcodebuildAnalyze';
 import { runPeripheryScan } from './steps/peripheryScan';
+import { runSlatherCoverage } from './steps/slatherCoverage';
+import { runXcovGate } from './steps/xcovGate';
 
 export interface StepContext {
   project: Project;
@@ -97,6 +99,8 @@ const RUNNERS: Record<StepType, StepRunner> = {
   swiftFormat: runSwiftFormat,
   xcodebuildAnalyze: runXcodebuildAnalyze,
   peripheryScan: runPeripheryScan,
+  slatherCoverage: runSlatherCoverage,
+  xcovGate: runXcovGate,
 };
 
 interface DagNode {

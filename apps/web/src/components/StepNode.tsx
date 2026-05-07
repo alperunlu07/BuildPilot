@@ -10,8 +10,10 @@ import {
   CloudUpload,
   CodeXml,
   FileCog,
+  Gauge,
   GitBranch,
   Microscope,
+  Percent,
   GitMerge,
   Gamepad2,
   Globe,
@@ -76,6 +78,8 @@ const ICONS: Record<string, LucideIcon> = {
   AlignLeft,
   Microscope,
   Search,
+  Percent,
+  Gauge,
 };
 
 type RuntimeStatus = 'running' | 'success' | 'failed' | 'skipped' | undefined;
@@ -327,6 +331,16 @@ function summariseData(type: StepType, data: Record<string, unknown>): string {
     case 'peripheryScan': {
       const fmt = (data.format as string) || 'xcode';
       return data.strict === 'true' ? `${fmt} --strict` : fmt;
+    }
+    case 'slatherCoverage':
+      return data.projectPath
+        ? `${(data.format as string) ?? 'html'} ← ${String(data.projectPath).split('/').pop()}`
+        : '';
+    case 'xcovGate': {
+      const min = typeof data.minimumCoveragePercentage === 'number'
+        ? data.minimumCoveragePercentage
+        : 0;
+      return min > 0 ? `≥ ${min}% (${data.scheme || 'no scheme'})` : `${data.scheme || 'no scheme'}`;
     }
     default:
       return '';

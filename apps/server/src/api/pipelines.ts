@@ -47,6 +47,8 @@ const stepTypes = [
   'swiftFormat',
   'xcodebuildAnalyze',
   'peripheryScan',
+  'slatherCoverage',
+  'xcovGate',
 ] as const;
 
 const nodeSchema = z.object({

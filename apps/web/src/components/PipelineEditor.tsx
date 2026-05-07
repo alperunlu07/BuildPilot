@@ -67,6 +67,8 @@ const nodeTypes = {
   swiftFormat: StepNode,
   xcodebuildAnalyze: StepNode,
   peripheryScan: StepNode,
+  slatherCoverage: StepNode,
+  xcovGate: StepNode,
 };
 
 interface Props {
@@ -886,6 +888,39 @@ function defaultData(type: StepType): Record<string, unknown> {
         format: 'xcode',
         strict: 'false',
         configFile: '',
+        additionalArgs: '',
+        cwd: '',
+      };
+    case 'slatherCoverage':
+      return {
+        hostId: '',
+        host: '',
+        identityFile: '',
+        password: '',
+        projectPath: '',
+        workspacePath: '',
+        scheme: '',
+        format: 'html',
+        outputDirectory: '',
+        buildDirectory: '',
+        additionalArgs: '',
+        cwd: '',
+      };
+    case 'xcovGate':
+      return {
+        hostId: '',
+        host: '',
+        identityFile: '',
+        password: '',
+        workspacePath: '',
+        projectPath: '',
+        scheme: '',
+        minimumCoveragePercentage: 0,
+        outputDirectory: 'xcov_report',
+        includeTargets: '',
+        excludeTargets: '',
+        jsonReport: 'false',
+        markdownReport: 'false',
         additionalArgs: '',
         cwd: '',
       };
