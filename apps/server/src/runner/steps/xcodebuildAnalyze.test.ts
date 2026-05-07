@@ -8,7 +8,7 @@ describe('buildXcodebuildAnalyzeArgs', () => {
       scheme: 'A',
     });
     expect(['xcrun', 'xcodebuild', ...args].join(' ')).toBe(
-      `xcrun xcodebuild -workspace 'X.xcworkspace' -scheme 'A' -configuration Release -destination 'generic/platform=iOS' analyze`,
+      `xcrun xcodebuild -workspace 'X.xcworkspace' -scheme 'A' -configuration 'Release' -destination 'generic/platform=iOS' analyze`,
     );
   });
 
@@ -63,6 +63,17 @@ describe('buildXcodebuildAnalyzeArgs', () => {
       configuration: 'Debug',
     });
     const i = args.indexOf('-configuration');
-    expect(args[i + 1]).toBe('Debug');
+    expect(args[i + 1]).toBe(`'Debug'`);
+  });
+
+  it('rejects an injected configuration value (defense-in-depth)', () => {
+    expect(() =>
+      buildXcodebuildAnalyzeArgs({
+        workspacePath: 'X.xcworkspace',
+        scheme: 'A',
+        // @ts-expect-error testing the runtime guard with an off-union value
+        configuration: 'Release; rm -rf /',
+      }),
+    ).toThrow(/invalid configuration/);
   });
 });

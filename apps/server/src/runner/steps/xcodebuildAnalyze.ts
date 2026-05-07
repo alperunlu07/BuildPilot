@@ -3,13 +3,20 @@ import type { StepContext } from '../engine';
 import { execMaybeRemote, shellQuote } from './_exec';
 import { pushWorkspaceOrProject, splitAdditionalArgs } from './_args';
 
-// argv-style builder (paths/values shell-quoted, flag names bare) so the
-// test suite can pin the rendered command verbatim.
+// Defense-in-depth: TS narrows configuration to 'Debug' | 'Release', but the
+// API zod schema accepts node `data` as record<string, unknown>, so anything
+// can reach the runner at runtime. Allowlist + shellQuote to block injection.
+const VALID_CONFIGURATIONS = new Set(['Debug', 'Release']);
+
 export function buildXcodebuildAnalyzeArgs(
   d: Partial<XcodebuildAnalyzeStepData>,
 ): string[] {
   if (!d.scheme || d.scheme.trim().length === 0) {
     throw new Error('xcodebuildAnalyze: missing "scheme"');
+  }
+  const configuration = d.configuration ?? 'Release';
+  if (!VALID_CONFIGURATIONS.has(configuration)) {
+    throw new Error(`xcodebuildAnalyze: invalid configuration "${configuration}"`);
   }
 
   const args: string[] = [];
@@ -21,7 +28,7 @@ export function buildXcodebuildAnalyzeArgs(
   });
 
   args.push('-scheme', shellQuote(d.scheme));
-  args.push('-configuration', d.configuration ?? 'Release');
+  args.push('-configuration', shellQuote(configuration));
   args.push('-destination', shellQuote(d.destination ?? 'generic/platform=iOS'));
   args.push(...splitAdditionalArgs(d.additionalArgs));
   args.push('analyze');
