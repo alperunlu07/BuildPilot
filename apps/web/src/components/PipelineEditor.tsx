@@ -813,6 +813,7 @@ function defaultData(type: StepType): Record<string, unknown> {
         fromRef: '',
         toRef: '',
         format: 'subject',
+        maxCommits: 1000,
         cwd: '',
       };
     case 'updateInfoPlist':

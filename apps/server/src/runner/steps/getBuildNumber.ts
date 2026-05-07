@@ -1,10 +1,10 @@
 import type { GetBuildNumberStepData } from '@buildpilot/shared-types';
 import type { StepContext } from '../engine';
-import { captureMaybeRemote, shellQuote } from './_exec';
+import { captureMaybeRemote } from './_exec';
+import { CFBUNDLE_VERSION_KEY, buildPlistBuddyCommand } from './_plist';
 
-// Pure builder for the test suite. Reads CFBundleVersion via either
-// `agvtool what-version -terse` (run from the .xcodeproj dir) or
-// `PlistBuddy -c "Print :CFBundleVersion" <plist>`.
+// Reads CFBundleVersion via `agvtool what-version -terse` (cwd must contain
+// the .xcodeproj) or `PlistBuddy Print :CFBundleVersion`.
 export function buildGetBuildNumberCommand(d: Partial<GetBuildNumberStepData>): string {
   const mode = d.mode ?? 'agvtool';
   if (mode === 'agvtool') {
@@ -14,7 +14,7 @@ export function buildGetBuildNumberCommand(d: Partial<GetBuildNumberStepData>): 
     if (!d.plistPath || d.plistPath.trim().length === 0) {
       throw new Error('getBuildNumber: missing "plistPath"');
     }
-    return `/usr/libexec/PlistBuddy -c ${shellQuote('Print :CFBundleVersion')} ${shellQuote(d.plistPath)}`;
+    return buildPlistBuddyCommand(`Print ${CFBUNDLE_VERSION_KEY}`, d.plistPath);
   }
   throw new Error(`getBuildNumber: invalid mode "${mode}"`);
 }
@@ -32,8 +32,5 @@ export async function runGetBuildNumber(
     cwd: d.cwd && d.cwd.trim().length > 0 ? d.cwd : undefined,
     label: command,
   });
-  // Trim then surface as a success line. Future work (Phase 4 Cluster C)
-  // will plumb this into a real step-output / interpolation system.
-  const value = out.trim();
-  ctx.log(`build number: ${value}`, 'success');
+  ctx.log(`build number: ${out.trim()}`, 'success');
 }

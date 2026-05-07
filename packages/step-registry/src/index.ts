@@ -1503,6 +1503,12 @@ export const STEP_DEFINITIONS: Record<StepType, StepDefinition> = {
         defaultValue: 'subject',
       },
       {
+        name: 'maxCommits',
+        label: 'Max commits to include',
+        type: 'number',
+        placeholder: '1000',
+      },
+      {
         name: 'cwd',
         label: 'Working dir (defaults to project root)',
         type: 'text',

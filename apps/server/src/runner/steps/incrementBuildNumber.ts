@@ -1,13 +1,12 @@
 import type { IncrementBuildNumberStepData } from '@buildpilot/shared-types';
 import type { StepContext } from '../engine';
 import { execMaybeRemote, shellQuote } from './_exec';
+import { CFBUNDLE_VERSION_KEY, buildPlistBuddyCommand } from './_plist';
 
-// Pure builder for the test suite. Two modes:
-//   • agvtool:    `xcrun agvtool next-version -all` (auto-bump by 1) OR
-//                 `xcrun agvtool new-version -all <v>` when versionString is set.
-//   • plistBuddy: `/usr/libexec/PlistBuddy -c "Set :CFBundleVersion <v>" <plist>`
-// agvtool must be invoked from the dir containing the .xcodeproj — that's the
-// `cwd` field, plumbed through execMaybeRemote.
+// Two modes:
+//   agvtool    — `xcrun agvtool {new-version -all <v> | next-version -all}` (cwd
+//                must contain .xcodeproj; next-version auto-bumps by 1).
+//   plistBuddy — Set :CFBundleVersion via PlistBuddy on a given plist.
 export function buildIncrementBuildNumberCommand(
   d: Partial<IncrementBuildNumberStepData>,
 ): string {
@@ -25,8 +24,10 @@ export function buildIncrementBuildNumberCommand(
     if (!d.versionString || d.versionString.trim().length === 0) {
       throw new Error('incrementBuildNumber: missing "versionString"');
     }
-    const arg = `Set :CFBundleVersion ${d.versionString}`;
-    return `/usr/libexec/PlistBuddy -c ${shellQuote(arg)} ${shellQuote(d.plistPath)}`;
+    return buildPlistBuddyCommand(
+      `Set ${CFBUNDLE_VERSION_KEY} ${d.versionString}`,
+      d.plistPath,
+    );
   }
   throw new Error(`incrementBuildNumber: invalid mode "${mode}"`);
 }

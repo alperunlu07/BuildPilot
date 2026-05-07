@@ -458,6 +458,10 @@ export interface GetBuildNumberStepData extends RunsOnMaybeRemote {
   cwd?: string;
 }
 
+// Default cap on commits returned. Without it a fromRef..HEAD range
+// spanning years buffers multi-MB strings into memory.
+export const CHANGELOG_DEFAULT_MAX_COMMITS = 1000;
+
 export interface ChangelogFromGitCommitsStepData extends RunsOnMaybeRemote {
   // Start of the commit range — exclusive (the commit at this ref is NOT
   // included). A tag like "v1.4.0" or a SHA both work.
@@ -469,6 +473,8 @@ export interface ChangelogFromGitCommitsStepData extends RunsOnMaybeRemote {
   //   subject-body  → '%s%n%n%b%n---' (separated by --- markers)
   //   oneline       → '%h %s'        (short SHA + subject)
   format?: 'subject' | 'subject-body' | 'oneline';
+  // Cap commits returned. Defaults to CHANGELOG_DEFAULT_MAX_COMMITS (1000).
+  maxCommits?: number;
   // Working dir for `git log`. Defaults to the project root on local runs.
   cwd?: string;
 }

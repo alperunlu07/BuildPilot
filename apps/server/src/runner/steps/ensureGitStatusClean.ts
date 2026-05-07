@@ -2,13 +2,14 @@ import type { EnsureGitStatusCleanStepData } from '@buildpilot/shared-types';
 import type { StepContext } from '../engine';
 import { captureMaybeRemote } from './_exec';
 
-// Pure builder for the test suite. `git status --porcelain` prints one line
-// per modified/untracked path and emits zero output when the tree is clean —
-// perfect for a pre-tag / pre-release gate.
+// Bound the porcelain output so an accidentally-broken .gitignore can't
+// buffer megabytes of paths into the build log just to fail the gate.
+const PORCELAIN_LINE_CAP = 100;
+
 export function buildEnsureGitStatusCleanCommand(
   _d: Partial<EnsureGitStatusCleanStepData>,
 ): string {
-  return 'git status --porcelain';
+  return `git status --porcelain | head -n ${PORCELAIN_LINE_CAP}`;
 }
 
 export async function runEnsureGitStatusClean(

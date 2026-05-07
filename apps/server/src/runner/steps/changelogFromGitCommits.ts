@@ -1,21 +1,16 @@
-import type { ChangelogFromGitCommitsStepData } from '@buildpilot/shared-types';
+import {
+  CHANGELOG_DEFAULT_MAX_COMMITS,
+  type ChangelogFromGitCommitsStepData,
+} from '@buildpilot/shared-types';
 import type { StepContext } from '../engine';
 import { captureMaybeRemote, shellQuote } from './_exec';
 
-// Maps the friendly `format` field onto a git log --pretty template. The
-// values land verbatim inside single-quotes on argv, so any embedded
-// single-quote in the template would break things — none of these contain
-// one.
 const FORMAT_TEMPLATES: Record<NonNullable<ChangelogFromGitCommitsStepData['format']>, string> = {
   subject: '%s',
   'subject-body': '%s%n%n%b%n---',
   oneline: '%h %s',
 };
 
-// Pure builder for the test suite. Produces e.g.
-//   git log --pretty=format:'%s' 'v1.4.0..HEAD'
-// fromRef is exclusive (commit at fromRef is excluded); toRef is inclusive
-// and defaults to HEAD.
 export function buildChangelogFromGitCommitsCommand(
   d: Partial<ChangelogFromGitCommitsStepData>,
 ): string {
@@ -29,7 +24,11 @@ export function buildChangelogFromGitCommitsCommand(
   }
   const toRef = d.toRef && d.toRef.trim().length > 0 ? d.toRef : 'HEAD';
   const range = `${d.fromRef}..${toRef}`;
-  return `git log --pretty=format:${shellQuote(template)} ${shellQuote(range)}`;
+  const maxCommits =
+    typeof d.maxCommits === 'number' && d.maxCommits > 0
+      ? Math.floor(d.maxCommits)
+      : CHANGELOG_DEFAULT_MAX_COMMITS;
+  return `git log --max-count=${maxCommits} --pretty=format:${shellQuote(template)} ${shellQuote(range)}`;
 }
 
 export async function runChangelogFromGitCommits(
@@ -47,9 +46,6 @@ export async function runChangelogFromGitCommits(
   });
   const toRef = d.toRef && d.toRef.trim().length > 0 ? d.toRef : 'HEAD';
   ctx.log(`changelog (${d.fromRef}..${toRef}):`, 'info');
-  // Multi-line emit so each commit subject becomes a separate log row —
-  // future Phase 4 Cluster C step-output system will plumb this into
-  // downstream steps as a single concatenated string.
   for (const line of out.split(/\r?\n/)) {
     if (line.length > 0) ctx.log(line, 'info');
   }
