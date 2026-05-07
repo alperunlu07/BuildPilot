@@ -1,6 +1,7 @@
 import { promises as fs } from 'node:fs';
 import { homedir } from 'node:os';
 import { Client, type ConnectConfig } from 'ssh2';
+import { getHost } from '../../store/hosts';
 
 // Parse "user@host[:port]" into its three parts.
 export function parseHost(spec: string): { user: string; host: string; port: number } {
@@ -21,6 +22,44 @@ export interface SshAuth {
   identityFile?: string;
   password?: string;
   skipStrictHostKey?: boolean;
+}
+
+// Resolve "either pick a saved host OR use inline fields". When hostId is a
+// non-empty string, the saved host's credentials win; otherwise we honour the
+// inline fields. Throws if neither path provides enough info to connect.
+export interface ResolvedHost {
+  spec: string; // user@host[:port]
+  identityFile?: string;
+  password?: string;
+  skipStrictHostKey?: boolean;
+}
+
+export function resolveHost(input: {
+  hostId?: string;
+  host?: string;
+  identityFile?: string;
+  password?: string;
+  skipStrictHostKey?: string | boolean;
+}): ResolvedHost {
+  if (input.hostId && input.hostId.trim().length > 0) {
+    const saved = getHost(input.hostId.trim());
+    if (!saved) throw new Error(`saved host not found: ${input.hostId}`);
+    return {
+      spec: saved.host,
+      identityFile: saved.identityFile ?? undefined,
+      password: saved.password ?? undefined,
+      skipStrictHostKey: saved.skipStrictHostKey ?? false,
+    };
+  }
+  if (!input.host || input.host.trim().length === 0) {
+    throw new Error('ssh: provide a saved hostId or an inline host string');
+  }
+  return {
+    spec: input.host,
+    identityFile: input.identityFile,
+    password: input.password,
+    skipStrictHostKey: input.skipStrictHostKey === true || input.skipStrictHostKey === 'true',
+  };
 }
 
 export async function buildConnectConfig(

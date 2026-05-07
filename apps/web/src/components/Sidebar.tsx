@@ -1,12 +1,13 @@
-import { Plus, Folder, GitBranch, History, Trash2 } from 'lucide-react';
+import { Plus, Folder, GitBranch, History, Server, Trash2 } from 'lucide-react';
 import { useStore } from '../store/store';
 import { cn } from '../lib/cn';
 
 interface Props {
   onAddProject(): void;
+  onManageHosts(): void;
 }
 
-export function Sidebar({ onAddProject }: Props) {
+export function Sidebar({ onAddProject, onManageHosts }: Props) {
   const projects = useStore((s) => s.projects);
   const pipelines = useStore((s) => s.pipelines);
   const view = useStore((s) => s.view);
@@ -36,7 +37,7 @@ export function Sidebar({ onAddProject }: Props) {
         </button>
       </div>
 
-      <div className="px-2 pt-3">
+      <div className="space-y-0.5 px-2 pt-3">
         <button
           type="button"
           onClick={() => setView({ type: 'builds' })}
@@ -49,6 +50,15 @@ export function Sidebar({ onAddProject }: Props) {
         >
           <History size={14} className="text-amber-400" />
           <span>Builds &amp; Logs</span>
+        </button>
+        <button
+          type="button"
+          onClick={onManageHosts}
+          className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm text-slate-300 hover:bg-slate-800/60"
+          title="Manage saved SSH hosts (used by Remote SSH / SFTP / Mac steps)"
+        >
+          <Server size={14} className="text-slate-400" />
+          <span>SSH Hosts</span>
         </button>
       </div>
 

@@ -2,19 +2,44 @@ import { Handle, Position, type NodeProps } from '@xyflow/react';
 import {
   Apple,
   ArrowDownToLine,
+  BadgeCheck,
+  Box,
+  Boxes,
+  Bug,
+  AlignLeft,
+  Camera,
   CloudUpload,
+  CodeXml,
+  FileCog,
+  Frame,
+  Gauge,
   GitBranch,
+  Microscope,
+  PenTool,
+  Percent,
   GitMerge,
   Gamepad2,
   Globe,
+  Hash,
+  KeyRound,
+  ListChecks,
   MessageCircle,
   MessageSquare,
   Package,
+  PlaneTakeoff,
+  Plus,
+  ScrollText,
+  Search,
   Send,
   Server,
+  ShieldCheck,
+  ShieldAlert,
   Sparkles,
+  Stamp,
   Terminal,
   Upload,
+  Wand2,
+  Wrench,
   type LucideIcon,
 } from 'lucide-react';
 import type { StepType } from '@buildpilot/shared-types';
@@ -36,6 +61,31 @@ const ICONS: Record<string, LucideIcon> = {
   Apple,
   CloudUpload,
   Upload,
+  PlaneTakeoff,
+  KeyRound,
+  BadgeCheck,
+  ShieldAlert,
+  ShieldCheck,
+  Stamp,
+  Wand2,
+  Wrench,
+  Box,
+  Boxes,
+  Bug,
+  ListChecks,
+  Plus,
+  Hash,
+  ScrollText,
+  FileCog,
+  CodeXml,
+  AlignLeft,
+  Microscope,
+  Search,
+  Percent,
+  Gauge,
+  PenTool,
+  Camera,
+  Frame,
 };
 
 type RuntimeStatus = 'running' | 'success' | 'failed' | 'skipped' | undefined;
@@ -210,6 +260,104 @@ function summariseData(type: StepType, data: Record<string, unknown>): string {
       return data.bucket && data.key
         ? `s3://${data.bucket}/${data.key}`
         : '';
+    case 'testflightUpload':
+      return data.ipaPath
+        ? `${data.platform ?? 'ios'} ← ${String(data.ipaPath).split('/').pop()}`
+        : '';
+    case 'keychainUnlock':
+      return data.keychain ? String(data.keychain) : 'login.keychain-db';
+    case 'provisioningProfileInstall':
+      return data.profilePath ? String(data.profilePath).split('/').pop() ?? '' : '';
+    case 'notarize':
+      return data.bundlePath
+        ? `${(data.authMethod as string) ?? 'apiKey'}: ${String(data.bundlePath).split('/').pop()}`
+        : '';
+    case 'stapleNotarization':
+      return data.bundlePath ? String(data.bundlePath).split('/').pop() ?? '' : '';
+    case 'fastlaneMatch':
+      return data.matchType
+        ? `${data.matchType}${data.readonly === 'true' ? ' (readonly)' : ''}`
+        : '';
+    case 'cocoapodsInstall':
+      return `${data.useBundleExec === 'true' ? 'bundle exec ' : ''}pod ${(data.command as string) ?? 'install'}${data.repoUpdate === 'true' ? ' --repo-update' : ''}`;
+    case 'swiftPackageResolve':
+      return data.workspacePath
+        ? String(data.workspacePath)
+        : data.projectPath
+          ? String(data.projectPath)
+          : '';
+    case 'dsymUpload':
+      return data.dsymPath
+        ? `${(data.backend as string) ?? 'sentry'} ← ${String(data.dsymPath).split('/').pop()}`
+        : '';
+    case 'xcresultParse':
+      return data.bundlePath ? String(data.bundlePath).split('/').pop() ?? '' : '';
+    case 'xcodeSelect':
+      return data.xcodePath ? String(data.xcodePath).split('/').pop() ?? '' : '';
+    case 'ensureGitStatusClean':
+      return data.cwd ? `clean? ${String(data.cwd)}` : 'git status --porcelain';
+    case 'incrementBuildNumber': {
+      const mode = (data.mode as string) || 'agvtool';
+      if (mode === 'plistBuddy') {
+        return data.versionString
+          ? `plistBuddy → ${data.versionString}`
+          : 'plistBuddy';
+      }
+      return data.versionString ? `agvtool → ${data.versionString}` : 'agvtool +1';
+    }
+    case 'getBuildNumber': {
+      const mode = (data.mode as string) || 'agvtool';
+      if (mode === 'plistBuddy') {
+        return data.plistPath ? `plistBuddy ← ${String(data.plistPath).split('/').pop()}` : 'plistBuddy';
+      }
+      return 'agvtool what-version';
+    }
+    case 'changelogFromGitCommits': {
+      if (!data.fromRef) return '';
+      const to = data.toRef ? String(data.toRef) : 'HEAD';
+      const fmt = (data.format as string) || 'subject';
+      return `${data.fromRef}..${to} (${fmt})`;
+    }
+    case 'updateInfoPlist': {
+      const op = (data.operation as string) || 'set';
+      if (!data.key) return op;
+      const path = data.plistPath ? String(data.plistPath).split('/').pop() : '';
+      return path ? `${op} ${data.key} → ${path}` : `${op} ${data.key}`;
+    }
+    case 'swiftlint': {
+      const mode = (data.mode as string) || 'lint';
+      return data.strict === 'true' ? `${mode} --strict` : mode;
+    }
+    case 'swiftFormat': {
+      const mode = (data.mode as string) || 'lint';
+      return mode;
+    }
+    case 'xcodebuildAnalyze':
+      return data.scheme ? `analyze ${data.scheme}` : '';
+    case 'peripheryScan': {
+      const fmt = (data.format as string) || 'xcode';
+      return data.strict === 'true' ? `${fmt} --strict` : fmt;
+    }
+    case 'slatherCoverage':
+      return data.projectPath
+        ? `${(data.format as string) ?? 'html'} ← ${String(data.projectPath).split('/').pop()}`
+        : '';
+    case 'xcovGate': {
+      const min = typeof data.minimumCoveragePercentage === 'number'
+        ? data.minimumCoveragePercentage
+        : 0;
+      return min > 0 ? `≥ ${min}% (${data.scheme || 'no scheme'})` : `${data.scheme || 'no scheme'}`;
+    }
+    case 'resign':
+      return data.ipaPath ? String(data.ipaPath).split('/').pop() ?? '' : '';
+    case 'snapshot':
+      return data.devices
+        ? `${String(data.devices).split(',')[0]?.trim() ?? '?'}${String(data.devices).includes(',') ? ' +N' : ''}`
+        : (data.scheme ? String(data.scheme) : '');
+    case 'frameit': {
+      const color = (data.colorFlag as string) || 'none';
+      return color === 'none' ? '' : color;
+    }
     default:
       return '';
   }

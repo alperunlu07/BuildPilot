@@ -31,21 +31,28 @@ packages/
 
 ## Step types
 
-Eleven built-in pipeline node types:
+Built-in pipeline node types:
 
-| Type            | What it does                                                                       |
-| --------------- | ---------------------------------------------------------------------------------- |
-| `checkout`      | `git checkout <branch>`                                                            |
-| `pull`          | `git pull <remote>`                                                                |
-| `shell`         | Runs an arbitrary shell command in the project directory                           |
-| `unityBatch`    | `Unity -batchmode -nographics -quit -executeMethod <Method>`                       |
-| `httpRequest`   | Generic HTTP call (POST/GET/…) with headers and body                               |
-| `slackNotify`   | Posts a message to a Slack incoming webhook                                        |
-| `discordNotify` | Posts a message to a Discord webhook                                               |
-| `aiPrompt`      | Runs `claude` / `codex` / `aider` / `gemini` (or a custom CLI) with a prompt       |
-| `artifact`      | Records build outputs into a downloadable artifact catalog                         |
-| `remoteSsh`     | Runs a shell command on a remote host via `ssh` (foundation for Mac iOS builds)   |
-| `xcodebuild`    | Drives `xcodebuild` for iOS / macOS — must run on a Mac (compose with `remoteSsh`) |
+| Type                          | What it does                                                                       |
+| ----------------------------- | ---------------------------------------------------------------------------------- |
+| `checkout`                    | `git checkout <branch>`                                                            |
+| `pull`                        | `git pull <remote>`                                                                |
+| `gitMerge`                    | Merge another branch into HEAD (pair with AI auto-fix for conflict resolution)     |
+| `shell`                       | Runs an arbitrary shell command in the project directory                           |
+| `unityBatch`                  | `Unity -batchmode -nographics -quit -executeMethod <Method>`                       |
+| `httpRequest`                 | Generic HTTP call (POST/GET/…) with headers and body                               |
+| `slackNotify`                 | Posts a message to a Slack incoming webhook                                        |
+| `discordNotify`               | Posts a message to a Discord webhook                                               |
+| `telegramNotify`              | Sends a Telegram bot message (HTML / MarkdownV2 / plain)                           |
+| `aiPrompt`                    | Runs `claude` / `codex` / `aider` / `gemini` (or a custom CLI) with a prompt       |
+| `artifact`                    | Records build outputs into a downloadable artifact catalog                         |
+| `s3Upload`                    | AWS S3 multipart upload + optional presigned URL + JSON manifest                   |
+| `sftpUpload`                  | Single-file SFTP put with key OR password auth                                     |
+| `remoteSsh`                   | Runs a shell command on a remote host via SSH (foundation for Mac iOS builds)      |
+| `xcodebuild`                  | Drives `xcodebuild` for iOS / macOS — must run on a Mac (compose with `remoteSsh`) |
+| `keychainUnlock`              | `security unlock-keychain` so codesign / xcodebuild don't prompt — local or remote |
+| `provisioningProfileInstall`  | Drops a `.mobileprovision` into the right Mac directory — local or remote          |
+| `testflightUpload`            | `xcrun altool --upload-app` wrapper (apiKey or appleId auth) — local or remote     |
 
 Pipelines watch one branch and run on a configurable cadence; the build target
 branch can differ from the watched branch via the `checkout` step. Edges between
@@ -64,16 +71,25 @@ resolution, and "try the obvious thing" recovery.
 
 ### iOS / Mac builds (Phase 2)
 
-The Windows host can drive a Mac builder over SSH. Typical pipeline:
+BuildPilot drives a Mac builder over SSH from any host (Windows / Linux),
+or runs Mac steps directly when installed on macOS. A full TestFlight
+pipeline looks like:
 
 ```
-checkout → pull → remoteSsh ──► (Mac runs git pull + xcodebuild archive)
-                              └► artifact (records the .ipa for download)
+checkout → pull → keychainUnlock ──► provisioningProfileInstall ──►
+        remoteSsh (xcodebuild archive + exportArchive) ──► artifact ──►
+        testflightUpload
 ```
+
+Each Mac step (`keychainUnlock`, `provisioningProfileInstall`,
+`testflightUpload`) accepts a saved-host id; if you leave it blank, the
+step runs on the BuildPilot host directly. Composed with the **Saved SSH
+hosts** dropdown (Sidebar → "SSH Hosts"), a typical Windows-driving-a-Mac
+pipeline never has to retype credentials.
 
 Fields you'll fill in on the `remoteSsh` step:
-- **Host:** `build@mac-builder.local` (optionally `:port`)
-- **Identity file:** path to a private key the host has authorized
+- **Saved host:** pick a Mac entry from `~/.buildpilot/hosts.json`, or fall
+  back to the inline host fields below
 - **Remote working dir:** the Mac-side clone of the same project
 - **Command:**
 
@@ -85,6 +101,21 @@ Fields you'll fill in on the `remoteSsh` step:
 
 For BuildPilot running directly on a Mac, the `xcodebuild` step is a typed
 shortcut for the same invocation.
+
+#### TestFlight upload
+
+The `testflightUpload` step wraps `xcrun altool --upload-app`. Two auth
+methods:
+
+- **API key (recommended):** put `AuthKey_<id>.p8` at
+  `~/.appstoreconnect/private_keys/` on the Mac, then fill `apiKeyId` +
+  `apiIssuerId` on the step.
+- **Apple ID:** an Apple ID + app-specific password. Plaintext on the
+  step until the secrets vault lands.
+
+Pair with `keychainUnlock` (so xcodebuild can sign without a UI prompt)
+and `provisioningProfileInstall` (so the right profile is on disk before
+xcodebuild runs).
 
 ## Getting started
 
@@ -269,9 +300,11 @@ appears immediately.
 
 ## Roadmap
 
-- [ ] iOS pipeline: `xcodebuild` step + remote Mac build agent over SSH
-- [ ] TestFlight upload via App Store Connect API
-- [ ] Multi-pipeline parallel builds with queue
+See `TODO.md` for the full living roadmap with commit-linked done items.
+Highlights of what's next:
+
+- [ ] LAN auth (basic / token) — required before binding `0.0.0.0`
 - [ ] PWA + iOS Web Push so toasts arrive when the dashboard tab is closed
-- [ ] Build cancellation, retry, restart-from-step
-- [ ] Discord/Slack webhook notifications
+- [ ] Pipeline templates (group of nodes) + pipeline versioning
+- [ ] Step inputs / outputs — `${{checkout.sha}}` interpolation between steps
+- [ ] Webhook-driven polling (GitHub / Gitea push) instead of cron poll

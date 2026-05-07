@@ -27,6 +27,31 @@ import { runSftpUpload } from './steps/sftpUpload';
 import { runXcodebuild } from './steps/xcodebuild';
 import { runGitMerge } from './steps/gitMerge';
 import { runS3Upload } from './steps/s3Upload';
+import { runTestflightUpload } from './steps/testflightUpload';
+import { runKeychainUnlock } from './steps/keychainUnlock';
+import { runProvisioningProfileInstall } from './steps/provisioningProfileInstall';
+import { runNotarize } from './steps/notarize';
+import { runStapleNotarization } from './steps/stapleNotarization';
+import { runFastlaneMatch } from './steps/fastlaneMatch';
+import { runCocoapodsInstall } from './steps/cocoapodsInstall';
+import { runSwiftPackageResolve } from './steps/swiftPackageResolve';
+import { runDsymUpload } from './steps/dsymUpload';
+import { runXcresultParse } from './steps/xcresultParse';
+import { runXcodeSelect } from './steps/xcodeSelect';
+import { runEnsureGitStatusClean } from './steps/ensureGitStatusClean';
+import { runIncrementBuildNumber } from './steps/incrementBuildNumber';
+import { runGetBuildNumber } from './steps/getBuildNumber';
+import { runChangelogFromGitCommits } from './steps/changelogFromGitCommits';
+import { runUpdateInfoPlist } from './steps/updateInfoPlist';
+import { runSwiftlint } from './steps/swiftlint';
+import { runSwiftFormat } from './steps/swiftFormat';
+import { runXcodebuildAnalyze } from './steps/xcodebuildAnalyze';
+import { runPeripheryScan } from './steps/peripheryScan';
+import { runSlatherCoverage } from './steps/slatherCoverage';
+import { runXcovGate } from './steps/xcovGate';
+import { runResign } from './steps/resign';
+import { runSnapshot } from './steps/snapshot';
+import { runFrameit } from './steps/frameit';
 
 export interface StepContext {
   project: Project;
@@ -57,6 +82,31 @@ const RUNNERS: Record<StepType, StepRunner> = {
   xcodebuild: runXcodebuild,
   gitMerge: runGitMerge,
   s3Upload: runS3Upload,
+  testflightUpload: runTestflightUpload,
+  keychainUnlock: runKeychainUnlock,
+  provisioningProfileInstall: runProvisioningProfileInstall,
+  notarize: runNotarize,
+  stapleNotarization: runStapleNotarization,
+  fastlaneMatch: runFastlaneMatch,
+  cocoapodsInstall: runCocoapodsInstall,
+  swiftPackageResolve: runSwiftPackageResolve,
+  dsymUpload: runDsymUpload,
+  xcresultParse: runXcresultParse,
+  xcodeSelect: runXcodeSelect,
+  ensureGitStatusClean: runEnsureGitStatusClean,
+  incrementBuildNumber: runIncrementBuildNumber,
+  getBuildNumber: runGetBuildNumber,
+  changelogFromGitCommits: runChangelogFromGitCommits,
+  updateInfoPlist: runUpdateInfoPlist,
+  swiftlint: runSwiftlint,
+  swiftFormat: runSwiftFormat,
+  xcodebuildAnalyze: runXcodebuildAnalyze,
+  peripheryScan: runPeripheryScan,
+  slatherCoverage: runSlatherCoverage,
+  xcovGate: runXcovGate,
+  resign: runResign,
+  snapshot: runSnapshot,
+  frameit: runFrameit,
 };
 
 interface DagNode {

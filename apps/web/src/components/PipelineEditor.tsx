@@ -47,6 +47,31 @@ const nodeTypes = {
   xcodebuild: StepNode,
   gitMerge: StepNode,
   s3Upload: StepNode,
+  testflightUpload: StepNode,
+  keychainUnlock: StepNode,
+  provisioningProfileInstall: StepNode,
+  notarize: StepNode,
+  stapleNotarization: StepNode,
+  fastlaneMatch: StepNode,
+  cocoapodsInstall: StepNode,
+  swiftPackageResolve: StepNode,
+  dsymUpload: StepNode,
+  xcresultParse: StepNode,
+  xcodeSelect: StepNode,
+  ensureGitStatusClean: StepNode,
+  incrementBuildNumber: StepNode,
+  getBuildNumber: StepNode,
+  changelogFromGitCommits: StepNode,
+  updateInfoPlist: StepNode,
+  swiftlint: StepNode,
+  swiftFormat: StepNode,
+  xcodebuildAnalyze: StepNode,
+  peripheryScan: StepNode,
+  slatherCoverage: StepNode,
+  xcovGate: StepNode,
+  resign: StepNode,
+  snapshot: StepNode,
+  frameit: StepNode,
 };
 
 interface Props {
@@ -589,9 +614,21 @@ function defaultData(type: StepType): Record<string, unknown> {
     case 'artifact':
       return { paths: '' };
     case 'remoteSsh':
-      return { host: '', identityFile: '', cwd: '', command: '', skipStrictHostKey: 'false' };
+      return {
+        hostId: '',
+        host: '',
+        identityFile: '',
+        password: '',
+        cwd: '',
+        command: '',
+        skipStrictHostKey: 'false',
+      };
     case 'xcodebuild':
       return {
+        hostId: '',
+        host: '',
+        identityFile: '',
+        password: '',
         workspacePath: '',
         projectPath: '',
         scheme: '',
@@ -599,18 +636,345 @@ function defaultData(type: StepType): Record<string, unknown> {
         buildAction: 'archive',
         destination: 'generic/platform=iOS',
         archivePath: '',
+        exportPath: '',
+        exportOptionsPlist: '',
         additionalArgs: '',
       };
     case 'gitMerge':
       return { sourceBranch: '', noFastForward: 'false', message: '' };
     case 'sftpUpload':
       return {
+        hostId: '',
         host: '',
         identityFile: '',
         password: '',
         localPath: '',
         remotePath: '',
         skipStrictHostKey: 'false',
+      };
+    case 'testflightUpload':
+      return {
+        hostId: '',
+        host: '',
+        identityFile: '',
+        password: '',
+        ipaPath: '',
+        platform: 'ios',
+        authMethod: 'apiKey',
+        apiKeyId: '',
+        apiIssuerId: '',
+        appleId: '',
+        appPassword: '',
+        additionalArgs: '',
+      };
+    case 'keychainUnlock':
+      return {
+        hostId: '',
+        host: '',
+        identityFile: '',
+        password: '',
+        keychain: '',
+        unlockTimeoutSec: 3600,
+      };
+    case 'provisioningProfileInstall':
+      return {
+        hostId: '',
+        host: '',
+        identityFile: '',
+        password: '',
+        profilePath: '',
+      };
+    case 'notarize':
+      return {
+        hostId: '',
+        host: '',
+        identityFile: '',
+        password: '',
+        bundlePath: '',
+        authMethod: 'apiKey',
+        apiKeyPath: '',
+        apiKeyId: '',
+        apiIssuerId: '',
+        appleId: '',
+        appPassword: '',
+        teamId: '',
+        wait: 'true',
+        additionalArgs: '',
+      };
+    case 'stapleNotarization':
+      return {
+        hostId: '',
+        host: '',
+        identityFile: '',
+        password: '',
+        bundlePath: '',
+      };
+    case 'fastlaneMatch':
+      return {
+        hostId: '',
+        host: '',
+        identityFile: '',
+        password: '',
+        matchType: 'appstore',
+        appIdentifier: '',
+        gitUrl: '',
+        gitBranch: '',
+        keychainName: '',
+        keychainPassword: '',
+        readonly: 'true',
+        cwd: '',
+        additionalArgs: '',
+      };
+    case 'cocoapodsInstall':
+      return {
+        hostId: '',
+        host: '',
+        identityFile: '',
+        password: '',
+        command: 'install',
+        repoUpdate: 'false',
+        useBundleExec: 'false',
+        cwd: '',
+        additionalArgs: '',
+      };
+    case 'swiftPackageResolve':
+      return {
+        hostId: '',
+        host: '',
+        identityFile: '',
+        password: '',
+        workspacePath: '',
+        projectPath: '',
+        scheme: '',
+        clonedSourcePackagesDirPath: '',
+        additionalArgs: '',
+      };
+    case 'dsymUpload':
+      return {
+        hostId: '',
+        host: '',
+        identityFile: '',
+        password: '',
+        backend: 'sentry',
+        dsymPath: '',
+        googleServicePlistPath: '',
+        uploadSymbolsBinary: '',
+        platform: 'ios',
+        sentryOrg: '',
+        sentryProject: '',
+        sentryAuthToken: '',
+        bugsnagApiKey: '',
+        bugsnagCliPath: '',
+        additionalArgs: '',
+      };
+    case 'xcresultParse':
+      return {
+        hostId: '',
+        host: '',
+        identityFile: '',
+        password: '',
+        bundlePath: '',
+        failOnTestFailure: 'true',
+      };
+    case 'xcodeSelect':
+      return {
+        hostId: '',
+        host: '',
+        identityFile: '',
+        password: '',
+        xcodePath: '',
+      };
+    case 'ensureGitStatusClean':
+      return {
+        hostId: '',
+        host: '',
+        identityFile: '',
+        password: '',
+        cwd: '',
+      };
+    case 'incrementBuildNumber':
+      return {
+        hostId: '',
+        host: '',
+        identityFile: '',
+        password: '',
+        mode: 'agvtool',
+        versionString: '',
+        plistPath: '',
+        cwd: '',
+      };
+    case 'getBuildNumber':
+      return {
+        hostId: '',
+        host: '',
+        identityFile: '',
+        password: '',
+        mode: 'agvtool',
+        plistPath: '',
+        cwd: '',
+      };
+    case 'changelogFromGitCommits':
+      return {
+        hostId: '',
+        host: '',
+        identityFile: '',
+        password: '',
+        fromRef: '',
+        toRef: '',
+        format: 'subject',
+        maxCommits: 1000,
+        cwd: '',
+      };
+    case 'updateInfoPlist':
+      return {
+        hostId: '',
+        host: '',
+        identityFile: '',
+        password: '',
+        plistPath: '',
+        key: '',
+        operation: 'set',
+        value: '',
+        cwd: '',
+      };
+    case 'swiftlint':
+      return {
+        hostId: '',
+        host: '',
+        identityFile: '',
+        password: '',
+        mode: 'lint',
+        configFile: '',
+        paths: '',
+        strict: 'false',
+        reporter: 'xcode',
+        quiet: 'false',
+        cwd: '',
+      };
+    case 'swiftFormat':
+      return {
+        hostId: '',
+        host: '',
+        identityFile: '',
+        password: '',
+        mode: 'lint',
+        configFile: '',
+        paths: '',
+        recursive: 'true',
+        parallel: 'false',
+        cwd: '',
+      };
+    case 'xcodebuildAnalyze':
+      return {
+        hostId: '',
+        host: '',
+        identityFile: '',
+        password: '',
+        workspacePath: '',
+        projectPath: '',
+        scheme: '',
+        configuration: 'Release',
+        destination: 'generic/platform=iOS',
+        additionalArgs: '',
+        cwd: '',
+      };
+    case 'peripheryScan':
+      return {
+        hostId: '',
+        host: '',
+        identityFile: '',
+        password: '',
+        workspacePath: '',
+        projectPath: '',
+        schemes: '',
+        targets: '',
+        format: 'xcode',
+        strict: 'false',
+        configFile: '',
+        additionalArgs: '',
+        cwd: '',
+      };
+    case 'slatherCoverage':
+      return {
+        hostId: '',
+        host: '',
+        identityFile: '',
+        password: '',
+        projectPath: '',
+        workspacePath: '',
+        scheme: '',
+        format: 'html',
+        outputDirectory: '',
+        buildDirectory: '',
+        additionalArgs: '',
+        cwd: '',
+      };
+    case 'xcovGate':
+      return {
+        hostId: '',
+        host: '',
+        identityFile: '',
+        password: '',
+        workspacePath: '',
+        projectPath: '',
+        scheme: '',
+        minimumCoveragePercentage: 0,
+        outputDirectory: 'xcov_report',
+        includeTargets: '',
+        excludeTargets: '',
+        jsonReport: 'false',
+        markdownReport: 'false',
+        additionalArgs: '',
+        cwd: '',
+      };
+    case 'resign':
+      return {
+        hostId: '',
+        host: '',
+        identityFile: '',
+        password: '',
+        ipaPath: '',
+        signingIdentity: '',
+        provisioningProfile: '',
+        bundleId: '',
+        displayName: '',
+        entitlements: '',
+        keychainPath: '',
+        additionalArgs: '',
+        cwd: '',
+      };
+    case 'snapshot':
+      return {
+        hostId: '',
+        host: '',
+        identityFile: '',
+        password: '',
+        outputDirectory: 'screenshots',
+        scheme: '',
+        workspacePath: '',
+        projectPath: '',
+        devices: '',
+        languages: '',
+        launchArguments: '',
+        iosVersion: '',
+        clearPreviousScreenshots: 'false',
+        outputSimulatorLogs: 'false',
+        additionalArgs: '',
+        cwd: '',
+      };
+    case 'frameit':
+      return {
+        hostId: '',
+        host: '',
+        identityFile: '',
+        password: '',
+        pathToScreenshots: './screenshots',
+        colorFlag: 'none',
+        force: 'false',
+        useLegacyIphone5s: 'false',
+        usePlatform: '',
+        additionalArgs: '',
+        cwd: '',
       };
     case 's3Upload':
       return {

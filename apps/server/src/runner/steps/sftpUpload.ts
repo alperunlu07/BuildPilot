@@ -2,11 +2,7 @@ import { promises as fs } from 'node:fs';
 import { isAbsolute, join } from 'node:path';
 import type { SftpUploadStepData } from '@buildpilot/shared-types';
 import type { StepContext } from '../engine';
-import { buildConnectConfig, connect, parseHost } from './_ssh';
-
-function asBool(v: unknown): boolean {
-  return v === true || v === 'true';
-}
+import { buildConnectConfig, connect, parseHost, resolveHost } from './_ssh';
 
 function fmtBytes(n: number): string {
   if (n < 1024) return `${n} B`;
@@ -20,7 +16,6 @@ export async function runSftpUpload(
   data: Record<string, unknown>,
 ): Promise<void> {
   const d = data as Partial<SftpUploadStepData>;
-  if (!d.host) throw new Error('sftpUpload: missing "host"');
   if (!d.localPath) throw new Error('sftpUpload: missing "localPath"');
   if (!d.remotePath) throw new Error('sftpUpload: missing "remotePath"');
 
@@ -28,12 +23,19 @@ export async function runSftpUpload(
   const stat = await fs.stat(localAbs);
   if (!stat.isFile()) throw new Error(`sftpUpload: not a file: ${localAbs}`);
 
-  const cfg = await buildConnectConfig(d.host, {
+  const resolved = resolveHost({
+    hostId: d.hostId,
+    host: d.host,
     identityFile: d.identityFile,
     password: d.password,
-    skipStrictHostKey: asBool(d.skipStrictHostKey),
+    skipStrictHostKey: d.skipStrictHostKey,
   });
-  const { host, port, user } = parseHost(d.host);
+  const cfg = await buildConnectConfig(resolved.spec, {
+    identityFile: resolved.identityFile,
+    password: resolved.password,
+    skipStrictHostKey: resolved.skipStrictHostKey,
+  });
+  const { host, port, user } = parseHost(resolved.spec);
 
   ctx.log(`sftp ${user}@${host}:${port}`);
   ctx.log(`${localAbs} (${fmtBytes(stat.size)}) -> ${d.remotePath}`);

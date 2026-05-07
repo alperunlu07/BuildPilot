@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react';
 import type { Node } from '@xyflow/react';
-import type { BuildLogEntry, StepType } from '@buildpilot/shared-types';
+import type { BuildLogEntry, SshHost, StepType } from '@buildpilot/shared-types';
 import { STEP_DEFINITIONS, type StepFieldSchema } from '@buildpilot/step-registry';
 import { BranchSelect } from './BranchSelect';
 import { LogTable } from './LogTable';
+import { useStore } from '../store/store';
 import { cn } from '../lib/cn';
 
 const EMPTY: BuildLogEntry[] = [];
@@ -33,6 +34,7 @@ export function StepPropertyPanel({
   // All hooks must run unconditionally (React rules of hooks), so they live
   // above the null/missing-def early returns.
   const [tab, setTab] = useState<Tab>('properties');
+  const hosts = useStore((s) => s.hosts);
   const nodeId = node?.id ?? null;
   const nodeEntries = useMemo(
     () => (nodeId ? entries.filter((e) => e.nodeId === nodeId) : EMPTY),
@@ -118,6 +120,7 @@ export function StepPropertyPanel({
               field={field}
               value={(node.data as Record<string, unknown>)[field.name]}
               branches={branches}
+              hosts={hosts}
               onChange={(v) => updateField(field.name, v)}
             />
           ))}
@@ -255,11 +258,13 @@ function Field({
   field,
   value,
   branches,
+  hosts,
   onChange,
 }: {
   field: StepFieldSchema;
   value: unknown;
   branches: string[];
+  hosts: SshHost[];
   onChange(v: string | number): void;
 }) {
   const stringValue = value === undefined || value === null ? '' : String(value);
@@ -301,6 +306,19 @@ function Field({
           required={field.required}
           className="w-full [&>select]:w-full [&>select]:px-2.5 [&>select]:py-1.5 [&>select]:text-[13px]"
         />
+      ) : field.type === 'hostSelect' ? (
+        <select
+          value={stringValue}
+          onChange={(e) => onChange(e.target.value)}
+          className="w-full rounded-md border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-[13px] text-slate-100 focus:border-sky-500 focus:outline-none"
+        >
+          <option value="">(inline / fill below)</option>
+          {hosts.map((h) => (
+            <option key={h.id} value={h.id}>
+              {h.name} — {h.host}
+            </option>
+          ))}
+        </select>
       ) : (
         <input
           type={field.type === 'number' ? 'number' : 'text'}
