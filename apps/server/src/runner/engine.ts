@@ -43,6 +43,8 @@ import { runIncrementBuildNumber } from './steps/incrementBuildNumber';
 import { runGetBuildNumber } from './steps/getBuildNumber';
 import { runChangelogFromGitCommits } from './steps/changelogFromGitCommits';
 import { runUpdateInfoPlist } from './steps/updateInfoPlist';
+import { runSwiftlint } from './steps/swiftlint';
+import { runSwiftFormat } from './steps/swiftFormat';
 
 export interface StepContext {
   project: Project;
@@ -89,6 +91,8 @@ const RUNNERS: Record<StepType, StepRunner> = {
   getBuildNumber: runGetBuildNumber,
   changelogFromGitCommits: runChangelogFromGitCommits,
   updateInfoPlist: runUpdateInfoPlist,
+  swiftlint: runSwiftlint,
+  swiftFormat: runSwiftFormat,
 };
 
 interface DagNode {

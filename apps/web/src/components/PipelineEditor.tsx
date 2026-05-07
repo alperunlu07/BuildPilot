@@ -63,6 +63,8 @@ const nodeTypes = {
   getBuildNumber: StepNode,
   changelogFromGitCommits: StepNode,
   updateInfoPlist: StepNode,
+  swiftlint: StepNode,
+  swiftFormat: StepNode,
 };
 
 interface Props {
@@ -826,6 +828,33 @@ function defaultData(type: StepType): Record<string, unknown> {
         key: '',
         operation: 'set',
         value: '',
+        cwd: '',
+      };
+    case 'swiftlint':
+      return {
+        hostId: '',
+        host: '',
+        identityFile: '',
+        password: '',
+        mode: 'lint',
+        configFile: '',
+        paths: '',
+        strict: 'false',
+        reporter: 'xcode',
+        quiet: 'false',
+        cwd: '',
+      };
+    case 'swiftFormat':
+      return {
+        hostId: '',
+        host: '',
+        identityFile: '',
+        password: '',
+        mode: 'lint',
+        configFile: '',
+        paths: '',
+        recursive: 'true',
+        parallel: 'false',
         cwd: '',
       };
     case 's3Upload':

@@ -57,7 +57,9 @@ export type StepType =
   | 'incrementBuildNumber'
   | 'getBuildNumber'
   | 'changelogFromGitCommits'
-  | 'updateInfoPlist';
+  | 'updateInfoPlist'
+  | 'swiftlint'
+  | 'swiftFormat';
 
 export type AiTool = 'claude' | 'codex' | 'aider' | 'gemini' | 'custom';
 
@@ -491,6 +493,40 @@ export interface UpdateInfoPlistStepData extends RunsOnMaybeRemote {
   // it already exists. 'delete' removes the key.
   operation?: 'set' | 'add-string' | 'delete';
   // Working dir for the PlistBuddy call. Defaults to the project root.
+  cwd?: string;
+}
+
+export interface SwiftlintStepData extends RunsOnMaybeRemote {
+  // 'lint' (default) runs `swiftlint lint`. 'fix' runs `swiftlint --fix`
+  // (no subcommand) for autocorrect. 'analyze' runs `swiftlint analyze`
+  // for rules that need a compile log.
+  mode?: 'lint' | 'fix' | 'analyze';
+  // Path to .swiftlint.yml — passed via --config when set.
+  configFile?: string;
+  // One path per line. Each line is shell-quoted and appended verbatim.
+  paths?: string;
+  // 'true' adds --strict (warnings count as errors).
+  strict?: string;
+  // Output reporter. Maps to --reporter <r>.
+  reporter?: 'xcode' | 'json' | 'junit' | 'markdown' | 'html' | 'emoji';
+  // 'true' adds --quiet (suppress non-violation output).
+  quiet?: string;
+  // Working dir for the swiftlint invocation.
+  cwd?: string;
+}
+
+export interface SwiftFormatStepData extends RunsOnMaybeRemote {
+  // 'lint' (default) runs `swift-format lint <files>` (fails on violations).
+  // 'format' runs `swift-format format -i <files>` (in-place rewrite).
+  mode?: 'lint' | 'format';
+  // Path to .swift-format JSON — passed via --configuration.
+  configFile?: string;
+  // One path per line. Each line is shell-quoted and appended at the end.
+  paths?: string;
+  // 'true' (default) adds --recursive (descend into directories).
+  recursive?: string;
+  // 'true' adds --parallel.
+  parallel?: string;
   cwd?: string;
 }
 

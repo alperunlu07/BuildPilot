@@ -43,6 +43,8 @@ const stepTypes = [
   'getBuildNumber',
   'changelogFromGitCommits',
   'updateInfoPlist',
+  'swiftlint',
+  'swiftFormat',
 ] as const;
 
 const nodeSchema = z.object({

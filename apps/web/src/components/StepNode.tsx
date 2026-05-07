@@ -6,7 +6,9 @@ import {
   Box,
   Boxes,
   Bug,
+  AlignLeft,
   CloudUpload,
+  CodeXml,
   FileCog,
   GitBranch,
   GitMerge,
@@ -68,6 +70,8 @@ const ICONS: Record<string, LucideIcon> = {
   Hash,
   ScrollText,
   FileCog,
+  CodeXml,
+  AlignLeft,
 };
 
 type RuntimeStatus = 'running' | 'success' | 'failed' | 'skipped' | undefined;
@@ -305,6 +309,14 @@ function summariseData(type: StepType, data: Record<string, unknown>): string {
       if (!data.key) return op;
       const path = data.plistPath ? String(data.plistPath).split('/').pop() : '';
       return path ? `${op} ${data.key} → ${path}` : `${op} ${data.key}`;
+    }
+    case 'swiftlint': {
+      const mode = (data.mode as string) || 'lint';
+      return data.strict === 'true' ? `${mode} --strict` : mode;
+    }
+    case 'swiftFormat': {
+      const mode = (data.mode as string) || 'lint';
+      return mode;
     }
     default:
       return '';
