@@ -12,10 +12,14 @@ import { hostsRoutes } from './api/hosts';
 import { reloadSchedules, startPoller } from './poller';
 import { eventBus } from './events/bus';
 import { startTelegramBot } from './runner/telegramBot';
+import { migratePlaintextSecrets } from './crypto/migrateSecrets';
+import { migrateHostsFile } from './store/hosts';
 
 async function main(): Promise<void> {
   const config = loadConfig();
   initDb(config.dbPath);
+  migratePlaintextSecrets();
+  migrateHostsFile();
 
   const app = Fastify({
     logger: {

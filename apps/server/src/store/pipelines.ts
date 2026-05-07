@@ -6,6 +6,18 @@ import type {
   PipelineWatch,
 } from '@buildpilot/shared-types';
 import { getDb } from './db';
+import {
+  decryptSecretsInObject,
+  encryptSecretsInObject,
+} from '../crypto/secrets';
+
+function encryptNodes(nodes: PipelineNode[]): PipelineNode[] {
+  return nodes.map((n) => ({ ...n, data: encryptSecretsInObject(n.data) }));
+}
+
+function decryptNodes(nodes: PipelineNode[]): PipelineNode[] {
+  return nodes.map((n) => ({ ...n, data: decryptSecretsInObject(n.data) }));
+}
 
 interface PipelineRow {
   id: string;
@@ -33,7 +45,7 @@ function rowToPipeline(row: PipelineRow): Pipeline {
       autoTrigger: row.auto_trigger as PipelineWatch['autoTrigger'],
       telegramApprovals: row.telegram_approvals === 1,
     },
-    nodes: JSON.parse(row.nodes_json) as PipelineNode[],
+    nodes: decryptNodes(JSON.parse(row.nodes_json) as PipelineNode[]),
     edges: JSON.parse(row.edges_json) as PipelineEdge[],
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -88,7 +100,7 @@ export function createPipeline(input: PipelineInput): Pipeline {
       input.watch.branch,
       input.watch.intervalSec,
       input.watch.autoTrigger,
-      JSON.stringify(input.nodes),
+      JSON.stringify(encryptNodes(input.nodes)),
       JSON.stringify(input.edges),
       now,
       now,
@@ -133,7 +145,7 @@ export function updatePipeline(
       merged.watch.branch,
       merged.watch.intervalSec,
       merged.watch.autoTrigger,
-      JSON.stringify(merged.nodes),
+      JSON.stringify(encryptNodes(merged.nodes)),
       JSON.stringify(merged.edges),
       merged.updatedAt,
       merged.watch.telegramApprovals ? 1 : 0,

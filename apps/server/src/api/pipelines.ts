@@ -52,6 +52,11 @@ const stepTypes = [
   'resign',
   'snapshot',
   'frameit',
+  'gradleBuild',
+  'adbConnect',
+  'adbInstall',
+  'adbShellLaunch',
+  'adbLogcat',
 ] as const;
 
 const nodeSchema = z.object({

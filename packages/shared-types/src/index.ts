@@ -66,7 +66,12 @@ export type StepType =
   | 'xcovGate'
   | 'resign'
   | 'snapshot'
-  | 'frameit';
+  | 'frameit'
+  | 'gradleBuild'
+  | 'adbConnect'
+  | 'adbInstall'
+  | 'adbShellLaunch'
+  | 'adbLogcat';
 
 export type AiTool = 'claude' | 'codex' | 'aider' | 'gemini' | 'custom';
 
@@ -666,6 +671,105 @@ export interface SnapshotStepData extends RunsOnMaybeRemote {
   clearPreviousScreenshots?: string;
   additionalArgs?: string;
   cwd?: string;
+}
+
+// ── Android steps ───────────────────────────────────────────────────────────
+// Drive `./gradlew` (or `gradlew.bat` on Windows) to produce an APK or AAB
+// from a standard Android Gradle project. Auto-discovers the resulting
+// artifact in app/build/outputs and registers it as a build artifact so
+// downstream `adbInstall` / `s3Upload` steps can find it.
+export interface GradleBuildStepData {
+  // 'apk'   → assemble<Variant>  (installable on device — use this for adb)
+  // 'aab'   → bundle<Variant>    (Play Store / Firebase distribution)
+  // 'custom'→ run an arbitrary gradle task (gradleTask field)
+  output: 'apk' | 'aab' | 'custom';
+  // Variant case is significant: gradle generates assembleRelease, not
+  // assemblerelease. Defaults to 'Release'.
+  variant?: string;
+  // Module path; defaults to ':app'. Set to empty string for root project.
+  module?: string;
+  // Used only when output === 'custom'. Full task name including ':' segments,
+  // e.g. ':app:assembleStagingDebug' or ':lib:test'.
+  gradleTask?: string;
+  // Extra flags forwarded after the task, e.g. '--info --no-daemon'.
+  gradleArgs?: string;
+  // Working dir relative to project root (where gradlew lives). Empty = root.
+  cwd?: string;
+  // 'true' (default) → on success, scan app/build/outputs and register the
+  // produced APK/AAB as a build artifact. Set to 'false' for custom tasks
+  // that don't produce an installable artifact.
+  registerArtifact?: string;
+}
+
+// `adb connect <host:port>` — pairs a Wi-Fi-debugging-enabled device with the
+// adb server. The device must already be authorized (USB-paired or, on
+// Android 11+, paired via `adb pair` — the latter is not yet a step).
+export interface AdbConnectStepData {
+  // ip:port. Default adbd port is 5555.
+  address: string;
+  // Override 'adb' lookup if it's not on PATH.
+  adbPath?: string;
+}
+
+// `adb install -r <apk>` onto a connected device. With multiple devices
+// connected, supply `serial` (from `adb devices`) to disambiguate; otherwise
+// adb will refuse to install with "more than one device".
+export interface AdbInstallStepData {
+  // APK path relative to project root or absolute. AABs are not installable
+  // directly — convert with bundletool first (future step).
+  apkPath: string;
+  // Specific device serial. Empty = let adb pick (works for single-device
+  // setups). Use the value from `adb devices` (e.g. "emulator-5554" or "RFCM…").
+  serial?: string;
+  // 'true' (default) → -r (reinstall, keeping data). False reinstalls fail
+  // when the package is already present.
+  replace?: string;
+  // 'true' → -d (allow version downgrade for debug builds).
+  allowDowngrade?: string;
+  // 'true' → -t (allow test packages with android:testOnly="true").
+  allowTest?: string;
+  adbPath?: string;
+}
+
+// `adb shell am start -n <package>/<activity>` — launches the freshly
+// installed app. The most common follow-up to adbInstall.
+export interface AdbShellLaunchStepData {
+  packageName: string;
+  // Activity component. Either '.MainActivity' (relative — package gets
+  // prefixed) or fully qualified 'com.example.app.MainActivity'. Empty =
+  // launch the package's main launcher activity via `monkey`.
+  activity?: string;
+  serial?: string;
+  // 'true' → -W flag, blocks until launch completes (gives a clearer signal
+  // for "did it actually start"). Default false (returns immediately).
+  waitForLaunch?: string;
+  adbPath?: string;
+}
+
+// `adb logcat` for a bounded duration, written to a file and registered as a
+// build artifact. Standard smoke-test post-launch step: install → launch →
+// capture 30s of logs → fail the pipeline if a crash signature appears
+// (future enhancement; currently captures only).
+export interface AdbLogcatStepData {
+  // Seconds to capture. Default 30.
+  durationSec?: number;
+  serial?: string;
+  // Optional logcat filter spec. Examples:
+  //   "*:E"                → errors only across all tags
+  //   "MyApp:D *:S"        → only MyApp tag at Debug+
+  //   "--pid=$(adb shell pidof -s com.example.app)"  → not supported here;
+  //                                                    use a shell step.
+  filter?: string;
+  // Output file path relative to project root. Default
+  // "logcat-<buildId>.txt". The file is registered as a build artifact when
+  // registerArtifact is 'true' (default).
+  outputPath?: string;
+  // 'true' (default) → adb logcat -c (clear ring buffer) before starting.
+  // Highly recommended so you only get logs from this run.
+  clearFirst?: string;
+  // 'true' (default) → register the output file as a build artifact.
+  registerArtifact?: string;
+  adbPath?: string;
 }
 
 // `fastlane frameit` adds device chrome around raw screenshots. Pure wrapper —

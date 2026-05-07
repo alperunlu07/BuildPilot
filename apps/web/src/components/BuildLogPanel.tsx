@@ -1,7 +1,9 @@
+import { useMemo, useState } from 'react';
 import { Square } from 'lucide-react';
-import type { BuildLogEntry } from '@buildpilot/shared-types';
+import type { BuildLogEntry, BuildLogLevel } from '@buildpilot/shared-types';
 import { useStore } from '../store/store';
 import { LogTable } from './LogTable';
+import { LevelToggleBar, defaultActiveLevels } from './LevelToggleBar';
 import { cn } from '../lib/cn';
 
 // Stable empty-array reference: returning a fresh `[]` from a Zustand
@@ -16,6 +18,21 @@ export function BuildLogPanel() {
   );
   const cancelBuild = useStore((s) => s.cancelBuild);
   const setView = useStore((s) => s.setView);
+  const [activeLevels, setActiveLevels] = useState<Set<BuildLogLevel>>(() => defaultActiveLevels());
+
+  const filtered = useMemo(
+    () => entries.filter((e) => activeLevels.has(e.level)),
+    [entries, activeLevels],
+  );
+
+  const toggleLevel = (lvl: BuildLogLevel) => {
+    setActiveLevels((prev) => {
+      const next = new Set(prev);
+      if (next.has(lvl)) next.delete(lvl);
+      else next.add(lvl);
+      return next;
+    });
+  };
 
   if (!activeBuild) return null;
 
@@ -57,9 +74,14 @@ export function BuildLogPanel() {
             </>
           )}
           <span className="text-slate-500">·</span>
-          <span className="text-slate-500">{entries.length} entries</span>
+          <span className="text-slate-500">
+            {filtered.length === entries.length
+              ? `${entries.length} entries`
+              : `${filtered.length} / ${entries.length} entries`}
+          </span>
         </div>
         <div className="flex items-center gap-2">
+          <LevelToggleBar active={activeLevels} onToggle={toggleLevel} compact />
           {!finished && (
             <button
               type="button"
@@ -81,7 +103,7 @@ export function BuildLogPanel() {
         </div>
       </div>
       <div className="min-h-0 flex-1">
-        <LogTable entries={entries} compact />
+        <LogTable entries={filtered} compact />
       </div>
     </div>
   );

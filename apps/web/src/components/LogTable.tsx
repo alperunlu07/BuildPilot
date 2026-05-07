@@ -1,4 +1,5 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { FixedSizeList, type ListChildComponentProps } from 'react-window';
 import type { BuildLogEntry, BuildLogLevel, StepType } from '@buildpilot/shared-types';
 import { cn } from '../lib/cn';
 
@@ -6,7 +7,7 @@ interface Props {
   entries: BuildLogEntry[];
   // Per-node display label, e.g. mapping nodeId → step type label. Optional.
   nodeLabel?(nodeId: string, stepType: StepType | null): string;
-  // When true, autoscroll the table to the latest row whenever entries grow.
+  // When true, autoscroll the list to the latest row whenever entries grow.
   follow?: boolean;
   // Compact = tighter row height for the bottom panel; default = roomier.
   compact?: boolean;
@@ -22,6 +23,17 @@ const LEVEL_STYLE: Record<BuildLogLevel, { dot: string; pill: string }> = {
   failure: { dot: 'bg-rose-400',    pill: 'bg-rose-900/40 text-rose-300' },
 };
 
+// Fixed row heights so we can virtualize with a FixedSizeList. Long messages
+// are clipped to a single line with overflow:hidden + title attribute; users
+// can hover to see the full text. Without fixed heights we'd need
+// VariableSizeList + per-row measurement, which costs more for big logs.
+const ROW_H = 24;
+const ROW_H_COMPACT = 20;
+
+// Grid column template — kept in sync between header and body rows so they
+// align. Last column (message) flexes.
+const GRID_COLS = 'minmax(0, 88px) minmax(0, 78px) minmax(0, 150px) minmax(0, 1fr)';
+
 export function LogTable({
   entries,
   nodeLabel,
@@ -29,21 +41,41 @@ export function LogTable({
   compact = false,
   emptyMessage = 'Waiting for output…',
 }: Props) {
-  const wrap = useRef<HTMLDivElement>(null);
+  const rowH = compact ? ROW_H_COMPACT : ROW_H;
+  const listRef = useRef<FixedSizeList>(null);
   const followRef = useRef(follow);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const [size, setSize] = useState<{ w: number; h: number }>({ w: 0, h: 0 });
 
+  // Measure the container so FixedSizeList knows how tall/wide to be. Using
+  // ResizeObserver instead of forcing height: 100% on the list because the
+  // sticky header above it eats some vertical space.
+  useLayoutEffect(() => {
+    const el = wrapperRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => {
+      const rect = el.getBoundingClientRect();
+      setSize({ w: rect.width, h: rect.height });
+    });
+    ro.observe(el);
+    const rect = el.getBoundingClientRect();
+    setSize({ w: rect.width, h: rect.height });
+    return () => ro.disconnect();
+  }, []);
+
+  // Autoscroll on new entries, but only if user hasn't scrolled away from the
+  // bottom. The onScroll handler updates followRef so we stop pinning to
+  // bottom once the user scrolls up to inspect.
   useEffect(() => {
     if (!followRef.current) return;
-    const el = wrap.current;
-    if (!el) return;
-    el.scrollTop = el.scrollHeight;
-  }, [entries]);
+    if (entries.length === 0) return;
+    listRef.current?.scrollToItem(entries.length - 1, 'end');
+  }, [entries.length]);
 
-  const onScroll = () => {
-    const el = wrap.current;
-    if (!el) return;
-    followRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 24;
-  };
+  const itemData = useMemo(
+    () => ({ entries, nodeLabel, compact, rowH }),
+    [entries, nodeLabel, compact, rowH],
+  );
 
   if (entries.length === 0) {
     return (
@@ -54,108 +86,109 @@ export function LogTable({
   }
 
   return (
-    <div
-      ref={wrap}
-      onScroll={onScroll}
-      className="scrollbar-thin h-full overflow-y-auto font-mono text-[12px]"
-    >
-      <table className="w-full table-fixed border-separate border-spacing-0">
-        <colgroup>
-          <col className="w-[88px]" />
-          <col className="w-[78px]" />
-          <col className="w-[150px]" />
-          <col />
-        </colgroup>
-        <thead className="sticky top-0 z-10 bg-slate-950/95 backdrop-blur">
-          <tr className="text-[10px] uppercase tracking-wider text-slate-500">
-            <Th compact={compact}>Time</Th>
-            <Th compact={compact}>Level</Th>
-            <Th compact={compact}>Node</Th>
-            <Th compact={compact}>Message</Th>
-          </tr>
-        </thead>
-        <tbody>
-          {entries.map((e) => {
-            const style = LEVEL_STYLE[e.level];
-            return (
-              <tr key={e.seq} className="border-t border-slate-900 hover:bg-slate-900/40">
-                <Td compact={compact} mono className="text-slate-500">
-                  {fmtTime(e.ts)}
-                </Td>
-                <Td compact={compact}>
-                  <span
-                    className={cn(
-                      'inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider',
-                      style.pill,
-                    )}
-                  >
-                    <span className={cn('h-1.5 w-1.5 rounded-full', style.dot)} />
-                    {e.level}
-                  </span>
-                </Td>
-                <Td compact={compact} mono className="truncate text-slate-300">
-                  {e.nodeId
-                    ? nodeLabel
-                      ? nodeLabel(e.nodeId, e.stepType)
-                      : `${e.stepType ?? '?'}:${e.nodeId.slice(0, 8)}`
-                    : <span className="text-slate-600">—</span>}
-                </Td>
-                <Td
-                  compact={compact}
-                  mono
-                  className={cn(
-                    'whitespace-pre-wrap break-words text-slate-200',
-                    e.level === 'stderr' && 'text-amber-200',
-                    e.level === 'failure' && 'text-rose-300',
-                    e.level === 'success' && 'text-emerald-300',
-                  )}
-                >
-                  {e.message}
-                </Td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+    <div className="flex h-full min-h-0 flex-col font-mono text-[12px]">
+      <div
+        className={cn(
+          'sticky top-0 z-10 grid border-b border-slate-800 bg-slate-950/95 px-2 backdrop-blur',
+          compact ? 'py-1' : 'py-1.5',
+        )}
+        style={{ gridTemplateColumns: GRID_COLS }}
+      >
+        <Th>Time</Th>
+        <Th>Level</Th>
+        <Th>Node</Th>
+        <Th>Message</Th>
+      </div>
+      <div ref={wrapperRef} className="flex-1 min-h-0">
+        {size.h > 0 && (
+          <FixedSizeList
+            ref={listRef}
+            height={size.h}
+            width={size.w}
+            itemCount={entries.length}
+            itemSize={rowH}
+            itemData={itemData}
+            overscanCount={20}
+            onScroll={({ scrollOffset, scrollUpdateWasRequested }) => {
+              if (scrollUpdateWasRequested) return;
+              const max = entries.length * rowH - size.h;
+              followRef.current = max - scrollOffset < rowH * 2;
+            }}
+            // Inline class for the inner container — react-window manages
+            // its own scroll, we just style the scrollbar.
+            className="scrollbar-thin"
+          >
+            {Row}
+          </FixedSizeList>
+        )}
+      </div>
     </div>
   );
 }
 
-function Th({ children, compact }: { children: React.ReactNode; compact: boolean }) {
+interface RowItemData {
+  entries: BuildLogEntry[];
+  nodeLabel?(nodeId: string, stepType: StepType | null): string;
+  compact: boolean;
+  rowH: number;
+}
+
+function Row({ index, style, data }: ListChildComponentProps<RowItemData>) {
+  const { entries, nodeLabel, compact } = data;
+  const e = entries[index]!;
+  const lvlStyle = LEVEL_STYLE[e.level];
   return (
-    <th
+    <div
+      style={style}
       className={cn(
-        'border-b border-slate-800 px-2 text-left font-medium',
-        compact ? 'py-1' : 'py-1.5',
+        'grid items-center border-t border-slate-900 px-2 hover:bg-slate-900/40',
+        compact ? 'py-0' : 'py-0',
       )}
     >
-      {children}
-    </th>
+      <div
+        className="grid w-full items-center"
+        style={{ gridTemplateColumns: GRID_COLS, height: '100%' }}
+      >
+        <span className="truncate text-slate-500">{fmtTime(e.ts)}</span>
+        <span
+          className={cn(
+            'inline-flex w-fit items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider',
+            lvlStyle.pill,
+          )}
+        >
+          <span className={cn('h-1.5 w-1.5 rounded-full', lvlStyle.dot)} />
+          {e.level}
+        </span>
+        <span className="truncate text-slate-300">
+          {e.nodeId
+            ? nodeLabel
+              ? nodeLabel(e.nodeId, e.stepType)
+              : `${e.stepType ?? '?'}:${e.nodeId.slice(0, 8)}`
+            : <span className="text-slate-600">—</span>}
+        </span>
+        <span
+          // Single-line truncation; full text on hover so virtualization
+          // can keep a fixed row height.
+          title={e.message}
+          className={cn(
+            'truncate text-slate-200',
+            e.level === 'stderr' && 'text-amber-200',
+            e.level === 'failure' && 'text-rose-300',
+            e.level === 'success' && 'text-emerald-300',
+          )}
+        >
+          {e.message}
+        </span>
+      </div>
+    </div>
   );
 }
 
-function Td({
-  children,
-  className,
-  mono,
-  compact,
-}: {
-  children: React.ReactNode;
-  className?: string;
-  mono?: boolean;
-  compact: boolean;
-}) {
+function Th({ children }: { children: React.ReactNode }) {
   return (
-    <td
-      className={cn(
-        'align-top px-2',
-        compact ? 'py-0.5' : 'py-1',
-        mono && 'font-mono',
-        className,
-      )}
-    >
+    <span className="truncate text-left text-[10px] font-medium uppercase tracking-wider text-slate-500">
       {children}
-    </td>
+    </span>
   );
 }
 

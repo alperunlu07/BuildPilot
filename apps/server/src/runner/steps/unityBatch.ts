@@ -29,7 +29,12 @@ export async function runUnityBatch(
   ctx.log(`> "${d.unityPath}" ${args.map((a) => (a.includes(' ') ? `"${a}"` : a)).join(' ')}`);
 
   await new Promise<void>((resolve, reject) => {
-    const child = spawn(d.unityPath!, args, { env: process.env });
+    // BUILDPILOT_BUILD signals to project-side post-build hooks (CloudBuild
+    // helpers, agent.bat, etc.) that the build is being driven by BuildPilot
+    // and any legacy uploaders should stand down — BuildPilot's own steps
+    // handle artifact upload and notifications now.
+    const env = { ...process.env, BUILDPILOT_BUILD: '1' };
+    const child = spawn(d.unityPath!, args, { env });
     ctx.attachProcess(child);
     child.on('error', reject);
     child.on('close', (code) => {

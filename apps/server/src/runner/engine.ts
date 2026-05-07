@@ -52,6 +52,11 @@ import { runXcovGate } from './steps/xcovGate';
 import { runResign } from './steps/resign';
 import { runSnapshot } from './steps/snapshot';
 import { runFrameit } from './steps/frameit';
+import { runGradleBuild } from './steps/gradleBuild';
+import { runAdbConnect } from './steps/adbConnect';
+import { runAdbInstall } from './steps/adbInstall';
+import { runAdbShellLaunch } from './steps/adbShellLaunch';
+import { runAdbLogcat } from './steps/adbLogcat';
 
 export interface StepContext {
   project: Project;
@@ -107,6 +112,11 @@ const RUNNERS: Record<StepType, StepRunner> = {
   resign: runResign,
   snapshot: runSnapshot,
   frameit: runFrameit,
+  gradleBuild: runGradleBuild,
+  adbConnect: runAdbConnect,
+  adbInstall: runAdbInstall,
+  adbShellLaunch: runAdbShellLaunch,
+  adbLogcat: runAdbLogcat,
 };
 
 interface DagNode {
@@ -364,6 +374,19 @@ export async function runPipeline(args: {
     if (outcomes.has(node.id) || inflight.has(node.id)) return 'wait';
     const incoming = incomingByNode.get(node.id) ?? [];
     if (!incoming.every((e) => outcomes.has(e.source))) return 'wait';
+
+    // Failure aggregator: when every incoming edge is a 'failure' edge, treat
+    // the join as OR — fire if ANY upstream actually failed. Without this,
+    // a single failure aggregator behind a chain (A→B→C, each with a failure
+    // edge to N) would never run: when A fails, B/C are skipped, and the
+    // edges from skipped parents would block N under strict AND semantics.
+    const allFailureEdges =
+      incoming.length > 0 && incoming.every((e) => (e.condition ?? 'success') === 'failure');
+    if (allFailureEdges) {
+      const anyFailed = incoming.some((e) => outcomes.get(e.source) === 'failed');
+      return anyFailed ? 'ready' : 'skip';
+    }
+
     const allMatch = incoming.every((e) => {
       const parent = outcomes.get(e.source);
       if (parent === 'skipped') return false;

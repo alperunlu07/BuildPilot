@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react';
 import type { Node } from '@xyflow/react';
-import type { BuildLogEntry, SshHost, StepType } from '@buildpilot/shared-types';
+import type { BuildLogEntry, BuildLogLevel, SshHost, StepType } from '@buildpilot/shared-types';
 import { STEP_DEFINITIONS, type StepFieldSchema } from '@buildpilot/step-registry';
 import { BranchSelect } from './BranchSelect';
 import { LogTable } from './LogTable';
+import { LevelToggleBar, defaultActiveLevels } from './LevelToggleBar';
 import { useStore } from '../store/store';
 import { cn } from '../lib/cn';
 
@@ -34,12 +35,25 @@ export function StepPropertyPanel({
   // All hooks must run unconditionally (React rules of hooks), so they live
   // above the null/missing-def early returns.
   const [tab, setTab] = useState<Tab>('properties');
+  const [activeLevels, setActiveLevels] = useState<Set<BuildLogLevel>>(() => defaultActiveLevels());
   const hosts = useStore((s) => s.hosts);
   const nodeId = node?.id ?? null;
   const nodeEntries = useMemo(
-    () => (nodeId ? entries.filter((e) => e.nodeId === nodeId) : EMPTY),
-    [entries, nodeId],
+    () =>
+      nodeId
+        ? entries.filter((e) => e.nodeId === nodeId && activeLevels.has(e.level))
+        : EMPTY,
+    [entries, nodeId, activeLevels],
   );
+
+  const toggleLevel = (lvl: BuildLogLevel) => {
+    setActiveLevels((prev) => {
+      const next = new Set(prev);
+      if (next.has(lvl)) next.delete(lvl);
+      else next.add(lvl);
+      return next;
+    });
+  };
 
   if (!node) {
     return (
@@ -132,14 +146,19 @@ export function StepPropertyPanel({
           />
         </div>
       ) : (
-        <div className="min-h-0 flex-1">
-          {nodeEntries.length === 0 ? (
-            <div className="px-4 py-6 text-xs text-slate-500">
-              No log entries for this node yet. Run the pipeline to see step output here.
-            </div>
-          ) : (
-            <LogTable entries={nodeEntries} compact emptyMessage="No entries." />
-          )}
+        <div className="flex min-h-0 flex-1 flex-col">
+          <div className="border-b border-slate-800 px-3 py-1.5">
+            <LevelToggleBar active={activeLevels} onToggle={toggleLevel} compact />
+          </div>
+          <div className="min-h-0 flex-1">
+            {nodeEntries.length === 0 ? (
+              <div className="px-4 py-6 text-xs text-slate-500">
+                No log entries for this node yet. Run the pipeline to see step output here.
+              </div>
+            ) : (
+              <LogTable entries={nodeEntries} compact emptyMessage="No entries." />
+            )}
+          </div>
         </div>
       )}
     </aside>

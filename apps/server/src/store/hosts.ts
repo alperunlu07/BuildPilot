@@ -3,6 +3,21 @@ import { homedir } from 'node:os';
 import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
 import type { HostCapabilities, SshHost } from '@buildpilot/shared-types';
+import { decryptSecret, encryptSecret, isEncrypted } from '../crypto/secrets';
+
+function encryptHostForDisk(h: SshHost): SshHost {
+  if (h.password && !isEncrypted(h.password)) {
+    return { ...h, password: encryptSecret(h.password) };
+  }
+  return h;
+}
+
+function decryptHostForRuntime(h: SshHost): SshHost {
+  if (h.password && isEncrypted(h.password)) {
+    return { ...h, password: decryptSecret(h.password) };
+  }
+  return h;
+}
 
 // Hosts live alongside config.json — single global list, not per-project.
 // File-backed (not SQLite) so a user can hand-edit / version-control it.
@@ -19,7 +34,10 @@ function readFile(): HostsFile {
     const raw = readFileSync(HOSTS_FILE, 'utf-8');
     const parsed = JSON.parse(raw) as HostsFile;
     if (!Array.isArray(parsed.hosts)) return { hosts: [] };
-    return parsed;
+    // In-memory hosts always carry plaintext passwords so step runners and
+    // the UI can use them directly. The on-disk file stays encrypted; see
+    // writeFile below.
+    return { hosts: parsed.hosts.map(decryptHostForRuntime) };
   } catch {
     return { hosts: [] };
   }
@@ -27,7 +45,8 @@ function readFile(): HostsFile {
 
 function writeFile(file: HostsFile): void {
   if (!existsSync(CONFIG_DIR)) mkdirSync(CONFIG_DIR, { recursive: true });
-  writeFileSync(HOSTS_FILE, JSON.stringify(file, null, 2), 'utf-8');
+  const onDisk: HostsFile = { hosts: file.hosts.map(encryptHostForDisk) };
+  writeFileSync(HOSTS_FILE, JSON.stringify(onDisk, null, 2), 'utf-8');
 }
 
 export interface SshHostInput {
@@ -93,6 +112,15 @@ export function deleteHost(id: string): boolean {
   if (file.hosts.length === before) return false;
   writeFile(file);
   return true;
+}
+
+// Startup helper: read hosts (which decrypts) and write back (which encrypts).
+// If anything was plaintext on disk it gets rewritten encrypted; if everything
+// was already encrypted the on-disk JSON ends up identical bytes.
+export function migrateHostsFile(): void {
+  const file = readFile();
+  if (file.hosts.length === 0) return;
+  writeFile(file);
 }
 
 export function setHostCapabilities(id: string, caps: HostCapabilities | null): SshHost | null {

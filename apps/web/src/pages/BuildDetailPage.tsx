@@ -12,6 +12,7 @@ import { api } from '../lib/api';
 import { cn } from '../lib/cn';
 import { LogTable } from '../components/LogTable';
 import { StepGantt } from '../components/StepGantt';
+import { defaultActiveLevels } from '../components/LevelToggleBar';
 
 const EMPTY: BuildLogEntry[] = [];
 
@@ -49,7 +50,7 @@ export function BuildDetailPage({ buildId }: Props) {
   const [artifacts, setArtifacts] = useState<BuildArtifact[]>([]);
 
   const [activeLevels, setActiveLevels] = useState<Set<BuildLogLevel>>(
-    () => new Set(ALL_LEVELS),
+    () => defaultActiveLevels(),
   );
   const [activeNodeId, setActiveNodeId] = useState<string | 'all'>('all');
 

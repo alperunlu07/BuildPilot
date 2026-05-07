@@ -14,7 +14,7 @@ import {
   type Node,
   type NodeChange,
 } from '@xyflow/react';
-import { Hammer, Save, Square, Trash2 } from 'lucide-react';
+import { ChevronDown, ChevronRight, Hammer, Save, Square, Trash2 } from 'lucide-react';
 import type {
   NodeTemplate,
   Pipeline,
@@ -23,7 +23,7 @@ import type {
   PipelineWatch,
   StepType,
 } from '@buildpilot/shared-types';
-import { STEP_DEFINITIONS, STEP_TYPES } from '@buildpilot/step-registry';
+import { STEP_CATEGORIES, STEP_DEFINITIONS } from '@buildpilot/step-registry';
 import { api } from '../lib/api';
 import { useStore } from '../store/store';
 import { BranchSelect } from './BranchSelect';
@@ -72,6 +72,11 @@ const nodeTypes = {
   resign: StepNode,
   snapshot: StepNode,
   frameit: StepNode,
+  gradleBuild: StepNode,
+  adbConnect: StepNode,
+  adbInstall: StepNode,
+  adbShellLaunch: StepNode,
+  adbLogcat: StepNode,
 };
 
 interface Props {
@@ -520,34 +525,87 @@ function Palette({
   templates: NodeTemplate[];
   onDeleteTemplate(t: NodeTemplate): void;
 }) {
+  const [query, setQuery] = useState('');
+  // Track which groups are collapsed. Empty Set = all open. Persists for the
+  // editor's lifetime; resets on page reload.
+  const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set());
+
+  const q = query.trim().toLowerCase();
+  const matches = (label: string, description: string) =>
+    q === '' || label.toLowerCase().includes(q) || description.toLowerCase().includes(q);
+
+  const toggleGroup = (key: string) => {
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
+  const filteredTemplates =
+    q === ''
+      ? templates
+      : templates.filter((t) => {
+          const def = STEP_DEFINITIONS[t.baseStepType];
+          return matches(t.name, t.description ?? def.label);
+        });
+
   return (
-    <div className="scrollbar-thin flex w-44 shrink-0 flex-col gap-2 overflow-y-auto border-r border-slate-800 bg-slate-950 p-3">
+    <div className="scrollbar-thin flex w-52 shrink-0 flex-col gap-2 overflow-y-auto border-r border-slate-800 bg-slate-950 p-3">
+      <input
+        type="text"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="Search nodes…"
+        className="w-full rounded-md border border-slate-800 bg-slate-900 px-2 py-1 text-[12px] text-slate-200 placeholder:text-slate-500 focus:border-sky-500 focus:outline-none"
+      />
       <div className="text-[11px] uppercase tracking-wider text-slate-500">Drag to canvas</div>
-      {STEP_TYPES.map((type) => {
-        const def = STEP_DEFINITIONS[type];
+
+      {STEP_CATEGORIES.map((group) => {
+        const items = group.types
+          .map((type) => ({ type, def: STEP_DEFINITIONS[type] }))
+          .filter(({ def }) => matches(def.label, def.description));
+        if (items.length === 0) return null;
+        // While searching, force-expand groups so matches are always visible.
+        const isOpen = q !== '' || !collapsed.has(group.key);
         return (
-          <div
-            key={type}
-            draggable
-            onDragStart={(e) => {
-              e.dataTransfer.setData('application/buildpilot-step', type);
-              e.dataTransfer.effectAllowed = 'move';
-            }}
-            className="cursor-grab rounded-md border bg-slate-900 px-2.5 py-1.5 text-[12px] text-slate-200 hover:border-slate-500"
-            style={{ borderColor: def.color }}
-            title={def.description}
-          >
-            {def.label}
+          <div key={group.key} className="flex flex-col gap-1">
+            <button
+              type="button"
+              onClick={() => toggleGroup(group.key)}
+              className="flex items-center gap-1 rounded px-1 py-0.5 text-left text-[10px] font-semibold uppercase tracking-wider text-slate-400 hover:text-slate-200"
+            >
+              {isOpen ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
+              <span className="flex-1 truncate">{group.label}</span>
+              <span className="text-slate-600">{items.length}</span>
+            </button>
+            {isOpen &&
+              items.map(({ type, def }) => (
+                <div
+                  key={type}
+                  draggable
+                  onDragStart={(e) => {
+                    e.dataTransfer.setData('application/buildpilot-step', type);
+                    e.dataTransfer.effectAllowed = 'move';
+                  }}
+                  className="cursor-grab rounded-md border bg-slate-900 px-2.5 py-1.5 text-[12px] text-slate-200 hover:border-slate-500"
+                  style={{ borderColor: def.color }}
+                  title={def.description}
+                >
+                  {def.label}
+                </div>
+              ))}
           </div>
         );
       })}
 
-      {templates.length > 0 && (
-        <>
-          <div className="mt-2 text-[11px] uppercase tracking-wider text-slate-500">
+      {filteredTemplates.length > 0 && (
+        <div className="flex flex-col gap-1">
+          <div className="mt-2 px-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
             Custom templates
           </div>
-          {templates.map((t) => {
+          {filteredTemplates.map((t) => {
             const def = STEP_DEFINITIONS[t.baseStepType];
             return (
               <div
@@ -579,7 +637,7 @@ function Palette({
               </div>
             );
           })}
-        </>
+        </div>
       )}
     </div>
   );
@@ -991,7 +1049,50 @@ function defaultData(type: StepType): Record<string, unknown> {
         manifestChannel: 'stable',
         manifestPlatform: 'linux-x86_64',
       };
+    case 'gradleBuild':
+      return {
+        output: 'apk',
+        variant: 'Release',
+        module: ':app',
+        gradleTask: '',
+        gradleArgs: '',
+        cwd: '',
+        registerArtifact: 'true',
+      };
+    case 'adbConnect':
+      return {
+        address: '',
+        adbPath: '',
+      };
+    case 'adbInstall':
+      return {
+        apkPath: '',
+        serial: '',
+        replace: 'true',
+        allowDowngrade: 'false',
+        allowTest: 'false',
+        adbPath: '',
+      };
+    case 'adbShellLaunch':
+      return {
+        packageName: '',
+        activity: '',
+        serial: '',
+        waitForLaunch: 'false',
+        adbPath: '',
+      };
+    case 'adbLogcat':
+      return {
+        durationSec: 30,
+        serial: '',
+        filter: '',
+        outputPath: '',
+        clearFirst: 'true',
+        registerArtifact: 'true',
+        adbPath: '',
+      };
   }
+  return {};
 }
 
 function pipelineNodesToReactFlow(nodes: PipelineNode[]): Node[] {

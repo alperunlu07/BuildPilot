@@ -1,7 +1,7 @@
 import type { TelegramConfig } from '@buildpilot/shared-types';
 import { logger } from '../logger';
 import { startBuildForPipeline } from './coordinator';
-import { getPipeline } from '../store/pipelines';
+import { getPipeline, listPipelines } from '../store/pipelines';
 import { getProject } from '../store/projects';
 
 interface TelegramUpdate {
@@ -81,8 +81,135 @@ async function pollLoop(): Promise<void> {
 }
 
 async function handleUpdate(upd: TelegramUpdate): Promise<void> {
-  if (upd.callback_query) await handleCallback(upd.callback_query);
-  // Inbound text messages are ignored for now — the bot is one-way + button clicks.
+  if (upd.callback_query) {
+    await handleCallback(upd.callback_query);
+    return;
+  }
+  if (upd.message) {
+    const chatId = upd.message.chat.id;
+    const text = upd.message.text ?? '';
+    logger.info({ chatId, text: text.slice(0, 60) }, 'telegram inbound message');
+    if (text.startsWith('/')) {
+      await handleCommand(chatId, text);
+    }
+  }
+}
+
+// Authorize commands against the configured defaultChatId. Anyone else gets
+// no response — silent ignore avoids advertising the bot to randoms.
+function isAuthorized(chatId: number): boolean {
+  if (!state) return false;
+  const allowed = state.config.defaultChatId?.trim();
+  if (!allowed) return false;
+  return String(chatId) === allowed;
+}
+
+async function handleCommand(chatId: number, text: string): Promise<void> {
+  if (!isAuthorized(chatId)) {
+    logger.warn({ chatId }, 'telegram command from unauthorized chat — ignored');
+    return;
+  }
+  // Strip @BotName suffix Telegram appends in groups: "/build@PFBuildPilot_bot"
+  const [rawCmd, ...args] = text.trim().split(/\s+/);
+  const cmd = (rawCmd ?? '').split('@')[0]?.toLowerCase() ?? '';
+
+  if (cmd === '/start' || cmd === '/help') {
+    await sendChatMessage(
+      chatId,
+      [
+        '<b>BuildPilot</b> — komutlar:',
+        '',
+        '<code>/list</code> — pipeline\'ları listeler',
+        '<code>/build</code> — pipeline seçtiren buton menüsü gönderir',
+        '<code>/build &lt;ad&gt;</code> — eşleşen pipeline\'ı çalıştırır',
+        '<code>/help</code> — bu yardım',
+      ].join('\n'),
+    );
+    return;
+  }
+
+  if (cmd === '/list') {
+    const lines = listPipelines().map((p) => {
+      const project = getProject(p.projectId);
+      return `• <b>${escapeHtml(p.name)}</b> — ${escapeHtml(project?.name ?? '?')} · <code>${escapeHtml(p.watch.branch)}</code>`;
+    });
+    await sendChatMessage(
+      chatId,
+      lines.length > 0 ? lines.join('\n') : 'No pipelines configured.',
+    );
+    return;
+  }
+
+  if (cmd === '/build') {
+    const all = listPipelines();
+    if (all.length === 0) {
+      await sendChatMessage(chatId, 'No pipelines configured.');
+      return;
+    }
+    if (args.length > 0) {
+      const needle = args.join(' ').toLowerCase();
+      const matches = all.filter((p) => p.name.toLowerCase().includes(needle));
+      if (matches.length === 0) {
+        await sendChatMessage(chatId, `No pipeline matched <code>${escapeHtml(needle)}</code>.`);
+        return;
+      }
+      if (matches.length > 1) {
+        const list = matches
+          .map((p) => `• <code>${escapeHtml(p.name)}</code>`)
+          .join('\n');
+        await sendChatMessage(
+          chatId,
+          `Multiple matches — refine name:\n${list}`,
+        );
+        return;
+      }
+      const p = matches[0]!;
+      const build = await startBuildForPipeline(p.id);
+      await sendChatMessage(
+        chatId,
+        build
+          ? `🚀 Build started for <b>${escapeHtml(p.name)}</b> — <code>${build.id.slice(0, 8)}</code>`
+          : `Could not start build for <b>${escapeHtml(p.name)}</b>.`,
+      );
+      return;
+    }
+    // No args: show picker. callback_data shape ("build:<pipelineId>")
+    // matches the existing handleCallback so no separate handler needed.
+    await sendChatMessage(chatId, 'Pick a pipeline to build:', {
+      inline_keyboard: all.map((p) => [
+        { text: p.name, callback_data: `build:${p.id}` },
+      ]),
+    });
+    return;
+  }
+
+  await sendChatMessage(
+    chatId,
+    `Unknown command. Try <code>/help</code>.`,
+  );
+}
+
+function escapeHtml(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+async function sendChatMessage(
+  chatId: number | string,
+  text: string,
+  replyMarkup?: Record<string, unknown>,
+): Promise<void> {
+  if (!state) return;
+  const body: Record<string, unknown> = {
+    chat_id: chatId,
+    text,
+    parse_mode: 'HTML',
+  };
+  if (replyMarkup) body.reply_markup = replyMarkup;
+  await fetch(`https://api.telegram.org/bot${state.config.botToken}/sendMessage`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  }).catch((err) => logger.warn({ err: String(err) }, 'telegram sendChatMessage failed'));
 }
 
 async function handleCallback(cb: NonNullable<TelegramUpdate['callback_query']>): Promise<void> {

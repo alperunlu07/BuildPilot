@@ -2350,6 +2350,230 @@ export const STEP_DEFINITIONS: Record<StepType, StepDefinition> = {
       },
     ],
   },
+  gradleBuild: {
+    type: 'gradleBuild',
+    label: 'Gradle Build',
+    description: 'Run ./gradlew (gradlew.bat on Windows) to produce an APK or AAB.',
+    color: '#84cc16',
+    icon: 'Hammer',
+    fields: [
+      {
+        name: 'output',
+        label: 'Output type',
+        type: 'select',
+        required: true,
+        options: ['apk', 'aab', 'custom'] as const,
+        defaultValue: 'apk',
+        help: 'apk → assemble<Variant>, aab → bundle<Variant>, custom → use the gradleTask field.',
+      },
+      {
+        name: 'variant',
+        label: 'Variant (capitalized)',
+        type: 'text',
+        placeholder: 'Release',
+        defaultValue: 'Release',
+        help: 'Case matters — gradle generates assembleRelease, not assemblerelease.',
+      },
+      {
+        name: 'module',
+        label: 'Module path',
+        type: 'text',
+        placeholder: ':app',
+        defaultValue: ':app',
+      },
+      {
+        name: 'gradleTask',
+        label: 'Custom gradle task (only when output=custom)',
+        type: 'text',
+        placeholder: ':app:assembleStagingDebug',
+      },
+      {
+        name: 'gradleArgs',
+        label: 'Extra gradle args',
+        type: 'text',
+        placeholder: '--info --no-daemon',
+      },
+      {
+        name: 'cwd',
+        label: 'Working dir (relative — gradlew location)',
+        type: 'text',
+        placeholder: '. (defaults to project root)',
+      },
+      {
+        name: 'registerArtifact',
+        label: 'Auto-register produced APK/AAB as artifact',
+        type: 'select',
+        options: ['true', 'false'] as const,
+        defaultValue: 'true',
+      },
+    ],
+  },
+  adbConnect: {
+    type: 'adbConnect',
+    label: 'ADB Connect',
+    description: 'Pair a Wi-Fi-debugging device with the adb server (adb connect ip:port).',
+    color: '#22c55e',
+    icon: 'Wifi',
+    fields: [
+      {
+        name: 'address',
+        label: 'Device address (ip:port)',
+        type: 'text',
+        required: true,
+        placeholder: '192.168.1.100:5555',
+        help: 'Device must already be authorized — pair via USB once or use adb pair on Android 11+.',
+      },
+      {
+        name: 'adbPath',
+        label: 'adb executable (override if not on PATH)',
+        type: 'text',
+        placeholder: 'adb',
+      },
+    ],
+  },
+  adbInstall: {
+    type: 'adbInstall',
+    label: 'ADB Install',
+    description: 'Install an APK onto a connected device (adb install -r).',
+    color: '#16a34a',
+    icon: 'Download',
+    fields: [
+      {
+        name: 'apkPath',
+        label: 'APK path (relative or absolute)',
+        type: 'text',
+        required: true,
+        placeholder: 'app/build/outputs/apk/release/app-release.apk',
+      },
+      {
+        name: 'serial',
+        label: 'Device serial (leave blank for single-device setups)',
+        type: 'text',
+        placeholder: 'emulator-5554 or 192.168.1.100:5555',
+      },
+      {
+        name: 'replace',
+        label: 'Replace existing install (-r)',
+        type: 'select',
+        options: ['true', 'false'] as const,
+        defaultValue: 'true',
+      },
+      {
+        name: 'allowDowngrade',
+        label: 'Allow version downgrade (-d)',
+        type: 'select',
+        options: ['false', 'true'] as const,
+        defaultValue: 'false',
+      },
+      {
+        name: 'allowTest',
+        label: 'Allow test packages (-t)',
+        type: 'select',
+        options: ['false', 'true'] as const,
+        defaultValue: 'false',
+      },
+      {
+        name: 'adbPath',
+        label: 'adb executable (override if not on PATH)',
+        type: 'text',
+        placeholder: 'adb',
+      },
+    ],
+  },
+  adbShellLaunch: {
+    type: 'adbShellLaunch',
+    label: 'ADB Launch App',
+    description: 'Start an app on the device (adb shell am start -n pkg/.Activity).',
+    color: '#15803d',
+    icon: 'Play',
+    fields: [
+      {
+        name: 'packageName',
+        label: 'Package name',
+        type: 'text',
+        required: true,
+        placeholder: 'com.example.app',
+      },
+      {
+        name: 'activity',
+        label: 'Activity (.MainActivity or fully qualified — blank = default launcher)',
+        type: 'text',
+        placeholder: '.MainActivity',
+      },
+      {
+        name: 'serial',
+        label: 'Device serial (leave blank for single-device setups)',
+        type: 'text',
+        placeholder: 'emulator-5554',
+      },
+      {
+        name: 'waitForLaunch',
+        label: 'Wait for launch to complete (-W)',
+        type: 'select',
+        options: ['false', 'true'] as const,
+        defaultValue: 'false',
+      },
+      {
+        name: 'adbPath',
+        label: 'adb executable (override if not on PATH)',
+        type: 'text',
+        placeholder: 'adb',
+      },
+    ],
+  },
+  adbLogcat: {
+    type: 'adbLogcat',
+    label: 'ADB Logcat',
+    description: 'Capture logcat for N seconds and save the output as a build artifact.',
+    color: '#65a30d',
+    icon: 'ScrollText',
+    fields: [
+      {
+        name: 'durationSec',
+        label: 'Duration (seconds)',
+        type: 'number',
+        defaultValue: 30,
+      },
+      {
+        name: 'serial',
+        label: 'Device serial (leave blank for single-device setups)',
+        type: 'text',
+        placeholder: 'emulator-5554',
+      },
+      {
+        name: 'filter',
+        label: 'Logcat filter spec (optional)',
+        type: 'text',
+        placeholder: '*:E  or  MyTag:D *:S',
+      },
+      {
+        name: 'outputPath',
+        label: 'Output file (relative to project root)',
+        type: 'text',
+        placeholder: 'logcat-<buildId>.txt (default)',
+      },
+      {
+        name: 'clearFirst',
+        label: 'Clear ring buffer before capture (-c)',
+        type: 'select',
+        options: ['true', 'false'] as const,
+        defaultValue: 'true',
+      },
+      {
+        name: 'registerArtifact',
+        label: 'Register output as build artifact',
+        type: 'select',
+        options: ['true', 'false'] as const,
+        defaultValue: 'true',
+      },
+      {
+        name: 'adbPath',
+        label: 'adb executable (override if not on PATH)',
+        type: 'text',
+        placeholder: 'adb',
+      },
+    ],
+  },
   aiPrompt: {
     type: 'aiPrompt',
     label: 'AI Prompt',
@@ -2399,4 +2623,110 @@ export const STEP_TYPES: readonly StepType[] = Object.keys(STEP_DEFINITIONS) as 
 
 export function getStepDefinition(type: StepType): StepDefinition {
   return STEP_DEFINITIONS[type];
+}
+
+export type StepCategory =
+  | 'git'
+  | 'build'
+  | 'notify'
+  | 'upload'
+  | 'remote'
+  | 'iosBuild'
+  | 'iosSigning'
+  | 'iosVersioning'
+  | 'iosQuality'
+  | 'iosScreenshots'
+  | 'android';
+
+export interface StepCategoryGroup {
+  key: StepCategory;
+  label: string;
+  types: readonly StepType[];
+}
+
+// Order here drives palette display order. Each StepType must appear in
+// exactly one group — see the assertion at the bottom of the file.
+export const STEP_CATEGORIES: readonly StepCategoryGroup[] = [
+  {
+    key: 'git',
+    label: 'Git',
+    types: ['checkout', 'pull', 'gitMerge', 'ensureGitStatusClean', 'changelogFromGitCommits'],
+  },
+  {
+    key: 'build',
+    label: 'Build',
+    types: ['shell', 'unityBatch', 'aiPrompt'],
+  },
+  {
+    key: 'notify',
+    label: 'Notifications',
+    types: ['slackNotify', 'discordNotify', 'telegramNotify', 'httpRequest'],
+  },
+  {
+    key: 'upload',
+    label: 'Artifacts & Upload',
+    types: ['artifact', 's3Upload', 'sftpUpload', 'dsymUpload'],
+  },
+  {
+    key: 'remote',
+    label: 'Remote',
+    types: ['remoteSsh'],
+  },
+  {
+    key: 'iosBuild',
+    label: 'iOS — Build',
+    types: ['xcodeSelect', 'xcodebuild', 'xcodebuildAnalyze', 'swiftPackageResolve', 'cocoapodsInstall'],
+  },
+  {
+    key: 'iosSigning',
+    label: 'iOS — Signing & Distribute',
+    types: [
+      'keychainUnlock',
+      'provisioningProfileInstall',
+      'fastlaneMatch',
+      'resign',
+      'notarize',
+      'stapleNotarization',
+      'testflightUpload',
+    ],
+  },
+  {
+    key: 'iosVersioning',
+    label: 'iOS — Versioning & Plist',
+    types: ['incrementBuildNumber', 'getBuildNumber', 'updateInfoPlist', 'xcresultParse'],
+  },
+  {
+    key: 'iosQuality',
+    label: 'iOS — Quality',
+    types: ['swiftlint', 'swiftFormat', 'peripheryScan', 'slatherCoverage', 'xcovGate'],
+  },
+  {
+    key: 'iosScreenshots',
+    label: 'iOS — Screenshots',
+    types: ['snapshot', 'frameit'],
+  },
+  {
+    key: 'android',
+    label: 'Android',
+    types: ['gradleBuild', 'adbConnect', 'adbInstall', 'adbShellLaunch', 'adbLogcat'],
+  },
+];
+
+// Build-time guard: every StepType must be assigned to exactly one category.
+// Throws at module load if a step is missing or duplicated, so palette UI
+// never silently hides a node type.
+{
+  const seen = new Set<StepType>();
+  for (const group of STEP_CATEGORIES) {
+    for (const t of group.types) {
+      if (seen.has(t)) {
+        throw new Error(`STEP_CATEGORIES: step "${t}" appears in more than one group`);
+      }
+      seen.add(t);
+    }
+  }
+  const missing = STEP_TYPES.filter((t) => !seen.has(t));
+  if (missing.length > 0) {
+    throw new Error(`STEP_CATEGORIES: missing groups for: ${missing.join(', ')}`);
+  }
 }

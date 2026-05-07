@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import type { ServerConfig } from '@buildpilot/shared-types';
+import { decryptSecret, encryptSecret, isEncrypted } from './crypto/secrets';
 
 const CONFIG_DIR = join(homedir(), '.buildpilot');
 const CONFIG_FILE = join(CONFIG_DIR, 'config.json');
@@ -47,10 +48,33 @@ export function loadConfig(): ServerConfig {
   const parsed = JSON.parse(raw) as Partial<ServerConfig>;
   const merged = { ...DEFAULT_CONFIG, ...parsed };
   const migrated = migrateLegacyDefaults(merged);
-  if (migrated !== merged) {
-    writeFileSync(CONFIG_FILE, JSON.stringify(migrated, null, 2), 'utf-8');
+
+  // Encrypt-at-rest sweep for the telegram bot token. If the file holds a
+  // plaintext token, rewrite it encrypted and hand the runtime the plaintext
+  // so the bot keeps working through the same call.
+  const onDiskToken = migrated.telegram?.botToken ?? '';
+  let runtimeToken = onDiskToken;
+  let needsRewrite = migrated !== merged;
+  if (onDiskToken && !isEncrypted(onDiskToken)) {
+    needsRewrite = true;
+  } else if (isEncrypted(onDiskToken)) {
+    runtimeToken = decryptSecret(onDiskToken);
   }
-  return migrated;
+  if (needsRewrite) {
+    const onDisk: ServerConfig = {
+      ...migrated,
+      telegram: migrated.telegram
+        ? { ...migrated.telegram, botToken: encryptSecret(onDiskToken) }
+        : migrated.telegram,
+    };
+    writeFileSync(CONFIG_FILE, JSON.stringify(onDisk, null, 2), 'utf-8');
+  }
+  return {
+    ...migrated,
+    telegram: migrated.telegram
+      ? { ...migrated.telegram, botToken: runtimeToken }
+      : migrated.telegram,
+  };
 }
 
 export const CONFIG_PATH = CONFIG_FILE;

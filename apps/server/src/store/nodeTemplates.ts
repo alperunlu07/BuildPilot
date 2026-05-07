@@ -1,6 +1,10 @@
 import { randomUUID } from 'node:crypto';
 import type { NodeTemplate, StepType } from '@buildpilot/shared-types';
 import { getDb } from './db';
+import {
+  decryptSecretsInObject,
+  encryptSecretsInObject,
+} from '../crypto/secrets';
 
 interface Row {
   id: string;
@@ -18,7 +22,7 @@ function rowToTemplate(row: Row): NodeTemplate {
     name: row.name,
     description: row.description,
     baseStepType: row.base_step_type as StepType,
-    data: JSON.parse(row.data_json) as Record<string, unknown>,
+    data: decryptSecretsInObject(JSON.parse(row.data_json) as Record<string, unknown>),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -58,7 +62,7 @@ export function createNodeTemplate(input: NodeTemplateInput): NodeTemplate {
       input.name,
       input.description ?? null,
       input.baseStepType,
-      JSON.stringify(input.data),
+      JSON.stringify(encryptSecretsInObject(input.data)),
       now,
       now,
     );
@@ -95,7 +99,7 @@ export function updateNodeTemplate(
       merged.name,
       merged.description,
       merged.baseStepType,
-      JSON.stringify(merged.data),
+      JSON.stringify(encryptSecretsInObject(merged.data)),
       merged.updatedAt,
       id,
     );
