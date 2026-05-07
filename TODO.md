@@ -172,7 +172,7 @@ Advanced pipeline orchestration features that fall outside the Phase 2.6 top-10.
 - [ ] **Static egress IP / VPN-during-build** — predictable IPs for firewall rules; VPN connection helper for private network access
 - [ ] **SSH `known_hosts` integration** — TOFU-style host key persistence so non-`skipStrictHostKey` hosts don't error on first connect (deferred from Phase 2.5 Cluster C — needs a TOFU vs prompt vs ~/.ssh/known_hosts design call)
 
-## ⏸ Phase 5 — fastlane action library
+## 🟢 Phase 5 — fastlane action library
 
 Wrap the canonical fastlane actions we don't yet cover. Each is a thin step that shells out, sharing the saved-host + execMaybeRemote plumbing already in place.
 
@@ -180,7 +180,7 @@ Wrap the canonical fastlane actions we don't yet cover. Each is a thin step that
 - [ ] **`buildAppGym` step** — `gym` / `build_app`: archive + export + xcpretty consolidated in one step (replaces the typical `xcodebuild archive → xcodebuild exportArchive` chain)
 - [ ] **Extend `xcodebuild` test action with xcpretty** — `scan`-style formatted output + Slack-summary toggle
 
-### Cluster 5.B · App Store Connect API
+### Cluster 5.B · App Store Connect API (still pending — needs ES256 JWT signer)
 - [ ] **`testflightUpload` `whatToTest` field** (deferred from 2.5 Cluster A) — post-upload App Store Connect PATCH to set "What to Test" notes; needs ES256 JWT signing of the .p8
 - [ ] **`testflightManage` step** — `pilot`-style: tester invite/remove, group assignment, changelog set
 - [ ] **`appStoreUpload` step** — `deliver`-style: metadata + screenshots + binary + submit-for-review via iTMSTransporter + Spaceship
@@ -193,28 +193,33 @@ Wrap the canonical fastlane actions we don't yet cover. Each is a thin step that
 - [ ] **`pushCertificate` step** — `pem`-style: generate / refresh APNs production / dev / website push certs (.pem / .cer / .p12) within the 30-day expiry window
 - [ ] **Extend `provisioningProfileInstall` for create / renew / repair** — `sigh`-style; today we only install
 - [ ] **`certManage` step** — `cert`-style: signing cert CRUD (mostly a backstop when not using match)
-- [ ] **`resign` step** — re-codesign an existing IPA with a different identity / profile (enterprise repackaging)
+- [x] **`resign` step** — re-codesign an existing IPA with a different identity / profile (enterprise repackaging) — `63d4454` + `be72be3` security fix
 - [ ] **`registerDevices` step** — add device UDIDs to the dev portal so ad-hoc / dev profiles include them
 
 ### Cluster 5.D · Versioning & release notes
-- [ ] **`incrementBuildNumber` / `incrementVersionNumber` step** — `agvtool` / `PlistBuddy` wrapper (the local-side bumper; pairs with the ASC-derived auto-bump in Phase 2.6)
-- [ ] **`getBuildNumber` / `getVersionNumber` step** — read-only twin that emits the value as a step output for downstream interpolation
-- [ ] **`changelogFromGitCommits` step** — git-log → release-note text; feeds testflightUpload / appStoreUpload
-- [ ] **`updateInfoPlist` / `updateProjectTeam` / `updateAppIdentifier` step** — pbxproj / Info.plist mutate (bundle ID, team, build settings) between checkout and build
-- [ ] **`xcodeSelect` step** — `xcode-select -s /Applications/Xcode_X.app`; switch active Xcode toolchain per pipeline (one-flag XS step)
-- [ ] **`ensureGitStatusClean` step** — pre-flight gate that prevents tagging an already-dirty tree
+- [x] **`incrementBuildNumber` step** — `agvtool` / `PlistBuddy` wrapper — `b7f9aaf`
+- [x] **`getBuildNumber` step** — read-only twin emitting the value as a structured `success` log line — `b7f9aaf`
+- [x] **`changelogFromGitCommits` step** — git-log → release-note text with `--max-count` cap — `9180cad`
+- [x] **`updateInfoPlist` step** — Set / Add / Delete via PlistBuddy — `9180cad`
+- [x] **`xcodeSelect` step** — `xcode-select -s` — `c83eca7`
+- [x] **`ensureGitStatusClean` step** — `git status --porcelain | head -n 100` pre-flight gate — `c83eca7`
 
 ### Cluster 5.E · Linting & coverage
-- [ ] **`swiftlint` step** — `swiftlint lint` / `--fix` / `analyze` with junit / xcode reporters
-- [ ] **`swiftFormat` step** — `swift-format lint` / `format -i`
-- [ ] **`xcodebuildAnalyze` step** — Apple Clang static analyzer; `.plist` diagnostics
-- [ ] **`slatherCoverage` step** — `.xcresult` / `.xccoverage` → Cobertura / HTML / Sonar / JSON coverage reports
-- [ ] **`xcovGate` step** — coverage threshold gate (fail if below %)
-- [ ] **`peripheryScan` step** — dead-code detection tied to xcodebuild output
+- [x] **`swiftlint` step** — `swiftlint lint` / `--fix` / `analyze` with junit / xcode reporters — `158ac52`
+- [x] **`swiftFormat` step** — `swift-format lint` / `format -i` — `158ac52`
+- [x] **`xcodebuildAnalyze` step** — Apple Clang static analyzer with shellQuote'd configuration — `bddc95a` + `be72be3` security fix
+- [x] **`slatherCoverage` step** — `.xcresult` → Cobertura / HTML / Sonar / JSON coverage reports — `ac0c747`
+- [x] **`xcovGate` step** — coverage threshold gate (fail if below %) — `ac0c747`
+- [x] **`peripheryScan` step** — dead-code detection — `bddc95a`
 
 ### Cluster 5.F · Screenshots
-- [ ] **`snapshot` step** — `capture_ios_screenshots`: automated localized screenshots across N simulators
-- [ ] **`frameit` step** — frame raw screenshots with downloaded device chrome
+- [x] **`snapshot` step** — `fastlane snapshot` localized screenshots across N simulators — `e3b213e`
+- [x] **`frameit` step** — frame raw screenshots with downloaded device chrome — `e3b213e`
+
+### Phase 5 supporting work
+- [x] **`_args.ts` shared helpers** — `splitAdditionalArgs`, `splitMultilinePaths`, `pushWorkspaceOrProject` — `9b6fe3f` (extracted via simplify skill)
+- [x] **`_plist.ts` shared helpers** — `buildPlistBuddyCommand`, `CFBUNDLE_VERSION_KEY` — `5f77cc9` (extracted via simplify skill)
+- [x] **Security fix** — `xcodebuildAnalyze` configuration command injection (HIGH) — `be72be3`
 
 ## ⏸ Phase 6 — Apple specialty CLIs
 
@@ -321,17 +326,17 @@ Turning the structured data BuildPilot already collects into actionable signal.
 | 2.6. Production-grade platform     |   0  |   10    | 🟡   0% (top-10 critical from cross-platform research) |
 | 3. Notifications & integrations    |   4  |    4    | 🟢  50% |
 | 4. Workflow control & hardening    |   0  |   25    | ⏸    0% |
-| 5. fastlane action library         |   0  |   28    | ⏸    0% |
+| 5. fastlane action library         |  18  |   13    | 🟢  58% (Cluster 5.D / 5.E / 5.F + resign done; ASC-API cluster 5.B still pending JWT signer) |
 | 6. Apple specialty CLIs            |   0  |   20    | ⏸    0% |
 | 7. Cloud device labs + crash ext.  |   0  |    6    | ⏸    0% |
 | 8. Caching infrastructure          |   0  |    5    | ⏸    0% |
 | 9. Observability & test reporting  |   0  |   11    | ⏸    0% |
-| **Overall**                        | **56** | **111** | **🟡 34%** |
+| **Overall**                        | **74** | **96**  | **🟢 44%** |
 
 **Next up (recommended order):**
-1. **Phase 2.6 Cluster A — Security foundation** (encrypted secrets vault + file storage + multi-user auth) is the single biggest blocker; nothing in 2.6.B-D can ship credibly until this lands.
+1. **Phase 2.6 Cluster A — Security foundation** (encrypted secrets vault + file storage + multi-user auth) is the single biggest blocker; nothing in 2.6.B-D can ship credibly until this lands. Phase 5's plaintext-credential warnings on resign / fastlane / etc. all get resolved by this.
 2. **Phase 2.6 Cluster B — Webhook triggers + PR status checks** so iOS team adoption stops being blocked on "we have to use polling and there's no PR check".
-3. **Phase 2.6 Cluster D — Auto-provisioning + auto build-number from ASC** (both depend on the JWT/ASC API work which testflight `whatToTest` will reuse).
+3. **Phase 5 Cluster 5.B (ASC API)** — the JWT-signer + spaceship plumbing this requires also unlocks Phase 2.6 Cluster D auto-provisioning and the deferred testflight `whatToTest` field.
 4. **Phase 2.6 Cluster C — Build matrix + manual approval** to round out the platform story.
-5. **Phase 5 quick-win bundle** — `xcodeSelect` (XS) + `incrementBuildNumber` (S) + `swiftlint` (S) + `appThinningReportParse` (S) + `otaManifestGenerate` (S); the 5 highest value/effort step types from the cross-platform analysis, all single-commit-able.
-6. **Phase 8 — Caching** unlocks the largest single CI-time win once 2.6's remote-cache foundation is in place.
+5. **Phase 8 — Caching** unlocks the largest single CI-time win once 2.6's remote-cache foundation is in place.
+6. **Phase 5 Cluster 5.A — `buildAppGym`** — consolidated archive+export+xcpretty step (replaces the typical xcodebuild archive → xcodebuild exportArchive chain).
