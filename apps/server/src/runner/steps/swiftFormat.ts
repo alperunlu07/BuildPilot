@@ -1,9 +1,8 @@
 import type { SwiftFormatStepData } from '@buildpilot/shared-types';
 import type { StepContext } from '../engine';
 import { execMaybeRemote, shellQuote } from './_exec';
+import { splitMultilinePaths } from './_args';
 
-// Pure command builder. Returns the joined shell string ready for
-// execMaybeRemote — exposed for the test suite.
 export function buildSwiftFormatCommand(d: Partial<SwiftFormatStepData>): string {
   const mode = d.mode ?? 'lint';
   if (mode !== 'lint' && mode !== 'format') {
@@ -25,11 +24,7 @@ export function buildSwiftFormatCommand(d: Partial<SwiftFormatStepData>): string
 
   if (d.parallel === 'true') parts.push('--parallel');
 
-  if (d.paths && d.paths.trim().length > 0) {
-    for (const p of d.paths.split('\n').map((s) => s.trim()).filter(Boolean)) {
-      parts.push(shellQuote(p));
-    }
-  }
+  parts.push(...splitMultilinePaths(d.paths));
 
   return parts.join(' ');
 }

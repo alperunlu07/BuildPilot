@@ -1,6 +1,7 @@
 import type { SwiftlintStepData } from '@buildpilot/shared-types';
 import type { StepContext } from '../engine';
 import { execMaybeRemote, shellQuote } from './_exec';
+import { splitMultilinePaths } from './_args';
 
 const VALID_REPORTERS = new Set([
   'xcode',
@@ -11,8 +12,6 @@ const VALID_REPORTERS = new Set([
   'emoji',
 ]);
 
-// Pure command builder. Returns the final shell string ready for
-// execMaybeRemote — exposed for the test suite.
 export function buildSwiftlintCommand(d: Partial<SwiftlintStepData>): string {
   const mode = d.mode ?? 'lint';
   const parts: string[] = ['swiftlint'];
@@ -41,11 +40,7 @@ export function buildSwiftlintCommand(d: Partial<SwiftlintStepData>): string {
   if (d.strict === 'true') parts.push('--strict');
   if (d.quiet === 'true') parts.push('--quiet');
 
-  if (d.paths && d.paths.trim().length > 0) {
-    for (const p of d.paths.split('\n').map((s) => s.trim()).filter(Boolean)) {
-      parts.push(shellQuote(p));
-    }
-  }
+  parts.push(...splitMultilinePaths(d.paths));
 
   return parts.join(' ');
 }

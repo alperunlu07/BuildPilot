@@ -1,9 +1,11 @@
 import type { SlatherCoverageStepData } from '@buildpilot/shared-types';
 import type { StepContext } from '../engine';
 import { execMaybeRemote, shellQuote } from './_exec';
+import { splitAdditionalArgs } from './_args';
 
-// Maps the friendly `format` enum to slather's mutually-exclusive CLI flag.
-const FORMAT_FLAGS: Record<string, string> = {
+// Tying the map to the union forces a compile error if a new format is added
+// without a corresponding CLI flag.
+const FORMAT_FLAGS: Record<NonNullable<SlatherCoverageStepData['format']>, string> = {
   html: '--html',
   json: '--json',
   cobertura: '--cobertura-xml',
@@ -11,8 +13,6 @@ const FORMAT_FLAGS: Record<string, string> = {
   sonarqube: '--sonarqube-xml',
 };
 
-// Pure command builder. Returns the joined shell string ready for
-// execMaybeRemote — exposed for the test suite.
 export function buildSlatherCoverageCommand(
   d: Partial<SlatherCoverageStepData>,
 ): string {
@@ -26,8 +26,8 @@ export function buildSlatherCoverageCommand(
     throw new Error(`slatherCoverage: invalid format "${format}"`);
   }
 
-  // `slather coverage` is the subcommand. Format flag goes before any other
-  // option; project path is the trailing positional arg.
+  // Format flag goes immediately after `slather coverage`; project path is
+  // the trailing positional arg.
   const parts: string[] = ['slather', 'coverage', formatFlag];
 
   if (d.outputDirectory && d.outputDirectory.trim().length > 0) {
@@ -43,10 +43,7 @@ export function buildSlatherCoverageCommand(
     parts.push('--scheme', shellQuote(d.scheme));
   }
 
-  if (d.additionalArgs && d.additionalArgs.trim().length > 0) {
-    parts.push(...d.additionalArgs.split(/\s+/).filter(Boolean).map(shellQuote));
-  }
-
+  parts.push(...splitAdditionalArgs(d.additionalArgs));
   parts.push(shellQuote(d.projectPath));
 
   return parts.join(' ');

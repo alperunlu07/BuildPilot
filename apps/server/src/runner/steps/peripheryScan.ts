@@ -1,6 +1,7 @@
 import type { PeripheryScanStepData } from '@buildpilot/shared-types';
 import type { StepContext } from '../engine';
 import { execMaybeRemote, shellQuote } from './_exec';
+import { pushWorkspaceOrProject, splitAdditionalArgs } from './_args';
 
 const VALID_FORMATS = new Set([
   'xcode',
@@ -10,22 +11,20 @@ const VALID_FORMATS = new Set([
   'checkstyle',
 ]);
 
-// Pure command builder. Returns the joined shell string ready for
-// execMaybeRemote — exposed for the test suite.
 export function buildPeripheryScanCommand(
   d: Partial<PeripheryScanStepData>,
 ): string {
-  if (!d.workspacePath && !d.projectPath) {
-    throw new Error('peripheryScan: requires either "workspacePath" or "projectPath"');
-  }
-
   const parts: string[] = ['periphery', 'scan'];
 
-  if (d.workspacePath) parts.push('--workspace', shellQuote(d.workspacePath));
-  else if (d.projectPath) parts.push('--project', shellQuote(d.projectPath));
+  pushWorkspaceOrProject(parts, d, {
+    workspaceFlag: '--workspace',
+    projectFlag: '--project',
+    requireOne: true,
+    stepName: 'peripheryScan',
+  });
 
-  // periphery accepts comma-separated lists directly — pass through as one
-  // shell-quoted token so commas survive the shell.
+  // Comma-separated lists pass through as one shell-quoted token so commas
+  // survive the shell.
   if (d.schemes && d.schemes.trim().length > 0) {
     parts.push('--schemes', shellQuote(d.schemes.trim()));
   }
@@ -45,11 +44,7 @@ export function buildPeripheryScanCommand(
     parts.push('--config', shellQuote(d.configFile));
   }
 
-  if (d.additionalArgs && d.additionalArgs.trim().length > 0) {
-    for (const a of d.additionalArgs.split(/\s+/).filter(Boolean)) {
-      parts.push(shellQuote(a));
-    }
-  }
+  parts.push(...splitAdditionalArgs(d.additionalArgs));
 
   return parts.join(' ');
 }
