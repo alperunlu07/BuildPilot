@@ -13,6 +13,7 @@ import {
   Gauge,
   GitBranch,
   Microscope,
+  PenTool,
   Percent,
   GitMerge,
   Gamepad2,
@@ -80,6 +81,7 @@ const ICONS: Record<string, LucideIcon> = {
   Search,
   Percent,
   Gauge,
+  PenTool,
 };
 
 type RuntimeStatus = 'running' | 'success' | 'failed' | 'skipped' | undefined;
@@ -342,6 +344,8 @@ function summariseData(type: StepType, data: Record<string, unknown>): string {
         : 0;
       return min > 0 ? `≥ ${min}% (${data.scheme || 'no scheme'})` : `${data.scheme || 'no scheme'}`;
     }
+    case 'resign':
+      return data.ipaPath ? String(data.ipaPath).split('/').pop() ?? '' : '';
     default:
       return '';
   }

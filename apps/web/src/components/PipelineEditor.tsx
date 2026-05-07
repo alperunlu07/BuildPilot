@@ -69,6 +69,7 @@ const nodeTypes = {
   peripheryScan: StepNode,
   slatherCoverage: StepNode,
   xcovGate: StepNode,
+  resign: StepNode,
 };
 
 interface Props {
@@ -921,6 +922,22 @@ function defaultData(type: StepType): Record<string, unknown> {
         excludeTargets: '',
         jsonReport: 'false',
         markdownReport: 'false',
+        additionalArgs: '',
+        cwd: '',
+      };
+    case 'resign':
+      return {
+        hostId: '',
+        host: '',
+        identityFile: '',
+        password: '',
+        ipaPath: '',
+        signingIdentity: '',
+        provisioningProfile: '',
+        bundleId: '',
+        displayName: '',
+        entitlements: '',
+        keychainPath: '',
         additionalArgs: '',
         cwd: '',
       };

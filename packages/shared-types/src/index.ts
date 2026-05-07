@@ -63,7 +63,8 @@ export type StepType =
   | 'xcodebuildAnalyze'
   | 'peripheryScan'
   | 'slatherCoverage'
-  | 'xcovGate';
+  | 'xcovGate'
+  | 'resign';
 
 export type AiTool = 'claude' | 'codex' | 'aider' | 'gemini' | 'custom';
 
@@ -604,6 +605,32 @@ export interface XcovGateStepData extends RunsOnMaybeRemote {
   jsonReport?: string;
   // 'true' adds --markdown_report.
   markdownReport?: string;
+  additionalArgs?: string;
+  cwd?: string;
+}
+
+// `fastlane sigh resign` re-codesigns an existing .ipa / .app with a different
+// identity + provisioning profile. Common for enterprise repackaging, ad-hoc
+// → App Store flips, and white-label app builds. The destination keychain
+// must already be unlocked (chain a `keychainUnlock` step before this one).
+export interface ResignStepData extends RunsOnMaybeRemote {
+  // Path to the .ipa (most common) or .app bundle. Trailing positional arg.
+  ipaPath?: string;
+  // Full identity string from the keychain, e.g.
+  // "Apple Distribution: Acme Corp (ABC123XYZ4)". Passed via --signing_identity.
+  signingIdentity?: string;
+  // Path to the .mobileprovision file. fastlane sigh resign also accepts the
+  // compound "bundle.id1=path1,bundle.id2=path2" form for multi-target apps —
+  // pass that string verbatim and it'll forward through.
+  provisioningProfile?: string;
+  // Override the bundle identifier. --bundle_id.
+  bundleId?: string;
+  // Override CFBundleDisplayName. --display_name.
+  displayName?: string;
+  // Path to entitlements .plist. --entitlements.
+  entitlements?: string;
+  // Specific keychain to use (otherwise security default). --keychain_path.
+  keychainPath?: string;
   additionalArgs?: string;
   cwd?: string;
 }

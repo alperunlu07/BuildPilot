@@ -49,6 +49,7 @@ const stepTypes = [
   'peripheryScan',
   'slatherCoverage',
   'xcovGate',
+  'resign',
 ] as const;
 
 const nodeSchema = z.object({

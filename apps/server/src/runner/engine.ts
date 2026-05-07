@@ -49,6 +49,7 @@ import { runXcodebuildAnalyze } from './steps/xcodebuildAnalyze';
 import { runPeripheryScan } from './steps/peripheryScan';
 import { runSlatherCoverage } from './steps/slatherCoverage';
 import { runXcovGate } from './steps/xcovGate';
+import { runResign } from './steps/resign';
 
 export interface StepContext {
   project: Project;
@@ -101,6 +102,7 @@ const RUNNERS: Record<StepType, StepRunner> = {
   peripheryScan: runPeripheryScan,
   slatherCoverage: runSlatherCoverage,
   xcovGate: runXcovGate,
+  resign: runResign,
 };
 
 interface DagNode {
