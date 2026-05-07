@@ -37,6 +37,8 @@ import { runCocoapodsInstall } from './steps/cocoapodsInstall';
 import { runSwiftPackageResolve } from './steps/swiftPackageResolve';
 import { runDsymUpload } from './steps/dsymUpload';
 import { runXcresultParse } from './steps/xcresultParse';
+import { runXcodeSelect } from './steps/xcodeSelect';
+import { runEnsureGitStatusClean } from './steps/ensureGitStatusClean';
 
 export interface StepContext {
   project: Project;
@@ -77,6 +79,8 @@ const RUNNERS: Record<StepType, StepRunner> = {
   swiftPackageResolve: runSwiftPackageResolve,
   dsymUpload: runDsymUpload,
   xcresultParse: runXcresultParse,
+  xcodeSelect: runXcodeSelect,
+  ensureGitStatusClean: runEnsureGitStatusClean,
 };
 
 interface DagNode {

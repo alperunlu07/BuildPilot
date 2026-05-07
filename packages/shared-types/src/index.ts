@@ -51,7 +51,9 @@ export type StepType =
   | 'cocoapodsInstall'
   | 'swiftPackageResolve'
   | 'dsymUpload'
-  | 'xcresultParse';
+  | 'xcresultParse'
+  | 'xcodeSelect'
+  | 'ensureGitStatusClean';
 
 export type AiTool = 'claude' | 'codex' | 'aider' | 'gemini' | 'custom';
 
@@ -412,6 +414,18 @@ export interface XcresultParseStepData extends RunsOnMaybeRemote {
   // surfacing test failures as red pipeline edges even when xcodebuild
   // itself was run with `|| true` to keep the build going.
   failOnTestFailure?: string;
+}
+
+export interface XcodeSelectStepData extends RunsOnMaybeRemote {
+  // Absolute path to the .app bundle, e.g. /Applications/Xcode_15.4.app.
+  // Passed straight to `xcode-select -s`.
+  xcodePath: string;
+}
+
+export interface EnsureGitStatusCleanStepData extends RunsOnMaybeRemote {
+  // Pre-flight gate: run `git status --porcelain` and fail if any output.
+  // Optional cwd lets you target a worktree other than the project root.
+  cwd?: string;
 }
 
 export interface FastlaneMatchStepData extends RunsOnMaybeRemote {

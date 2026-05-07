@@ -57,6 +57,8 @@ const nodeTypes = {
   swiftPackageResolve: StepNode,
   dsymUpload: StepNode,
   xcresultParse: StepNode,
+  xcodeSelect: StepNode,
+  ensureGitStatusClean: StepNode,
 };
 
 interface Props {
@@ -760,6 +762,22 @@ function defaultData(type: StepType): Record<string, unknown> {
         password: '',
         bundlePath: '',
         failOnTestFailure: 'true',
+      };
+    case 'xcodeSelect':
+      return {
+        hostId: '',
+        host: '',
+        identityFile: '',
+        password: '',
+        xcodePath: '',
+      };
+    case 'ensureGitStatusClean':
+      return {
+        hostId: '',
+        host: '',
+        identityFile: '',
+        password: '',
+        cwd: '',
       };
     case 's3Upload':
       return {

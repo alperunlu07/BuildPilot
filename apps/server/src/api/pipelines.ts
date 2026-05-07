@@ -37,6 +37,8 @@ const stepTypes = [
   'swiftPackageResolve',
   'dsymUpload',
   'xcresultParse',
+  'xcodeSelect',
+  'ensureGitStatusClean',
 ] as const;
 
 const nodeSchema = z.object({

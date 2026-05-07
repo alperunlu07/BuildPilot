@@ -20,10 +20,12 @@ import {
   Send,
   Server,
   ShieldCheck,
+  ShieldAlert,
   Sparkles,
   Stamp,
   Terminal,
   Upload,
+  Wand2,
   Wrench,
   type LucideIcon,
 } from 'lucide-react';
@@ -49,8 +51,10 @@ const ICONS: Record<string, LucideIcon> = {
   PlaneTakeoff,
   KeyRound,
   BadgeCheck,
+  ShieldAlert,
   ShieldCheck,
   Stamp,
+  Wand2,
   Wrench,
   Box,
   Boxes,
@@ -262,6 +266,10 @@ function summariseData(type: StepType, data: Record<string, unknown>): string {
         : '';
     case 'xcresultParse':
       return data.bundlePath ? String(data.bundlePath).split('/').pop() ?? '' : '';
+    case 'xcodeSelect':
+      return data.xcodePath ? String(data.xcodePath).split('/').pop() ?? '' : '';
+    case 'ensureGitStatusClean':
+      return data.cwd ? `clean? ${String(data.cwd)}` : 'git status --porcelain';
     default:
       return '';
   }
