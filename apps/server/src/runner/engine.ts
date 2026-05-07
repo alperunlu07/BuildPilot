@@ -50,6 +50,8 @@ import { runPeripheryScan } from './steps/peripheryScan';
 import { runSlatherCoverage } from './steps/slatherCoverage';
 import { runXcovGate } from './steps/xcovGate';
 import { runResign } from './steps/resign';
+import { runSnapshot } from './steps/snapshot';
+import { runFrameit } from './steps/frameit';
 
 export interface StepContext {
   project: Project;
@@ -103,6 +105,8 @@ const RUNNERS: Record<StepType, StepRunner> = {
   slatherCoverage: runSlatherCoverage,
   xcovGate: runXcovGate,
   resign: runResign,
+  snapshot: runSnapshot,
+  frameit: runFrameit,
 };
 
 interface DagNode {

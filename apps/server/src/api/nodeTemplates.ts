@@ -48,6 +48,8 @@ const stepTypes = [
   'slatherCoverage',
   'xcovGate',
   'resign',
+  'snapshot',
+  'frameit',
 ] as const;
 
 const createSchema = z.object({

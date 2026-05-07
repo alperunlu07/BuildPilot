@@ -64,7 +64,9 @@ export type StepType =
   | 'peripheryScan'
   | 'slatherCoverage'
   | 'xcovGate'
-  | 'resign';
+  | 'resign'
+  | 'snapshot'
+  | 'frameit';
 
 export type AiTool = 'claude' | 'codex' | 'aider' | 'gemini' | 'custom';
 
@@ -631,6 +633,55 @@ export interface ResignStepData extends RunsOnMaybeRemote {
   entitlements?: string;
   // Specific keychain to use (otherwise security default). --keychain_path.
   keychainPath?: string;
+  additionalArgs?: string;
+  cwd?: string;
+}
+
+// `fastlane snapshot` drives a UI Test bundle across N simulator devices and
+// languages, capturing localized screenshots. Defaults can also live in a
+// Snapfile checked into the project root, in which case all of these fields
+// are optional. https://docs.fastlane.tools/actions/snapshot/
+export interface SnapshotStepData extends RunsOnMaybeRemote {
+  // --output_directory <dir>. Defaults to 'screenshots' if blank.
+  outputDirectory?: string;
+  // 'true' adds --output_simulator_logs.
+  outputSimulatorLogs?: string;
+  // --ios_version <ver>.
+  iosVersion?: string;
+  // --scheme <name>. Required by snapshot at runtime unless a Snapfile
+  // supplies it; the builder doesn't enforce — the Snapfile may fill in.
+  scheme?: string;
+  // Either workspacePath OR projectPath. Both optional — Snapfile may fill in.
+  workspacePath?: string;
+  projectPath?: string;
+  // Comma-separated, e.g. "iPhone 16 Pro,iPad Pro". Forwarded as a single
+  // --devices arg (fastlane parses the comma list).
+  devices?: string;
+  // Comma-separated, e.g. "en-US,fr-FR". Forwarded as one --languages arg.
+  languages?: string;
+  // Multiline — one launch arg per line. Each becomes a separate
+  // --launch_arguments <arg> flag (snapshot supports repeating it).
+  launchArguments?: string;
+  // 'true' adds --clear_previous_screenshots.
+  clearPreviousScreenshots?: string;
+  additionalArgs?: string;
+  cwd?: string;
+}
+
+// `fastlane frameit` adds device chrome around raw screenshots. Pure wrapper —
+// reads frames from ~/.fastlane/frameit (downloaded on first run).
+export interface FrameitStepData extends RunsOnMaybeRemote {
+  // Trailing positional. Defaults to './screenshots' when blank.
+  pathToScreenshots?: string;
+  // Allowlisted via VALID_COLORS at runtime. 'none' = no color flag, the
+  // others map to --silver / --gold / --rose_gold / --space_gray.
+  colorFlag?: 'none' | 'silver' | 'gold' | 'rose-gold' | 'space-gray';
+  // 'true' adds --force (overwrite existing framed images).
+  force?: string;
+  // 'true' adds --use_legacy_iphone5s.
+  useLegacyIphone5s?: string;
+  // --use_platform <X>. Typical values: "IOS", "ANDROID", "ANY".
+  usePlatform?: string;
   additionalArgs?: string;
   cwd?: string;
 }

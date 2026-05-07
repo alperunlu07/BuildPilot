@@ -7,9 +7,11 @@ import {
   Boxes,
   Bug,
   AlignLeft,
+  Camera,
   CloudUpload,
   CodeXml,
   FileCog,
+  Frame,
   Gauge,
   GitBranch,
   Microscope,
@@ -82,6 +84,8 @@ const ICONS: Record<string, LucideIcon> = {
   Percent,
   Gauge,
   PenTool,
+  Camera,
+  Frame,
 };
 
 type RuntimeStatus = 'running' | 'success' | 'failed' | 'skipped' | undefined;
@@ -346,6 +350,14 @@ function summariseData(type: StepType, data: Record<string, unknown>): string {
     }
     case 'resign':
       return data.ipaPath ? String(data.ipaPath).split('/').pop() ?? '' : '';
+    case 'snapshot':
+      return data.devices
+        ? `${String(data.devices).split(',')[0]?.trim() ?? '?'}${String(data.devices).includes(',') ? ' +N' : ''}`
+        : (data.scheme ? String(data.scheme) : '');
+    case 'frameit': {
+      const color = (data.colorFlag as string) || 'none';
+      return color === 'none' ? '' : color;
+    }
     default:
       return '';
   }

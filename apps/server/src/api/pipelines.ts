@@ -50,6 +50,8 @@ const stepTypes = [
   'slatherCoverage',
   'xcovGate',
   'resign',
+  'snapshot',
+  'frameit',
 ] as const;
 
 const nodeSchema = z.object({

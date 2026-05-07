@@ -70,6 +70,8 @@ const nodeTypes = {
   slatherCoverage: StepNode,
   xcovGate: StepNode,
   resign: StepNode,
+  snapshot: StepNode,
+  frameit: StepNode,
 };
 
 interface Props {
@@ -938,6 +940,39 @@ function defaultData(type: StepType): Record<string, unknown> {
         displayName: '',
         entitlements: '',
         keychainPath: '',
+        additionalArgs: '',
+        cwd: '',
+      };
+    case 'snapshot':
+      return {
+        hostId: '',
+        host: '',
+        identityFile: '',
+        password: '',
+        outputDirectory: 'screenshots',
+        scheme: '',
+        workspacePath: '',
+        projectPath: '',
+        devices: '',
+        languages: '',
+        launchArguments: '',
+        iosVersion: '',
+        clearPreviousScreenshots: 'false',
+        outputSimulatorLogs: 'false',
+        additionalArgs: '',
+        cwd: '',
+      };
+    case 'frameit':
+      return {
+        hostId: '',
+        host: '',
+        identityFile: '',
+        password: '',
+        pathToScreenshots: './screenshots',
+        colorFlag: 'none',
+        force: 'false',
+        useLegacyIphone5s: 'false',
+        usePlatform: '',
         additionalArgs: '',
         cwd: '',
       };
