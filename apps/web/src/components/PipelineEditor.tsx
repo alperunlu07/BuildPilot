@@ -59,6 +59,8 @@ const nodeTypes = {
   xcresultParse: StepNode,
   xcodeSelect: StepNode,
   ensureGitStatusClean: StepNode,
+  incrementBuildNumber: StepNode,
+  getBuildNumber: StepNode,
 };
 
 interface Props {
@@ -777,6 +779,27 @@ function defaultData(type: StepType): Record<string, unknown> {
         host: '',
         identityFile: '',
         password: '',
+        cwd: '',
+      };
+    case 'incrementBuildNumber':
+      return {
+        hostId: '',
+        host: '',
+        identityFile: '',
+        password: '',
+        mode: 'agvtool',
+        versionString: '',
+        plistPath: '',
+        cwd: '',
+      };
+    case 'getBuildNumber':
+      return {
+        hostId: '',
+        host: '',
+        identityFile: '',
+        password: '',
+        mode: 'agvtool',
+        plistPath: '',
         cwd: '',
       };
     case 's3Upload':

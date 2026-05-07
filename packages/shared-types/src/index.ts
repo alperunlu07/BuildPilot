@@ -53,7 +53,9 @@ export type StepType =
   | 'dsymUpload'
   | 'xcresultParse'
   | 'xcodeSelect'
-  | 'ensureGitStatusClean';
+  | 'ensureGitStatusClean'
+  | 'incrementBuildNumber'
+  | 'getBuildNumber';
 
 export type AiTool = 'claude' | 'codex' | 'aider' | 'gemini' | 'custom';
 
@@ -425,6 +427,32 @@ export interface XcodeSelectStepData extends RunsOnMaybeRemote {
 export interface EnsureGitStatusCleanStepData extends RunsOnMaybeRemote {
   // Pre-flight gate: run `git status --porcelain` and fail if any output.
   // Optional cwd lets you target a worktree other than the project root.
+  cwd?: string;
+}
+
+export interface IncrementBuildNumberStepData extends RunsOnMaybeRemote {
+  // 'agvtool' (default) shells out to `xcrun agvtool …`. 'plistBuddy' edits
+  // CFBundleVersion in a specific Info.plist directly.
+  mode?: 'agvtool' | 'plistBuddy';
+  // For agvtool: when set, uses `agvtool new-version -all <v>`; when blank,
+  // uses `agvtool next-version -all` (auto-increment by 1).
+  // For plistBuddy: required — the new value to write into CFBundleVersion.
+  versionString?: string;
+  // Required when mode='plistBuddy'. Path to the Info.plist whose
+  // CFBundleVersion will be set.
+  plistPath?: string;
+  // Working dir for the command. Required for agvtool — must contain the
+  // .xcodeproj. Optional / typically unused for plistBuddy.
+  cwd?: string;
+}
+
+export interface GetBuildNumberStepData extends RunsOnMaybeRemote {
+  // 'agvtool' (default) runs `xcrun agvtool what-version -terse`.
+  // 'plistBuddy' runs `/usr/libexec/PlistBuddy -c "Print :CFBundleVersion" …`.
+  mode?: 'agvtool' | 'plistBuddy';
+  // Required when mode='plistBuddy'. Path to the Info.plist to read.
+  plistPath?: string;
+  // Working dir. Required for agvtool — must contain the .xcodeproj.
   cwd?: string;
 }
 

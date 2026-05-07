@@ -1340,6 +1340,117 @@ export const STEP_DEFINITIONS: Record<StepType, StepDefinition> = {
       },
     ],
   },
+  incrementBuildNumber: {
+    type: 'incrementBuildNumber',
+    label: 'Increment Build #',
+    description:
+      'Bump CFBundleVersion via `agvtool` (auto-increment by 1 or set explicitly) or `PlistBuddy`.',
+    color: '#22c55e',
+    icon: 'Plus',
+    fields: [
+      {
+        name: 'hostId',
+        label: 'Saved Mac host (or pick "(inline)" / leave blank for local)',
+        type: 'hostSelect',
+      },
+      {
+        name: 'host',
+        label: 'Inline host',
+        type: 'text',
+        placeholder: 'build@mac-builder.local',
+      },
+      {
+        name: 'identityFile',
+        label: 'Identity file',
+        type: 'text',
+        placeholder: '~/.ssh/id_ed25519',
+      },
+      {
+        name: 'password',
+        label: 'SSH password',
+        type: 'text',
+        placeholder: '(use this OR identityFile)',
+      },
+      {
+        name: 'mode',
+        label: 'Mode',
+        type: 'select',
+        options: ['agvtool', 'plistBuddy'] as const,
+        defaultValue: 'agvtool',
+      },
+      {
+        name: 'versionString',
+        label: 'Version (blank = agvtool next-version auto-bump)',
+        type: 'text',
+        placeholder: '42',
+        help: 'Blank with mode=agvtool runs `next-version -all`. Required for plistBuddy.',
+      },
+      {
+        name: 'plistPath',
+        label: 'Info.plist path (plistBuddy only)',
+        type: 'text',
+        placeholder: 'MyApp/Info.plist',
+      },
+      {
+        name: 'cwd',
+        label: 'Working dir (must contain .xcodeproj for agvtool)',
+        type: 'text',
+        placeholder: '. (defaults to project root)',
+      },
+    ],
+  },
+  getBuildNumber: {
+    type: 'getBuildNumber',
+    label: 'Get Build #',
+    description:
+      'Read CFBundleVersion via `agvtool what-version -terse` or `PlistBuddy Print :CFBundleVersion`.',
+    color: '#10b981',
+    icon: 'Hash',
+    fields: [
+      {
+        name: 'hostId',
+        label: 'Saved Mac host (or pick "(inline)" / leave blank for local)',
+        type: 'hostSelect',
+      },
+      {
+        name: 'host',
+        label: 'Inline host',
+        type: 'text',
+        placeholder: 'build@mac-builder.local',
+      },
+      {
+        name: 'identityFile',
+        label: 'Identity file',
+        type: 'text',
+        placeholder: '~/.ssh/id_ed25519',
+      },
+      {
+        name: 'password',
+        label: 'SSH password',
+        type: 'text',
+        placeholder: '(use this OR identityFile)',
+      },
+      {
+        name: 'mode',
+        label: 'Mode',
+        type: 'select',
+        options: ['agvtool', 'plistBuddy'] as const,
+        defaultValue: 'agvtool',
+      },
+      {
+        name: 'plistPath',
+        label: 'Info.plist path (plistBuddy only)',
+        type: 'text',
+        placeholder: 'MyApp/Info.plist',
+      },
+      {
+        name: 'cwd',
+        label: 'Working dir (must contain .xcodeproj for agvtool)',
+        type: 'text',
+        placeholder: '. (defaults to project root)',
+      },
+    ],
+  },
   aiPrompt: {
     type: 'aiPrompt',
     label: 'AI Prompt',

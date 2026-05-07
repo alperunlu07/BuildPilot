@@ -11,12 +11,14 @@ import {
   GitMerge,
   Gamepad2,
   Globe,
+  Hash,
   KeyRound,
   ListChecks,
   MessageCircle,
   MessageSquare,
   Package,
   PlaneTakeoff,
+  Plus,
   Send,
   Server,
   ShieldCheck,
@@ -60,6 +62,8 @@ const ICONS: Record<string, LucideIcon> = {
   Boxes,
   Bug,
   ListChecks,
+  Plus,
+  Hash,
 };
 
 type RuntimeStatus = 'running' | 'success' | 'failed' | 'skipped' | undefined;
@@ -270,6 +274,22 @@ function summariseData(type: StepType, data: Record<string, unknown>): string {
       return data.xcodePath ? String(data.xcodePath).split('/').pop() ?? '' : '';
     case 'ensureGitStatusClean':
       return data.cwd ? `clean? ${String(data.cwd)}` : 'git status --porcelain';
+    case 'incrementBuildNumber': {
+      const mode = (data.mode as string) || 'agvtool';
+      if (mode === 'plistBuddy') {
+        return data.versionString
+          ? `plistBuddy → ${data.versionString}`
+          : 'plistBuddy';
+      }
+      return data.versionString ? `agvtool → ${data.versionString}` : 'agvtool +1';
+    }
+    case 'getBuildNumber': {
+      const mode = (data.mode as string) || 'agvtool';
+      if (mode === 'plistBuddy') {
+        return data.plistPath ? `plistBuddy ← ${String(data.plistPath).split('/').pop()}` : 'plistBuddy';
+      }
+      return 'agvtool what-version';
+    }
     default:
       return '';
   }

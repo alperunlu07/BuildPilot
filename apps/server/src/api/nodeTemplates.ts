@@ -37,6 +37,8 @@ const stepTypes = [
   'xcresultParse',
   'xcodeSelect',
   'ensureGitStatusClean',
+  'incrementBuildNumber',
+  'getBuildNumber',
 ] as const;
 
 const createSchema = z.object({
