@@ -59,7 +59,9 @@ export type StepType =
   | 'changelogFromGitCommits'
   | 'updateInfoPlist'
   | 'swiftlint'
-  | 'swiftFormat';
+  | 'swiftFormat'
+  | 'xcodebuildAnalyze'
+  | 'peripheryScan';
 
 export type AiTool = 'claude' | 'codex' | 'aider' | 'gemini' | 'custom';
 
@@ -527,6 +529,41 @@ export interface SwiftFormatStepData extends RunsOnMaybeRemote {
   recursive?: string;
   // 'true' adds --parallel.
   parallel?: string;
+  cwd?: string;
+}
+
+export interface XcodebuildAnalyzeStepData extends RunsOnMaybeRemote {
+  // Either workspacePath (.xcworkspace) OR projectPath (.xcodeproj). One is
+  // required.
+  workspacePath?: string;
+  projectPath?: string;
+  // Required — the xcodebuild scheme to analyze.
+  scheme?: string;
+  // Defaults to 'Release' to match the canonical CI invocation.
+  configuration?: 'Debug' | 'Release';
+  // Defaults to 'generic/platform=iOS'.
+  destination?: string;
+  // Free-form passthrough — split on whitespace and shell-quoted.
+  additionalArgs?: string;
+  cwd?: string;
+}
+
+export interface PeripheryScanStepData extends RunsOnMaybeRemote {
+  // Either workspacePath OR projectPath. One is required.
+  workspacePath?: string;
+  projectPath?: string;
+  // Comma-separated; passed straight to `--schemes A,B`.
+  schemes?: string;
+  // Comma-separated; passed straight to `--targets A,B`.
+  targets?: string;
+  // Output format. Defaults to 'xcode' so the warnings show up inline in
+  // Xcode build logs.
+  format?: 'xcode' | 'json' | 'csv' | 'github-actions' | 'checkstyle';
+  // 'true' adds --strict (treats unused decls as build errors).
+  strict?: string;
+  // Path to a .periphery.yml — passed via --config when set.
+  configFile?: string;
+  additionalArgs?: string;
   cwd?: string;
 }
 

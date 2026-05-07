@@ -45,6 +45,8 @@ const stepTypes = [
   'updateInfoPlist',
   'swiftlint',
   'swiftFormat',
+  'xcodebuildAnalyze',
+  'peripheryScan',
 ] as const;
 
 const nodeSchema = z.object({

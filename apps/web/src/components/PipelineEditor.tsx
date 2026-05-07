@@ -65,6 +65,8 @@ const nodeTypes = {
   updateInfoPlist: StepNode,
   swiftlint: StepNode,
   swiftFormat: StepNode,
+  xcodebuildAnalyze: StepNode,
+  peripheryScan: StepNode,
 };
 
 interface Props {
@@ -855,6 +857,36 @@ function defaultData(type: StepType): Record<string, unknown> {
         paths: '',
         recursive: 'true',
         parallel: 'false',
+        cwd: '',
+      };
+    case 'xcodebuildAnalyze':
+      return {
+        hostId: '',
+        host: '',
+        identityFile: '',
+        password: '',
+        workspacePath: '',
+        projectPath: '',
+        scheme: '',
+        configuration: 'Release',
+        destination: 'generic/platform=iOS',
+        additionalArgs: '',
+        cwd: '',
+      };
+    case 'peripheryScan':
+      return {
+        hostId: '',
+        host: '',
+        identityFile: '',
+        password: '',
+        workspacePath: '',
+        projectPath: '',
+        schemes: '',
+        targets: '',
+        format: 'xcode',
+        strict: 'false',
+        configFile: '',
+        additionalArgs: '',
         cwd: '',
       };
     case 's3Upload':

@@ -45,6 +45,8 @@ import { runChangelogFromGitCommits } from './steps/changelogFromGitCommits';
 import { runUpdateInfoPlist } from './steps/updateInfoPlist';
 import { runSwiftlint } from './steps/swiftlint';
 import { runSwiftFormat } from './steps/swiftFormat';
+import { runXcodebuildAnalyze } from './steps/xcodebuildAnalyze';
+import { runPeripheryScan } from './steps/peripheryScan';
 
 export interface StepContext {
   project: Project;
@@ -93,6 +95,8 @@ const RUNNERS: Record<StepType, StepRunner> = {
   updateInfoPlist: runUpdateInfoPlist,
   swiftlint: runSwiftlint,
   swiftFormat: runSwiftFormat,
+  xcodebuildAnalyze: runXcodebuildAnalyze,
+  peripheryScan: runPeripheryScan,
 };
 
 interface DagNode {

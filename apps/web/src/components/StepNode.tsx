@@ -11,6 +11,7 @@ import {
   CodeXml,
   FileCog,
   GitBranch,
+  Microscope,
   GitMerge,
   Gamepad2,
   Globe,
@@ -23,6 +24,7 @@ import {
   PlaneTakeoff,
   Plus,
   ScrollText,
+  Search,
   Send,
   Server,
   ShieldCheck,
@@ -72,6 +74,8 @@ const ICONS: Record<string, LucideIcon> = {
   FileCog,
   CodeXml,
   AlignLeft,
+  Microscope,
+  Search,
 };
 
 type RuntimeStatus = 'running' | 'success' | 'failed' | 'skipped' | undefined;
@@ -317,6 +321,12 @@ function summariseData(type: StepType, data: Record<string, unknown>): string {
     case 'swiftFormat': {
       const mode = (data.mode as string) || 'lint';
       return mode;
+    }
+    case 'xcodebuildAnalyze':
+      return data.scheme ? `analyze ${data.scheme}` : '';
+    case 'peripheryScan': {
+      const fmt = (data.format as string) || 'xcode';
+      return data.strict === 'true' ? `${fmt} --strict` : fmt;
     }
     default:
       return '';

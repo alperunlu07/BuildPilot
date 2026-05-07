@@ -43,6 +43,8 @@ const stepTypes = [
   'updateInfoPlist',
   'swiftlint',
   'swiftFormat',
+  'xcodebuildAnalyze',
+  'peripheryScan',
 ] as const;
 
 const createSchema = z.object({
