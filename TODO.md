@@ -124,8 +124,8 @@ Goal: take BuildPilot from "demo for one developer" to "adoptable by a 5+ person
 - [ ] **Multi-user auth + RBAC + audit log** — at minimum: local users with bcrypt passwords, owner / maintainer / member / viewer roles, append-only audit log of who triggered what
 
 ### Cluster 2.6.B · External integration
-- [ ] **Webhook-driven triggers** — receive GitHub / GitLab / Gitea push + PR webhooks; replace the poller for repos that can push (poller stays as fallback)
-- [ ] **PR / status check integration** — post check-run state back to the VCS so branch protection can require BuildPilot green; comment-driven re-run
+- [x] **Webhook-driven triggers** — receive GitHub / GitLab / Gitea push + PR webhooks (HMAC-SHA256 / X-Gitlab-Token verification, per-pipeline secret via `BUILDPILOT_WEBHOOK_SECRET_<id>` env var until secret-vault columns land); poller stays as fallback for repos that can't push — `00b2137`
+- [ ] **PR / status check integration** — post check-run state back to the VCS so branch protection can require BuildPilot green; comment-driven re-run (webhook receiver in `00b2137` covers the inbound half; outbound check-run POST is still pending)
 
 ### Cluster 2.6.C · Pipeline orchestration
 - [ ] **Build matrix expansion** — declare a `matrix` block on a pipeline (`xcode: [15, 16] × scheme: [Free, Pro] × destination: [...]`) → N parallel runs without copy-paste
@@ -162,9 +162,9 @@ Goal: parity with iOS for the most common Android release path — Gradle build 
 - [x] Telegram bot — `telegramNotify` step + interactive build approvals — `6c0567d`
 - [x] Telegram bot text commands — `/help`, `/list`, `/build [name]` gated to `defaultChatId` (unauthorized chats silently ignored, inbound text logged so users can discover their chat id) — `cee40ac`
 - [ ] **PWA + iOS / Web Push** — service worker + `web-push`; closed-tab notifications + push-to-mobile
-- [ ] **Email digest** — daily summary of build outcomes per pipeline
-- [ ] **`emailNotify` step** — first-class transactional email step with templates + variables (separate from the per-pipeline daily digest above)
-- [ ] **`teamsNotify` step** — Microsoft Teams incoming webhook (mirror Slack/Discord/Telegram surface)
+- [ ] **Email digest** — daily summary of build outcomes per pipeline (waits on cron infra from Phase 4)
+- [x] **`emailNotify` step** — SMTP via nodemailer (dynamic-import optional dep); `from`/`to`/`cc`/`bcc`, `bodyText`/`bodyHtml`, STARTTLS-vs-TLS auto-detect — `d27523c`
+- [x] **`teamsNotify` step** — Teams incoming webhook with simple / messageCard / raw Adaptive-Card formats — `d27523c`
 
 ## ⏸ Phase 4 — Workflow control & hardening
 
@@ -173,14 +173,14 @@ Advanced pipeline orchestration features that fall outside the Phase 2.6 top-10.
 ### Cluster 4.A · Triggers & scheduling (beyond Phase 2.6)
 - [ ] **Tag-pattern triggers** — `v*.*.*` push starts a release pipeline against the tagged commit (Bitrise / Xcode Cloud / Travis pattern)
 - [ ] **Cron-scheduled builds** — pipelines that fire on a cron expression, not just commit-driven; per-pipeline schedule list
-- [ ] **API-trigger endpoint with parameters** — `POST /api/triggers/:token` that starts a build with arbitrary input variables (parameterised manual / external-system entry point)
+- [x] **API-trigger endpoint with parameters** — `POST /api/triggers/:pipelineId` accepts `{triggerSha?, triggerBranch?, variables?}`; per-pipeline token via env var until secret-vault columns land — `00b2137`
 - [ ] **Path-filtered triggers** — `if_changed` on globs so a pipeline skips when no relevant files changed (Buildkite / GH `paths` / GitLab `rules:changes`)
 - [ ] **Cancel-previous-build on new push** — rolling-build mode; auto-abort superseded runs on the same branch (Bitrise / Codemagic)
 - [ ] **PR-merge-state builds** — build the simulated post-merge tree, not just the PR head (Bitrise mode — catches "merges cleanly but breaks main")
 - [ ] **PR comment-driven actions** — `/run-ios` style comments retrigger a pipeline (GH Actions `issue_comment`)
 
 ### Cluster 4.B · Workflow controls
-- [ ] **Step-level soft fail / `continue-on-error`** — mark a step as non-blocking so the pipeline keeps going (GH `continue-on-error`, Buildkite `soft_fail`, GitLab `allow_failure`)
+- [x] **Step-level soft fail / `continue-on-error`** — `continueOnError` flag on any step's data; the failure is logged at failure-level but downstream success-edges still fire and the build doesn't go red. Surfaced in the StepPropertyPanel "Step controls" section — `00b2137`
 - [ ] **Build retries with backoff** — auto-retry transient step failures with exponential backoff; per-step retry policy
 - [ ] **Step / build watchdog** — kill steps that produce no log output for N minutes (Bitrise pattern); detects hung xcodebuild / SSH sessions
 - [ ] **Build priority + queue management** — priority ordering for releases; jump-the-queue flag
@@ -208,24 +208,25 @@ Advanced pipeline orchestration features that fall outside the Phase 2.6 top-10.
 Wrap the canonical fastlane actions we don't yet cover. Each is a thin step that shells out, sharing the saved-host + execMaybeRemote plumbing already in place.
 
 ### Cluster 5.A · Build & test
-- [ ] **`buildAppGym` step** — `gym` / `build_app`: archive + export + xcpretty consolidated in one step (replaces the typical `xcodebuild archive → xcodebuild exportArchive` chain)
-- [ ] **Extend `xcodebuild` test action with xcpretty** — `scan`-style formatted output + Slack-summary toggle
+- [x] **`buildAppGym` step** — `fastlane gym` archive + export + xcpretty in one shot (replaces the typical `xcodebuild archive → xcodebuild exportArchive` chain) — `d27523c`
+- [ ] **Extend `xcodebuild` test action with xcpretty** — `scan`-style formatted output + Slack-summary toggle (postponed; bundles with the test-retry-modes work in Phase 2.6.D)
 
-### Cluster 5.B · App Store Connect API (still pending — needs ES256 JWT signer)
-- [ ] **`testflightUpload` `whatToTest` field** (deferred from 2.5 Cluster A) — post-upload App Store Connect PATCH to set "What to Test" notes; needs ES256 JWT signing of the .p8
-- [ ] **`testflightManage` step** — `pilot`-style: tester invite/remove, group assignment, changelog set
-- [ ] **`appStoreUpload` step** — `deliver`-style: metadata + screenshots + binary + submit-for-review via iTMSTransporter + Spaceship
-- [ ] **`appStorePrecheck` step** — App Store metadata pre-validation lint (swear words, broken URLs, copyright, future-feature mentions)
-- [ ] **`appStoreCreate` step** — `produce`-style: bootstrap a new app on ASC + Dev Portal
-- [ ] **`appStoreConnectApi` generic step** — sub-action enum (build poll, beta tester CRUD, version create, IAP CRUD, phased rollout, customer reviews fetch)
-- [ ] **`testflightPublicLink` step** — generate / fetch public TestFlight beta link via ASC API
+### Cluster 5.B · App Store Connect API (ES256 JWT signer landed in `d27523c`)
+- [x] **`_asc.ts` shared helpers** — ES256 JWT signer (Node `createPrivateKey` + `dsaEncoding:'ieee-p1363'` for raw r||s output) + `ascRequest()` + `ascErrorMessage()`. Tested with a generated P-256 key + signature roundtrip — `d27523c`
+- [x] **`testflightSetWhatToTest` step** (split out from testflightUpload — needs build-processing wait) — PATCH/POST betaBuildLocalization with whatsNew text; resolves buildId by `appBundleId + version + buildNumber` lookup or accepts it directly — `d27523c`
+- [x] **`testflightManage` step** — invite / remove / list testers + add/remove from BetaGroups via ASC API — `d27523c`
+- [x] **`appStoreUpload` step** — `fastlane deliver` wrapper (metadata + ipa + screenshots + submit-for-review) — `d27523c`
+- [x] **`appStorePrecheck` step** — `fastlane precheck` metadata lint — `d27523c`
+- [x] **`appStoreCreate` step** — POST /v1/apps (+ POST /v1/bundleIds when `registerBundleId=true`) — `d27523c`
+- [x] **`appStoreConnectApi` generic step** — raw method/path/queryJson/bodyJson catch-all for the ASC long tail — `d27523c`
+- [x] **`testflightPublicLink` step** — find/create public-enabled BetaGroup + attach build + read `publicLink` — `d27523c`
 
 ### Cluster 5.C · Code signing & devices
-- [ ] **`pushCertificate` step** — `pem`-style: generate / refresh APNs production / dev / website push certs (.pem / .cer / .p12) within the 30-day expiry window
-- [ ] **Extend `provisioningProfileInstall` for create / renew / repair** — `sigh`-style; today we only install
-- [ ] **`certManage` step** — `cert`-style: signing cert CRUD (mostly a backstop when not using match)
+- [x] **`pushCertificate` step** — `fastlane pem` APNs prod/dev cert renewal + .p12 export with `activeDaysLimit` for cron-friendly auto-renewal — `d27523c`
+- [x] **`sigh` step** — `fastlane sigh` profile download / renew / repair / manage (complements `provisioningProfileInstall` which only drops a pre-existing .mobileprovision into place) — `d27523c`
+- [x] **`certManage` step** — `fastlane cert` signing cert CRUD (mostly a backstop when not using match) — `d27523c`
 - [x] **`resign` step** — re-codesign an existing IPA with a different identity / profile (enterprise repackaging) — `63d4454` + `be72be3` security fix
-- [ ] **`registerDevices` step** — add device UDIDs to the dev portal so ad-hoc / dev profiles include them
+- [x] **`registerDevices` step** — POST /v1/devices for ad-hoc / dev profile UDIDs; multiline parser supports `Name=UDID` form + comments — `d27523c`
 
 ### Cluster 5.D · Versioning & release notes
 - [x] **`incrementBuildNumber` step** — `agvtool` / `PlistBuddy` wrapper — `b7f9aaf`
@@ -252,41 +253,41 @@ Wrap the canonical fastlane actions we don't yet cover. Each is a thin step that
 - [x] **`_plist.ts` shared helpers** — `buildPlistBuddyCommand`, `CFBUNDLE_VERSION_KEY` — `5f77cc9` (extracted via simplify skill)
 - [x] **Security fix** — `xcodebuildAnalyze` configuration command injection (HIGH) — `be72be3`
 
-## ⏸ Phase 6 — Apple specialty CLIs
+## ✅ Phase 6 — Apple specialty CLIs (`5931477`)
 
 iOS-specific tooling beyond fastlane that nearly every release pipeline ends up shelling out to.
 
 ### Cluster 6.A · Simulator management (`xcrun simctl`)
-- [ ] **`simctlPrepare` step** — boot / shutdown / erase / create simulators; deterministic test sims
-- [ ] **`simctlInstallLaunch` step** — `simctl install` + `launch` + `terminate`
-- [ ] **`simctlScreenshot` / `simctlRecordVideo` step** — UI capture for artifact upload
-- [ ] **`simctlPushNotification` step** — `simctl push` payload injection for testing remote-notification flows
-- [ ] **`simctlStatusBarOverride` step** — clean status bar (9:41 time, full battery) for App Store screenshots
-- [ ] **`simctlPrivacyGrant` step** — preseed photos / camera / location permissions before tests
+- [x] **`simctlPrepare` step** — boot / shutdown / erase / create / shutdownAll / eraseAll simulators — `5931477`
+- [x] **`simctlInstallLaunch` step** — install + launch (+ terminate / uninstall / installAndLaunch chain) — `5931477`
+- [x] **`simctlScreenshot` / `simctlRecordVideo` step** — `xcrun simctl io … screenshot|recordVideo` — `5931477`
+- [x] **`simctlPushNotification` step** — APNs payload via inline JSON (dropped to temp .apns + cleaned up) or payload path — `5931477`
+- [x] **`simctlStatusBarOverride` step** — pin time=9:41 + battery=100% + signal/operator for App Store screenshots — `5931477`
+- [x] **`simctlPrivacyGrant` step** — grant / revoke / reset photos / camera / location etc. — `5931477`
 
 ### Cluster 6.B · Code signing helpers (advanced)
-- [ ] **`securityKeychainImport` step** with `set-key-partition-list` — fixes the #1 cause of CI codesign UI prompts (extends the existing `keychainUnlock`)
-- [ ] **`codesignArbitrary` step** — re-sign individual extensions / dynamic libs with custom entitlements
-- [ ] **`dsymVerify` step** — `dwarfdump --uuid` UUID match check between binary and dSYM; gate before upload
+- [x] **`securityKeychainImport` step** with `set-key-partition-list` — fixes the codesign UI prompt that breaks CI codesign — `5931477`
+- [x] **`codesignArbitrary` step** — codesign with custom identity + entitlements + `--force` / `--preserve-metadata` / `--timestamp` etc. — `5931477`
+- [x] **`dsymVerify` step** — `dwarfdump --uuid` binary vs dSYM mismatch gate (parses output; throws when binary UUIDs aren't all in dSYM) — `5931477`
 
 ### Cluster 6.C · Privacy & compliance
-- [ ] **`privacyManifestValidate` step** — required-reason API lint over `PrivacyInfo.xcprivacy`; mandatory App Store gate since 1 May 2024
-- [ ] **`privacyManifestAggregate` step** — merge dependency-side privacy manifests into the app's manifest
+- [x] **`privacyManifestValidate` step** — `plutil -lint` PrivacyInfo.xcprivacy + cross-check declared categories against required-reason API symbol references — `5931477`
+- [x] **`privacyManifestAggregate` step** — find PrivacyInfo.xcprivacy files in deps + plist-merge into one app-level manifest — `5931477`
 
 ### Cluster 6.D · Performance & size
-- [ ] **`appThinningReportParse` step** — parse `App Thinning Size Report.txt` and gate on size delta vs previous build
-- [ ] **`linkMapAnalyze` step** — per-module byte attribution from the linker map (Caliper / EmergeTools-style)
-- [ ] **`bitcodeStrip` step** — `xcrun bitcode_strip`
+- [x] **`appThinningReportParse` step** — parse "App Thinning Size Report.txt" + diff vs baseline; gate on max app-growth-% — `5931477`
+- [x] **`linkMapAnalyze` step** — per-module byte attribution from Mach-O link map (Caliper / EmergeTools-style top-N) — `5931477`
+- [x] **`bitcodeStrip` step** — `xcrun bitcode_strip -r/-l/-m` — `5931477`
 
 ### Cluster 6.E · Distribution
-- [ ] **`otaManifestGenerate` step** — write the `itms-services://` install plist for ad-hoc / enterprise OTA; chains into existing `s3Upload` / `sftpUpload`
-- [ ] **`firebaseAppDistribution` step** — beta tester groups + release notes (fills the App-Center-replacement slot)
-- [ ] **`distributionGroups`** — internal beta workflow with click-to-register UDID flow + auto profile rebuild (App Center pattern)
-- [ ] **`phasedRollout` step** — gradual % rollout configured at App Store submission (Codemagic feature)
-- [ ] **`branchTargetedTestFlight` step** — auto-route a build to the tester group matching its branch name (Xcode Cloud feature)
+- [x] **`otaManifestGenerate` step** — write itms-services:// install plist for ad-hoc / enterprise OTA + log install link — `5931477`
+- [x] **`firebaseAppDistribution` step** — `firebase appdistribution:distribute` (iOS .ipa or Android .apk/.aab) — `5931477`
+- [x] **`distributionGroups` step** — reconcile TestFlight BetaGroups against a desired tester roster spec (App Center pattern) with dry-run + remove-strangers — `5931477`
+- [x] **`phasedRollout` step** — start / pause / resume / complete App Store phased release via ASC API — `5931477`
+- [x] **`branchTargetedTestFlight` step** — auto-route a build to BetaGroup matching its branch name (Xcode Cloud feature); supports literal + glob + /regex/ patterns — `5931477`
 
 ### Cluster 6.F · StoreKit
-- [ ] **`storekitConfigure` step** — set `.storekit` configuration for IAP testing in `xcodebuild test`
+- [x] **`storekitConfigure` step** — validate .storekit config exists; logs the STOREKIT_CONFIGURATION env var hint for downstream xcodebuild test — `5931477`
 
 ## ⏸ Phase 6.5 — Steam (Steamworks SDK) PC distribution
 
@@ -296,18 +297,18 @@ app_build VDF → upload → branch promotion → Workshop. Pairs with Unity's
 `unityBatch` and the Steamworks Partner pipeline most game studios already use.
 
 ### Cluster 6.5.A · Build & upload
-- [ ] **`steamcmdSetup` step** — bootstrap `steamcmd` on the agent (download + extract + warm cache; optional Steam Guard `sentry` / `ssfn` import for headless 2FA). Idempotent — skips download if `steamcmd.exe` / `steamcmd.sh` already present at the configured install dir
-- [ ] **`steamUpload` step** — `steamcmd +login <user> <pass> +run_app_build <vdf> +quit`. Accepts inline VDF text OR a path to `app_build_<appid>.vdf`. Optional 2FA code field; falls back to cached sentry/ssfn files. Captures the resulting BuildID into the build log so downstream `steamSetLive` can target it
-- [ ] **`steamBuildVdfGenerate` step** — generate `app_build_<appid>.vdf` + `depot_build_<depotid>.vdf` from form fields (appId, depots[], contentRoot, branch, description). Writes to a temp dir and emits the path so `steamUpload` can consume it without hand-authoring VDF
+- [x] **`steamcmdSetup` step** — bootstrap `steamcmd` cross-platform (PowerShell on Windows, curl|tar on Linux/macOS); optional Steam Guard sentry/ssfn cache sideloading via base64 fields — `5931477`
+- [x] **`steamUpload` step** — `steamcmd +run_app_build` with inline VDF (auto-generated from form fields: appId + contentRoot + multiline depots) OR a user-provided VDF path; cleans up generated temp VDF on exit — `5931477`
+- [x] **`steamBuildVdfGenerate`** — folded into `steamUpload`; the multiline `depots` field on `steamUpload` triggers VDF generation via the `_steam.ts` helpers when no `vdfPath` is supplied — `5931477`
 
 ### Cluster 6.5.B · Branch promotion & workshop
-- [ ] **`steamSetLive` step** — set a build live on a branch via Steamworks Web API (`ISteamPipe/SetAppBuildLive`). Requires a Web API publisher key + `appId` + `buildId` + `branch`. Pair with Telegram approvals for production branches
-- [ ] **`steamWorkshopUpload` step** — Workshop content upload via SteamPipe (separate VDF: `workshop_<appid>_<itemid>.vdf`). Required for mod-friendly games
+- [x] **`steamSetLive` step** — Steamworks Web API `ISteamApps/SetAppBuildLive` promotion; URL-encoded form-POST with `key=<publisher>` — `5931477`
+- [x] **`steamWorkshopUpload` step** — `steamcmd +workshop_build_item` with generated workshop VDF (publishedfileid="0" creates new) — `5931477`
 
 ### Phase 6.5 supporting work
-- [ ] `_steam.ts` shared helpers — VDF text generation (app_build, depot, workshop), Steamworks Web API client (auth via publisher key), platform-aware `steamcmd` path resolver
-- [ ] Add `steam` group to STEP_CATEGORIES in `step-registry`
-- [ ] Add `steamPassword`, `steamWebApiKey`, `steamGuardCode` to `SENSITIVE_FIELDS` in `secrets.ts` so credentials are encrypted at rest
+- [x] `_steam.ts` shared helpers — typed AppBuild VDF generator (handles backslash + quote escaping), Workshop VDF generator, Steamworks Web API SetAppBuildLive client, steamcmd argv builder — `5931477`
+- [x] Add `steam` group to STEP_CATEGORIES in `step-registry` — `5931477`
+- [x] Add `steamPassword`, `steamWebApiKey`, `steamGuardCode` to `SENSITIVE_FIELDS` in `secrets.ts` so credentials are encrypted at rest — `d27523c`
 
 ## ⏸ Phase 7 — Cloud device labs & crash reporter extensions
 
@@ -375,23 +376,23 @@ Turning the structured data BuildPilot already collects into actionable signal.
 | 1.5. Dashboard overhaul            |  25  |    0    | ✅ 100% |
 | 1.6. Engine + UX polish            |   5  |    0    | ✅ 100% |
 | 2. Cross-OS / iOS                  |   6  |    0    | ✅ 100% |
-| 2.5. iOS production-readiness      |  11  |    2    | 🟢  85% (testflight whatToTest moved to Phase 5; ssh known_hosts moved to Phase 4) |
-| 2.6. Production-grade platform     |   1  |   12    | 🟡   8% (encrypted-secrets-at-rest done; file vault + RBAC + webhooks + matrix pending) |
+| 2.5. iOS production-readiness      |  11  |    2    | 🟢  85% (testflight whatToTest moved + done in Phase 5; ssh known_hosts moved to Phase 4) |
+| 2.6. Production-grade platform     |   2  |   11    | 🟡  15% (encrypted-secrets-at-rest + webhook-driven triggers done; file vault + RBAC + matrix + manual approval + ASC auto-prov + remote Xcode cache pending) |
 | 2.7. Android pipeline foundations  |   5  |    5    | 🟢  50% (gradleBuild + adb cluster done; bundletool / Play Console / pair / sign deferred) |
-| 3. Notifications & integrations    |   5  |    4    | 🟢  56% |
-| 4. Workflow control & hardening    |   0  |   25    | ⏸    0% |
-| 5. fastlane action library         |  18  |   13    | 🟢  58% (Cluster 5.D / 5.E / 5.F + resign done; ASC-API cluster 5.B still pending JWT signer) |
-| 6. Apple specialty CLIs            |   0  |   20    | ⏸    0% |
-| 6.5. Steam (PC distribution)       |   0  |    8    | ⏸    0% (NEW — paired with Unity Standalone targets) |
+| 3. Notifications & integrations    |   7  |    2    | 🟢  78% (PWA push + email digest deferred — both depend on cron infra) |
+| 4. Workflow control & hardening    |   2  |   23    | 🟡   8% (continueOnError + API trigger endpoint done; cron / tag / path-filter / matrix / versioning / retention pending) |
+| 5. fastlane action library         |  30  |    1    | 🟢  97% (only `xcodebuild test` xcpretty-toggle remains — bundles with the test-retry-modes work in Phase 2.6.D) |
+| 6. Apple specialty CLIs            |  20  |    0    | ✅ 100% |
+| 6.5. Steam (PC distribution)       |   7  |    1    | 🟢  88% (steamBuildVdfGenerate folded into steamUpload; only the dedicated standalone version remains optional) |
 | 7. Cloud device labs + crash ext.  |   0  |    6    | ⏸    0% |
 | 8. Caching infrastructure          |   0  |    5    | ⏸    0% |
 | 9. Observability & test reporting  |   0  |   11    | ⏸    0% |
-| **Overall**                        | **86** | **111** | **🟢 44%** |
+| **Overall**                        | **130** | **67**  | **🟢 66%** |
 
 **Next up (recommended order):**
-1. **Phase 2.6 Cluster A — Security foundation** (encrypted secrets vault + file storage + multi-user auth) is the single biggest blocker; nothing in 2.6.B-D can ship credibly until this lands. Phase 5's plaintext-credential warnings on resign / fastlane / etc. all get resolved by this.
-2. **Phase 2.6 Cluster B — Webhook triggers + PR status checks** so iOS team adoption stops being blocked on "we have to use polling and there's no PR check".
-3. **Phase 5 Cluster 5.B (ASC API)** — the JWT-signer + spaceship plumbing this requires also unlocks Phase 2.6 Cluster D auto-provisioning and the deferred testflight `whatToTest` field.
-4. **Phase 2.6 Cluster C — Build matrix + manual approval** to round out the platform story.
-5. **Phase 8 — Caching** unlocks the largest single CI-time win once 2.6's remote-cache foundation is in place.
-6. **Phase 5 Cluster 5.A — `buildAppGym`** — consolidated archive+export+xcpretty step (replaces the typical xcodebuild archive → xcodebuild exportArchive chain).
+1. **Phase 2.6 Cluster A — File vault + multi-user auth + RBAC + audit log** — the secret-encryption-at-rest piece landed in `cee40ac`, but the file-vault (`.p12` / `.mobileprovision` / `.p8` / `GoogleService-Info.plist` upload + reference-by-id) and the multi-user/RBAC layer are still the biggest blockers for adopting BuildPilot in a 5+ person team. The `BUILDPILOT_WEBHOOK_SECRET_<id>` env-var stop-gap can be replaced once secret-vault columns land.
+2. **Phase 2.6 Cluster D — ASC API auto-provisioning** — the ES256 JWT signer landed in `d27523c`. Wire it into a `provisionAuto` step that creates / renews profiles + registers App IDs + adds devices automatically. Also unblocks an "auto build-number from ASC" step that hits the latest TestFlight build number and feeds `incrementBuildNumber`.
+3. **Phase 2.6 Cluster C — Build matrix + manual approval / block step** — the two top platform-feature gaps that remain. Manual approval needs in-flight build state (waiting-for-human) plus a dashboard UI to grant approval.
+4. **Phase 4 Cluster B — Build retries with backoff + step watchdog + build priority** — engine-level reliability features. Tag-pattern / cron / path-filtered triggers are smaller items in Cluster A that share the same poller-refactor.
+5. **Phase 8 — Caching** — once the remote-Xcode-cache foundation in 2.6.D lands, the layered caching adapters (DerivedData, SPM, CocoaPods, Carthage, Ruby gems) land cheaply.
+6. **Phase 9 — Observability** — xcresult HTML report renderer + flaky-test detection + duration trends turn the structured data BuildPilot already collects into actionable signal.
