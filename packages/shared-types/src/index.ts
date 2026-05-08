@@ -71,7 +71,21 @@ export type StepType =
   | 'adbConnect'
   | 'adbInstall'
   | 'adbShellLaunch'
-  | 'adbLogcat';
+  | 'adbLogcat'
+  | 'teamsNotify'
+  | 'emailNotify'
+  | 'appStoreConnectApi'
+  | 'testflightSetWhatToTest'
+  | 'testflightPublicLink'
+  | 'testflightManage'
+  | 'appStorePrecheck'
+  | 'appStoreCreate'
+  | 'appStoreUpload'
+  | 'buildAppGym'
+  | 'pushCertificate'
+  | 'certManage'
+  | 'registerDevices'
+  | 'sigh';
 
 export type AiTool = 'claude' | 'codex' | 'aider' | 'gemini' | 'custom';
 
@@ -770,6 +784,246 @@ export interface AdbLogcatStepData {
   // 'true' (default) → register the output file as a build artifact.
   registerArtifact?: string;
   adbPath?: string;
+}
+
+// Common shape shared by every App Store Connect API-driven step. The
+// runner signs an ES256 JWT from the .p8 (path or contents) and hits ASC
+// directly — no `xcrun altool` shell-out needed.
+export interface AscApiCredentials {
+  // Provide ONE: a path to the .p8 OR the PEM contents pasted into the field.
+  apiKeyPath?: string;
+  apiKeyContents?: string;
+  // 8-character key id from the Users + Access → Keys page in ASC.
+  keyId: string;
+  // Issuer UUID from the same page.
+  issuerId: string;
+}
+
+export interface AppStoreConnectApiStepData extends AscApiCredentials {
+  method?: 'GET' | 'POST' | 'PATCH' | 'DELETE';
+  path: string;
+  // JSON-encoded query params, e.g. {"filter[type]":"APPLE_TV_OS"}
+  queryJson?: string;
+  // JSON-encoded request body — used for POST / PATCH.
+  bodyJson?: string;
+}
+
+export interface TestflightSetWhatToTestStepData extends AscApiCredentials {
+  // Either pass the build id directly, or look it up by app + version + build #.
+  buildId?: string;
+  appBundleId?: string;
+  // Marketing version, e.g. "1.4.0" — matched on preReleaseVersion.version.
+  version?: string;
+  // CFBundleVersion (build number), e.g. "42" — matched on builds.version.
+  buildNumber?: string;
+  // BCP-47 locale id, e.g. "en-US". Defaults to en-US when blank.
+  locale?: string;
+  // The "What to Test" text shown to TestFlight reviewers + testers.
+  whatsNew: string;
+}
+
+export interface TestflightPublicLinkStepData extends AscApiCredentials {
+  appBundleId: string;
+  // BetaGroup name to use (will be created with publicLinkEnabled=true if
+  // missing). Defaults to "Public" when blank.
+  groupName?: string;
+  // Optional — when set, attaches this build to the public group so the
+  // public link starts handing out this version.
+  buildId?: string;
+}
+
+export interface TestflightManageStepData extends AscApiCredentials {
+  action?: 'inviteTester' | 'removeTester' | 'listTesters' | 'addToGroup' | 'removeFromGroup';
+  // Required for inviteTester / listTesters / addToGroup / removeFromGroup.
+  appBundleId?: string;
+  // Required for tester ops (the email is the lookup key in ASC).
+  testerEmail?: string;
+  testerFirstName?: string;
+  testerLastName?: string;
+  // Required for addToGroup / removeFromGroup; optional on inviteTester
+  // (when set, adds the new tester to the named group on creation).
+  groupName?: string;
+}
+
+export interface AppStorePrecheckStepData extends RunsOnMaybeRemote {
+  appIdentifier: string;
+  username?: string;
+  teamId?: string;
+  // 'true' includes IAPs in the lint pass (default: skipped — IAPs lint
+  // separately via `precheck --include_in_app_purchases true`).
+  includeInAppPurchases?: string;
+  // Default precheck rule verdict when no per-rule level is configured.
+  // Values: 'warn' | 'error' | 'skip'.
+  defaultRule?: string;
+  additionalArgs?: string;
+  cwd?: string;
+}
+
+export interface AppStoreCreateStepData extends AscApiCredentials {
+  bundleId: string;
+  name: string;
+  sku: string;
+  // BCP-47, e.g. "en-US".
+  primaryLocale: string;
+  // Used when registering the bundleId on the Developer Portal: 'IOS' | 'MAC_OS'.
+  platform?: 'IOS' | 'MAC_OS' | 'UNIVERSAL';
+  // Comma-separated platform list for the App record itself, e.g. "IOS,MAC_OS".
+  // When unset, falls back to `platform`.
+  platforms?: string;
+  // 'true' — register the bundleId on the Dev Portal if it doesn't exist
+  // yet. Otherwise we error out so the user makes the call explicitly.
+  registerBundleId?: string;
+}
+
+export interface AppStoreUploadStepData extends RunsOnMaybeRemote {
+  appIdentifier: string;
+  ipaPath?: string;
+  metadataPath?: string;
+  screenshotsPath?: string;
+  username?: string;
+  teamId?: string;
+  // 'true' skips upload of the .ipa binary (metadata-only delivery).
+  skipBinaryUpload?: string;
+  skipMetadata?: string;
+  skipScreenshots?: string;
+  // 'true' submits for App Store review after upload completes.
+  submitForReview?: string;
+  // 'true' — release automatically once review approves.
+  automaticRelease?: string;
+  // 'true' bypasses the metadata-changes confirmation prompt (CI-required).
+  force?: string;
+  additionalArgs?: string;
+  cwd?: string;
+}
+
+export interface BuildAppGymStepData extends RunsOnMaybeRemote {
+  workspacePath?: string;
+  projectPath?: string;
+  scheme: string;
+  // Defaults to Release when blank.
+  configuration?: string;
+  // 'app-store' | 'ad-hoc' | 'enterprise' | 'development' | 'developer-id' | 'mac-application'
+  exportMethod?: string;
+  exportOptionsPlist?: string;
+  outputDirectory?: string;
+  outputName?: string;
+  includeBitcode?: string;
+  // 'false' to omit dSYMs from the output ipa.
+  includeSymbols?: string;
+  cleanBeforeBuild?: string;
+  // 'true' adds --silent (suppress xcpretty output).
+  silent?: string;
+  skipPackageIpa?: string;
+  skipArchive?: string;
+  additionalArgs?: string;
+  cwd?: string;
+}
+
+export interface PushCertificateStepData extends RunsOnMaybeRemote {
+  appIdentifier: string;
+  username?: string;
+  teamId?: string;
+  // 'true' generates a development APNs cert; default = production.
+  development?: string;
+  // 'false' to skip the .p12 export (only the .pem is dropped).
+  generateP12?: string;
+  // .p12 export password (encrypted at rest).
+  password?: string;
+  // Output dir; defaults to fastlane's default (project root).
+  outputPath?: string;
+  // 'true' regenerates even when the existing cert hasn't expired.
+  force?: string;
+  // pem renews automatically when the cert expires within N days.
+  activeDaysLimit?: number | string;
+  additionalArgs?: string;
+  cwd?: string;
+}
+
+export interface CertManageStepData extends RunsOnMaybeRemote {
+  // 'true' fetches a development cert; default = production.
+  development?: string;
+  appIdentifier?: string;
+  username?: string;
+  teamId?: string;
+  outputPath?: string;
+  keychainPath?: string;
+  keychainPassword?: string;
+  // ios | macos | catalyst — defaults to ios.
+  platform?: string;
+  force?: string;
+  additionalArgs?: string;
+  cwd?: string;
+}
+
+export interface RegisterDevicesStepData extends AscApiCredentials {
+  // Multiline. Each line is either "Name=UDID" or "UDID" (auto-named).
+  // Lines starting with # are comments.
+  udids: string;
+  platform?: 'IOS' | 'MAC_OS';
+}
+
+export interface SighStepData extends RunsOnMaybeRemote {
+  // sigh sub-action.
+  action?: 'download' | 'renew' | 'repair' | 'manage';
+  appIdentifier?: string;
+  username?: string;
+  teamId?: string;
+  // appstore (default) | adhoc | development | developer_id
+  profileType?: 'appstore' | 'adhoc' | 'development' | 'developer_id';
+  outputPath?: string;
+  // 'true' regenerates even when an existing profile is reusable.
+  force?: string;
+  // 'true' adds --skip_install — by default sigh installs the .mobileprovision.
+  skipInstall?: string;
+  // ios (default) | tvos | macos
+  platform?: string;
+  additionalArgs?: string;
+  cwd?: string;
+}
+
+// Microsoft Teams incoming webhook step. Supports the legacy O365 connector
+// surface (text-only or MessageCard) plus a `raw` escape hatch where the user
+// pastes an Adaptive Card JSON for Power Automate Workflow webhooks (legacy
+// connectors are being deprecated in October 2025).
+export interface TeamsNotifyStepData {
+  webhookUrl: string;
+  text: string;
+  // 'simple' (default)  → { "text": "..." } — the universal-fallback shape.
+  // 'messageCard'       → MessageCard with title + themeColor.
+  // 'raw'               → forward `text` verbatim (must be valid JSON).
+  format?: 'simple' | 'messageCard' | 'raw';
+  // Used only by format=messageCard.
+  title?: string;
+  // Hex without '#'. Used only by format=messageCard.
+  themeColor?: string;
+}
+
+// First-class transactional email step. Uses nodemailer at runtime via dynamic
+// import; the package is an optional peer dep that the operator installs once
+// in apps/server. Field-level secrets (smtpPassword) are encrypted at rest.
+export interface EmailNotifyStepData {
+  // SMTP server. Most providers: smtp.gmail.com, smtp.office365.com,
+  // smtp.sendgrid.net, smtp.mailgun.org, etc.
+  smtpHost: string;
+  // Default 587 (STARTTLS). Use 465 for TLS-on-connect, 25 for unauthenticated
+  // localhost relays.
+  smtpPort?: number;
+  // 'true' forces TLS-on-connect; 'false' disables. Empty = derive from port
+  // (465 → secure, anything else → STARTTLS). Most operators leave blank.
+  smtpSecure?: string;
+  smtpUser: string;
+  // Plaintext on the form; encrypted at rest via SENSITIVE_FIELDS.
+  smtpPassword: string;
+  // Header values. From must be a verified sender on most providers.
+  from: string;
+  // Comma / semicolon / whitespace separated. At least one address required.
+  to: string;
+  cc?: string;
+  bcc?: string;
+  subject: string;
+  // Provide bodyText OR bodyHtml (or both — multipart). At least one required.
+  bodyText?: string;
+  bodyHtml?: string;
 }
 
 // `fastlane frameit` adds device chrome around raw screenshots. Pure wrapper —

@@ -57,6 +57,20 @@ const stepTypes = [
   'adbInstall',
   'adbShellLaunch',
   'adbLogcat',
+  'teamsNotify',
+  'emailNotify',
+  'appStoreConnectApi',
+  'testflightSetWhatToTest',
+  'testflightPublicLink',
+  'testflightManage',
+  'appStorePrecheck',
+  'appStoreCreate',
+  'appStoreUpload',
+  'buildAppGym',
+  'pushCertificate',
+  'certManage',
+  'registerDevices',
+  'sigh',
 ] as const;
 
 const nodeSchema = z.object({

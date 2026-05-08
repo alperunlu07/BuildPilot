@@ -77,6 +77,20 @@ const nodeTypes = {
   adbInstall: StepNode,
   adbShellLaunch: StepNode,
   adbLogcat: StepNode,
+  teamsNotify: StepNode,
+  emailNotify: StepNode,
+  appStoreConnectApi: StepNode,
+  testflightSetWhatToTest: StepNode,
+  testflightPublicLink: StepNode,
+  testflightManage: StepNode,
+  appStorePrecheck: StepNode,
+  appStoreCreate: StepNode,
+  appStoreUpload: StepNode,
+  buildAppGym: StepNode,
+  pushCertificate: StepNode,
+  certManage: StepNode,
+  registerDevices: StepNode,
+  sigh: StepNode,
 };
 
 interface Props {

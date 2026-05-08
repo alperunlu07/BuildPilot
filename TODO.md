@@ -23,7 +23,18 @@ running locally on Windows for Unity dedicated-server builds.
 - [x] Build engine with topological execution + per-build SQLite log column
 - [x] SSE event stream (`newCommit`, `buildStarted`, `buildLog`, `buildFinished`)
 
-## ✅ Phase 1.5 — Dashboard overhaul (this session)
+## ✅ Phase 1.6 — Engine + UX polish (cee40ac)
+
+Goal: harden the runtime + UX after Phase 5 + Phase 2.5 step explosion. Engine
+correctness fixes, palette / log scaling, and dev-server reliability.
+
+- [x] Failure-aggregator nodes — joins where every incoming edge is `failure` now fire under OR semantics (single shared `notify-on-fail` node behind a chain A→B→C used to never run because skipped parents blocked the AND join) — `cee40ac`
+- [x] Palette grouping — 11 collapsible categories (Git, Build, Notifications, Upload, Remote, iOS Build/Signing/Versioning/Quality/Screenshots, Android) with search box; load-time guard throws if a step type is missing from any group — `cee40ac`
+- [x] Log virtualization — react-window FixedSizeList in LogTable; stdout default-hidden behind a shared LevelToggleBar (BuildLogPanel, BuildDetailPage, StepPropertyPanel) — `cee40ac`
+- [x] Vite dev server pinned to `127.0.0.1` — Vite 6 was binding `::1` only and breaking `http://localhost:49832` on Windows — `cee40ac`
+- [x] `BUILDPILOT_BUILD=1` env var injected into unityBatch — lets project-side post-build hooks (e.g. `agent.bat` that runs a legacy uploader via `cmd /k`) short-circuit when running under BuildPilot — `cee40ac`
+
+## ✅ Phase 1.5 — Dashboard overhaul
 
 Goal: pro-grade run visibility, control, and AI-assisted recovery.
 
@@ -107,7 +118,9 @@ quality-of-life pieces.
 Goal: take BuildPilot from "demo for one developer" to "adoptable by a 5+ person iOS team". The 10 features that show up in every other iOS CI/CD platform (Bitrise / Codemagic / Xcode Cloud / GitHub Actions / GitLab / CircleCI) but not BuildPilot. See the cross-platform research write-up for the evidence trail.
 
 ### Cluster 2.6.A · Security foundation
-- [ ] **Encrypted secrets + file vault** — org / project / pipeline-scope KV with at-rest encryption + reference-by-ID (`${{ secrets.APPLE_ID }}` style); file binaries (`.p12`, `.mobileprovision`, `.p8`, `GoogleService-Info.plist`) uploaded once and referenced by id from any step
+- [x] **Encrypted secrets at rest** — field-level AES-256-GCM with master key at `~/.buildpilot/master.key` (POSIX 0600). Sensitive fields in pipeline node data, `hosts.json`, `node_templates` and the telegram bot token in `config.json` wrapped as `enc:1:<base64>`. Startup migration rewrites any plaintext value idempotently — `cee40ac`
+- [ ] **File vault** — file binaries (`.p12`, `.mobileprovision`, `.p8`, `GoogleService-Info.plist`) uploaded once and referenced by id from any step
+- [ ] **Reference-by-ID interpolation** — `${{ secrets.APPLE_ID }}` style interpolation across step data + `${{ files.signing_p12 }}` for vault file references
 - [ ] **Multi-user auth + RBAC + audit log** — at minimum: local users with bcrypt passwords, owner / maintainer / member / viewer roles, append-only audit log of who triggered what
 
 ### Cluster 2.6.B · External integration
@@ -124,12 +137,30 @@ Goal: take BuildPilot from "demo for one developer" to "adoptable by a 5+ person
 - [ ] **Test retry modes on `xcodebuild` test action** — retry-on-failure / until-failure / max-repetitions (Xcode 13+); the #1 fix for flaky-UI-test pipeline reds
 - [ ] **Remote Xcode build cache** — XCRemoteCache (Spotify) or the Apple compilation cache (Xcode 26+) integrated as a typed step + a server-side cache namespace; routinely cuts xcodebuild time 40–60%
 
+## ✅ Phase 2.7 — Android pipeline foundations (cee40ac)
+
+Goal: parity with iOS for the most common Android release path — Gradle build → ADB install → smoke test → Play Console upload (Play upload deferred to a future phase).
+
+- [x] `gradleBuild` step — runs `./gradlew assemble<Variant>` (apk) / `bundle<Variant>` (aab) / custom task; auto-discovers artifact in `app/build/outputs` and registers it as a build artifact — `cee40ac`
+- [x] `adbConnect` step — `adb connect <ip:port>` for Wi-Fi-debugging-paired devices — `cee40ac`
+- [x] `adbInstall` step — `adb install -r <apk>` with serial / replace / allowDowngrade / allowTest toggles — `cee40ac`
+- [x] `adbShellLaunch` step — `adb shell am start -n <pkg>/<activity>` with `-W` wait toggle — `cee40ac`
+- [x] `adbLogcat` step — bounded-duration logcat capture written to a file + registered as a build artifact — `cee40ac`
+
+### Phase 2.7 future work (deferred to a later Android phase)
+- [ ] **`bundletool` step** — convert `.aab` → installable APKs (replaces the limitation that `adbInstall` can't take an .aab directly)
+- [ ] **`playConsoleUpload` step** — Google Play Developer API: upload .aab/.apk to internal/alpha/beta/production track via service-account JWT
+- [ ] **`adbPair` step** — Android 11+ wireless pairing flow (`adb pair <host:port>` with the 6-digit code)
+- [ ] **`androidSign` step** — apksigner/jarsigner wrap for signing standalone APKs
+- [ ] **`firebaseAppDistributionAndroid`** — Android variant of Phase 6.E firebaseAppDistribution
+
 ## 🟢 Phase 3 — Notifications & integrations
 
 - [x] Native browser Notification API on commits (suppressed when tab focused) — `1d04201`
 - [x] Slack incoming webhook step — `1d04201`
 - [x] Discord webhook step — `1d04201`
 - [x] Telegram bot — `telegramNotify` step + interactive build approvals — `6c0567d`
+- [x] Telegram bot text commands — `/help`, `/list`, `/build [name]` gated to `defaultChatId` (unauthorized chats silently ignored, inbound text logged so users can discover their chat id) — `cee40ac`
 - [ ] **PWA + iOS / Web Push** — service worker + `web-push`; closed-tab notifications + push-to-mobile
 - [ ] **Email digest** — daily summary of build outcomes per pipeline
 - [ ] **`emailNotify` step** — first-class transactional email step with templates + variables (separate from the per-pipeline daily digest above)
@@ -257,6 +288,27 @@ iOS-specific tooling beyond fastlane that nearly every release pipeline ends up 
 ### Cluster 6.F · StoreKit
 - [ ] **`storekitConfigure` step** — set `.storekit` configuration for IAP testing in `xcodebuild test`
 
+## ⏸ Phase 6.5 — Steam (Steamworks SDK) PC distribution
+
+Goal: ship Windows / Linux / macOS PC builds to Steam — `steamcmd` install →
+app_build VDF → upload → branch promotion → Workshop. Pairs with Unity's
+`StandaloneWindows64` / `StandaloneLinux64` / `StandaloneOSX` targets in
+`unityBatch` and the Steamworks Partner pipeline most game studios already use.
+
+### Cluster 6.5.A · Build & upload
+- [ ] **`steamcmdSetup` step** — bootstrap `steamcmd` on the agent (download + extract + warm cache; optional Steam Guard `sentry` / `ssfn` import for headless 2FA). Idempotent — skips download if `steamcmd.exe` / `steamcmd.sh` already present at the configured install dir
+- [ ] **`steamUpload` step** — `steamcmd +login <user> <pass> +run_app_build <vdf> +quit`. Accepts inline VDF text OR a path to `app_build_<appid>.vdf`. Optional 2FA code field; falls back to cached sentry/ssfn files. Captures the resulting BuildID into the build log so downstream `steamSetLive` can target it
+- [ ] **`steamBuildVdfGenerate` step** — generate `app_build_<appid>.vdf` + `depot_build_<depotid>.vdf` from form fields (appId, depots[], contentRoot, branch, description). Writes to a temp dir and emits the path so `steamUpload` can consume it without hand-authoring VDF
+
+### Cluster 6.5.B · Branch promotion & workshop
+- [ ] **`steamSetLive` step** — set a build live on a branch via Steamworks Web API (`ISteamPipe/SetAppBuildLive`). Requires a Web API publisher key + `appId` + `buildId` + `branch`. Pair with Telegram approvals for production branches
+- [ ] **`steamWorkshopUpload` step** — Workshop content upload via SteamPipe (separate VDF: `workshop_<appid>_<itemid>.vdf`). Required for mod-friendly games
+
+### Phase 6.5 supporting work
+- [ ] `_steam.ts` shared helpers — VDF text generation (app_build, depot, workshop), Steamworks Web API client (auth via publisher key), platform-aware `steamcmd` path resolver
+- [ ] Add `steam` group to STEP_CATEGORIES in `step-registry`
+- [ ] Add `steamPassword`, `steamWebApiKey`, `steamGuardCode` to `SENSITIVE_FIELDS` in `secrets.ts` so credentials are encrypted at rest
+
 ## ⏸ Phase 7 — Cloud device labs & crash reporter extensions
 
 Real-device testing and richer dSYM upload coverage.
@@ -321,17 +373,20 @@ Turning the structured data BuildPilot already collects into actionable signal.
 | ---------------------------------- | ---: | ------: | ------ |
 | 1. MVP                             |  10  |    0    | ✅ 100% |
 | 1.5. Dashboard overhaul            |  25  |    0    | ✅ 100% |
+| 1.6. Engine + UX polish            |   5  |    0    | ✅ 100% |
 | 2. Cross-OS / iOS                  |   6  |    0    | ✅ 100% |
 | 2.5. iOS production-readiness      |  11  |    2    | 🟢  85% (testflight whatToTest moved to Phase 5; ssh known_hosts moved to Phase 4) |
-| 2.6. Production-grade platform     |   0  |   10    | 🟡   0% (top-10 critical from cross-platform research) |
-| 3. Notifications & integrations    |   4  |    4    | 🟢  50% |
+| 2.6. Production-grade platform     |   1  |   12    | 🟡   8% (encrypted-secrets-at-rest done; file vault + RBAC + webhooks + matrix pending) |
+| 2.7. Android pipeline foundations  |   5  |    5    | 🟢  50% (gradleBuild + adb cluster done; bundletool / Play Console / pair / sign deferred) |
+| 3. Notifications & integrations    |   5  |    4    | 🟢  56% |
 | 4. Workflow control & hardening    |   0  |   25    | ⏸    0% |
 | 5. fastlane action library         |  18  |   13    | 🟢  58% (Cluster 5.D / 5.E / 5.F + resign done; ASC-API cluster 5.B still pending JWT signer) |
 | 6. Apple specialty CLIs            |   0  |   20    | ⏸    0% |
+| 6.5. Steam (PC distribution)       |   0  |    8    | ⏸    0% (NEW — paired with Unity Standalone targets) |
 | 7. Cloud device labs + crash ext.  |   0  |    6    | ⏸    0% |
 | 8. Caching infrastructure          |   0  |    5    | ⏸    0% |
 | 9. Observability & test reporting  |   0  |   11    | ⏸    0% |
-| **Overall**                        | **74** | **96**  | **🟢 44%** |
+| **Overall**                        | **86** | **111** | **🟢 44%** |
 
 **Next up (recommended order):**
 1. **Phase 2.6 Cluster A — Security foundation** (encrypted secrets vault + file storage + multi-user auth) is the single biggest blocker; nothing in 2.6.B-D can ship credibly until this lands. Phase 5's plaintext-credential warnings on resign / fastlane / etc. all get resolved by this.

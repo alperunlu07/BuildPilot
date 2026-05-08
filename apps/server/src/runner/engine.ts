@@ -57,6 +57,20 @@ import { runAdbConnect } from './steps/adbConnect';
 import { runAdbInstall } from './steps/adbInstall';
 import { runAdbShellLaunch } from './steps/adbShellLaunch';
 import { runAdbLogcat } from './steps/adbLogcat';
+import { runTeamsNotify } from './steps/teamsNotify';
+import { runEmailNotify } from './steps/emailNotify';
+import { runAppStoreConnectApi } from './steps/appStoreConnectApi';
+import { runTestflightSetWhatToTest } from './steps/testflightSetWhatToTest';
+import { runTestflightPublicLink } from './steps/testflightPublicLink';
+import { runTestflightManage } from './steps/testflightManage';
+import { runAppStorePrecheck } from './steps/appStorePrecheck';
+import { runAppStoreCreate } from './steps/appStoreCreate';
+import { runAppStoreUpload } from './steps/appStoreUpload';
+import { runBuildAppGym } from './steps/buildAppGym';
+import { runPushCertificate } from './steps/pushCertificate';
+import { runCertManage } from './steps/certManage';
+import { runRegisterDevices } from './steps/registerDevices';
+import { runSigh } from './steps/sigh';
 
 export interface StepContext {
   project: Project;
@@ -117,6 +131,20 @@ const RUNNERS: Record<StepType, StepRunner> = {
   adbInstall: runAdbInstall,
   adbShellLaunch: runAdbShellLaunch,
   adbLogcat: runAdbLogcat,
+  teamsNotify: runTeamsNotify,
+  emailNotify: runEmailNotify,
+  appStoreConnectApi: runAppStoreConnectApi,
+  testflightSetWhatToTest: runTestflightSetWhatToTest,
+  testflightPublicLink: runTestflightPublicLink,
+  testflightManage: runTestflightManage,
+  appStorePrecheck: runAppStorePrecheck,
+  appStoreCreate: runAppStoreCreate,
+  appStoreUpload: runAppStoreUpload,
+  buildAppGym: runBuildAppGym,
+  pushCertificate: runPushCertificate,
+  certManage: runCertManage,
+  registerDevices: runRegisterDevices,
+  sigh: runSigh,
 };
 
 interface DagNode {

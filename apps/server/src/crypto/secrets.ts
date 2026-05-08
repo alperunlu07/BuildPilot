@@ -103,6 +103,16 @@ export const SENSITIVE_FIELDS = new Set([
   'sentryAuthToken',
   'bugsnagApiKey',
   'webhookUrl',
+  'smtpPassword',
+  // Steam (Phase 6.5)
+  'steamPassword',
+  'steamWebApiKey',
+  'steamGuardCode',
+  // ASC API (Phase 5.B / 2.6.D)
+  'ascPrivateKey',
+  'ascApiKey',
+  // Notarize (Phase 2.5) — additional aliases
+  'apiKeyContents',
 ]);
 
 export function encryptSecretsInObject<T extends Record<string, unknown>>(obj: T): T {
