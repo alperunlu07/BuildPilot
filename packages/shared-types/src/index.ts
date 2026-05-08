@@ -85,7 +85,31 @@ export type StepType =
   | 'pushCertificate'
   | 'certManage'
   | 'registerDevices'
-  | 'sigh';
+  | 'sigh'
+  | 'simctlPrepare'
+  | 'simctlInstallLaunch'
+  | 'simctlScreenshot'
+  | 'simctlPushNotification'
+  | 'simctlStatusBarOverride'
+  | 'simctlPrivacyGrant'
+  | 'securityKeychainImport'
+  | 'codesignArbitrary'
+  | 'dsymVerify'
+  | 'privacyManifestValidate'
+  | 'privacyManifestAggregate'
+  | 'appThinningReportParse'
+  | 'linkMapAnalyze'
+  | 'bitcodeStrip'
+  | 'otaManifestGenerate'
+  | 'firebaseAppDistribution'
+  | 'distributionGroups'
+  | 'phasedRollout'
+  | 'branchTargetedTestFlight'
+  | 'storekitConfigure'
+  | 'steamcmdSetup'
+  | 'steamUpload'
+  | 'steamSetLive'
+  | 'steamWorkshopUpload';
 
 export type AiTool = 'claude' | 'codex' | 'aider' | 'gemini' | 'custom';
 
@@ -979,6 +1003,296 @@ export interface SighStepData extends RunsOnMaybeRemote {
   platform?: string;
   additionalArgs?: string;
   cwd?: string;
+}
+
+// Phase 6.A — `xcrun simctl` simulator lifecycle.
+export interface SimctlPrepareStepData extends RunsOnMaybeRemote {
+  // boot | shutdown | erase | create | shutdownAll | eraseAll
+  action?: string;
+  // UDID for boot/shutdown/erase. Empty defaults to "booted".
+  udid?: string;
+  deviceName?: string;
+  // create only — device type identifier, e.g.
+  // 'com.apple.CoreSimulator.SimDeviceType.iPhone-16'.
+  deviceType?: string;
+  // create only — runtime identifier, e.g.
+  // 'com.apple.CoreSimulator.SimRuntime.iOS-18-0'.
+  runtime?: string;
+  additionalArgs?: string;
+  cwd?: string;
+}
+
+export interface SimctlInstallLaunchStepData extends RunsOnMaybeRemote {
+  // install | launch | terminate | uninstall | installAndLaunch (default)
+  action?: string;
+  udid?: string;
+  appPath?: string;
+  bundleId?: string;
+  waitForDebugger?: string;
+  console?: string;
+  launchArgs?: string;
+}
+
+export interface SimctlScreenshotStepData extends RunsOnMaybeRemote {
+  mode?: 'screenshot' | 'recordVideo';
+  udid?: string;
+  outputPath: string;
+  // screenshot only: png | jpeg | tiff
+  type?: string;
+  // screenshot + recordVideo
+  display?: string;
+  mask?: string;
+  // recordVideo only
+  codec?: string;
+  force?: string;
+  additionalArgs?: string;
+  cwd?: string;
+}
+
+export interface SimctlPushNotificationStepData extends RunsOnMaybeRemote {
+  udid?: string;
+  bundleId?: string;
+  // Provide ONE: payloadJson (we drop into a temp .apns file) or payloadPath.
+  payloadJson?: string;
+  payloadPath?: string;
+}
+
+export interface SimctlStatusBarOverrideStepData extends RunsOnMaybeRemote {
+  // override (default) | clear | list
+  action?: 'override' | 'clear' | 'list';
+  udid?: string;
+  time?: string;
+  dataNetwork?: string;
+  wifiMode?: string;
+  wifiBars?: number | string;
+  cellularMode?: string;
+  cellularBars?: number | string;
+  operatorName?: string;
+  batteryState?: string;
+  batteryLevel?: number | string;
+}
+
+export interface SimctlPrivacyGrantStepData extends RunsOnMaybeRemote {
+  // grant (default) | revoke | reset
+  action?: 'grant' | 'revoke' | 'reset';
+  udid?: string;
+  // all | calendar | contacts | location | microphone | photos | etc.
+  service: string;
+  bundleId?: string;
+}
+
+// Phase 6.B — codesign / keychain / dsym helpers.
+export interface SecurityKeychainImportStepData extends RunsOnMaybeRemote {
+  filePath: string;
+  filePassword?: string;
+  keychain?: string;
+  keychainPassword?: string;
+  // 'true' (default) — apply -A so the imported key is accessible to all apps.
+  allowAccess?: string;
+  // Comma/newline separated codesign / xcodebuild paths to allow without UI.
+  allowedTools?: string;
+  // priv | pub | cert | agg | seq — passed via -t.
+  fileType?: string;
+  // openssl | bsafe | pemseq | wrapped | x509 | pkcs7 | pkcs8 | pkcs12 — passed via -f.
+  fileFormat?: string;
+  // -S apple-tool:,apple: by default — fixes the codesign UI prompt.
+  partitionList?: string;
+  // 'true' — skip the partition-list step (use when the import alone is enough).
+  skipPartitionList?: string;
+}
+
+export interface CodesignArbitraryStepData extends RunsOnMaybeRemote {
+  targetPath: string;
+  identity: string;
+  entitlementsPath?: string;
+  // 'false' to skip --force.
+  force?: string;
+  preserveMetadata?: string;
+  // 'none' to disable timestamping; URL or 'true' to use Apple TSA.
+  timestamp?: string;
+  options?: string;
+  requirements?: string;
+  additionalArgs?: string;
+  cwd?: string;
+}
+
+export interface DsymVerifyStepData extends RunsOnMaybeRemote {
+  binaryPath: string;
+  dsymPath: string;
+}
+
+// Phase 6.C — privacy manifests.
+export interface PrivacyManifestValidateStepData extends RunsOnMaybeRemote {
+  manifestPath: string;
+  // Optional path to the binary; when set, scan symbols for required-reason
+  // API references and warn (or fail with strict=true) when categories are missing.
+  binaryPath?: string;
+  // 'true' fails the step on missed categories; 'false' warns only.
+  strict?: string;
+}
+
+export interface PrivacyManifestAggregateStepData extends RunsOnMaybeRemote {
+  // Directory to scan for PrivacyInfo.xcprivacy files. Typically Pods/.
+  scanRoot: string;
+  outputPath: string;
+  // 'true' to overwrite an existing aggregate manifest; default skip.
+  overwrite?: string;
+}
+
+// Phase 6.D — performance/size analysis.
+export interface AppThinningReportParseStepData {
+  reportPath: string;
+  baselineReportPath?: string;
+  // Fail the step when worst variant grew more than this percent.
+  maxAppGrowthPct?: number | string;
+}
+
+export interface LinkMapAnalyzeStepData {
+  mapPath: string;
+  topN?: number | string;
+}
+
+export interface BitcodeStripStepData extends RunsOnMaybeRemote {
+  inputPath: string;
+  outputPath?: string;
+  // remove (default) | leave | markerOnly
+  mode?: 'remove' | 'leave' | 'markerOnly';
+}
+
+// Phase 6.E — distribution.
+export interface OtaManifestGenerateStepData {
+  bundleId: string;
+  bundleVersion: string;
+  title: string;
+  ipaUrl: string;
+  outputPath: string;
+  icon57Url?: string;
+  icon512Url?: string;
+  subtitle?: string;
+  // Optional. When set, the step logs an itms-services:// install link
+  // pointing at <installUrlBase>/<filename(outputPath)>.
+  installUrlBase?: string;
+}
+
+export interface FirebaseAppDistributionStepData extends RunsOnMaybeRemote {
+  appId: string;
+  binaryPath: string;
+  // Auth: provide either a service account key path (preferred) OR a
+  // refresh token via FIREBASE_TOKEN.
+  serviceAccountPath?: string;
+  firebaseToken?: string;
+  // Comma-separated tester groups + emails.
+  groups?: string;
+  testers?: string;
+  releaseNotes?: string;
+  releaseNotesFile?: string;
+  additionalArgs?: string;
+  cwd?: string;
+}
+
+export interface DistributionGroupsStepData extends AscApiCredentials {
+  // list | reconcile | inviteEmail (default: list)
+  action?: 'list' | 'reconcile' | 'inviteEmail';
+  appBundleId: string;
+  // Multiline spec. Example:
+  //   [Internal]
+  //   alice@example.com
+  //   bob@example.com
+  //
+  //   [QA]
+  //   carol@example.com
+  spec?: string;
+  // 'true' deletes testers in the group that aren't in the desired list.
+  removeStrangers?: string;
+  dryRun?: string;
+}
+
+export interface PhasedRolloutStepData extends AscApiCredentials {
+  // start | pause | resume | complete
+  action?: 'start' | 'pause' | 'resume' | 'complete';
+  appStoreVersionId: string;
+}
+
+export interface BranchTargetedTestFlightStepData extends AscApiCredentials {
+  appBundleId: string;
+  buildId: string;
+  // Override the trigger branch (otherwise pulled from build.triggerBranch).
+  branchOverride?: string;
+  // Multiline mapping. Each line: `branch-pattern => GroupName`.
+  // Pattern supports literal text + * (any) + ? (single) wildcards, or
+  // /regex/ form for arbitrary regexp.
+  mapping?: string;
+  // Used when no mapping line matches. Step errors when both empty.
+  defaultGroup?: string;
+  // 'true' creates the BetaGroup if it doesn't exist on the app.
+  createMissingGroup?: string;
+}
+
+// Phase 6.F — StoreKit.
+export interface StorekitConfigureStepData extends RunsOnMaybeRemote {
+  // Path to .storekit configuration file.
+  storekitPath: string;
+}
+
+// Phase 6.5 — Steam.
+export interface SteamcmdSetupStepData extends RunsOnMaybeRemote {
+  installDir: string;
+  // 'auto' (default) | 'windows' | 'linux' | 'macos' — controls the
+  // download URL + extract command.
+  platform?: string;
+  // Optional Steam Guard cache. Both must be base64-encoded contents of
+  // the original sentry/ssfn files; we drop them next to steamHomeDir.
+  sentryFileBase64?: string;
+  ssfnFileBase64?: string;
+  ssfnFileName?: string;
+  steamHomeDir?: string;
+  configVdfPath?: string;
+}
+
+export interface SteamUploadStepData extends RunsOnMaybeRemote {
+  steamcmdPath?: string;
+  username: string;
+  password: string;
+  steamGuardCode?: string;
+  // Provide ONE: a path to an existing VDF file, OR the inputs to generate
+  // one (appId + contentRoot + depots).
+  vdfPath?: string;
+  appId?: string;
+  description?: string;
+  contentRoot?: string;
+  buildOutput?: string;
+  // SetLive branch — leave blank to upload without promoting.
+  setLive?: string;
+  preview?: string;
+  // Multiline. Each line: `<depotId>:<localPath>[:<depotPath>][:<recursive>]`
+  depots?: string;
+}
+
+export interface SteamSetLiveStepData {
+  steamWebApiKey: string;
+  appId: string;
+  buildId: string;
+  branch: string;
+  description?: string;
+  // For testing against a recorded mock — leave blank in production.
+  baseUrl?: string;
+}
+
+export interface SteamWorkshopUploadStepData extends RunsOnMaybeRemote {
+  steamcmdPath?: string;
+  username: string;
+  password: string;
+  steamGuardCode?: string;
+  appId: string;
+  // "0" creates a new Workshop item.
+  itemId?: string;
+  contentFolder: string;
+  previewFile?: string;
+  title?: string;
+  description?: string;
+  changeNote?: string;
+  // 0 public | 1 friends | 2 private
+  visibility?: '0' | '1' | '2';
 }
 
 // Microsoft Teams incoming webhook step. Supports the legacy O365 connector

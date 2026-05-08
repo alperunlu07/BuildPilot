@@ -113,6 +113,10 @@ export const SENSITIVE_FIELDS = new Set([
   'ascApiKey',
   // Notarize (Phase 2.5) — additional aliases
   'apiKeyContents',
+  // Phase 6.B keychain import
+  'filePassword',
+  // Phase 6.E firebase distribution
+  'firebaseToken',
 ]);
 
 export function encryptSecretsInObject<T extends Record<string, unknown>>(obj: T): T {

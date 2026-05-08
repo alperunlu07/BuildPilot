@@ -71,6 +71,30 @@ import { runPushCertificate } from './steps/pushCertificate';
 import { runCertManage } from './steps/certManage';
 import { runRegisterDevices } from './steps/registerDevices';
 import { runSigh } from './steps/sigh';
+import { runSimctlPrepare } from './steps/simctlPrepare';
+import { runSimctlInstallLaunch } from './steps/simctlInstallLaunch';
+import { runSimctlScreenshot } from './steps/simctlScreenshot';
+import { runSimctlPushNotification } from './steps/simctlPushNotification';
+import { runSimctlStatusBarOverride } from './steps/simctlStatusBarOverride';
+import { runSimctlPrivacyGrant } from './steps/simctlPrivacyGrant';
+import { runSecurityKeychainImport } from './steps/securityKeychainImport';
+import { runCodesignArbitrary } from './steps/codesignArbitrary';
+import { runDsymVerify } from './steps/dsymVerify';
+import { runPrivacyManifestValidate } from './steps/privacyManifestValidate';
+import { runPrivacyManifestAggregate } from './steps/privacyManifestAggregate';
+import { runAppThinningReportParse } from './steps/appThinningReportParse';
+import { runLinkMapAnalyze } from './steps/linkMapAnalyze';
+import { runBitcodeStrip } from './steps/bitcodeStrip';
+import { runOtaManifestGenerate } from './steps/otaManifestGenerate';
+import { runFirebaseAppDistribution } from './steps/firebaseAppDistribution';
+import { runDistributionGroups } from './steps/distributionGroups';
+import { runPhasedRollout } from './steps/phasedRollout';
+import { runBranchTargetedTestFlight } from './steps/branchTargetedTestFlight';
+import { runStorekitConfigure } from './steps/storekitConfigure';
+import { runSteamcmdSetup } from './steps/steamcmdSetup';
+import { runSteamUpload } from './steps/steamUpload';
+import { runSteamSetLive } from './steps/steamSetLive';
+import { runSteamWorkshopUpload } from './steps/steamWorkshopUpload';
 
 export interface StepContext {
   project: Project;
@@ -145,6 +169,30 @@ const RUNNERS: Record<StepType, StepRunner> = {
   certManage: runCertManage,
   registerDevices: runRegisterDevices,
   sigh: runSigh,
+  simctlPrepare: runSimctlPrepare,
+  simctlInstallLaunch: runSimctlInstallLaunch,
+  simctlScreenshot: runSimctlScreenshot,
+  simctlPushNotification: runSimctlPushNotification,
+  simctlStatusBarOverride: runSimctlStatusBarOverride,
+  simctlPrivacyGrant: runSimctlPrivacyGrant,
+  securityKeychainImport: runSecurityKeychainImport,
+  codesignArbitrary: runCodesignArbitrary,
+  dsymVerify: runDsymVerify,
+  privacyManifestValidate: runPrivacyManifestValidate,
+  privacyManifestAggregate: runPrivacyManifestAggregate,
+  appThinningReportParse: runAppThinningReportParse,
+  linkMapAnalyze: runLinkMapAnalyze,
+  bitcodeStrip: runBitcodeStrip,
+  otaManifestGenerate: runOtaManifestGenerate,
+  firebaseAppDistribution: runFirebaseAppDistribution,
+  distributionGroups: runDistributionGroups,
+  phasedRollout: runPhasedRollout,
+  branchTargetedTestFlight: runBranchTargetedTestFlight,
+  storekitConfigure: runStorekitConfigure,
+  steamcmdSetup: runSteamcmdSetup,
+  steamUpload: runSteamUpload,
+  steamSetLive: runSteamSetLive,
+  steamWorkshopUpload: runSteamWorkshopUpload,
 };
 
 interface DagNode {
