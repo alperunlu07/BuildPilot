@@ -561,24 +561,50 @@ export async function runPipeline(args: {
       outcomes.set(nodeId, 'success');
     } else {
       const msg = result.error instanceof Error ? result.error.message : String(result.error ?? 'unknown');
-      persist(
-        'failure',
-        `✖ step failed after ${result.attempts} attempt${result.attempts === 1 ? '' : 's'}: ${msg}`,
-        nodeId,
-        node.type,
-      );
-      eventBus.publish({
-        type: 'buildStepFinished',
-        buildId: build.id,
-        pipelineId: pipeline.id,
-        nodeId,
-        stepType: node.type,
-        status: 'failed',
-      });
-      outcomes.set(nodeId, 'failed');
-      anyFailed = true;
-      // Don't break — failure-edges may still need to fire and other parallel
-      // branches keep running.
+      // Step-level "continue on error" / soft-fail: the user marked this node
+      // as non-blocking (GH `continue-on-error`, Buildkite `soft_fail`,
+      // GitLab `allow_failure`). Record the failure in the log but treat the
+      // outcome as success so downstream success-edges still fire and the
+      // overall build doesn't go red.
+      const continueOnError = (node.data as { continueOnError?: unknown })?.continueOnError === 'true';
+      if (continueOnError) {
+        persist(
+          'failure',
+          `⚠ step failed after ${result.attempts} attempt${result.attempts === 1 ? '' : 's'} (continueOnError): ${msg}`,
+          nodeId,
+          node.type,
+        );
+        // Fire as 'success' so the dashboard's per-step indicator stays green,
+        // but the log-level 'failure' line above is preserved for ops review.
+        eventBus.publish({
+          type: 'buildStepFinished',
+          buildId: build.id,
+          pipelineId: pipeline.id,
+          nodeId,
+          stepType: node.type,
+          status: 'success',
+        });
+        outcomes.set(nodeId, 'success');
+      } else {
+        persist(
+          'failure',
+          `✖ step failed after ${result.attempts} attempt${result.attempts === 1 ? '' : 's'}: ${msg}`,
+          nodeId,
+          node.type,
+        );
+        eventBus.publish({
+          type: 'buildStepFinished',
+          buildId: build.id,
+          pipelineId: pipeline.id,
+          nodeId,
+          stepType: node.type,
+          status: 'failed',
+        });
+        outcomes.set(nodeId, 'failed');
+        anyFailed = true;
+        // Don't break — failure-edges may still need to fire and other parallel
+        // branches keep running.
+      }
     }
   }
 

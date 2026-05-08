@@ -138,6 +138,12 @@ export function StepPropertyPanel({
               onChange={(v) => updateField(field.name, v)}
             />
           ))}
+          <CommonControlsSection
+            data={node.data as Record<string, unknown>}
+            onChange={(patch) =>
+              onChange(node.id, { ...(node.data as Record<string, unknown>), ...patch })
+            }
+          />
           <AiAutoFixSection
             value={(node.data as Record<string, unknown>).aiAutoFix as Record<string, unknown> | undefined}
             onChange={(next) =>
@@ -266,6 +272,34 @@ function AiAutoFixSection({
           </p>
         </div>
       )}
+    </div>
+  );
+}
+
+function CommonControlsSection({
+  data,
+  onChange,
+}: {
+  data: Record<string, unknown>;
+  onChange(patch: Record<string, unknown>): void;
+}) {
+  const continueOnError = data.continueOnError === 'true' || data.continueOnError === true;
+  return (
+    <div className="mt-2 rounded-md border border-slate-800 bg-slate-900/40 p-3 space-y-2">
+      <div className="text-[10px] uppercase tracking-wider text-slate-500">Step controls</div>
+      <label className="flex items-center gap-2 text-[12px] text-slate-300">
+        <input
+          type="checkbox"
+          checked={continueOnError}
+          onChange={(e) => onChange({ continueOnError: e.target.checked ? 'true' : 'false' })}
+          className="h-3.5 w-3.5"
+        />
+        Continue on error (soft-fail; downstream success-edges still fire)
+      </label>
+      <p className="text-[10px] text-slate-500">
+        Mirrors GH <code>continue-on-error</code>, Buildkite <code>soft_fail</code>,
+        GitLab <code>allow_failure</code>. The failure is logged but the pipeline keeps going.
+      </p>
     </div>
   );
 }
