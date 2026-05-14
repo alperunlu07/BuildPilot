@@ -10,6 +10,7 @@ import { eventsRoutes } from './api/events';
 import { nodeTemplatesRoutes } from './api/nodeTemplates';
 import { hostsRoutes } from './api/hosts';
 import { triggerRoutes } from './api/triggers';
+import { configRoutes } from './api/config';
 import { reloadSchedules, startPoller } from './poller';
 import { eventBus } from './events/bus';
 import { startTelegramBot } from './runner/telegramBot';
@@ -39,8 +40,8 @@ async function main(): Promise<void> {
 
   const allowedOrigins = new Set<string>();
   if (config.webOrigin) allowedOrigins.add(config.webOrigin);
-  allowedOrigins.add('http://127.0.0.1:49832');
-  allowedOrigins.add('http://localhost:49832');
+  allowedOrigins.add('http://127.0.0.1:51732');
+  allowedOrigins.add('http://localhost:51732');
 
   await app.register(cors, {
     origin: (origin, cb) => {
@@ -59,6 +60,7 @@ async function main(): Promise<void> {
   await nodeTemplatesRoutes(app);
   await hostsRoutes(app);
   await triggerRoutes(app);
+  await configRoutes(app);
 
   // Re-sync poller whenever projects change. Pipeline mutations also trigger sync;
   // for now we just sync on any project event and rely on listPipelines() returning

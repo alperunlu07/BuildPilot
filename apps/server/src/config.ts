@@ -1,20 +1,23 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import type { ServerConfig } from '@buildpilot/shared-types';
+import type { ServerConfig, TelegramConfig } from '@buildpilot/shared-types';
 import { decryptSecret, encryptSecret, isEncrypted } from './crypto/secrets';
 
 const CONFIG_DIR = join(homedir(), '.buildpilot');
 const CONFIG_FILE = join(CONFIG_DIR, 'config.json');
 
-// IANA dynamic/private port range (49152–65535); chosen to avoid collisions
-// with anything on a typical dev machine.
+// IANA dynamic/private port range (49152–65535). The previous defaults
+// (49831/49832) collided with Windows Hyper-V's reserved dynamic-port block
+// (49823–49922 here), which produces EACCES at bind time even with no
+// process holding the port. 51731/51732 land in the safe 50695–53849
+// window outside every reservation observed on a default Win11 host.
 const DEFAULT_CONFIG: ServerConfig = {
   host: '127.0.0.1',
-  port: 49831,
+  port: 51731,
   pollIntervalSec: 60,
   dbPath: join(CONFIG_DIR, 'db.sqlite'),
-  webOrigin: 'http://127.0.0.1:49832',
+  webOrigin: 'http://127.0.0.1:51732',
   telegram: {
     enabled: false,
     botToken: '',
@@ -26,6 +29,7 @@ const DEFAULT_CONFIG: ServerConfig = {
 // defaults — silently bumped to the new ones so existing installs migrate.
 const LEGACY_DEFAULTS: ReadonlyArray<{ port: number; webOrigin: string }> = [
   { port: 7777, webOrigin: 'http://127.0.0.1:5173' },
+  { port: 49831, webOrigin: 'http://127.0.0.1:49832' },
 ];
 
 function migrateLegacyDefaults(cfg: ServerConfig): ServerConfig {
@@ -36,45 +40,95 @@ function migrateLegacyDefaults(cfg: ServerConfig): ServerConfig {
   return { ...cfg, port: DEFAULT_CONFIG.port, webOrigin: DEFAULT_CONFIG.webOrigin };
 }
 
+// In-process cache so /api/config/telegram can read the runtime (plaintext)
+// telegram config without re-reading the file every request, and so the bot
+// restart path has a single source of truth.
+let cachedConfig: ServerConfig | null = null;
+
+// Decrypts a secret-shaped value if it carries the enc:1: prefix; otherwise
+// returns it as-is (legacy plaintext from older configs).
+function readSecret(v: string | undefined): string {
+  if (!v) return '';
+  return isEncrypted(v) ? decryptSecret(v) : v;
+}
+
+// Build the on-disk representation: token + chat ID are stored encrypted.
+// We always re-encrypt even if the input was already an enc: blob — encryptSecret
+// is idempotent for that case (returns as-is).
+function toOnDisk(cfg: ServerConfig): ServerConfig {
+  if (!cfg.telegram) return cfg;
+  return {
+    ...cfg,
+    telegram: {
+      ...cfg.telegram,
+      botToken: cfg.telegram.botToken ? encryptSecret(cfg.telegram.botToken) : '',
+      defaultChatId: cfg.telegram.defaultChatId ? encryptSecret(cfg.telegram.defaultChatId) : '',
+    },
+  };
+}
+
+// Build the runtime representation: secrets are decrypted so callers (the
+// telegram bot, the telegramNotify step) can use them directly.
+function toRuntime(cfg: ServerConfig): ServerConfig {
+  if (!cfg.telegram) return cfg;
+  return {
+    ...cfg,
+    telegram: {
+      ...cfg.telegram,
+      botToken: readSecret(cfg.telegram.botToken),
+      defaultChatId: readSecret(cfg.telegram.defaultChatId),
+    },
+  };
+}
+
+// True when the file representation differs from what toOnDisk would write —
+// i.e. some secret-shaped field is still plaintext and needs to be migrated.
+function needsRewrite(cfg: ServerConfig): boolean {
+  const t = cfg.telegram;
+  if (!t) return false;
+  if (t.botToken && !isEncrypted(t.botToken)) return true;
+  if (t.defaultChatId && !isEncrypted(t.defaultChatId)) return true;
+  return false;
+}
+
 export function loadConfig(): ServerConfig {
   if (!existsSync(CONFIG_DIR)) {
     mkdirSync(CONFIG_DIR, { recursive: true });
   }
   if (!existsSync(CONFIG_FILE)) {
     writeFileSync(CONFIG_FILE, JSON.stringify(DEFAULT_CONFIG, null, 2), 'utf-8');
+    cachedConfig = { ...DEFAULT_CONFIG };
     return { ...DEFAULT_CONFIG };
   }
   const raw = readFileSync(CONFIG_FILE, 'utf-8');
   const parsed = JSON.parse(raw) as Partial<ServerConfig>;
-  const merged = { ...DEFAULT_CONFIG, ...parsed };
+  const merged = { ...DEFAULT_CONFIG, ...parsed } as ServerConfig;
   const migrated = migrateLegacyDefaults(merged);
 
-  // Encrypt-at-rest sweep for the telegram bot token. If the file holds a
-  // plaintext token, rewrite it encrypted and hand the runtime the plaintext
-  // so the bot keeps working through the same call.
-  const onDiskToken = migrated.telegram?.botToken ?? '';
-  let runtimeToken = onDiskToken;
-  let needsRewrite = migrated !== merged;
-  if (onDiskToken && !isEncrypted(onDiskToken)) {
-    needsRewrite = true;
-  } else if (isEncrypted(onDiskToken)) {
-    runtimeToken = decryptSecret(onDiskToken);
+  // Encrypt-at-rest sweep: if the file holds any plaintext telegram secrets,
+  // rewrite the file with everything encrypted. Defaults migration also
+  // triggers a rewrite so old port/origin pairs get pinned to the new ones.
+  if (migrated !== merged || needsRewrite(migrated)) {
+    writeFileSync(CONFIG_FILE, JSON.stringify(toOnDisk(migrated), null, 2), 'utf-8');
   }
-  if (needsRewrite) {
-    const onDisk: ServerConfig = {
-      ...migrated,
-      telegram: migrated.telegram
-        ? { ...migrated.telegram, botToken: encryptSecret(onDiskToken) }
-        : migrated.telegram,
-    };
-    writeFileSync(CONFIG_FILE, JSON.stringify(onDisk, null, 2), 'utf-8');
-  }
-  return {
-    ...migrated,
-    telegram: migrated.telegram
-      ? { ...migrated.telegram, botToken: runtimeToken }
-      : migrated.telegram,
-  };
+  const runtime = toRuntime(migrated);
+  cachedConfig = runtime;
+  return runtime;
+}
+
+// Persist a new telegram config to disk (encrypted) and update the in-process
+// cache. Returns the runtime (plaintext) shape so the caller can hand it to
+// startTelegramBot directly.
+export function saveTelegramConfig(next: TelegramConfig): TelegramConfig {
+  const base = cachedConfig ?? loadConfig();
+  const updated: ServerConfig = { ...base, telegram: { ...next } };
+  writeFileSync(CONFIG_FILE, JSON.stringify(toOnDisk(updated), null, 2), 'utf-8');
+  cachedConfig = updated;
+  return updated.telegram!;
+}
+
+export function getTelegramConfigRuntime(): TelegramConfig | null {
+  return cachedConfig?.telegram ?? null;
 }
 
 export const CONFIG_PATH = CONFIG_FILE;

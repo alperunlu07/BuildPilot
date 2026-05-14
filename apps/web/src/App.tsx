@@ -10,6 +10,7 @@ import { ProjectDetailPage } from './pages/ProjectDetailPage';
 import { PipelinePage } from './pages/PipelinePage';
 import { BuildsPage } from './pages/BuildsPage';
 import { BuildDetailPage } from './pages/BuildDetailPage';
+import { SettingsPage } from './pages/SettingsPage';
 import { useStore } from './store/store';
 import { onConnected, subscribe } from './lib/events';
 import { ensurePermission } from './lib/notifications';
@@ -66,6 +67,7 @@ export function App() {
           {view.type === 'pipeline' && <PipelinePage pipelineId={view.id} />}
           {view.type === 'builds' && <BuildsPage />}
           {view.type === 'build' && <BuildDetailPage buildId={view.id} />}
+          {view.type === 'settings' && <SettingsPage />}
         </div>
         <BuildLogPanel />
       </main>

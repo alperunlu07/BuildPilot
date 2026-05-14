@@ -1506,6 +1506,30 @@ export interface ServerConfig {
   telegram?: TelegramConfig;
 }
 
+// Shape returned by GET /api/config/telegram. Cleartext values never leave
+// the server — we only expose enough for the dashboard to render a preview
+// and indicate "a secret is set" vs. "it's empty". The chat ID is treated
+// as a secret too because it identifies a private channel.
+export interface TelegramConfigPublic {
+  enabled: boolean;
+  hasBotToken: boolean;
+  botTokenPreview: string; // e.g. "••••1234" or ""
+  hasChatId: boolean;
+  chatIdPreview: string; // e.g. "@channel" or "••••5678" or ""
+}
+
+// Body accepted by PUT /api/config/telegram. Any string field left as the
+// empty string is interpreted as "keep the existing value" so the dashboard
+// can save the form without having to re-type secrets every time.
+export interface TelegramConfigUpdate {
+  enabled?: boolean;
+  botToken?: string; // "" → keep existing
+  defaultChatId?: string; // "" → keep existing
+  // When true, explicitly clear the stored botToken (overrides "" semantics).
+  clearBotToken?: boolean;
+  clearChatId?: boolean;
+}
+
 // Optional per-pipeline flag exposed on PipelineWatch — when set + a bot
 // is configured, new commits trigger an interactive Telegram message
 // asking whether to build.

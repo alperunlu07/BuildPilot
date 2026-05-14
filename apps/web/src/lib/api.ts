@@ -9,6 +9,8 @@ import type {
   ProjectSummary,
   SshHost,
   StepType,
+  TelegramConfigPublic,
+  TelegramConfigUpdate,
 } from '@buildpilot/shared-types';
 
 const API = '/api';
@@ -159,4 +161,17 @@ export const api = {
       `/hosts/${id}/ping`,
       { method: 'POST' },
     ),
+
+  // ── Telegram settings ────────────────────────────────────
+  getTelegramConfig: () => http<TelegramConfigPublic>('/config/telegram'),
+  updateTelegramConfig: (input: TelegramConfigUpdate) =>
+    http<TelegramConfigPublic>('/config/telegram', {
+      method: 'PUT',
+      body: JSON.stringify(input),
+    }),
+  testTelegram: (input: { botToken?: string; chatId?: string } = {}) =>
+    http<{ ok: true } | { ok: false; error: string }>('/config/telegram/test', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
 };

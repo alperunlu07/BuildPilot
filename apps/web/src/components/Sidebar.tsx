@@ -1,4 +1,4 @@
-import { Plus, Folder, GitBranch, History, Server, Trash2 } from 'lucide-react';
+import { Plus, Folder, GitBranch, History, Server, Settings, Trash2 } from 'lucide-react';
 import { useStore } from '../store/store';
 import { cn } from '../lib/cn';
 
@@ -59,6 +59,20 @@ export function Sidebar({ onAddProject, onManageHosts }: Props) {
         >
           <Server size={14} className="text-slate-400" />
           <span>SSH Hosts</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setView({ type: 'settings' })}
+          className={cn(
+            'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm',
+            view.type === 'settings'
+              ? 'bg-slate-800 text-slate-100'
+              : 'text-slate-300 hover:bg-slate-800/60',
+          )}
+          title="Server-wide settings (Telegram integration, etc.)"
+        >
+          <Settings size={14} className="text-slate-400" />
+          <span>Settings</span>
         </button>
       </div>
 

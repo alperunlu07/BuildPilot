@@ -8,13 +8,13 @@ export default defineConfig({
     // Windows resolves `localhost` to 127.0.0.1, which then fails to
     // connect. Pinning to 127.0.0.1 avoids the IPv4/IPv6 mismatch.
     host: '127.0.0.1',
-    port: 49832,
+    port: 51732,
     strictPort: true,
     open: true,
     proxy: {
-      '/api': 'http://127.0.0.1:49831',
+      '/api': 'http://127.0.0.1:51731',
       '/events': {
-        target: 'http://127.0.0.1:49831',
+        target: 'http://127.0.0.1:51731',
         changeOrigin: true,
       },
     },

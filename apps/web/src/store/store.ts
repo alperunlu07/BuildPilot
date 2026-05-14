@@ -22,7 +22,8 @@ export type View =
   | { type: 'project'; id: string }
   | { type: 'pipeline'; id: string }
   | { type: 'builds' }
-  | { type: 'build'; id: string };
+  | { type: 'build'; id: string }
+  | { type: 'settings' };
 
 export interface CommitToast {
   id: string;
