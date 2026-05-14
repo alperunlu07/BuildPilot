@@ -13,12 +13,11 @@ export async function runShell(
   ctx.log(`$ ${d.command}`);
   ctx.log(`cwd: ${cwd}`);
 
-  const isWindows = process.platform === 'win32';
-  const shell = isWindows ? 'cmd.exe' : '/bin/sh';
-  const args = isWindows ? ['/d', '/s', '/c', d.command] : ['-c', d.command];
-
   await new Promise<void>((resolve, reject) => {
-    const child = spawn(shell, args, { cwd, env: process.env });
+    // shell:true so the command string is forwarded to the platform shell verbatim.
+    // Without it, Node escapes inner double-quotes when building the Windows command
+    // line, which cmd.exe doesn't understand — quoted paths silently fail to resolve.
+    const child = spawn(d.command, [], { cwd, env: process.env, shell: true });
     ctx.attachProcess(child);
     child.on('error', reject);
     child.on('close', (code) => {
