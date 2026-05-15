@@ -13,6 +13,7 @@ import { cn } from '../lib/cn';
 import { LogTable } from '../components/LogTable';
 import { StepGantt } from '../components/StepGantt';
 import { defaultActiveLevels } from '../components/LevelToggleBar';
+import { ArtifactPreviewModal } from '../components/ArtifactPreviewModal';
 
 const EMPTY: BuildLogEntry[] = [];
 
@@ -48,6 +49,8 @@ export function BuildDetailPage({ buildId }: Props) {
   const [build, setBuild] = useState<Build | null>(null);
   const [loading, setLoading] = useState(true);
   const [artifacts, setArtifacts] = useState<BuildArtifact[]>([]);
+  // Selected artifact for the inline log viewer modal. null = closed.
+  const [previewArtifact, setPreviewArtifact] = useState<BuildArtifact | null>(null);
 
   const [activeLevels, setActiveLevels] = useState<Set<BuildLogLevel>>(
     () => defaultActiveLevels(),
@@ -294,13 +297,25 @@ export function BuildDetailPage({ buildId }: Props) {
             {artifacts.map((a) => (
               <li
                 key={a.id}
-                className="flex items-center justify-between gap-2 rounded-md border border-slate-800 bg-slate-950 px-2 py-1 text-[11px]"
+                className="group flex items-center justify-between gap-2 rounded-md border border-slate-800 bg-slate-950 px-2 py-1 text-[11px] hover:border-slate-700"
               >
-                <span className="truncate font-mono text-slate-200" title={a.path}>
+                <button
+                  type="button"
+                  onClick={() => setPreviewArtifact(a)}
+                  className="min-w-0 flex-1 truncate text-left font-mono text-slate-200 hover:text-sky-300"
+                  title={`Preview ${a.path}`}
+                >
                   {a.path}
-                </span>
+                </button>
                 <span className="flex shrink-0 items-center gap-2">
                   <span className="text-slate-500">{formatBytes(a.size)}</span>
+                  <button
+                    type="button"
+                    onClick={() => setPreviewArtifact(a)}
+                    className="text-sky-400 hover:text-sky-300"
+                  >
+                    preview
+                  </button>
                   <a
                     href={api.artifactDownloadUrl(a.id)}
                     className="text-sky-400 hover:text-sky-300"
@@ -378,6 +393,12 @@ export function BuildDetailPage({ buildId }: Props) {
           emptyMessage={entries.length === 0 ? 'Build queued / no output yet.' : 'No rows match these filters.'}
         />
       </div>
+
+      {/* Inline artifact log viewer — opens when user clicks an artifact row. */}
+      <ArtifactPreviewModal
+        artifact={previewArtifact}
+        onClose={() => setPreviewArtifact(null)}
+      />
     </div>
   );
 }

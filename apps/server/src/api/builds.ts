@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { createReadStream, statSync } from 'node:fs';
+import { open } from 'node:fs/promises';
 import { basename } from 'node:path';
 import { z } from 'zod';
 import { createBuild, getBuild, listBuilds, updateBuildStatus } from '../store/builds';
@@ -71,6 +72,48 @@ export async function buildsRoutes(app: FastifyInstance): Promise<void> {
       `attachment; filename="${basename(artifact.path).replace(/"/g, '')}"`,
     );
     return reply.send(createReadStream(artifact.path));
+  });
+
+  // Inline text preview of an artifact for the dashboard log viewer.
+  // Returns up to maxBytes (default 5 MiB) of UTF-8 decoded content plus a
+  // `truncated` flag so the UI can show a "showing first N bytes" banner.
+  // Binary files are still served — UTF-8 decode replaces invalid bytes
+  // with U+FFFD rather than failing, so the modal stays usable for any
+  // file the user clicked "preview" on.
+  app.get('/api/artifacts/:id/text', async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const q = (req.query as { maxBytes?: string }) ?? {};
+    const MAX_LIMIT = 32 * 1024 * 1024; // 32 MiB ceiling — keep modal responsive
+    const DEFAULT_LIMIT = 5 * 1024 * 1024; // 5 MiB default
+    const requested = q.maxBytes ? Math.max(1, parseInt(q.maxBytes, 10) || 0) : DEFAULT_LIMIT;
+    const maxBytes = Math.min(requested, MAX_LIMIT);
+
+    const artifact = getBuildArtifact(Number(id));
+    if (!artifact) return reply.code(404).send({ error: 'not found' });
+    const stat = (() => {
+      try { return statSync(artifact.path); } catch { return null; }
+    })();
+    if (!stat || !stat.isFile()) {
+      return reply.code(410).send({ error: 'artifact file no longer exists at recorded path' });
+    }
+
+    const bytesToRead = Math.min(stat.size, maxBytes);
+    const buf = Buffer.alloc(bytesToRead);
+    const fh = await open(artifact.path, 'r');
+    try {
+      await fh.read(buf, 0, bytesToRead, 0);
+    } finally {
+      await fh.close();
+    }
+
+    return {
+      id: artifact.id,
+      path: artifact.path,
+      size: stat.size,
+      truncated: bytesToRead < stat.size,
+      bytesRead: bytesToRead,
+      content: buf.toString('utf-8'),
+    };
   });
 
   app.post('/api/builds', async (req, reply) => {

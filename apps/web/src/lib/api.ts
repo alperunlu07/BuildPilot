@@ -97,6 +97,17 @@ export const api = {
   },
   getBuildArtifacts: (id: string) => http<BuildArtifact[]>(`/builds/${id}/artifacts`),
   artifactDownloadUrl: (id: number) => `${API}/artifacts/${id}/download`,
+  // Inline text preview for the dashboard log viewer. Server caps at 32 MiB
+  // and replaces invalid UTF-8 bytes with U+FFFD so any file is renderable.
+  getArtifactText: (id: number, maxBytes?: number) =>
+    http<{
+      id: number;
+      path: string;
+      size: number;
+      truncated: boolean;
+      bytesRead: number;
+      content: string;
+    }>(`/artifacts/${id}/text${maxBytes ? `?maxBytes=${maxBytes}` : ''}`),
   triggerBuild: (pipelineId: string, fromNodeId?: string) =>
     http<Build>('/builds', {
       method: 'POST',
