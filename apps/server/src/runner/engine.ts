@@ -57,6 +57,10 @@ import { runAdbConnect } from './steps/adbConnect';
 import { runAdbInstall } from './steps/adbInstall';
 import { runAdbShellLaunch } from './steps/adbShellLaunch';
 import { runAdbLogcat } from './steps/adbLogcat';
+import { runAdbPair } from './steps/adbPair';
+import { runBundletool } from './steps/bundletool';
+import { runAndroidSign } from './steps/androidSign';
+import { runPlayConsoleUpload } from './steps/playConsoleUpload';
 import { runTeamsNotify } from './steps/teamsNotify';
 import { runEmailNotify } from './steps/emailNotify';
 import { runAppStoreConnectApi } from './steps/appStoreConnectApi';
@@ -156,6 +160,10 @@ const RUNNERS: Record<StepType, StepRunner> = {
   adbInstall: runAdbInstall,
   adbShellLaunch: runAdbShellLaunch,
   adbLogcat: runAdbLogcat,
+  adbPair: runAdbPair,
+  bundletool: runBundletool,
+  androidSign: runAndroidSign,
+  playConsoleUpload: runPlayConsoleUpload,
   teamsNotify: runTeamsNotify,
   emailNotify: runEmailNotify,
   appStoreConnectApi: runAppStoreConnectApi,

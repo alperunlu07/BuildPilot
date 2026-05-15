@@ -72,6 +72,10 @@ export type StepType =
   | 'adbInstall'
   | 'adbShellLaunch'
   | 'adbLogcat'
+  | 'adbPair'
+  | 'bundletool'
+  | 'androidSign'
+  | 'playConsoleUpload'
   | 'teamsNotify'
   | 'emailNotify'
   | 'appStoreConnectApi'
@@ -436,7 +440,7 @@ export interface SwiftPackageResolveStepData extends RunsOnMaybeRemote {
 export interface DsymUploadStepData extends RunsOnMaybeRemote {
   // Which crash-reporting service we're uploading symbols to. Each one
   // shells out to a different CLI; the runner picks the right argv shape.
-  backend: 'crashlytics' | 'sentry' | 'bugsnag';
+  backend: 'crashlytics' | 'sentry' | 'bugsnag' | 'datadog' | 'instabug' | 'embrace' | 'newrelic';
   // Path to the .xcarchive, .dSYM, or directory of dSYMs (interpretation
   // depends on the backend — most accept all three).
   dsymPath: string;
@@ -458,6 +462,26 @@ export interface DsymUploadStepData extends RunsOnMaybeRemote {
   bugsnagApiKey?: string;
   // Custom CLI path; defaults to `bugsnag-cli` on PATH.
   bugsnagCliPath?: string;
+  // ── Datadog fields (`@datadog/datadog-ci dsyms upload`) ─────────────
+  // Per-region site, e.g. "datadoghq.com" / "datadoghq.eu" / "us3.datadoghq.com".
+  datadogSite?: string;
+  // Passed via DATADOG_API_KEY env so it doesn't show on argv.
+  datadogApiKey?: string;
+  // Custom CLI path; defaults to `datadog-ci` on PATH.
+  datadogCliPath?: string;
+  // ── Instabug fields (`Instabug_dsym_upload.sh`) ─────────────────────
+  instabugAppToken?: string;
+  // Custom script path; defaults to looking up `Instabug_dsym_upload.sh` on PATH.
+  instabugScriptPath?: string;
+  // ── Embrace fields (`embrace_symbol_upload.darwin`) ─────────────────
+  embraceAppId?: string;
+  embraceApiToken?: string;
+  // Custom binary path; defaults to `embrace_symbol_upload.darwin`.
+  embraceUploadPath?: string;
+  // ── New Relic fields (`newrelic-ios-symbol-upload`) ─────────────────
+  newrelicAppToken?: string;
+  // Custom binary path; defaults to `newrelic-ios-symbol-upload`.
+  newrelicCliPath?: string;
   // Shared additionalArgs slot for whichever backend is in play.
   additionalArgs?: string;
 }
@@ -846,6 +870,107 @@ export interface AdbLogcatStepData {
   // 'true' (default) → register the output file as a build artifact.
   registerArtifact?: string;
   adbPath?: string;
+}
+
+// `adb pair <host:port>` — Android 11+ Wi-Fi debugging needs a one-time
+// pairing handshake with a 6-digit code shown in the device's developer
+// settings. After pairing, the standard `adb connect` is used.
+export interface AdbPairStepData {
+  // ip:port reported by the device's Wireless Debugging → Pair with code dialog.
+  // NOTE this is the *pairing* port, not the *connect* port (different ports).
+  address: string;
+  // 6-digit code shown on-device. Required.
+  pairingCode: string;
+  adbPath?: string;
+}
+
+// `bundletool build-apks` / `install-apks` — converts an .aab into a set of
+// installable APKs (a .apks zip) and optionally installs them onto a
+// connected device. Required when you build an `.aab` via `gradleBuild` but
+// need to install it for local smoke testing (`adb install` won't accept
+// AABs directly).
+export interface BundletoolStepData {
+  // build-apks (default) generates the .apks. install-apks installs it.
+  action?: 'build-apks' | 'install-apks';
+  // Source .aab. Required for build-apks; ignored for install-apks.
+  bundlePath?: string;
+  // Where to write the .apks (build-apks) or where to read it from (install-apks).
+  apksPath: string;
+  // Path to a signing keystore (.jks / .keystore). Required when build-apks
+  // for release distribution — omit for debug builds and bundletool will
+  // accept the unsigned mode but adb install on most devices will reject the
+  // resulting APKs.
+  keystorePath?: string;
+  androidKeystorePassword?: string;
+  keyAlias?: string;
+  androidKeyPassword?: string;
+  // 'true' → --mode=universal (one APK per architecture).
+  universalMode?: string;
+  // Specific device serial for install-apks.
+  serial?: string;
+  // Path to the bundletool jar; defaults to `bundletool` on PATH (i.e. the
+  // pip-installable wrapper / homebrew bundletool that auto-resolves java).
+  bundletoolPath?: string;
+  // Extra args passed verbatim after the action / inputs.
+  additionalArgs?: string;
+}
+
+// `apksigner sign` (default) or `jarsigner -verify` — codesign an unsigned
+// APK with a v1/v2/v3/v4 signature scheme. Most teams now sign in the
+// gradle build via signingConfigs; this step exists for the standalone case
+// (Unity exports, Cordova builds, repackaging an existing APK).
+export interface AndroidSignStepData {
+  // 'sign' (default) signs the apk in place. 'verify' runs apksigner verify
+  // for a pre-flight gate. 'jarsign' falls back to jarsigner for legacy
+  // v1-only signatures.
+  action?: 'sign' | 'verify' | 'jarsign';
+  // APK to sign (or to read for verify).
+  apkPath: string;
+  // Output path. Defaults to overwriting apkPath when blank.
+  outputPath?: string;
+  // Java keystore (.jks / .keystore). Required for sign + jarsign.
+  keystorePath?: string;
+  androidKeystorePassword?: string;
+  keyAlias?: string;
+  androidKeyPassword?: string;
+  // Signature scheme toggles (apksigner). Each defaults to apksigner's own
+  // default (v1+v2+v3 enabled on modern Android Build Tools).
+  v1?: string;
+  v2?: string;
+  v3?: string;
+  v4?: string;
+  // Path to apksigner / jarsigner if not on PATH. apksigner ships with
+  // Android Build Tools (e.g. $ANDROID_HOME/build-tools/<ver>/apksigner).
+  apksignerPath?: string;
+  jarsignerPath?: string;
+  additionalArgs?: string;
+}
+
+// `curl`-driven Google Play Developer API v3 upload. Stays JWT-free by
+// leaning on a service-account .json key (the standard Play setup) and
+// asking google's OAuth token endpoint for a short-lived token, then
+// driving the standard 4-step Edits API (insert → upload → tracks.update →
+// commit). Implementation lives in the runner; this shape is just the form.
+export interface PlayConsoleUploadStepData {
+  packageName: string;
+  // Path OR raw JSON contents of a service-account key (.json). The runner
+  // accepts either — service accounts must have the "Service Account User"
+  // role on the Play Console and be granted Release-manager on the app.
+  serviceAccountJsonPath?: string;
+  playServiceAccountJson?: string;
+  // Path to the artifact: .aab (preferred) or .apk.
+  binaryPath: string;
+  // 'internal' (default) | 'alpha' | 'beta' | 'production'.
+  track?: string;
+  // 'completed' (default — fully rolled out) | 'inProgress' | 'halted' |
+  // 'draft' (no rollout). When 'inProgress', userFraction must be set.
+  status?: string;
+  // 0..1 (default unset; required when status='inProgress').
+  userFraction?: number;
+  // Release notes per locale. One-per-line "lang=text" form, e.g.
+  //   en-US=Bug fixes and improvements
+  //   tr-TR=Hata düzeltmeleri
+  releaseNotes?: string;
 }
 
 // Common shape shared by every App Store Connect API-driven step. The
