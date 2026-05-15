@@ -618,6 +618,27 @@ export const STEP_DEFINITIONS: Record<StepType, StepDefinition> = {
         placeholder: 'signing/ExportOptions.plist',
       },
       {
+        name: 'prettifier',
+        label: 'Output formatter',
+        type: 'select',
+        options: ['none', 'xcpretty', 'xcbeautify'] as const,
+        defaultValue: 'none',
+        help: 'Pipes xcodebuild stdout through the chosen tool. Must be installed on the build host.',
+      },
+      {
+        name: 'testRetryMode',
+        label: 'Test retry mode (buildAction=test only — Xcode 13+)',
+        type: 'select',
+        options: ['none', 'retry-on-failure', 'until-failure', 'repeat'] as const,
+        defaultValue: 'none',
+      },
+      {
+        name: 'testIterations',
+        label: 'Test iterations (retry / repeat / until-failure modes)',
+        type: 'number',
+        defaultValue: 3,
+      },
+      {
         name: 'additionalArgs',
         label: 'Extra args',
         type: 'text',

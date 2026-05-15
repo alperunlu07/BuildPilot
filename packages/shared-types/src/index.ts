@@ -142,6 +142,25 @@ export interface PipelineWatch {
   // inline-keyboard buttons whenever this pipeline's watched branch
   // advances. Requires a bot configured in ~/.buildpilot/config.json.
   telegramApprovals?: boolean;
+  // Phase 4 Cluster A — extra trigger surfaces. None are required; an empty
+  // watch keeps the existing branch-polling behaviour.
+  //
+  // tagPattern: glob-style pattern matched against pushed tags (e.g.
+  //   "v*.*.*"). When a matching tag advances, fire a build against the
+  //   tagged commit instead of HEAD.
+  tagPattern?: string;
+  // cronExpr: standard 5-field cron expression evaluated in UTC. Fires a
+  // build on schedule against the watched branch — independent of any
+  // commit activity. Blank disables.
+  cronExpr?: string;
+  // pathFilter: newline-separated glob list. When non-empty, the poller
+  // skips the build unless at least one changed file in the new commits
+  // matches one of these globs (GitLab `rules:changes` / GH `paths`).
+  pathFilter?: string;
+  // cancelInProgressOnNewCommit: when true and a new commit fires while a
+  // previous build for the same pipeline is still running, the previous
+  // build is cancelled before the new one starts (rolling-build mode).
+  cancelInProgressOnNewCommit?: boolean;
 }
 
 export interface Pipeline {
@@ -351,6 +370,18 @@ export interface XcodebuildStepData extends RunsOnMaybeRemote {
   // exportArchive only — path to ExportOptions.plist.
   exportOptionsPlist?: string;
   buildAction?: 'build' | 'archive' | 'test' | 'clean' | 'exportArchive';
+  // Phase 5 — when buildAction=test|build|archive, pipe stdout through
+  // xcpretty (or xcbeautify) for human-friendly output. Adds no flags to
+  // the xcodebuild argv; the runner inserts a shell pipe instead.
+  prettifier?: 'none' | 'xcpretty' | 'xcbeautify';
+  // Phase 2.6.D — test retry modes. Only applied when buildAction='test'.
+  // 'retry-on-failure'  → -test-iterations N -retry-tests-on-failure
+  // 'until-failure'     → -test-iterations N -run-tests-until-failure
+  // 'repeat'            → -test-iterations N
+  testRetryMode?: 'none' | 'retry-on-failure' | 'until-failure' | 'repeat';
+  // -test-iterations value (Xcode 13+). Capped at 50 client-side because
+  // xcodebuild itself silently caps higher values.
+  testIterations?: number;
   additionalArgs?: string;
 }
 

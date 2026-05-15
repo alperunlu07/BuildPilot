@@ -96,15 +96,34 @@ export function initDb(path: string): DB {
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL
     );
+
+    -- Phase 4 Cluster A — generic poller scratchpad keyed by an opaque key.
+    -- Used to track "last seen tag SHA per (pipeline,tag)" and "last cron
+    -- minute fired per pipeline" without needing dedicated tables.
+    CREATE TABLE IF NOT EXISTS poller_kv (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
   `);
 
   // Lightweight migration for existing installs: SQLite's CREATE TABLE IF
   // NOT EXISTS doesn't add new columns, so additive schema changes need an
   // explicit ALTER. We swallow the error if the column already exists.
-  try {
-    db.exec('ALTER TABLE pipelines ADD COLUMN telegram_approvals INTEGER NOT NULL DEFAULT 0');
-  } catch {
-    /* column already present */
+  const additivePipelineCols = [
+    'telegram_approvals INTEGER NOT NULL DEFAULT 0',
+    // Phase 4 Cluster A — extra trigger fields.
+    'tag_pattern TEXT',
+    'cron_expr TEXT',
+    'path_filter TEXT',
+    'cancel_in_progress_on_new_commit INTEGER NOT NULL DEFAULT 0',
+  ];
+  for (const decl of additivePipelineCols) {
+    try {
+      db.exec(`ALTER TABLE pipelines ADD COLUMN ${decl}`);
+    } catch {
+      /* column already present */
+    }
   }
 
   _db = db;

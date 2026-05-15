@@ -115,6 +115,11 @@ const nodeTypes = {
   steamUpload: StepNode,
   steamSetLive: StepNode,
   steamWorkshopUpload: StepNode,
+  iosDeviceLog: StepNode,
+  adbPair: StepNode,
+  bundletool: StepNode,
+  androidSign: StepNode,
+  playConsoleUpload: StepNode,
 };
 
 interface Props {
@@ -165,6 +170,7 @@ function Editor({ pipeline }: Props) {
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [branches, setBranches] = useState<string[]>([]);
+  const [triggersOpen, setTriggersOpen] = useState(false);
   // Save-as-template dialog state. Holds the source node id whose data we
   // will snapshot when the user confirms.
   const [saveTemplateNodeId, setSaveTemplateNodeId] = useState<string | null>(null);
@@ -399,6 +405,17 @@ function Editor({ pipeline }: Props) {
             />
             Telegram ask
           </label>
+          <button
+            type="button"
+            onClick={() => setTriggersOpen((v) => !v)}
+            className="inline-flex items-center gap-1 rounded-md bg-slate-800 px-2 py-0.5 text-[11px] text-slate-300 hover:text-slate-100"
+            title="Advanced trigger options (tag pattern, cron schedule, path filter, rolling builds)"
+          >
+            Triggers{' '}
+            {watch.tagPattern || watch.cronExpr || watch.pathFilter || watch.cancelInProgressOnNewCommit
+              ? '●'
+              : '…'}
+          </button>
         </div>
 
         <div className="flex items-center gap-2">
@@ -447,6 +464,71 @@ function Editor({ pipeline }: Props) {
           </button>
         </div>
       </header>
+
+      {triggersOpen && (
+        <div className="border-b border-slate-800 bg-slate-900/60 px-4 py-3">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            <label className="block text-xs text-slate-300">
+              <span className="mb-1 block text-[11px] uppercase tracking-wide text-slate-500">
+                Tag pattern (glob — e.g. v*.*.*)
+              </span>
+              <input
+                type="text"
+                value={watch.tagPattern ?? ''}
+                onChange={(e) => {
+                  setWatch({ ...watch, tagPattern: e.target.value });
+                  setDirty(true);
+                }}
+                placeholder="v*.*.*"
+                className="w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1.5 text-xs text-slate-100"
+              />
+            </label>
+            <label className="block text-xs text-slate-300">
+              <span className="mb-1 block text-[11px] uppercase tracking-wide text-slate-500">
+                Cron (5-field, UTC — e.g. "0 9 * * *")
+              </span>
+              <input
+                type="text"
+                value={watch.cronExpr ?? ''}
+                onChange={(e) => {
+                  setWatch({ ...watch, cronExpr: e.target.value });
+                  setDirty(true);
+                }}
+                placeholder="0 9 * * *"
+                className="w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1.5 text-xs text-slate-100"
+              />
+            </label>
+            <label className="block text-xs text-slate-300 md:col-span-2">
+              <span className="mb-1 block text-[11px] uppercase tracking-wide text-slate-500">
+                Path filter globs (one per line — empty = build on every commit)
+              </span>
+              <textarea
+                value={watch.pathFilter ?? ''}
+                onChange={(e) => {
+                  setWatch({ ...watch, pathFilter: e.target.value });
+                  setDirty(true);
+                }}
+                rows={3}
+                placeholder={'ios/**\nshared/**'}
+                className="w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1.5 font-mono text-xs text-slate-100"
+              />
+            </label>
+            <label className="inline-flex items-center gap-2 text-xs text-slate-300 md:col-span-2">
+              <input
+                type="checkbox"
+                checked={watch.cancelInProgressOnNewCommit ?? false}
+                onChange={(e) => {
+                  setWatch({ ...watch, cancelInProgressOnNewCommit: e.target.checked });
+                  setDirty(true);
+                }}
+                className="h-3 w-3"
+              />
+              Cancel previous in-flight build when a new commit / trigger arrives
+              (rolling-build mode)
+            </label>
+          </div>
+        </div>
+      )}
 
       <SaveTemplateDialog
         open={saveTemplateNodeId !== null}

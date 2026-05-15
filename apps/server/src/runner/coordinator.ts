@@ -26,22 +26,42 @@ const activeChildren = new Map<string, Set<ChildProcess>>();
 // into a 'cancelled' final status instead of 'failed'.
 const cancelledBuilds = new Set<string>();
 
+// Pipeline-id → currently in-flight build-ids (pending or running). Used by
+// the rolling-build trigger (Phase 4 Cluster A) so a new commit can cancel
+// the previous build for the same pipeline before queuing the new one.
+const pipelineInflight = new Map<string, Set<string>>();
+
 export function enqueueBuild(args: RunArgs): Promise<void> {
   const projectId = args.project.id;
+  const pipelineId = args.pipeline.id;
+  const buildId = args.build.id;
+
+  // Track this build as in-flight for its pipeline so cancelInProgressForPipeline
+  // can find it on the next commit. We add eagerly (pre-runPipeline) so a
+  // queued-but-not-yet-running build is still cancellable.
+  const set = pipelineInflight.get(pipelineId) ?? new Set<string>();
+  set.add(buildId);
+  pipelineInflight.set(pipelineId, set);
+
   const prev = projectQueues.get(projectId) ?? Promise.resolve();
   const next = prev
     .catch(() => null)
     .then(() => runPipeline(args))
     .catch((err) => {
-      logger.error({ err, buildId: args.build.id }, 'pipeline crashed');
+      logger.error({ err, buildId }, 'pipeline crashed');
     });
   projectQueues.set(projectId, next);
   void next.finally(() => {
     if (projectQueues.get(projectId) === next) {
       projectQueues.delete(projectId);
     }
-    activeChildren.delete(args.build.id);
-    cancelledBuilds.delete(args.build.id);
+    activeChildren.delete(buildId);
+    cancelledBuilds.delete(buildId);
+    const s = pipelineInflight.get(pipelineId);
+    if (s) {
+      s.delete(buildId);
+      if (s.size === 0) pipelineInflight.delete(pipelineId);
+    }
   });
   return next;
 }
@@ -85,6 +105,13 @@ export function isCancelled(buildId: string): boolean {
 
 export function clearCancellation(buildId: string): void {
   cancelledBuilds.delete(buildId);
+}
+
+// List the in-flight build-ids for a pipeline so triggers can decide
+// whether to cancel previous runs (rolling-build mode, Phase 4 Cluster A).
+export function listInflightBuildsForPipeline(pipelineId: string): string[] {
+  const set = pipelineInflight.get(pipelineId);
+  return set ? [...set] : [];
 }
 
 // Reusable "trigger a build for this pipeline" helper used by the API route,
