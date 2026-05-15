@@ -1,10 +1,9 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { homedir } from 'node:os';
 import { join } from 'node:path';
 import type { ServerConfig, TelegramConfig } from '@buildpilot/shared-types';
 import { decryptSecret, encryptSecret, isEncrypted } from './crypto/secrets';
+import { CONFIG_DIR } from './paths';
 
-const CONFIG_DIR = join(homedir(), '.buildpilot');
 const CONFIG_FILE = join(CONFIG_DIR, 'config.json');
 
 // IANA dynamic/private port range (49152–65535). The previous defaults

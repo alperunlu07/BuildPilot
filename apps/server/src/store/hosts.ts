@@ -1,9 +1,9 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { homedir } from 'node:os';
 import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
 import type { HostCapabilities, SshHost } from '@buildpilot/shared-types';
 import { decryptSecret, encryptSecret, isEncrypted } from '../crypto/secrets';
+import { CONFIG_DIR } from '../paths';
 
 function encryptHostForDisk(h: SshHost): SshHost {
   if (h.password && !isEncrypted(h.password)) {
@@ -21,7 +21,6 @@ function decryptHostForRuntime(h: SshHost): SshHost {
 
 // Hosts live alongside config.json — single global list, not per-project.
 // File-backed (not SQLite) so a user can hand-edit / version-control it.
-const CONFIG_DIR = join(homedir(), '.buildpilot');
 const HOSTS_FILE = join(CONFIG_DIR, 'hosts.json');
 
 interface HostsFile {

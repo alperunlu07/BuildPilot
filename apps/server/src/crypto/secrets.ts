@@ -1,7 +1,7 @@
 import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto';
+import { CONFIG_DIR } from '../paths';
 
 // Field-level encryption for secrets at rest. Sensitive values in pipeline
 // node data, host passwords, telegram tokens, and node templates are wrapped
@@ -20,7 +20,6 @@ import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto';
 // committing config files). It does not protect against an attacker with
 // read access to the same OS user's home directory — that user can decrypt.
 
-const CONFIG_DIR = join(homedir(), '.buildpilot');
 const KEY_FILE = join(CONFIG_DIR, 'master.key');
 const PREFIX = 'enc:1:';
 const ALG = 'aes-256-gcm';
