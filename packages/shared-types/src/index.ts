@@ -267,6 +267,30 @@ export interface AiAutoFixConfig {
   maxRetries: number;
 }
 
+// Phase 4 Cluster B — per-step retry with backoff. Plain retry; no AI.
+// When both this and aiAutoFix are set, the engine prefers aiAutoFix
+// because that path already includes a fix loop. Stored on the step data
+// as `retryPolicy`.
+export interface RetryPolicy {
+  enabled: boolean;
+  // Number of retries (i.e. total attempts = maxRetries + 1).
+  maxRetries: number;
+  // Initial backoff in ms. Doubled each retry up to backoffMaxMs.
+  backoffMs: number;
+  backoffMaxMs: number;
+}
+
+// Phase 4 Cluster B — per-step watchdog. If a step emits no log entries
+// for `idleSec` seconds the engine cancels the running children and the
+// step is marked failed with a clear "watchdog" error. Stored as
+// `watchdog` on the step data.
+export interface WatchdogPolicy {
+  enabled: boolean;
+  // Seconds of log silence before the step is killed. Defaults to 600
+  // (10 min) when blank — same threshold most other CIs use.
+  idleSec: number;
+}
+
 export interface ArtifactStepData {
   // One path per line, relative to project root (or absolute). Each path can
   // be a file, a directory (lists files inside non-recursively), or a
@@ -1698,6 +1722,10 @@ export interface ServerConfig {
   dbPath: string;
   webOrigin: string | null;
   telegram?: TelegramConfig;
+  // Phase 4 Cluster D — build retention. When > 0, builds older than N days
+  // (and their associated log entries + artifact rows) are pruned on a daily
+  // cleanup pass. Set to 0 / omitted to keep everything forever.
+  buildRetentionDays?: number;
 }
 
 // Shape returned by GET /api/config/telegram. Cleartext values never leave

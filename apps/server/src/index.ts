@@ -16,6 +16,7 @@ import { eventBus } from './events/bus';
 import { startTelegramBot } from './runner/telegramBot';
 import { migratePlaintextSecrets } from './crypto/migrateSecrets';
 import { migrateHostsFile } from './store/hosts';
+import { pruneOldBuilds } from './store/retention';
 
 async function main(): Promise<void> {
   const config = loadConfig();
@@ -80,6 +81,33 @@ async function main(): Promise<void> {
 
   startPoller();
   if (config.telegram) startTelegramBot(config.telegram);
+
+  // Phase 4 Cluster D — daily build retention sweep. Opt-in via
+  // `buildRetentionDays` in config.json. The sweep runs immediately on boot
+  // and then every 24h while the server is up.
+  if (config.buildRetentionDays && config.buildRetentionDays > 0) {
+    const retentionDays = config.buildRetentionDays;
+    const runSweep = () => {
+      try {
+        const stats = pruneOldBuilds(retentionDays);
+        if (stats.builds > 0) {
+          logger.info(
+            {
+              retentionDays,
+              builds: stats.builds,
+              logEntries: stats.logEntries,
+              artifacts: stats.artifacts,
+            },
+            'retention: pruned builds older than cutoff',
+          );
+        }
+      } catch (err) {
+        logger.warn({ err: String(err) }, 'retention sweep failed');
+      }
+    };
+    runSweep();
+    setInterval(runSweep, 24 * 60 * 60 * 1000);
+  }
 }
 
 main().catch((err) => {

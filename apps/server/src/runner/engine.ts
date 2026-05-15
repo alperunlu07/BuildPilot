@@ -11,7 +11,7 @@ import { updateBuildStatus } from '../store/builds';
 import { appendBuildLogEntry } from '../store/buildLogs';
 import { setPipelineLastBuiltSha } from '../store/pipelines';
 import { eventBus } from '../events/bus';
-import { isCancelled, trackChild } from './coordinator';
+import { cancelBuild, isCancelled, trackChild } from './coordinator';
 import { runCheckout } from './steps/checkout';
 import { runPull } from './steps/pull';
 import { runShell } from './steps/shell';
@@ -230,26 +230,64 @@ async function executeStep(
   persist: (level: BuildLogLevel, message: string, nodeId: string | null, stepType: StepType | null) => void,
 ): Promise<StepResult> {
   const runner = RUNNERS[node.type];
-  const ctx = makeStepContext(build, project, node, persist);
   const aiFix = readAiAutoFix(node.data);
-  const maxAttempts = aiFix?.enabled ? Math.max(1, aiFix.maxRetries ?? 3) + 1 : 1;
+  const retryPolicy = aiFix?.enabled ? null : readRetryPolicy(node.data);
+  const watchdog = readWatchdog(node.data);
+  const maxAttempts = aiFix?.enabled
+    ? Math.max(1, aiFix.maxRetries ?? 3) + 1
+    : retryPolicy?.enabled
+      ? Math.max(0, retryPolicy.maxRetries) + 1
+      : 1;
   let lastErr: unknown = null;
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     if (attempt > 1) {
-      persist(
-        'system',
-        `↻ retry ${attempt - 1}/${maxAttempts - 1} after AI fix`,
-        node.id,
-        node.type,
-      );
+      if (aiFix?.enabled) {
+        persist(
+          'system',
+          `↻ retry ${attempt - 1}/${maxAttempts - 1} after AI fix`,
+          node.id,
+          node.type,
+        );
+      } else if (retryPolicy?.enabled) {
+        // Linear-doubling backoff up to backoffMaxMs.
+        const delay = Math.min(
+          retryPolicy.backoffMs * 2 ** (attempt - 2),
+          retryPolicy.backoffMaxMs,
+        );
+        persist(
+          'system',
+          `↻ retry ${attempt - 1}/${maxAttempts - 1} after ${delay}ms backoff`,
+          node.id,
+          node.type,
+        );
+        await sleep(delay);
+        if (isCancelled(build.id)) {
+          return { ok: false, cancelled: true, attempts: attempt - 1, error: lastErr };
+        }
+      }
     }
+    // Per-attempt ctx — the watchdog tracker observes only this attempt's
+    // log entries, so retries get a fresh idle clock.
+    const watchdogState = watchdog?.enabled
+      ? createWatchdogState(build.id, watchdog.idleSec, () =>
+          persist(
+            'failure',
+            `✖ watchdog: no log output for ${watchdog.idleSec}s — terminating step`,
+            node.id,
+            node.type,
+          ),
+        )
+      : null;
+    const ctx = makeStepContext(build, project, node, persist, watchdogState);
     try {
       await runner(ctx, node.data);
+      watchdogState?.cancel();
       if (isCancelled(build.id)) {
         return { ok: false, cancelled: true, attempts: attempt, error: lastErr };
       }
       return { ok: true, cancelled: false, attempts: attempt, error: null };
     } catch (err) {
+      watchdogState?.cancel();
       lastErr = err;
       if (isCancelled(build.id)) {
         return { ok: false, cancelled: true, attempts: attempt, error: lastErr };
@@ -276,10 +314,88 @@ async function executeStep(
           const aiMsg = aiErr instanceof Error ? aiErr.message : String(aiErr);
           persist('failure', `AI fix invocation failed: ${aiMsg}`, node.id, node.type);
         }
+      } else if (attempt < maxAttempts && retryPolicy?.enabled) {
+        persist(
+          'failure',
+          `✖ step failed (attempt ${attempt}): ${msg} — retrying`,
+          node.id,
+          node.type,
+        );
       }
     }
   }
   return { ok: false, cancelled: false, attempts: maxAttempts, error: lastErr };
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+export function readRetryPolicy(
+  data: Record<string, unknown>,
+): { enabled: boolean; maxRetries: number; backoffMs: number; backoffMaxMs: number } | null {
+  const raw = data.retryPolicy as unknown;
+  if (!raw || typeof raw !== 'object') return null;
+  const r = raw as Record<string, unknown>;
+  const enabled = r.enabled === true || r.enabled === 'true';
+  if (!enabled) return null;
+  const maxRetries = typeof r.maxRetries === 'number'
+    ? Math.max(0, Math.min(r.maxRetries, 10))
+    : 3;
+  const backoffMs = typeof r.backoffMs === 'number' ? Math.max(0, r.backoffMs) : 1000;
+  const backoffMaxMs = typeof r.backoffMaxMs === 'number' ? Math.max(backoffMs, r.backoffMaxMs) : 30_000;
+  return { enabled, maxRetries, backoffMs, backoffMaxMs };
+}
+
+export function readWatchdog(
+  data: Record<string, unknown>,
+): { enabled: boolean; idleSec: number } | null {
+  const raw = data.watchdog as unknown;
+  if (!raw || typeof raw !== 'object') return null;
+  const r = raw as Record<string, unknown>;
+  const enabled = r.enabled === true || r.enabled === 'true';
+  if (!enabled) return null;
+  const idleSec = typeof r.idleSec === 'number' && r.idleSec > 0 ? r.idleSec : 600;
+  return { enabled, idleSec };
+}
+
+interface WatchdogState {
+  poke(): void;
+  cancel(): void;
+}
+
+function createWatchdogState(
+  buildId: string,
+  idleSec: number,
+  onFire: () => void,
+): WatchdogState {
+  let timer: NodeJS.Timeout | null = null;
+  let cancelled = false;
+  const reset = () => {
+    if (cancelled) return;
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(() => {
+      if (cancelled) return;
+      onFire();
+      // Trip the build-level cancellation so all child processes terminate.
+      // Reusing the existing cancel pipe means SIGTERM → SIGKILL with the
+      // same grace period as a UI-driven cancel; the engine's outer loop
+      // will then return cancelled=true for this attempt.
+      try {
+        cancelBuild(buildId);
+      } catch {
+        /* nothing in-flight */
+      }
+    }, idleSec * 1000);
+  };
+  reset();
+  return {
+    poke: reset,
+    cancel() {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    },
+  };
 }
 
 function readAiAutoFix(data: Record<string, unknown>): AiAutoFixConfig | null {
@@ -658,16 +774,31 @@ function makeStepContext(
   project: Project,
   node: DagNode,
   persist: (level: BuildLogLevel, message: string, nodeId: string | null, stepType: StepType | null) => void,
+  watchdog: WatchdogState | null,
 ): StepContext {
+  // Every log emit pokes the watchdog. The runner instrumentation pipes
+  // child_process stdout/stderr through `persist` line-by-line below, so
+  // long-running but chatty processes never trip the watchdog.
+  const persistWithPoke = (
+    level: BuildLogLevel,
+    message: string,
+    nodeId: string | null,
+    stepType: StepType | null,
+  ) => {
+    persist(level, message, nodeId, stepType);
+    watchdog?.poke();
+  };
   return {
     project,
     build,
     log(message, level = 'info') {
-      persist(level, message, node.id, node.type);
+      persistWithPoke(level, message, node.id, node.type);
     },
     attachProcess(child) {
       trackChild(build.id, child);
-      const splitter = makeLineSplitter((line, level) => persist(level, line, node.id, node.type));
+      const splitter = makeLineSplitter((line, level) =>
+        persistWithPoke(level, line, node.id, node.type),
+      );
       child.stdout?.on('data', (chunk: Buffer) => splitter.feed(chunk, 'stdout'));
       child.stderr?.on('data', (chunk: Buffer) => splitter.feed(chunk, 'stderr'));
       child.on('close', () => splitter.flush());
