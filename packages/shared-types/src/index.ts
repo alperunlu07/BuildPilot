@@ -109,7 +109,8 @@ export type StepType =
   | 'steamcmdSetup'
   | 'steamUpload'
   | 'steamSetLive'
-  | 'steamWorkshopUpload';
+  | 'steamWorkshopUpload'
+  | 'iosDeviceLog';
 
 export type AiTool = 'claude' | 'codex' | 'aider' | 'gemini' | 'custom';
 
@@ -788,6 +789,43 @@ export interface AdbShellLaunchStepData {
 // build artifact. Standard smoke-test post-launch step: install → launch →
 // capture 30s of logs → fail the pipeline if a crash signature appears
 // (future enhancement; currently captures only).
+// Stream the iOS system log from a connected device for N seconds via
+// `idevicesyslog` (libimobiledevice). The on-disk output is registered as
+// a build artifact unless `registerArtifact` is 'false'.
+//
+// Counterpart of `AdbLogcatStepData` for the Android side — keep the field
+// names aligned where possible so a single dashboard view can speak both.
+export interface IosDeviceLogStepData {
+  // Seconds to capture. Default 30.
+  durationSec?: number;
+  // Target a specific iOS device by UDID. Leave blank for single-device.
+  udid?: string;
+  // 'true' → connect to a network (Wi-Fi) device. Default 'false'.
+  network?: string;
+  // 'true' (default) → idevicesyslog -x, exit when the device disconnects.
+  // Set 'false' to keep waiting for reconnect within the duration window.
+  exitOnDisconnect?: string;
+  // 'true' (default) → idevicesyslog --no-colors. Strips ANSI escapes from
+  // the on-disk log (so grep / tail render cleanly).
+  noColors?: string;
+  // idevicesyslog -m STRING: only keep lines CONTAINING this. Common values:
+  //   "Zooyale"            → only your app's syslog lines
+  //   "<Error>"            → all errors across the system
+  match?: string;
+  // idevicesyslog -M STRING: only keep lines NOT containing this. Useful
+  // for filtering out chatty system services.
+  unmatch?: string;
+  // Output file path relative to project root. Default
+  // "ios-syslog-<buildId>.txt". Registered as a build artifact when
+  // registerArtifact is 'true' (default).
+  outputPath?: string;
+  // 'true' (default) → register the output file as a build artifact.
+  registerArtifact?: string;
+  // Override the idevicesyslog binary path. Default: `idevicesyslog`
+  // (must be on PATH; install via `brew install libimobiledevice`).
+  idevicesyslogPath?: string;
+}
+
 export interface AdbLogcatStepData {
   // Seconds to capture. Default 30.
   durationSec?: number;

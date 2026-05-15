@@ -95,6 +95,7 @@ const stepTypes = [
   'steamUpload',
   'steamSetLive',
   'steamWorkshopUpload',
+  'iosDeviceLog',
 ] as const;
 
 const nodeSchema = z.object({

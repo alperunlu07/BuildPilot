@@ -95,6 +95,7 @@ import { runSteamcmdSetup } from './steps/steamcmdSetup';
 import { runSteamUpload } from './steps/steamUpload';
 import { runSteamSetLive } from './steps/steamSetLive';
 import { runSteamWorkshopUpload } from './steps/steamWorkshopUpload';
+import { runIosDeviceLog } from './steps/iosDeviceLog';
 
 export interface StepContext {
   project: Project;
@@ -193,6 +194,7 @@ const RUNNERS: Record<StepType, StepRunner> = {
   steamUpload: runSteamUpload,
   steamSetLive: runSteamSetLive,
   steamWorkshopUpload: runSteamWorkshopUpload,
+  iosDeviceLog: runIosDeviceLog,
 };
 
 interface DagNode {
