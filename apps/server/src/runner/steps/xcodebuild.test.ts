@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildXcodebuildArgs } from './xcodebuild';
+import { buildXcodebuildArgs, prettifierSuffix } from './xcodebuild';
 
 describe('buildXcodebuildArgs - archive action', () => {
   it('builds an archive invocation from a workspace', () => {
@@ -140,5 +140,98 @@ describe('buildXcodebuildArgs - additional args + non-archive actions', () => {
     expect(
       buildXcodebuildArgs({ workspacePath: 'x', scheme: 'A', buildAction: 'clean' }),
     ).toContain('clean');
+  });
+});
+
+describe('buildXcodebuildArgs - testRetryMode', () => {
+  it('emits -retry-tests-on-failure with -test-iterations N', () => {
+    const args = buildXcodebuildArgs({
+      workspacePath: 'x',
+      scheme: 'A',
+      buildAction: 'test',
+      testRetryMode: 'retry-on-failure',
+      testIterations: 5,
+    });
+    expect(args).toContain('-test-iterations');
+    expect(args).toContain('5');
+    expect(args).toContain('-retry-tests-on-failure');
+  });
+
+  it('emits -run-tests-until-failure for until-failure mode', () => {
+    const args = buildXcodebuildArgs({
+      workspacePath: 'x',
+      scheme: 'A',
+      buildAction: 'test',
+      testRetryMode: 'until-failure',
+    });
+    expect(args).toContain('-run-tests-until-failure');
+  });
+
+  it('emits bare -test-iterations for repeat mode (no companion flag)', () => {
+    const args = buildXcodebuildArgs({
+      workspacePath: 'x',
+      scheme: 'A',
+      buildAction: 'test',
+      testRetryMode: 'repeat',
+      testIterations: 10,
+    });
+    expect(args).toContain('-test-iterations');
+    expect(args).toContain('10');
+    expect(args).not.toContain('-retry-tests-on-failure');
+    expect(args).not.toContain('-run-tests-until-failure');
+  });
+
+  it('ignores testRetryMode when buildAction is not test', () => {
+    const args = buildXcodebuildArgs({
+      workspacePath: 'x',
+      scheme: 'A',
+      buildAction: 'archive',
+      testRetryMode: 'retry-on-failure',
+    });
+    expect(args).not.toContain('-test-iterations');
+    expect(args).not.toContain('-retry-tests-on-failure');
+  });
+
+  it('caps iterations to the Xcode-imposed max of 50', () => {
+    const args = buildXcodebuildArgs({
+      workspacePath: 'x',
+      scheme: 'A',
+      buildAction: 'test',
+      testRetryMode: 'repeat',
+      testIterations: 9999,
+    });
+    expect(args).toContain('50');
+  });
+
+  it('floors iterations at 2 (retry semantics need >1 iteration)', () => {
+    const args = buildXcodebuildArgs({
+      workspacePath: 'x',
+      scheme: 'A',
+      buildAction: 'test',
+      testRetryMode: 'retry-on-failure',
+      testIterations: 1,
+    });
+    expect(args).toContain('2');
+  });
+
+  it('omits all iteration flags when testRetryMode is none / unset', () => {
+    const args = buildXcodebuildArgs({
+      workspacePath: 'x',
+      scheme: 'A',
+      buildAction: 'test',
+    });
+    expect(args).not.toContain('-test-iterations');
+  });
+});
+
+describe('prettifierSuffix', () => {
+  it('returns "" for none / undefined', () => {
+    expect(prettifierSuffix('none')).toBe('');
+    expect(prettifierSuffix(undefined)).toBe('');
+  });
+
+  it('returns " | xcpretty" / " | xcbeautify" for the two formatters', () => {
+    expect(prettifierSuffix('xcpretty')).toBe(' | xcpretty');
+    expect(prettifierSuffix('xcbeautify')).toBe(' | xcbeautify');
   });
 });

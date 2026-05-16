@@ -1,6 +1,7 @@
 import { Folder, Plus, Trash2 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { useStore } from '../store/store';
+import { BuildSparkline } from '../components/BuildSparkline';
 
 interface Props {
   onAdd(): void;
@@ -69,7 +70,7 @@ export function ProjectsPage({ onAdd }: Props) {
                 </span>
               </div>
               <code className="mt-1 block truncate text-[11px] text-slate-500">{p.path}</code>
-              <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-slate-400">
+              <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-slate-400">
                 <span className="rounded-md bg-slate-800 px-2 py-0.5">
                   default:{' '}
                   <span className="font-mono text-emerald-400">{p.defaultBranch}</span>
@@ -88,6 +89,9 @@ export function ProjectsPage({ onAdd }: Props) {
                     </span>
                   </span>
                 )}
+                <span className="ml-auto" onClick={(e) => e.stopPropagation()}>
+                  <BuildSparkline projectId={p.id} />
+                </span>
               </div>
             </li>
           ))}

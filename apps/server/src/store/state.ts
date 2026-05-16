@@ -18,3 +18,25 @@ export function setLastSeenSha(projectId: string, branch: string, sha: string): 
     )
     .run(projectId, branch, sha, Date.now());
 }
+
+// Generic key/value scratchpad backing tag-pattern + cron tracking. Each
+// caller picks an opaque key namespace; the value is an arbitrary string
+// (typically a SHA or a unix timestamp). Phase 4 Cluster A.
+export function getPollerKv(key: string): string | null {
+  const row = getDb()
+    .prepare('SELECT value FROM poller_kv WHERE key = ?')
+    .get(key) as { value: string } | undefined;
+  return row?.value ?? null;
+}
+
+export function setPollerKv(key: string, value: string): void {
+  getDb()
+    .prepare(
+      `INSERT INTO poller_kv (key, value, updated_at)
+       VALUES (?, ?, ?)
+       ON CONFLICT(key) DO UPDATE SET
+         value = excluded.value,
+         updated_at = excluded.updated_at`,
+    )
+    .run(key, value, Date.now());
+}

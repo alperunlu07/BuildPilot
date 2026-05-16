@@ -39,11 +39,33 @@ export function buildXcodebuildArgs(d: Partial<XcodebuildStepData>): string[] {
     }
   }
 
+  // Test retry / iteration modes (Xcode 13+). Only valid with buildAction=test.
+  if (action === 'test' && d.testRetryMode && d.testRetryMode !== 'none') {
+    const iterations = Math.min(Math.max(d.testIterations ?? 3, 2), 50);
+    args.push('-test-iterations', String(iterations));
+    if (d.testRetryMode === 'retry-on-failure') {
+      args.push('-retry-tests-on-failure');
+    } else if (d.testRetryMode === 'until-failure') {
+      args.push('-run-tests-until-failure');
+    }
+    // 'repeat' is bare -test-iterations N with no additional flag.
+  }
+
   if (d.additionalArgs && d.additionalArgs.trim().length > 0) {
     args.push(...d.additionalArgs.split(/\s+/).filter(Boolean));
   }
 
   return args;
+}
+
+// Resolve the prettifier value to a shell command suffix (e.g. " | xcpretty")
+// or an empty string when no prettifier is requested. Centralised here so
+// the local and remote code paths agree on the exact pipe syntax.
+export function prettifierSuffix(p: XcodebuildStepData['prettifier']): string {
+  if (!p || p === 'none') return '';
+  if (p === 'xcpretty') return ' | xcpretty';
+  if (p === 'xcbeautify') return ' | xcbeautify';
+  return '';
 }
 
 export async function runXcodebuild(
@@ -52,23 +74,30 @@ export async function runXcodebuild(
 ): Promise<void> {
   const d = data as Partial<XcodebuildStepData>;
   const args = buildXcodebuildArgs(d);
+  const suffix = prettifierSuffix(d.prettifier);
 
-  if (isRemote(d)) {
-    // Quote each arg so paths-with-spaces survive the SSH shell. The xcrun
-    // wrapper picks up xcodebuild from the active developer dir, which is
-    // more portable than relying on a bare PATH lookup on the Mac.
-    const command = ['xcrun', 'xcodebuild', ...args.map(shellQuote)].join(' ');
+  if (isRemote(d) || suffix.length > 0) {
+    // Either remote or we need a shell pipe for xcpretty / xcbeautify.
+    // Both go through execMaybeRemote so the shell is wired up; locally
+    // it runs via `sh -c` (set in _exec.ts) and the pipe works as expected.
+    // PIPESTATUS-ish trick: prepend `set -o pipefail` so a non-zero
+    // xcodebuild exit isn't masked by xcpretty's 0 exit.
+    const inner = ['xcrun', 'xcodebuild', ...args.map(shellQuote)].join(' ');
+    const command = suffix.length > 0
+      ? `set -o pipefail; ${inner}${suffix}`
+      : inner;
     await execMaybeRemote({
       ctx,
       d,
       command,
-      label: `xcodebuild ${args.join(' ')}`,
+      label: `xcodebuild ${args.join(' ')}${suffix}`,
     });
     return;
   }
 
-  // Local — keep the existing direct-spawn path so we get clean ENOENT
-  // diagnostics ("must run on a macOS host") instead of a generic shell error.
+  // Local + no prettifier — keep the existing direct-spawn path so we get
+  // clean ENOENT diagnostics ("must run on a macOS host") instead of a
+  // generic shell error.
   ctx.log(`xcodebuild ${args.map((a) => (a.includes(' ') ? `"${a}"` : a)).join(' ')}`);
   ctx.log(`cwd: ${ctx.project.path}`);
 

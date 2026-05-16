@@ -64,6 +64,14 @@ export const api = {
     http<{ ok: true }>(`/projects/${id}/fetch`, { method: 'POST' }),
   currentBranch: (id: string) =>
     http<{ branch: string; sha: string | null }>(`/projects/${id}/current-branch`),
+  projectSparkline: (id: string, limit = 30) =>
+    http<Array<{
+      id: string;
+      pipelineId: string;
+      status: 'pending' | 'running' | 'success' | 'failed' | 'cancelled';
+      startedAt: number;
+      finishedAt: number | null;
+    }>>(`/projects/${id}/sparkline?limit=${limit}`),
 
   // ── Pipelines ────────────────────────────────────────────
   listPipelines: (projectId?: string) =>

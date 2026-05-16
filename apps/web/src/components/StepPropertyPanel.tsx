@@ -284,8 +284,16 @@ function CommonControlsSection({
   onChange(patch: Record<string, unknown>): void;
 }) {
   const continueOnError = data.continueOnError === 'true' || data.continueOnError === true;
+  const retry = (data.retryPolicy as Record<string, unknown> | undefined) ?? {};
+  const retryEnabled = retry.enabled === true;
+  const retryMax = typeof retry.maxRetries === 'number' ? retry.maxRetries : 3;
+  const retryBackoff = typeof retry.backoffMs === 'number' ? retry.backoffMs : 1000;
+  const retryBackoffMax = typeof retry.backoffMaxMs === 'number' ? retry.backoffMaxMs : 30000;
+  const watchdog = (data.watchdog as Record<string, unknown> | undefined) ?? {};
+  const watchdogEnabled = watchdog.enabled === true;
+  const watchdogIdle = typeof watchdog.idleSec === 'number' ? watchdog.idleSec : 600;
   return (
-    <div className="mt-2 rounded-md border border-slate-800 bg-slate-900/40 p-3 space-y-2">
+    <div className="mt-2 rounded-md border border-slate-800 bg-slate-900/40 p-3 space-y-3">
       <div className="text-[10px] uppercase tracking-wider text-slate-500">Step controls</div>
       <label className="flex items-center gap-2 text-[12px] text-slate-300">
         <input
@@ -296,10 +304,135 @@ function CommonControlsSection({
         />
         Continue on error (soft-fail; downstream success-edges still fire)
       </label>
-      <p className="text-[10px] text-slate-500">
+      <p className="-mt-1 text-[10px] text-slate-500">
         Mirrors GH <code>continue-on-error</code>, Buildkite <code>soft_fail</code>,
         GitLab <code>allow_failure</code>. The failure is logged but the pipeline keeps going.
       </p>
+
+      <div className="border-t border-slate-800 pt-2">
+        <label className="flex items-center gap-2 text-[12px] text-slate-300">
+          <input
+            type="checkbox"
+            checked={retryEnabled}
+            onChange={(e) =>
+              onChange({
+                retryPolicy: {
+                  ...retry,
+                  enabled: e.target.checked,
+                  maxRetries: retryMax,
+                  backoffMs: retryBackoff,
+                  backoffMaxMs: retryBackoffMax,
+                },
+              })
+            }
+            className="h-3.5 w-3.5"
+          />
+          Auto-retry on failure (exponential backoff)
+        </label>
+        {retryEnabled && (
+          <div className="ml-5 mt-2 grid grid-cols-3 gap-2">
+            <label className="text-[10px] uppercase tracking-wider text-slate-500">
+              Max retries
+              <input
+                type="number"
+                min={0}
+                max={10}
+                value={retryMax}
+                onChange={(e) =>
+                  onChange({
+                    retryPolicy: {
+                      ...retry,
+                      enabled: true,
+                      maxRetries: Math.max(0, Math.min(10, Number(e.target.value) || 0)),
+                      backoffMs: retryBackoff,
+                      backoffMaxMs: retryBackoffMax,
+                    },
+                  })
+                }
+                className="mt-0.5 w-full rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-[12px] text-slate-100"
+              />
+            </label>
+            <label className="text-[10px] uppercase tracking-wider text-slate-500">
+              Backoff (ms)
+              <input
+                type="number"
+                min={0}
+                value={retryBackoff}
+                onChange={(e) =>
+                  onChange({
+                    retryPolicy: {
+                      ...retry,
+                      enabled: true,
+                      maxRetries: retryMax,
+                      backoffMs: Math.max(0, Number(e.target.value) || 0),
+                      backoffMaxMs: retryBackoffMax,
+                    },
+                  })
+                }
+                className="mt-0.5 w-full rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-[12px] text-slate-100"
+              />
+            </label>
+            <label className="text-[10px] uppercase tracking-wider text-slate-500">
+              Cap (ms)
+              <input
+                type="number"
+                min={0}
+                value={retryBackoffMax}
+                onChange={(e) =>
+                  onChange({
+                    retryPolicy: {
+                      ...retry,
+                      enabled: true,
+                      maxRetries: retryMax,
+                      backoffMs: retryBackoff,
+                      backoffMaxMs: Math.max(retryBackoff, Number(e.target.value) || 0),
+                    },
+                  })
+                }
+                className="mt-0.5 w-full rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-[12px] text-slate-100"
+              />
+            </label>
+          </div>
+        )}
+      </div>
+
+      <div className="border-t border-slate-800 pt-2">
+        <label className="flex items-center gap-2 text-[12px] text-slate-300">
+          <input
+            type="checkbox"
+            checked={watchdogEnabled}
+            onChange={(e) =>
+              onChange({
+                watchdog: { ...watchdog, enabled: e.target.checked, idleSec: watchdogIdle },
+              })
+            }
+            className="h-3.5 w-3.5"
+          />
+          Watchdog: kill the step after N seconds of log silence
+        </label>
+        {watchdogEnabled && (
+          <div className="ml-5 mt-2">
+            <label className="text-[10px] uppercase tracking-wider text-slate-500">
+              Idle threshold (sec)
+              <input
+                type="number"
+                min={10}
+                value={watchdogIdle}
+                onChange={(e) =>
+                  onChange({
+                    watchdog: {
+                      ...watchdog,
+                      enabled: true,
+                      idleSec: Math.max(10, Number(e.target.value) || 600),
+                    },
+                  })
+                }
+                className="mt-0.5 w-full rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-[12px] text-slate-100"
+              />
+            </label>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

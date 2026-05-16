@@ -134,7 +134,7 @@ Goal: take BuildPilot from "demo for one developer" to "adoptable by a 5+ person
 ### Cluster 2.6.D · iOS pipeline acceleration
 - [ ] **Auto-provisioning via App Store Connect API** — single ASC API key replaces the `fastlaneMatch + keychainUnlock + provisioningProfileInstall` triple: BuildPilot creates / renews profiles, registers App IDs and devices automatically (Bitrise / Codemagic / Xcode Cloud all do this)
 - [ ] **Auto build-number from ASC** — `latestTestflightBuildNumber` step + integration with `incrementBuildNumber` so every TestFlight upload gets a strictly monotonic CFBundleVersion (kills `ITMS-90189` failures)
-- [ ] **Test retry modes on `xcodebuild` test action** — retry-on-failure / until-failure / max-repetitions (Xcode 13+); the #1 fix for flaky-UI-test pipeline reds
+- [x] **Test retry modes on `xcodebuild` test action** — retry-on-failure / until-failure / max-repetitions (Xcode 13+); emits `-test-iterations N` + the right companion flag with iteration count clamped to [2, 50] — `0809fd1`
 - [ ] **Remote Xcode build cache** — XCRemoteCache (Spotify) or the Apple compilation cache (Xcode 26+) integrated as a typed step + a server-side cache namespace; routinely cuts xcodebuild time 40–60%
 
 ## ✅ Phase 2.7 — Android pipeline foundations (cee40ac)
@@ -148,11 +148,11 @@ Goal: parity with iOS for the most common Android release path — Gradle build 
 - [x] `adbLogcat` step — bounded-duration logcat capture written to a file + registered as a build artifact — `cee40ac`
 
 ### Phase 2.7 future work (deferred to a later Android phase)
-- [ ] **`bundletool` step** — convert `.aab` → installable APKs (replaces the limitation that `adbInstall` can't take an .aab directly)
-- [ ] **`playConsoleUpload` step** — Google Play Developer API: upload .aab/.apk to internal/alpha/beta/production track via service-account JWT
-- [ ] **`adbPair` step** — Android 11+ wireless pairing flow (`adb pair <host:port>` with the 6-digit code)
-- [ ] **`androidSign` step** — apksigner/jarsigner wrap for signing standalone APKs
-- [ ] **`firebaseAppDistributionAndroid`** — Android variant of Phase 6.E firebaseAppDistribution
+- [x] **`bundletool` step** — convert `.aab` → installable APKs (replaces the limitation that `adbInstall` can't take an .aab directly) — `61b41e0`
+- [x] **`playConsoleUpload` step** — Google Play Developer API: upload .aab/.apk to internal/alpha/beta/production track via service-account RS256 JWT → OAuth → edits → bundles/apks → tracks → commit — `61b41e0`
+- [x] **`adbPair` step** — Android 11+ wireless pairing flow (`adb pair <host:port>` with the 6-digit code; code redacted in logs) — `61b41e0`
+- [x] **`androidSign` step** — apksigner / jarsigner wrap for signing standalone APKs (sign / verify / jarsign actions) — `61b41e0`
+- [x] **`firebaseAppDistributionAndroid`** — covered by existing `firebaseAppDistribution` step (already takes `binaryPath` for either iOS .ipa or Android .apk/.aab)
 
 ## 🟢 Phase 3 — Notifications & integrations
 
@@ -171,18 +171,18 @@ Goal: parity with iOS for the most common Android release path — Gradle build 
 Advanced pipeline orchestration features that fall outside the Phase 2.6 top-10. Auth + secrets + webhook triggers moved to Phase 2.6 — what remains is the long tail of trigger / retention / scheduling / RBAC-extension items.
 
 ### Cluster 4.A · Triggers & scheduling (beyond Phase 2.6)
-- [ ] **Tag-pattern triggers** — `v*.*.*` push starts a release pipeline against the tagged commit (Bitrise / Xcode Cloud / Travis pattern)
-- [ ] **Cron-scheduled builds** — pipelines that fire on a cron expression, not just commit-driven; per-pipeline schedule list
+- [x] **Tag-pattern triggers** — `v*.*.*` push starts a release pipeline against the tagged commit (Bitrise / Xcode Cloud / Travis pattern) — `0809fd1`
+- [x] **Cron-scheduled builds** — pipelines that fire on a 5-field UTC cron expression via a dedicated 60s-aligned tick — `0809fd1`
 - [x] **API-trigger endpoint with parameters** — `POST /api/triggers/:pipelineId` accepts `{triggerSha?, triggerBranch?, variables?}`; per-pipeline token via env var until secret-vault columns land — `00b2137`
-- [ ] **Path-filtered triggers** — `if_changed` on globs so a pipeline skips when no relevant files changed (Buildkite / GH `paths` / GitLab `rules:changes`)
-- [ ] **Cancel-previous-build on new push** — rolling-build mode; auto-abort superseded runs on the same branch (Bitrise / Codemagic)
+- [x] **Path-filtered triggers** — `if_changed` on newline-separated globs so a pipeline skips when no relevant files changed in the new commits (Buildkite / GH `paths` / GitLab `rules:changes`) — `0809fd1`
+- [x] **Cancel-previous-build on new push** — rolling-build mode; cancels in-flight builds for the same pipeline before queuing the new one (Bitrise / Codemagic) — `0809fd1`
 - [ ] **PR-merge-state builds** — build the simulated post-merge tree, not just the PR head (Bitrise mode — catches "merges cleanly but breaks main")
 - [ ] **PR comment-driven actions** — `/run-ios` style comments retrigger a pipeline (GH Actions `issue_comment`)
 
 ### Cluster 4.B · Workflow controls
 - [x] **Step-level soft fail / `continue-on-error`** — `continueOnError` flag on any step's data; the failure is logged at failure-level but downstream success-edges still fire and the build doesn't go red. Surfaced in the StepPropertyPanel "Step controls" section — `00b2137`
-- [ ] **Build retries with backoff** — auto-retry transient step failures with exponential backoff; per-step retry policy
-- [ ] **Step / build watchdog** — kill steps that produce no log output for N minutes (Bitrise pattern); detects hung xcodebuild / SSH sessions
+- [x] **Build retries with backoff** — per-step `retryPolicy` { enabled, maxRetries, backoffMs, backoffMaxMs } with exponential backoff up to cap; UI exposes the toggle next to continueOnError — `90dcd5e`
+- [x] **Step / build watchdog** — per-step `watchdog` { enabled, idleSec } — engine arms a rolling setTimeout pokes on every log emit and trips cancelBuild() when silence exceeds idleSec — `90dcd5e`
 - [ ] **Build priority + queue management** — priority ordering for releases; jump-the-queue flag
 - [ ] **Required reviewers + wait timer on environments** — N approvers, optional time delay before deploy (extends the manual-approval step from Phase 2.6)
 - [ ] **In-flight build SSH / live-tail** — connect into a still-running Mac host to debug a stuck step (Bitrise / Codemagic feature)
@@ -195,13 +195,13 @@ Advanced pipeline orchestration features that fall outside the Phase 2.6 top-10.
 - [ ] **Reusable workflow / sub-pipeline call** — parameterised pipeline-fragment imports (composable building block beyond the group template)
 
 ### Cluster 4.D · Hosting & retention
-- [ ] **Build retention** — opt-in delete of logs/artifacts older than N days
+- [x] **Build retention** — opt-in `buildRetentionDays` in `config.json`; daily cleanup pass via `pruneOldBuilds` cascades log + artifact rows in a transaction. Running builds are never touched. — `90dcd5e`
 - [ ] **Search across logs** — full-text grep over historical logs (SQLite FTS5)
-- [ ] **Per-project sparklines** — last-30-build status strip on the project detail page
+- [x] **Per-project sparklines** — last-30-build status strip on `ProjectsPage`; rendered from `GET /api/projects/:id/sparkline` — `90dcd5e`
 - [ ] **Multi-agent fleet** — >2 remote builders with dispatch + capability tags (extends saved-hosts capability snapshot from Phase 2.5 Cluster C)
 - [ ] **OIDC federation** — short-lived AWS / GCP / Vault tokens issued by BuildPilot in lieu of stored long-lived secrets
 - [ ] **Static egress IP / VPN-during-build** — predictable IPs for firewall rules; VPN connection helper for private network access
-- [ ] **SSH `known_hosts` integration** — TOFU-style host key persistence so non-`skipStrictHostKey` hosts don't error on first connect (deferred from Phase 2.5 Cluster C — needs a TOFU vs prompt vs ~/.ssh/known_hosts design call)
+- [x] **SSH `known_hosts` integration** — TOFU-style host-key persistence at `~/.buildpilot/known_hosts.json`; first connect records the SHA-256, later connects reject mismatches. Bypass via `skipStrictHostKey=true`. — `90dcd5e`
 
 ## 🟢 Phase 5 — fastlane action library
 
@@ -209,7 +209,7 @@ Wrap the canonical fastlane actions we don't yet cover. Each is a thin step that
 
 ### Cluster 5.A · Build & test
 - [x] **`buildAppGym` step** — `fastlane gym` archive + export + xcpretty in one shot (replaces the typical `xcodebuild archive → xcodebuild exportArchive` chain) — `d27523c`
-- [ ] **Extend `xcodebuild` test action with xcpretty** — `scan`-style formatted output + Slack-summary toggle (postponed; bundles with the test-retry-modes work in Phase 2.6.D)
+- [x] **Extend `xcodebuild` test action with xcpretty** — `prettifier` field selects xcpretty / xcbeautify / none and inserts a `set -o pipefail` shell pipe so non-zero xcodebuild exits aren't masked — `0809fd1`
 
 ### Cluster 5.B · App Store Connect API (ES256 JWT signer landed in `d27523c`)
 - [x] **`_asc.ts` shared helpers** — ES256 JWT signer (Node `createPrivateKey` + `dsaEncoding:'ieee-p1363'` for raw r||s output) + `ascRequest()` + `ascErrorMessage()`. Tested with a generated P-256 key + signature roundtrip — `d27523c`
@@ -322,10 +322,10 @@ Real-device testing and richer dSYM upload coverage.
   - BrowserStack App Live / App Automate (`POST /app-automate/upload`)
 
 ### Cluster 7.B · Crash reporter extensions
-- [ ] **Extend `dsymUpload` with `provider=datadog`** — `@datadog/datadog-ci dsyms upload`
-- [ ] **Extend `dsymUpload` with `provider=instabug`** — `Instabug_dsym_upload.sh`
-- [ ] **Extend `dsymUpload` with `provider=embrace`** — `embrace_symbol_upload.darwin`
-- [ ] **Extend `dsymUpload` with `provider=newrelic`** — `newrelic-ios-symbol-upload`
+- [x] **Extend `dsymUpload` with `provider=datadog`** — `datadog-ci dsyms upload` (API key + site via env) — `61b41e0`
+- [x] **Extend `dsymUpload` with `provider=instabug`** — `Instabug_dsym_upload.sh` wrapper — `61b41e0`
+- [x] **Extend `dsymUpload` with `provider=embrace`** — `embrace_symbol_upload.darwin` with --app / --token — `61b41e0`
+- [x] **Extend `dsymUpload` with `provider=newrelic`** — `newrelic-ios-symbol-upload <app-token> <dsym>` — `61b41e0`
 
 ### Cluster 7.C · Cross-platform mobile extras
 - [ ] **`codePush` step** — OTA RN bundle deployment (App Center alumni; open-sourced)
@@ -376,18 +376,18 @@ Turning the structured data BuildPilot already collects into actionable signal.
 | 1.5. Dashboard overhaul            |  25  |    0    | ✅ 100% |
 | 1.6. Engine + UX polish            |   5  |    0    | ✅ 100% |
 | 2. Cross-OS / iOS                  |   6  |    0    | ✅ 100% |
-| 2.5. iOS production-readiness      |  11  |    2    | 🟢  85% (testflight whatToTest moved + done in Phase 5; ssh known_hosts moved to Phase 4) |
-| 2.6. Production-grade platform     |   2  |   11    | 🟡  15% (encrypted-secrets-at-rest + webhook-driven triggers done; file vault + RBAC + matrix + manual approval + ASC auto-prov + remote Xcode cache pending) |
-| 2.7. Android pipeline foundations  |   5  |    5    | 🟢  50% (gradleBuild + adb cluster done; bundletool / Play Console / pair / sign deferred) |
+| 2.5. iOS production-readiness      |  11  |    2    | 🟢  85% (testflight whatToTest done in Phase 5; ssh known_hosts done in Phase 4) |
+| 2.6. Production-grade platform     |   3  |   10    | 🟡  23% (encrypted-secrets-at-rest + webhook-driven triggers + test retry modes done; file vault + RBAC + matrix + manual approval + ASC auto-prov + remote Xcode cache pending) |
+| 2.7. Android pipeline foundations  |  10  |    0    | ✅ 100% (gradleBuild + full adb cluster + bundletool + androidSign + playConsoleUpload; firebaseAppDistribution already covered Android) |
 | 3. Notifications & integrations    |   7  |    2    | 🟢  78% (PWA push + email digest deferred — both depend on cron infra) |
-| 4. Workflow control & hardening    |   2  |   23    | 🟡   8% (continueOnError + API trigger endpoint done; cron / tag / path-filter / matrix / versioning / retention pending) |
-| 5. fastlane action library         |  30  |    1    | 🟢  97% (only `xcodebuild test` xcpretty-toggle remains — bundles with the test-retry-modes work in Phase 2.6.D) |
+| 4. Workflow control & hardening    |  10  |   15    | 🟢  40% (continueOnError + API trigger + tag triggers + cron + path filter + rolling builds + retries with backoff + step watchdog + build retention + sparklines + ssh known_hosts done; priority queue + matrix + versioning + multi-agent + OIDC pending) |
+| 5. fastlane action library         |  31  |    0    | ✅ 100% |
 | 6. Apple specialty CLIs            |  20  |    0    | ✅ 100% |
 | 6.5. Steam (PC distribution)       |   7  |    1    | 🟢  88% (steamBuildVdfGenerate folded into steamUpload; only the dedicated standalone version remains optional) |
-| 7. Cloud device labs + crash ext.  |   0  |    6    | ⏸    0% |
+| 7. Cloud device labs + crash ext.  |   4  |    2    | 🟢  67% (datadog / instabug / embrace / newrelic dsymUpload providers done; cloudDeviceTest + codePush pending) |
 | 8. Caching infrastructure          |   0  |    5    | ⏸    0% |
 | 9. Observability & test reporting  |   0  |   11    | ⏸    0% |
-| **Overall**                        | **130** | **67**  | **🟢 66%** |
+| **Overall**                        | **149** | **48**  | **🟢 76%** |
 
 **Next up (recommended order):**
 1. **Phase 2.6 Cluster A — File vault + multi-user auth + RBAC + audit log** — the secret-encryption-at-rest piece landed in `cee40ac`, but the file-vault (`.p12` / `.mobileprovision` / `.p8` / `GoogleService-Info.plist` upload + reference-by-id) and the multi-user/RBAC layer are still the biggest blockers for adopting BuildPilot in a 5+ person team. The `BUILDPILOT_WEBHOOK_SECRET_<id>` env-var stop-gap can be replaced once secret-vault columns land.

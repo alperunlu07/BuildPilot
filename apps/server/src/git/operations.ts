@@ -109,3 +109,55 @@ export async function pull(repoPath: string, remote = 'origin'): Promise<string>
 export async function checkout(repoPath: string, branch: string): Promise<void> {
   await git(repoPath).checkout(branch);
 }
+
+// List local tags + the SHA each points at. Used by tag-pattern triggers
+// (Phase 4 Cluster A) to detect newly pushed tags after a fetch.
+export async function listTagsWithSha(
+  repoPath: string,
+): Promise<Array<{ tag: string; sha: string }>> {
+  try {
+    // `for-each-ref refs/tags` enumerates lightweight tags too; dereference
+    // annotated tags with %(*objectname) for the commit they point at.
+    const raw = await git(repoPath).raw([
+      'for-each-ref',
+      '--format=%(refname:strip=2)\t%(objectname)\t%(*objectname)',
+      'refs/tags',
+    ]);
+    const rows: Array<{ tag: string; sha: string }> = [];
+    for (const line of raw.split('\n')) {
+      if (!line.trim()) continue;
+      const [tag, objSha, derefSha] = line.split('\t');
+      if (!tag) continue;
+      const sha = (derefSha && derefSha.length > 0 ? derefSha : objSha) ?? '';
+      if (sha.length > 0) rows.push({ tag, sha });
+    }
+    return rows;
+  } catch {
+    return [];
+  }
+}
+
+// File-system paths changed between two refs (inclusive of the right side).
+// Returns [] if either ref is unknown — caller treats that as "no filter
+// info" rather than throwing, so a transient git failure doesn't block the
+// build.
+export async function changedPathsBetween(
+  repoPath: string,
+  fromSha: string,
+  toSha: string,
+): Promise<string[]> {
+  if (!fromSha || !toSha) return [];
+  try {
+    const raw = await git(repoPath).raw([
+      'diff',
+      '--name-only',
+      `${fromSha}..${toSha}`,
+    ]);
+    return raw
+      .split('\n')
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
+  } catch {
+    return [];
+  }
+}

@@ -116,6 +116,15 @@ export const SENSITIVE_FIELDS = new Set([
   'filePassword',
   // Phase 6.E firebase distribution
   'firebaseToken',
+  // Phase 7.B dsymUpload provider extensions
+  'datadogApiKey',
+  'instabugAppToken',
+  'embraceApiToken',
+  'newrelicAppToken',
+  // Phase 2.7 deferred Android — Play Console + signing
+  'playServiceAccountJson',
+  'androidKeystorePassword',
+  'androidKeyPassword',
 ]);
 
 export function encryptSecretsInObject<T extends Record<string, unknown>>(obj: T): T {

@@ -22,6 +22,8 @@ const DEFAULT_CONFIG: ServerConfig = {
     botToken: '',
     defaultChatId: '',
   },
+  // Phase 4 Cluster D — disabled by default; opt in via config.json or env.
+  buildRetentionDays: 0,
 };
 
 // Configs written by older builds that still carry the previous well-known

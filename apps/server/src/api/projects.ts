@@ -133,4 +133,29 @@ export async function projectsRoutes(app: FastifyInstance): Promise<void> {
     const sha = branch ? await getHeadSha(project.path, branch) : null;
     return { branch, sha };
   });
+
+  // Phase 4 Cluster D — per-project build sparkline. Returns the last N
+  // builds across all pipelines for the project, ordered oldest → newest.
+  // The dashboard renders a 30-cell colour strip from this; the limit cap
+  // is the same 200 the regular /api/builds endpoint uses.
+  app.get('/api/projects/:id/sparkline', async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const project = getProject(id);
+    if (!project) return reply.code(404).send({ error: 'not found' });
+    const q = (req.query as { limit?: string }) ?? {};
+    const limit = Math.min(Math.max(parseInt(q.limit ?? '30', 10) || 30, 1), 200);
+    const recent = listBuilds({ projectId: id, limit });
+    // listBuilds returns newest-first; for sparklines we want chronological
+    // order so the left edge is "oldest visible".
+    return recent
+      .slice()
+      .reverse()
+      .map((b) => ({
+        id: b.id,
+        pipelineId: b.pipelineId,
+        status: b.status,
+        startedAt: b.startedAt,
+        finishedAt: b.finishedAt,
+      }));
+  });
 }
