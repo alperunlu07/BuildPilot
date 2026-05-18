@@ -130,6 +130,11 @@ export const SENSITIVE_FIELDS = new Set([
   // here as a reminder that Slack uses the same field name.)
   'signingSecret',
   'publicKey',
+  // Cluster 11.E — VCS feedback. Personal access tokens / OAuth bearer
+  // tokens used to POST check-runs / commit statuses back to GitHub /
+  // GitLab / Gitea. Plus the GitHub OAuth-app client secret.
+  'vcsToken',
+  'clientSecret',
 ]);
 
 export function encryptSecretsInObject<T extends Record<string, unknown>>(obj: T): T {

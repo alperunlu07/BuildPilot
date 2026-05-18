@@ -5,6 +5,12 @@ export interface Project {
   path: string; // absolute path
   defaultBranch: string;
   createdAt: number;
+  // Cluster 11.E — outbound VCS feedback. All three are required to enable
+  // posting check-runs / commit statuses; absence (null) means the project
+  // is local-only and skips outbound posts.
+  vcsProvider?: VcsProvider | null;
+  vcsRepo?: string | null;
+  vcsCredentialId?: string | null;
 }
 
 export interface ProjectSummary extends Project {
@@ -161,6 +167,14 @@ export interface PipelineWatch {
   // previous build for the same pipeline is still running, the previous
   // build is cancelled before the new one starts (rolling-build mode).
   cancelInProgressOnNewCommit?: boolean;
+  // Cluster 11.E — comma-separated allow-list of slash commands accepted via
+  // PR issue_comment webhooks. Stored as a single string (vs. an array) to
+  // keep ALTER TABLE migrations minimal. Empty = disabled.
+  prCommands?: string;
+  // Optional comma-separated whitelist of authors. Empty = anyone with write
+  // access (we don't currently re-check perms — the webhook coming in is
+  // already gated by the secret).
+  prCommandAuthors?: string;
 }
 
 export interface Pipeline {
@@ -1729,6 +1743,11 @@ export interface ServerConfig {
   // (and their associated log entries + artifact rows) are pruned on a daily
   // cleanup pass. Set to 0 / omitted to keep everything forever.
   buildRetentionDays?: number;
+  // Cluster 11.E — GitHub OAuth app credentials used for the
+  // /api/vcs/github/oauth/{start,callback} flow. The user pastes a client id
+  // and secret from a GitHub OAuth app they registered themselves; we don't
+  // automate the app registration step.
+  githubOAuth?: GithubOAuthConfig;
 }
 
 // ── Slack (Cluster 11.I) ────────────────────────────────────────────────────
@@ -2100,4 +2119,106 @@ export interface BuildTrendsBuild {
   startedAt: number;
   finishedAt: number | null;
   durationMs: number | null;
+}
+
+// ── Cluster 11.E · VCS / PR feedback ────────────────────────────────────────
+// A stored credential used by the outbound check-run posting and PR-context
+// lookups. The `token` field is encrypted-at-rest via the existing crypto
+// allow-list (key name `vcsToken`).
+export type VcsProvider = 'github' | 'gitlab' | 'gitea';
+
+export interface VcsCredential {
+  id: string;
+  name: string;
+  provider: VcsProvider;
+  // Optional base URL for self-hosted GitLab / Gitea / GitHub Enterprise.
+  // Blank → use the provider's public default.
+  baseUrl: string | null;
+  // The decrypted token is never returned by the API — only on creation.
+  // List/get returns the masked preview only.
+  tokenPreview: string;
+  createdAt: number;
+}
+
+// `POST /api/vcs/credentials` body.
+export interface VcsCredentialCreate {
+  name: string;
+  provider: VcsProvider;
+  baseUrl?: string;
+  vcsToken: string;
+}
+
+// Per-project VCS link. Stored on the projects row; absence means "skip
+// outbound posts for this project".
+export interface ProjectVcsConfig {
+  vcsProvider: VcsProvider | null;
+  // owner/repo e.g. "alperunlu07/BuildPilot" (or namespaced GitLab path).
+  vcsRepo: string | null;
+  vcsCredentialId: string | null;
+}
+
+// `PUT /api/projects/:id/vcs` body.
+export type ProjectVcsUpdate = ProjectVcsConfig;
+
+// PR metadata associated with a build (commit may belong to N PRs; we return
+// all of them so the UI can render multiple cards if needed).
+export interface PrContext {
+  // The commit sha we looked up.
+  sha: string;
+  provider: VcsProvider;
+  // owner/repo we queried.
+  repo: string;
+  prs: PrSummary[];
+}
+
+export interface PrSummary {
+  number: number;
+  title: string;
+  state: 'open' | 'closed' | 'merged';
+  url: string;
+  authorLogin: string | null;
+  headBranch: string;
+  baseBranch: string;
+  labels: string[];
+  // Issue references parsed out of the PR body (#NNN style). Up to 20.
+  linkedIssues: number[];
+}
+
+// Pipeline-level slash command config (stored in pipeline data). Empty list
+// = comment triggers disabled for this pipeline.
+export interface PrCommandConfig {
+  // Allowed slash commands without the leading slash. `["run-ios", "run-all"]`
+  // accepts `/run-ios` and `/run-all`. Special token `"*"` allows any
+  // command.
+  commands: string[];
+  // Whitelist of GitHub/Gitea logins or GitLab usernames that are allowed
+  // to trigger the build. Empty = anyone with write access to the repo.
+  allowedAuthors: string[];
+}
+
+// Server-side projection of the outbound check-run state. The runner posts
+// one of these for each build start / finish.
+export type CheckRunState = 'queued' | 'in_progress' | 'success' | 'failure' | 'cancelled';
+
+// GitHub OAuth app config (lives in ~/.buildpilot/config.json).
+export interface GithubOAuthConfig {
+  clientId: string;
+  clientSecret: string;
+  // Where to redirect after a successful exchange. Defaults to the dashboard
+  // /vcs-credentials page when blank.
+  redirectAfter?: string;
+}
+
+export interface GithubOAuthConfigPublic {
+  hasClientId: boolean;
+  clientIdPreview: string;
+  hasClientSecret: boolean;
+  redirectAfter: string;
+}
+
+export interface GithubOAuthConfigUpdate {
+  clientId?: string;
+  clientSecret?: string;
+  redirectAfter?: string;
+  clearClientSecret?: boolean;
 }

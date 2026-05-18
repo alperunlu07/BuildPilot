@@ -38,6 +38,9 @@ interface PipelineRow {
   cron_expr: string | null;
   path_filter: string | null;
   cancel_in_progress_on_new_commit: number | null;
+  // Cluster 11.E — PR comment trigger settings.
+  pr_commands: string | null;
+  pr_command_authors: string | null;
 }
 
 function rowToPipeline(row: PipelineRow): Pipeline {
@@ -54,6 +57,8 @@ function rowToPipeline(row: PipelineRow): Pipeline {
       cronExpr: row.cron_expr ?? undefined,
       pathFilter: row.path_filter ?? undefined,
       cancelInProgressOnNewCommit: row.cancel_in_progress_on_new_commit === 1,
+      prCommands: row.pr_commands ?? undefined,
+      prCommandAuthors: row.pr_command_authors ?? undefined,
     },
     nodes: decryptNodes(JSON.parse(row.nodes_json) as PipelineNode[]),
     edges: JSON.parse(row.edges_json) as PipelineEdge[],
@@ -101,8 +106,9 @@ export function createPipeline(input: PipelineInput): Pipeline {
       `INSERT INTO pipelines
        (id, project_id, name, watch_branch, watch_interval_sec, auto_trigger,
         nodes_json, edges_json, created_at, updated_at, telegram_approvals,
-        tag_pattern, cron_expr, path_filter, cancel_in_progress_on_new_commit)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        tag_pattern, cron_expr, path_filter, cancel_in_progress_on_new_commit,
+        pr_commands, pr_command_authors)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     .run(
       id,
@@ -120,6 +126,8 @@ export function createPipeline(input: PipelineInput): Pipeline {
       input.watch.cronExpr ?? null,
       input.watch.pathFilter ?? null,
       input.watch.cancelInProgressOnNewCommit ? 1 : 0,
+      input.watch.prCommands ?? null,
+      input.watch.prCommandAuthors ?? null,
     );
   return {
     id,
@@ -154,7 +162,8 @@ export function updatePipeline(
          name = ?, watch_branch = ?, watch_interval_sec = ?, auto_trigger = ?,
          nodes_json = ?, edges_json = ?, updated_at = ?, telegram_approvals = ?,
          tag_pattern = ?, cron_expr = ?, path_filter = ?,
-         cancel_in_progress_on_new_commit = ?
+         cancel_in_progress_on_new_commit = ?,
+         pr_commands = ?, pr_command_authors = ?
        WHERE id = ?`,
     )
     .run(
@@ -170,6 +179,8 @@ export function updatePipeline(
       merged.watch.cronExpr ?? null,
       merged.watch.pathFilter ?? null,
       merged.watch.cancelInProgressOnNewCommit ? 1 : 0,
+      merged.watch.prCommands ?? null,
+      merged.watch.prCommandAuthors ?? null,
       id,
     );
   return merged;

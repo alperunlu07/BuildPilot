@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type {
   DiscordConfig,
+  GithubOAuthConfig,
   ServerConfig,
   SlackConfig,
   TelegramConfig,
@@ -83,6 +84,14 @@ function toOnDisk(cfg: ServerConfig): ServerConfig {
       publicKey: cfg.discord.publicKey ? encryptSecret(cfg.discord.publicKey) : '',
     };
   }
+  if (cfg.githubOAuth) {
+    out.githubOAuth = {
+      ...cfg.githubOAuth,
+      clientSecret: cfg.githubOAuth.clientSecret
+        ? encryptSecret(cfg.githubOAuth.clientSecret)
+        : '',
+    };
+  }
   return out;
 }
 
@@ -110,6 +119,12 @@ function toRuntime(cfg: ServerConfig): ServerConfig {
       publicKey: readSecret(cfg.discord.publicKey),
     };
   }
+  if (cfg.githubOAuth) {
+    out.githubOAuth = {
+      ...cfg.githubOAuth,
+      clientSecret: readSecret(cfg.githubOAuth.clientSecret),
+    };
+  }
   return out;
 }
 
@@ -129,6 +144,10 @@ function needsRewrite(cfg: ServerConfig): boolean {
   const d = cfg.discord;
   if (d) {
     if (d.publicKey && !isEncrypted(d.publicKey)) return true;
+  }
+  const g = cfg.githubOAuth;
+  if (g) {
+    if (g.clientSecret && !isEncrypted(g.clientSecret)) return true;
   }
   return false;
 }
@@ -197,6 +216,19 @@ export function saveDiscordConfig(next: DiscordConfig): DiscordConfig {
   writeFileSync(CONFIG_FILE, JSON.stringify(toOnDisk(updated), null, 2), 'utf-8');
   cachedConfig = updated;
   return updated.discord!;
+}
+
+// ── GitHub OAuth (Cluster 11.E) ─────────────────────────────────────────────
+export function getGithubOAuthRuntime(): GithubOAuthConfig | null {
+  return cachedConfig?.githubOAuth ?? null;
+}
+
+export function saveGithubOAuthConfig(next: GithubOAuthConfig): GithubOAuthConfig {
+  const base = cachedConfig ?? loadConfig();
+  const updated: ServerConfig = { ...base, githubOAuth: { ...next } };
+  writeFileSync(CONFIG_FILE, JSON.stringify(toOnDisk(updated), null, 2), 'utf-8');
+  cachedConfig = updated;
+  return updated.githubOAuth!;
 }
 
 export const CONFIG_PATH = CONFIG_FILE;
