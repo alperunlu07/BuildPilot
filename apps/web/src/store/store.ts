@@ -276,10 +276,24 @@ export const useStore = create<State>((set, get) => ({
   errorToasts: [],
 
   async loadProjects() {
-    set({ projects: await api.listProjects() });
+    const list = await api.listProjects();
+    // Pending soft-deletes shouldn't reappear if a `projectAdded` event
+    // races us into a re-fetch before the API delete fires.
+    const hiddenProjects = new Set(
+      get()
+        .pendingDeletions.filter((d) => d.kind === 'project')
+        .map((d) => (d.snapshot as ProjectSummary).id),
+    );
+    set({ projects: list.filter((p) => !hiddenProjects.has(p.id)) });
   },
   async loadPipelines(projectId) {
-    set({ pipelines: await api.listPipelines(projectId) });
+    const list = await api.listPipelines(projectId);
+    const hiddenPipelines = new Set(
+      get()
+        .pendingDeletions.filter((d) => d.kind === 'pipeline')
+        .map((d) => (d.snapshot as Pipeline).id),
+    );
+    set({ pipelines: list.filter((p) => !hiddenPipelines.has(p.id)) });
   },
   async loadBuilds(filter = {}) {
     set({ builds: await api.listBuilds({ ...filter, limit: 30 }) });
