@@ -23,6 +23,7 @@ import { onConnected, subscribe } from './lib/events';
 import { ensurePermission } from './lib/notifications';
 import { useGlobalShortcuts } from './lib/keyboard';
 import { applyTheme, subscribeSystemTheme } from './lib/theme';
+import { pathToView, viewToPath, viewsEqual } from './lib/router';
 
 export function App() {
   const view = useStore((s) => s.view);
@@ -71,6 +72,28 @@ export function App() {
     if (theme !== 'system') return;
     return subscribeSystemTheme(() => applyTheme('system'));
   }, [theme]);
+
+  // URL <-> view sync. The Zustand `view` remains the source of truth for
+  // existing components; this effect just mirrors it into the address bar
+  // and reacts to browser back/forward.
+  useEffect(() => {
+    const initial = pathToView(window.location.pathname);
+    if (!viewsEqual(initial, view)) setView(initial);
+    function onPop() {
+      const v = pathToView(window.location.pathname);
+      if (!viewsEqual(v, useStore.getState().view)) setView(v);
+    }
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    const path = viewToPath(view);
+    if (window.location.pathname !== path) {
+      window.history.pushState({}, '', path);
+    }
+  }, [view]);
 
   useGlobalShortcuts({
     onNewPipeline: () => {
