@@ -225,8 +225,8 @@ Cross-refs: `TODO.md` Phase 2.6.C.
 
 - [x] **Matrix editor panel** — declarative `matrix: { xcode: [15,16], scheme: [Free,Pro] }`
   side panel in the pipeline editor with preview of generated runs — `e2b98fb`
-- [ ] **Matrix run summary view** — collapsed N×M grid; each cell links
-  to its build; "rerun failed cells only" action
+- [x] **Matrix run summary view** — collapsed N×M grid; each cell links
+  to its build; "rerun failed cells only" action — `0edb606`
 - [ ] **Matrix-aware notifications** — single summary message per matrix
   instead of N×M individual notifies
 

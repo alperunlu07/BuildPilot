@@ -844,14 +844,32 @@ export const useStore = create<State>((set, get) => ({
         }
         void get().loadBuilds();
         break;
-      case 'notifyMatrix':
-        // Cluster 11.C — rolled-up summary for matrix pipelines. The
-        // current dashboard surface treats this as a hint to refresh the
-        // build list (so the parent + every child's status flips at
-        // once); detailed UI rendering lives on BuildDetailPage which
-        // re-fetches when the user opens the parent.
+      case 'notifyMatrix': {
+        // Cluster 11.C — rolled-up summary for matrix pipelines. Refresh
+        // the build list so the parent + every child's status flip at
+        // once, then fire a single desktop toast summarising the matrix.
+        // This is the dashboard counterpart to the "single message per
+        // matrix" promise — individual children stayed quiet, and the
+        // parent posts one notification at the end.
         void get().loadBuilds();
+        const projectName =
+          get().projects.find((p) => p.id === event.projectId)?.name ?? 'project';
+        const pipelineName =
+          get().pipelines.find((p) => p.id === event.pipelineId)?.name ?? 'pipeline';
+        const bits: string[] = [];
+        if (event.success > 0) bits.push(`${event.success} ok`);
+        if (event.failed > 0) bits.push(`${event.failed} failed`);
+        if (event.cancelled > 0) bits.push(`${event.cancelled} cancelled`);
+        notify({
+          title: `${projectName} · ${pipelineName} matrix done`,
+          body: `${event.success}/${event.total} succeeded${
+            bits.length > 0 ? ` (${bits.join(', ')})` : ''
+          }`,
+          tag: `notifyMatrix:${event.parentBuildId}`,
+          onClick: () => get().setView({ type: 'build', id: event.parentBuildId }),
+        });
         break;
+      }
       case 'projectAdded':
       case 'projectRemoved':
         void get().loadProjects();
