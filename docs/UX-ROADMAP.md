@@ -167,8 +167,8 @@ landing experience.
 - [x] **Responsive sidebar** — collapses into a drawer below `md:` (768px) — `52ffdf4`
 - [x] **Mobile-optimized build detail page** — log table currently
   unusable below 640px (fixed column widths) — `f87a609`
-- [ ] **PWA install** — manifest + service worker (also needed for Web
-  Push; tracked in `TODO.md` Phase 3)
+- [x] **PWA install** — manifest + service worker (also needed for Web
+  Push; tracked in `TODO.md` Phase 3) — `464e81b`
 - [ ] **Tap-friendly hit targets** — current Trash2 hover-delete buttons
   are 14px square; bump to 32px on touch devices
 

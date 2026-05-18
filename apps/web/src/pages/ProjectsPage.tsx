@@ -62,7 +62,11 @@ export function ProjectsPage({ onAdd }: Props) {
                   e.stopPropagation();
                   softDeleteProject(p.id);
                 }}
-                className="focusable absolute right-3 top-3 rounded-md border border-transparent p-1 text-slate-400 opacity-0 transition-opacity hover:border-rose-700 hover:text-rose-400 group-hover:opacity-100"
+                // touch-target bumps this to >=32px on coarse-pointer devices.
+                // We also force-visible on touch since `group-hover` never
+                // fires there — otherwise the delete affordance would be
+                // unreachable on a phone.
+                className="focusable touch-target absolute right-3 top-3 rounded-md border border-transparent p-1 text-slate-400 opacity-0 transition-opacity hover:border-rose-700 hover:text-rose-400 group-hover:opacity-100 [@media(pointer:coarse)]:opacity-100"
                 title="Remove this project"
                 aria-label={`Remove project ${p.name}`}
               >

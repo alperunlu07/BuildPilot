@@ -1245,7 +1245,7 @@ function Palette({
                   e.dataTransfer.setData('application/buildpilot-template', t.id);
                   e.dataTransfer.effectAllowed = 'move';
                 }}
-                className="group relative cursor-grab rounded-md border bg-slate-900 px-2.5 py-1.5 text-[12px] text-slate-200 hover:border-slate-500"
+                className="group relative touch-target cursor-grab rounded-md border bg-slate-900 px-2.5 py-1.5 text-[12px] text-slate-200 hover:border-slate-500"
                 style={{ borderColor: def.color, borderStyle: 'dashed' }}
                 title={t.description ?? `${def.label} preset`}
               >
@@ -1259,8 +1259,9 @@ function Palette({
                     e.stopPropagation();
                     onDeleteTemplate(t);
                   }}
-                  className="absolute right-1 top-1 rounded p-0.5 text-slate-400 opacity-0 hover:text-rose-400 group-hover:opacity-100"
+                  className="focusable touch-target absolute right-1 top-1 rounded p-0.5 text-slate-400 opacity-0 hover:text-rose-400 group-hover:opacity-100 [@media(pointer:coarse)]:opacity-100"
                   title="Delete this template"
+                  aria-label={`Delete template ${t.name}`}
                 >
                   ×
                 </button>
@@ -1296,7 +1297,10 @@ function PaletteItem({
           e.dataTransfer.effectAllowed = 'move';
           setHover(false);
         }}
-        className="cursor-grab rounded-md border bg-slate-900 px-2.5 py-1.5 text-[12px] text-slate-200 hover:border-slate-500"
+        // touch-target so palette tiles stay comfortably tappable on touch
+        // devices — drag-from-palette still works because we listen for
+        // dragstart, not pointerdown.
+        className="touch-target cursor-grab rounded-md border bg-slate-900 px-2.5 py-1.5 text-[12px] text-slate-200 hover:border-slate-500"
         style={{ borderColor: def.color }}
       >
         {def.label}

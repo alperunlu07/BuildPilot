@@ -98,7 +98,8 @@ export function ConfirmDialog({
           <button
             type="button"
             onClick={onCancel}
-            className="focusable rounded-md px-3 py-1.5 text-sm text-slate-400 hover:text-slate-200"
+            className="focusable touch-target rounded-md px-3 py-1.5 text-sm text-slate-400 hover:text-slate-200"
+            aria-label={`${cancelLabel} and close dialog`}
           >
             {cancelLabel}
           </button>

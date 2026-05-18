@@ -426,7 +426,9 @@ export function Sidebar({
                       e.stopPropagation();
                       softDeleteProject(p.id);
                     }}
-                    className="focusable rounded p-0.5 text-slate-400 opacity-0 transition-opacity hover:text-rose-400 group-hover:opacity-100"
+                    // Force-visible on touch so the trash button is actually
+                    // reachable without a hover state to trigger group-hover.
+                    className="focusable touch-target rounded p-0.5 text-slate-400 opacity-0 transition-opacity hover:text-rose-400 group-hover:opacity-100 [@media(pointer:coarse)]:opacity-100"
                     title="Remove this project"
                     aria-label="Remove project"
                   >
@@ -479,7 +481,7 @@ export function Sidebar({
                                 e.stopPropagation();
                                 softDeletePipeline(pl.id);
                               }}
-                              className="focusable rounded p-0.5 text-slate-400 opacity-0 transition-opacity hover:text-rose-400 group-hover:opacity-100"
+                              className="focusable touch-target rounded p-0.5 text-slate-400 opacity-0 transition-opacity hover:text-rose-400 group-hover:opacity-100 [@media(pointer:coarse)]:opacity-100"
                               title="Delete this pipeline"
                               aria-label="Delete pipeline"
                             >

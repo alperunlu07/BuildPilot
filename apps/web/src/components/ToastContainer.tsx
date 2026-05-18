@@ -40,7 +40,7 @@ export function ToastContainer() {
               <button
                 type="button"
                 onClick={() => dismissToast(t.id)}
-                className="focusable rounded text-slate-400 hover:text-slate-300"
+                className="focusable touch-target rounded text-slate-400 hover:text-slate-300"
                 aria-label="Dismiss new-commit toast"
               >
                 <X size={14} />
