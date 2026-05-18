@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Trash2, Undo2 } from 'lucide-react';
+import { AlertTriangle, Trash2, Undo2, X } from 'lucide-react';
 import { useStore } from '../store/store';
 
 // Shows one toast per pending soft-delete with a countdown bar + UNDO
@@ -7,6 +7,8 @@ import { useStore } from '../store/store';
 export function UndoToast() {
   const pending = useStore((s) => s.pendingDeletions);
   const undoDeletion = useStore((s) => s.undoDeletion);
+  const errors = useStore((s) => s.errorToasts);
+  const dismissError = useStore((s) => s.dismissError);
   // Tick so the progress bar can animate. 100ms is fine — 50 frames per
   // toast lifetime feels smooth without being expensive.
   const [, setTick] = useState(0);
@@ -17,10 +19,28 @@ export function UndoToast() {
     return () => clearInterval(id);
   }, [pending.length]);
 
-  if (pending.length === 0) return null;
+  if (pending.length === 0 && errors.length === 0) return null;
 
   return (
     <div className="pointer-events-none fixed bottom-4 left-1/2 z-40 flex -translate-x-1/2 flex-col items-center gap-2">
+      {errors.map((e) => (
+        <div
+          key={e.id}
+          className="pointer-events-auto flex w-[420px] items-start gap-3 rounded-lg border border-rose-700/60 bg-slate-900 px-4 py-3 shadow-xl ring-1 ring-rose-500/10"
+        >
+          <div className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-rose-500/15 text-rose-300">
+            <AlertTriangle size={13} />
+          </div>
+          <div className="min-w-0 flex-1 text-sm text-slate-100">{e.message}</div>
+          <button
+            type="button"
+            onClick={() => dismissError(e.id)}
+            className="text-slate-500 hover:text-slate-300"
+          >
+            <X size={13} />
+          </button>
+        </div>
+      ))}
       {pending.map((d) => {
         const remaining = Math.max(0, d.expiresAt - Date.now());
         const total = 5000;

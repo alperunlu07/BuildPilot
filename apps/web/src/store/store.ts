@@ -180,6 +180,8 @@ interface State {
   paletteOpen: boolean;
   shortcutsHelpOpen: boolean;
   pendingDeletions: PendingDeletion[];
+  // Transient error banners surfaced when optimistic actions roll back.
+  errorToasts: { id: string; message: string }[];
 
   loadProjects(): Promise<void>;
   loadPipelines(projectId?: string): Promise<void>;
@@ -243,6 +245,8 @@ interface State {
   softDeleteProject(id: string): void;
   softDeletePipeline(id: string): void;
   undoDeletion(deletionId: string): void;
+  pushError(message: string): void;
+  dismissError(id: string): void;
   handleEvent(event: ServerEvent): void;
 }
 
@@ -269,6 +273,7 @@ export const useStore = create<State>((set, get) => ({
   paletteOpen: false,
   shortcutsHelpOpen: false,
   pendingDeletions: [],
+  errorToasts: [],
 
   async loadProjects() {
     set({ projects: await api.listProjects() });
@@ -379,17 +384,74 @@ export const useStore = create<State>((set, get) => ({
     }
   },
   async triggerBuild(pipelineId, fromNodeId) {
-    const b = await api.triggerBuild(pipelineId, fromNodeId);
+    const pipeline = get().pipelines.find((p) => p.id === pipelineId);
+    // Optimistic placeholder so the editor + project page can flip to
+    // "Queued…" without waiting for the server round-trip. The real build
+    // (with the server-assigned id) replaces this entry on success; on
+    // error we roll it back and surface a toast.
+    const placeholder: Build = {
+      id: `opt-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`,
+      pipelineId,
+      projectId: pipeline?.projectId ?? '',
+      triggerSha: '',
+      triggerBranch: pipeline?.watch.branch ?? '',
+      status: 'pending',
+      startedAt: Date.now(),
+      finishedAt: null,
+      log: '',
+    };
     set({
-      activeBuild: b,
-      entriesByBuild: { ...get().entriesByBuild, [b.id]: [] },
+      activeBuild: placeholder,
+      builds: [placeholder, ...get().builds],
     });
-    await get().loadBuilds();
-    return b;
+    try {
+      const b = await api.triggerBuild(pipelineId, fromNodeId);
+      set({
+        activeBuild: b,
+        builds: [b, ...get().builds.filter((x) => x.id !== placeholder.id)],
+        entriesByBuild: { ...get().entriesByBuild, [b.id]: [] },
+      });
+      await get().loadBuilds();
+      return b;
+    } catch (err) {
+      set({
+        activeBuild: null,
+        builds: get().builds.filter((x) => x.id !== placeholder.id),
+      });
+      get().pushError(
+        `Run failed: ${err instanceof Error ? err.message : String(err)}`,
+      );
+      throw err;
+    }
   },
   async cancelBuild(id) {
-    await api.cancelBuild(id);
-    await get().loadBuilds();
+    // Optimistic flip — mark cancelled locally; rollback on error.
+    const snapshot = get().builds.find((b) => b.id === id);
+    if (snapshot) {
+      set({
+        builds: get().builds.map((b) =>
+          b.id === id ? { ...b, status: 'cancelled' as const, finishedAt: b.finishedAt ?? Date.now() } : b,
+        ),
+        activeBuild:
+          get().activeBuild?.id === id
+            ? { ...get().activeBuild!, status: 'cancelled', finishedAt: get().activeBuild!.finishedAt ?? Date.now() }
+            : get().activeBuild,
+      });
+    }
+    try {
+      await api.cancelBuild(id);
+      await get().loadBuilds();
+    } catch (err) {
+      if (snapshot) {
+        set({
+          builds: get().builds.map((b) => (b.id === id ? snapshot : b)),
+        });
+      }
+      get().pushError(
+        `Cancel failed: ${err instanceof Error ? err.message : String(err)}`,
+      );
+      throw err;
+    }
   },
   async pullProject(id) {
     await api.pullProject(id);
@@ -561,6 +623,18 @@ export const useStore = create<State>((set, get) => ({
       pendingDeletions: [...state.pendingDeletions, pending],
       view: nextView,
     });
+  },
+  pushError(message) {
+    const id = `err-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+    set({ errorToasts: [...get().errorToasts, { id, message }] });
+    // Auto-dismiss after 6 seconds so the corner doesn't fill up if many
+    // calls fail in succession.
+    setTimeout(() => {
+      set({ errorToasts: get().errorToasts.filter((e) => e.id !== id) });
+    }, 6000);
+  },
+  dismissError(id) {
+    set({ errorToasts: get().errorToasts.filter((e) => e.id !== id) });
   },
   undoDeletion(deletionId) {
     const state = get();

@@ -128,9 +128,9 @@ landing experience.
 - [ ] **Empty-state CTAs** — Projects, Pipelines, Builds and Hosts pages
   show actionable empty states with a primary CTA + a "load sample
   pipeline" option for first-run users
-- [ ] **Toast-with-undo** for destructive actions — pipeline / project
+- [x] **Toast-with-undo** for destructive actions — pipeline / project
   delete shows a 5s undo toast instead of relying solely on the confirm
-  dialog
+  dialog — `88c88ad`
 - [ ] **Pipeline editor draft auto-save** — debounced save to
   `localStorage` so a tab close / accidental refresh doesn't lose work
 - [ ] **Optimistic UI** for run / cancel — the button flips state
