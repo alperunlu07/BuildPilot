@@ -108,20 +108,20 @@ landing experience.
 
 ### Cluster 10.D · Metrics-led home dashboard
 
-- [ ] **Home dashboard** — replace the default `projects` landing with a
+- [x] **Home dashboard** — replace the default `projects` landing with a
   metrics overview: running builds, last-24h success rate, recent
   failures, slowest pipelines, disk usage. Projects list moves to a
-  tab / route
-- [ ] **Per-pipeline metrics panel** — duration P50/P95 sparkline + step
-  duration breakdown over last 30 builds (data already in DB)
-- [ ] **Slowest-step leaderboard** per pipeline — top 5 longest-running
-  steps with average duration
-- [ ] **Disk usage page** — bytes consumed by `~/.buildpilot/artifacts/`
+  tab / route — `d4f49d0`
+- [x] **Per-pipeline metrics panel** — duration P50/P95 sparkline + step
+  duration breakdown over last 30 builds (data already in DB) — `da7f723`
+- [x] **Slowest-step leaderboard** per pipeline — top 5 longest-running
+  steps with average duration — `da7f723`
+- [x] **Disk usage page** — bytes consumed by `~/.buildpilot/artifacts/`
   broken down by pipeline, with a "prune older than N days" action
-  that reuses existing `pruneOldBuilds`
-- [ ] **Active builds widget** — sticky element (sidebar or header)
+  that reuses existing `pruneOldBuilds` — `44a047a`
+- [x] **Active builds widget** — sticky element (sidebar or header)
   showing in-flight builds with progress + cancel button, regardless
-  of the current view
+  of the current view — `ca49d02`
 
 ### Cluster 10.E · Small UX polish
 
