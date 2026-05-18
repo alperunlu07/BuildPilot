@@ -13,14 +13,14 @@ satellite widgets.
 - [x] Home dashboard — new landing view with: running builds count, last-24h
       success rate, recent failures (last 5), slowest pipelines (top 5 by
       avg duration), disk usage summary. Add server endpoint
-      `GET /api/metrics/home`. *(commit TBD)*
-- [ ] Per-pipeline metrics panel — duration P50/P95 sparkline + step
+      `GET /api/metrics/home`. (d4f49d0)
+- [x] Per-pipeline metrics panel — duration P50/P95 sparkline + step
       duration breakdown over last 30 builds. Endpoint
       `GET /api/metrics/pipeline/:id`. Render as a section on the home page
-      or as a standalone component callable from the pipeline page.
-- [ ] Slowest-step leaderboard per pipeline — top 5 longest-running steps
+      or as a standalone component callable from the pipeline page. *(commit TBD)*
+- [x] Slowest-step leaderboard per pipeline — top 5 longest-running steps
       with average duration. Endpoint or computed in
-      `/api/metrics/pipeline/:id`.
+      `/api/metrics/pipeline/:id`. *(commit TBD)*
 - [ ] Disk usage page — bytes consumed by `~/.buildpilot/artifacts/` broken
       down by pipeline, with a "prune older than N days" action that reuses
       existing `pruneOldBuilds`. Endpoints `GET /api/metrics/disk-usage` +

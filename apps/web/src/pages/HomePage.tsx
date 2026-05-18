@@ -12,6 +12,7 @@ import { formatDistanceToNow } from 'date-fns';
 import type { HomeMetrics } from '@buildpilot/shared-types';
 import { api } from '../lib/api';
 import { useStore } from '../store/store';
+import { PipelineMetricsPanel } from '../components/PipelineMetricsPanel';
 
 // Cluster 10.D — metrics-led landing view. Surfaces the numbers an
 // operator wants at a glance: how many builds are in-flight right now,
@@ -211,6 +212,37 @@ export function HomePage() {
               </div>
             </section>
           </div>
+
+          {metrics.slowestPipelines.length > 0 && (
+            <section className="mt-6">
+              <header className="mb-2 flex items-center gap-2 text-sm text-slate-300">
+                <Timer size={14} className="text-amber-400" />
+                <span>Per-pipeline detail</span>
+                <span className="text-[11px] text-slate-500">
+                  · top {Math.min(3, metrics.slowestPipelines.length)} by avg duration
+                </span>
+              </header>
+              <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
+                {metrics.slowestPipelines.slice(0, 3).map((p) => (
+                  <div
+                    key={p.pipelineId}
+                    className="rounded-md border border-slate-800 bg-slate-900/40 p-3"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setView({ type: 'pipeline', id: p.pipelineId })}
+                      className="mb-2 block w-full truncate text-left text-sm text-slate-200 hover:text-sky-400"
+                      title="Open pipeline editor"
+                    >
+                      {p.projectName} <span className="text-slate-500">/</span>{' '}
+                      <span className="text-slate-300">{p.pipelineName}</span>
+                    </button>
+                    <PipelineMetricsPanel pipelineId={p.pipelineId} compact />
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
         </>
       )}
     </div>
