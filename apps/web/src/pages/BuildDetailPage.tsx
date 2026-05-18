@@ -23,6 +23,7 @@ import {
   type SavedLogFilter,
 } from '../components/LogSearchBar';
 import { TimestampRangeSlider } from '../components/TimestampRangeSlider';
+import { commandFromEntry } from '../lib/copyCommand';
 
 const EMPTY: BuildLogEntry[] = [];
 
@@ -483,6 +484,7 @@ export function BuildDetailPage({ buildId }: Props) {
           nodeLabel={(id, type) =>
             `${nodeLabelMap.get(id) ?? type ?? '?'} · ${id.slice(0, 8)}`
           }
+          copyCommandFor={commandFromEntry}
           emptyMessage={entries.length === 0 ? 'Build queued / no output yet.' : 'No rows match these filters.'}
         />
       </div>

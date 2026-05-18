@@ -14,6 +14,9 @@ interface Props {
   // Compact = tighter row height for the bottom panel; default = roomier.
   compact?: boolean;
   emptyMessage?: string;
+  // Optional "Copy as terminal command" hook. Returning a non-null string
+  // surfaces a hover "copy" button on the row that writes it to clipboard.
+  copyCommandFor?(entry: BuildLogEntry): string | null;
 }
 
 const LEVEL_STYLE: Record<BuildLogLevel, { dot: string; pill: string }> = {
@@ -42,6 +45,7 @@ export function LogTable({
   follow = true,
   compact = false,
   emptyMessage = 'Waiting for output…',
+  copyCommandFor,
 }: Props) {
   const rowH = compact ? ROW_H_COMPACT : ROW_H;
   const listRef = useRef<FixedSizeList>(null);
@@ -84,8 +88,8 @@ export function LogTable({
   }, [entries.length]);
 
   const itemData = useMemo(
-    () => ({ entries, nodeLabel, compact, rowH }),
-    [entries, nodeLabel, compact, rowH],
+    () => ({ entries, nodeLabel, compact, rowH, copyCommandFor }),
+    [entries, nodeLabel, compact, rowH, copyCommandFor],
   );
 
   if (entries.length === 0) {
@@ -154,17 +158,19 @@ interface RowItemData {
   nodeLabel?(nodeId: string, stepType: StepType | null): string;
   compact: boolean;
   rowH: number;
+  copyCommandFor?(entry: BuildLogEntry): string | null;
 }
 
 function Row({ index, style, data }: ListChildComponentProps<RowItemData>) {
-  const { entries, nodeLabel, compact } = data;
+  const { entries, nodeLabel, compact, copyCommandFor } = data;
   const e = entries[index]!;
   const lvlStyle = LEVEL_STYLE[e.level];
+  const cmd = copyCommandFor?.(e) ?? null;
   return (
     <div
       style={style}
       className={cn(
-        'grid items-center border-t border-slate-900 px-2 hover:bg-slate-900/40',
+        'group grid items-center border-t border-slate-900 px-2 hover:bg-slate-900/40',
         compact ? 'py-0' : 'py-0',
       )}
     >
@@ -195,13 +201,28 @@ function Row({ index, style, data }: ListChildComponentProps<RowItemData>) {
           // the title attr so the tooltip stays readable.
           title={e.message.replace(/\x1b\[[0-9;]*[A-Za-z]/g, '')}
           className={cn(
-            'truncate text-slate-200',
+            'relative flex items-center truncate text-slate-200',
             e.level === 'stderr' && 'text-amber-200',
             e.level === 'failure' && 'text-rose-300',
             e.level === 'success' && 'text-emerald-300',
           )}
         >
-          <AnsiMessage text={e.message} />
+          <span className="min-w-0 truncate">
+            <AnsiMessage text={e.message} />
+          </span>
+          {cmd && (
+            <button
+              type="button"
+              onClick={(ev) => {
+                ev.stopPropagation();
+                void navigator.clipboard?.writeText(cmd);
+              }}
+              className="ml-2 hidden shrink-0 rounded border border-slate-700 px-1.5 py-0 text-[10px] uppercase tracking-wider text-slate-400 hover:border-sky-500 hover:text-sky-300 group-hover:inline-flex"
+              title={`Copy: ${cmd}`}
+            >
+              copy
+            </button>
+          )}
         </span>
       </div>
     </div>
