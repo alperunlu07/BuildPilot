@@ -340,6 +340,6 @@ theme.
 
 | Phase                              | Done | Pending | Status |
 | ---------------------------------- | ---: | ------: | ------ |
-| 10. UI/UX overhaul                 |   0  |   70    | ⏸ 0%   |
+| 10. UI/UX overhaul (A–G)           |  54  |    2    | ✅ 96% (split view + swimlanes deferred as stretch) |
 | 11. Platform expansion             |   0  |   30    | ⏸ 0%   |
 | 12. Developer ergonomics           |   0  |    7    | ⏸ 0%   |
