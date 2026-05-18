@@ -87,8 +87,8 @@ landing experience.
   suggestion summary if it ran — `872e658`
 - [x] **Log search regex toggle** — current LogTable filter is substring;
   add a regex toggle and remember last query per build — `884e333`
-- [ ] **Timestamp-range filter** — slider over the build duration to scope
-  log view to a window (handy for hour-long Unity builds)
+- [x] **Timestamp-range filter** — slider over the build duration to scope
+  log view to a window (handy for hour-long Unity builds) — `af12a84`
 - [ ] **Saved log filters** — named filter presets ("errors only",
   "Xcode warnings", "build commands") shared across builds
 - [ ] **"Copy as terminal command"** — every step that shells out should
