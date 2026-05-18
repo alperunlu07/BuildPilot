@@ -11,6 +11,7 @@ import {
   Home,
   KeyRound,
   LineChart,
+  ListOrdered,
   Monitor,
   Moon,
   Plus,
@@ -355,7 +356,13 @@ export function Sidebar({
           icon={<Server size={14} className="text-slate-400" />}
           label={t('nav.hosts')}
           onClick={() => setView({ type: 'hosts' })}
-          title="Manage saved SSH hosts (used by Remote SSH / SFTP / Mac steps)"
+        />
+        <NavItem
+          active={view.type === 'queue'}
+          icon={<ListOrdered size={14} className="text-sky-400" />}
+          label="Queue"
+          onClick={() => setView({ type: 'queue' })}
+          title="Pending and running builds, grouped by lane"
         />
         <NavItem
           active={view.type === 'trends'}

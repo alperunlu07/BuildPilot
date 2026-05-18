@@ -18,6 +18,7 @@ import { ProjectDetailPage } from './pages/ProjectDetailPage';
 import { PipelinePage } from './pages/PipelinePage';
 import { BuildsPage } from './pages/BuildsPage';
 import { BuildDetailPage } from './pages/BuildDetailPage';
+import { QueuePage } from './pages/QueuePage';
 import { SettingsPage } from './pages/SettingsPage';
 import { DiskUsagePage } from './pages/DiskUsagePage';
 import { HostsPage } from './pages/HostsPage';
@@ -49,6 +50,7 @@ export function App() {
   const loadBuilds = useStore((s) => s.loadBuilds);
   const loadNodeTemplates = useStore((s) => s.loadNodeTemplates);
   const loadHosts = useStore((s) => s.loadHosts);
+  const loadQueue = useStore((s) => s.loadQueue);
   const handleEvent = useStore((s) => s.handleEvent);
   const confirmation = useStore((s) => s.confirmation);
   const closeConfirmation = useStore((s) => s.closeConfirmation);
@@ -104,6 +106,7 @@ export function App() {
     void loadBuilds();
     void loadNodeTemplates();
     void loadHosts();
+    void loadQueue();
     void ensurePermission();
   }, [
     authChecked,
@@ -114,6 +117,7 @@ export function App() {
     loadBuilds,
     loadNodeTemplates,
     loadHosts,
+    loadQueue,
   ]);
 
   useEffect(() => subscribe(handleEvent), [handleEvent]);
@@ -139,8 +143,9 @@ export function App() {
         void loadBuilds();
         void loadNodeTemplates();
         void loadHosts();
+        void loadQueue();
       }),
-    [loadProjects, loadPipelines, loadBuilds, loadNodeTemplates, loadHosts],
+    [loadProjects, loadPipelines, loadBuilds, loadNodeTemplates, loadHosts, loadQueue],
   );
 
   // System theme listener — only reacts when the user picked `system`.
@@ -200,6 +205,7 @@ export function App() {
           {view.type === 'pipeline' && <PipelinePage pipelineId={view.id} />}
           {view.type === 'builds' && <BuildsPage />}
           {view.type === 'build' && <BuildDetailPage buildId={view.id} />}
+          {view.type === 'queue' && <QueuePage />}
           {view.type === 'settings' && <SettingsPage />}
           {view.type === 'diskUsage' && <DiskUsagePage />}
           {view.type === 'hosts' && <HostsPage />}

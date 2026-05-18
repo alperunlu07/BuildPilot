@@ -8,6 +8,7 @@ import type {
   NotificationPrefs,
   Pipeline,
   ProjectSummary,
+  QueueSnapshot,
   ServerEvent,
   SshHost,
   User,
@@ -50,7 +51,8 @@ export type View =
   | { type: 'secrets'; name?: string }
   | { type: 'vaultFiles' }
   | { type: 'vcsCredentials' }
-  | { type: 'approvals' };
+  | { type: 'approvals' }
+  | { type: 'queue' };
 
 export interface CommitToast {
   id: string;
@@ -171,6 +173,9 @@ interface State {
   builds: Build[];
   nodeTemplates: NodeTemplate[];
   hosts: SshHost[];
+  // WP5 (queue): most recent QueueSnapshot fetched from /api/queue. The
+  // Queue page seeds + polls this; null until the first load completes.
+  queue: QueueSnapshot | null;
   activeBuild: Build | null;
   view: View;
   toasts: CommitToast[];
@@ -210,6 +215,7 @@ interface State {
   loadProjects(): Promise<void>;
   loadPipelines(projectId?: string): Promise<void>;
   loadBuilds(filter?: { projectId?: string; pipelineId?: string }): Promise<void>;
+  loadQueue(): Promise<void>;
   loadNodeTemplates(): Promise<void>;
   saveNodeTemplate(input: {
     name: string;
@@ -287,6 +293,7 @@ export const useStore = create<State>((set, get) => ({
   builds: [],
   nodeTemplates: [],
   hosts: [],
+  queue: null,
   activeBuild: null,
   view: { type: 'home' },
   toasts: [],
@@ -329,6 +336,9 @@ export const useStore = create<State>((set, get) => ({
   },
   async loadBuilds(filter = {}) {
     set({ builds: await api.listBuilds({ ...filter, limit: 30 }) });
+  },
+  async loadQueue() {
+    set({ queue: await api.getQueue() });
   },
   async loadNodeTemplates() {
     set({ nodeTemplates: await api.listNodeTemplates() });

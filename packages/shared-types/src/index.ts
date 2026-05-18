@@ -261,6 +261,20 @@ export interface BuildWithMatrix extends Build {
   children: Build[];
 }
 
+// ── Queue snapshot ──────────────────────────────────────────────────────────
+// WP5 (queue): point-in-time view of running + pending builds, grouped by
+// lane. Powers the dashboard's Queue page — polled, not pushed.
+export interface QueueLaneSnapshot {
+  lane: Lane;
+  running: Build[]; // status='running' on this lane, ordered by startedAt ASC
+  pending: Build[]; // status='pending' on this lane, ordered by (priority ASC, startedAt ASC)
+}
+
+export interface QueueSnapshot {
+  lanes: QueueLaneSnapshot[]; // listLanes() order — name ASC
+  generatedAt: number; // unix ms
+}
+
 // ── Step data shapes ────────────────────────────────────────────────────────
 export interface CheckoutStepData {
   branch: string;

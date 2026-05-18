@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { Build, BuildStatus } from '@buildpilot/shared-types';
 import { getDb } from './db';
 
-interface BuildRow {
+export interface BuildRow {
   id: string;
   pipeline_id: string;
   project_id: string;
@@ -22,7 +22,7 @@ interface BuildRow {
   lane_id: string;
 }
 
-function rowToBuild(row: BuildRow): Build {
+export function rowToBuild(row: BuildRow): Build {
   let matrixValues: Record<string, string> | null = null;
   if (row.matrix_values_json) {
     try {

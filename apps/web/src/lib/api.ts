@@ -30,6 +30,7 @@ import type {
   PruneBuildsResponse,
   Secret,
   SecretUsage,
+  QueueSnapshot,
   SshHost,
   StepType,
   TelegramConfigPublic,
@@ -190,6 +191,11 @@ export const api = {
       `/builds/${parentId}/rerun-failed`,
       { method: 'POST' },
     ),
+
+  // ── Queue ────────────────────────────────────────────────
+  // WP5 (queue): polled snapshot of running + pending builds, grouped by
+  // lane. Server returns generatedAt so the UI can show "last refreshed".
+  getQueue: () => http<QueueSnapshot>('/queue'),
 
   // ── Node templates ───────────────────────────────────────
   listNodeTemplates: () => http<NodeTemplate[]>('/node-templates'),

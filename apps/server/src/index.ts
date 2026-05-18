@@ -21,6 +21,7 @@ import { prContextRoutes } from './api/pr-context';
 import { prCommandRoutes } from './api/pr-commands';
 import { approvalsRoutes } from './api/approvals';
 import { lanesRoutes } from './api/lanes';
+import { queueRoutes } from './api/queue';
 import { reloadSchedules, startPoller } from './poller';
 import { eventBus } from './events/bus';
 import { startTelegramBot } from './runner/telegramBot';
@@ -117,6 +118,7 @@ async function main(): Promise<void> {
   await prCommandRoutes(app);
   await approvalsRoutes(app);
   await lanesRoutes(app);
+  await queueRoutes(app);
 
   // Re-sync poller whenever projects change. Pipeline mutations also trigger sync;
   // for now we just sync on any project event and rely on listPipelines() returning
