@@ -103,8 +103,8 @@ landing experience.
   conventions (`::group::name` / `--- name`), auto-detected in stdout — `a7ddef7`
 - [x] **Inline ANSI color support** in LogTable — many shell tools emit
   color; LogTable currently strips — `4ac2c44`
-- [ ] **Build diff view** — pick two builds; show step-by-step duration
-  diff + artifact size diff + first diverging log line
+- [x] **Build diff view** — pick two builds; show step-by-step duration
+  diff + artifact size diff + first diverging log line — `4955ddf`
 
 ### Cluster 10.D · Metrics-led home dashboard
 
