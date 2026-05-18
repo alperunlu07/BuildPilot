@@ -1,4 +1,5 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { ArrowDownCircle } from 'lucide-react';
 import { FixedSizeList, type ListChildComponentProps } from 'react-window';
 import type { BuildLogEntry, BuildLogLevel, StepType } from '@buildpilot/shared-types';
 import { cn } from '../lib/cn';
@@ -46,6 +47,9 @@ export function LogTable({
   const followRef = useRef(follow);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState<{ w: number; h: number }>({ w: 0, h: 0 });
+  // Mirrors followRef into render state so the "Jump to latest" button can
+  // appear/disappear when the user scrolls away from the bottom.
+  const [autoFollow, setAutoFollow] = useState(follow);
 
   // Measure the container so FixedSizeList knows how tall/wide to be. Using
   // ResizeObserver instead of forcing height: 100% on the list because the
@@ -72,6 +76,12 @@ export function LogTable({
     listRef.current?.scrollToItem(entries.length - 1, 'end');
   }, [entries.length]);
 
+  const jumpToLatest = useCallback(() => {
+    followRef.current = true;
+    setAutoFollow(true);
+    if (entries.length > 0) listRef.current?.scrollToItem(entries.length - 1, 'end');
+  }, [entries.length]);
+
   const itemData = useMemo(
     () => ({ entries, nodeLabel, compact, rowH }),
     [entries, nodeLabel, compact, rowH],
@@ -86,7 +96,7 @@ export function LogTable({
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col font-mono text-[12px]">
+    <div className="relative flex h-full min-h-0 flex-col font-mono text-[12px]">
       <div
         className={cn(
           'sticky top-0 z-10 grid border-b border-slate-800 bg-slate-950/95 px-2 backdrop-blur',
@@ -112,7 +122,9 @@ export function LogTable({
             onScroll={({ scrollOffset, scrollUpdateWasRequested }) => {
               if (scrollUpdateWasRequested) return;
               const max = entries.length * rowH - size.h;
-              followRef.current = max - scrollOffset < rowH * 2;
+              const atBottom = max - scrollOffset < rowH * 2;
+              followRef.current = atBottom;
+              setAutoFollow((cur) => (cur === atBottom ? cur : atBottom));
             }}
             // Inline class for the inner container — react-window manages
             // its own scroll, we just style the scrollbar.
@@ -122,6 +134,16 @@ export function LogTable({
           </FixedSizeList>
         )}
       </div>
+      {!autoFollow && (
+        <button
+          type="button"
+          onClick={jumpToLatest}
+          className="absolute bottom-3 right-4 z-20 inline-flex items-center gap-1 rounded-full border border-sky-700 bg-slate-900/90 px-2.5 py-1 text-[11px] text-sky-300 shadow-lg backdrop-blur hover:border-sky-500 hover:text-sky-200"
+          title="Re-enable autoscroll"
+        >
+          <ArrowDownCircle size={12} /> Jump to latest
+        </button>
+      )}
     </div>
   );
 }
