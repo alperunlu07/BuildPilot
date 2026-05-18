@@ -21,6 +21,9 @@ import { BuildDetailPage } from './pages/BuildDetailPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { DiskUsagePage } from './pages/DiskUsagePage';
 import { HostsPage } from './pages/HostsPage';
+import { TestReportPage } from './pages/TestReportPage';
+import { FlakyTestsPage } from './pages/FlakyTestsPage';
+import { BuildTrendsPage } from './pages/BuildTrendsPage';
 import { useStore } from './store/store';
 import { onConnected, subscribe } from './lib/events';
 import { ensurePermission } from './lib/notifications';
@@ -48,7 +51,17 @@ export function App() {
   // Mobile drawer open state — only consumed below md. Auto-close whenever
   // the route changes so tapping a nav item dismisses the drawer.
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const viewKey = `${view.type}:${'id' in view ? view.id : ''}`;
+  // Stable per-view key for effects (close mobile drawer on navigation).
+  // We cover the legacy `id` variants plus the Cluster 11.F views which
+  // carry buildId/pipelineId instead.
+  const viewKey =
+    view.type === 'testReport'
+      ? `testReport:${view.buildId}`
+      : view.type === 'flakyTests'
+        ? `flakyTests:${view.pipelineId ?? ''}`
+        : view.type === 'trends'
+          ? `trends:${view.pipelineId ?? ''}`
+          : `${view.type}:${'id' in view ? view.id : ''}`;
   useEffect(() => {
     setMobileNavOpen(false);
   }, [viewKey]);
@@ -144,6 +157,9 @@ export function App() {
           {view.type === 'settings' && <SettingsPage />}
           {view.type === 'diskUsage' && <DiskUsagePage />}
           {view.type === 'hosts' && <HostsPage />}
+          {view.type === 'testReport' && <TestReportPage buildId={view.buildId} />}
+          {view.type === 'flakyTests' && <FlakyTestsPage />}
+          {view.type === 'trends' && <BuildTrendsPage />}
         </div>
         <BuildLogPanel />
       </main>

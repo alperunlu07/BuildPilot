@@ -117,6 +117,11 @@ export function initDb(path: string): DB {
     'cron_expr TEXT',
     'path_filter TEXT',
     'cancel_in_progress_on_new_commit INTEGER NOT NULL DEFAULT 0',
+    // Cluster 11.F — JSON array of test keys ("classname::name") the
+    // user has marked as flaky / quarantined. Engine wiring (treat
+    // failures from these as soft-fail) is a future step; the column
+    // captures intent today so the UI roundtrips correctly.
+    'flaky_quarantine_json TEXT',
   ];
   for (const decl of additivePipelineCols) {
     try {

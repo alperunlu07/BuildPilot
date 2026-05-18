@@ -2,8 +2,11 @@ import type {
   Build,
   BuildArtifact,
   BuildLogEntry,
+  BuildTrendsReport,
   Commit,
+  CoverageReport,
   DiskUsageReport,
+  FlakyTestsReport,
   HomeMetrics,
   NodeTemplate,
   Pipeline,
@@ -15,6 +18,8 @@ import type {
   StepType,
   TelegramConfigPublic,
   TelegramConfigUpdate,
+  TestReportKind,
+  TestReportTree,
 } from '@buildpilot/shared-types';
 
 const API = '/api';
@@ -239,4 +244,33 @@ export const api = {
     http<PruneBuildsResponse>(`/builds/prune?olderThanDays=${olderThanDays}`, {
       method: 'POST',
     }),
+
+  // ── Observability — test reports + coverage (Cluster 11.F) ───────────
+  testReport: (
+    buildId: string,
+    opts: { kind?: TestReportKind; artifactId?: number } = {},
+  ) => {
+    const qs = new URLSearchParams();
+    if (opts.kind) qs.set('kind', opts.kind);
+    if (opts.artifactId !== undefined) qs.set('artifactId', String(opts.artifactId));
+    const q = qs.toString();
+    return http<TestReportTree>(`/builds/${buildId}/test-report${q ? `?${q}` : ''}`);
+  },
+  buildCoverage: (buildId: string) => http<CoverageReport>(`/builds/${buildId}/coverage`),
+
+  // Flaky test detection (Cluster 11.F item 4).
+  flakyTests: (pipelineId: string, buildCount = 30) =>
+    http<FlakyTestsReport>(`/flaky-tests?pipelineId=${pipelineId}&buildCount=${buildCount}`),
+  quarantineFlakyTest: (pipelineId: string, testKey: string, quarantined: boolean) =>
+    http<{ pipelineId: string; quarantined: string[] }>(
+      `/flaky-tests/${pipelineId}/quarantine`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ testKey, quarantined }),
+      },
+    ),
+
+  // Build duration trend (Cluster 11.F item 5).
+  buildTrends: (pipelineId: string, buildCount = 100) =>
+    http<BuildTrendsReport>(`/metrics/trends?pipelineId=${pipelineId}&buildCount=${buildCount}`),
 };

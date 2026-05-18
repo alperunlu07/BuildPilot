@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Check, ChevronLeft, Download, Filter, GitCompareArrows, Link2, RotateCcw, Square } from 'lucide-react';
+import { Check, ChevronLeft, Download, FileBarChart, Filter, GitCompareArrows, Link2, RotateCcw, Square } from 'lucide-react';
 import type {
   Build,
   BuildArtifact,
@@ -160,6 +160,19 @@ export function BuildDetailPage({ buildId }: Props) {
     }
     return [...seen.entries()];
   }, [entries]);
+
+  // Cluster 11.F — detect when a build has a test report or coverage
+  // artifact so we can offer a "Tests" jump-link button in the header.
+  const hasTestArtifact = useMemo(
+    () =>
+      artifacts.some(
+        (a) =>
+          /\.xcresult\/?$/i.test(a.path) ||
+          (a.path.toLowerCase().endsWith('.xml') &&
+            !/(?:^|\/)(coverage|cobertura)[^/]*\.xml$/i.test(a.path)),
+      ),
+    [artifacts],
+  );
 
   const logGroups = useMemo(() => detectLogGroups(entries), [entries]);
   const groupFilter = useMemo(
@@ -329,6 +342,16 @@ export function BuildDetailPage({ buildId }: Props) {
                 title={`Re-run from the failed step (${failedNodeId.slice(0, 8)}) and onwards`}
               >
                 <RotateCcw size={11} /> Retry from failed step
+              </button>
+            )}
+            {hasTestArtifact && (
+              <button
+                type="button"
+                onClick={() => setView({ type: 'testReport', buildId: build.id })}
+                className="focusable inline-flex items-center gap-1 rounded-md border border-emerald-700/60 px-2 py-0.5 text-emerald-300 hover:border-emerald-500 hover:text-emerald-200"
+                title="View parsed test report (xcresult / JUnit)"
+              >
+                <FileBarChart size={11} /> Tests
               </button>
             )}
             <button

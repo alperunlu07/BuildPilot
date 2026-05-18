@@ -1,5 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import type {
+  BuildTrendsBuild,
+  BuildTrendsReport,
   DiskUsageReport,
   DiskUsagePipelineEntry,
   HomeMetrics,
@@ -400,6 +402,98 @@ export async function metricsRoutes(app: FastifyInstance): Promise<void> {
       pipelines,
       orphanBytes: Number(orphan.bytes ?? 0),
       orphanArtifactCount: Number(orphan.c ?? 0),
+    };
+    return body;
+  });
+
+  // Cluster 11.F — extended trend window for BuildTrendsPage. Pulls up
+  // to N most recent finished builds (default 100), computes P50/P95,
+  // success rate, and a P95 spike alert against the older-half baseline.
+  app.get('/api/metrics/trends', async (req, reply) => {
+    const q = (req.query as { pipelineId?: string; buildCount?: string }) ?? {};
+    if (!q.pipelineId) return reply.code(400).send({ error: 'pipelineId required' });
+    const pipeline = getPipeline(q.pipelineId);
+    if (!pipeline) return reply.code(404).send({ error: 'pipeline not found' });
+    const limit = Math.max(1, Math.min(500, parseInt(q.buildCount ?? '100', 10) || 100));
+    const db = getDb();
+
+    const rows = db
+      .prepare(
+        `SELECT id, status, started_at, finished_at FROM builds
+         WHERE pipeline_id = ?
+         ORDER BY started_at DESC
+         LIMIT ?`,
+      )
+      .all(q.pipelineId, limit) as Array<{
+      id: string;
+      status: string;
+      started_at: number;
+      finished_at: number | null;
+    }>;
+
+    const builds: BuildTrendsBuild[] = rows
+      .slice()
+      .reverse()
+      .map((r) => ({
+        id: r.id,
+        status: r.status as BuildTrendsBuild['status'],
+        startedAt: r.started_at,
+        finishedAt: r.finished_at,
+        durationMs: r.finished_at != null ? r.finished_at - r.started_at : null,
+      }));
+
+    const durations = builds
+      .map((b) => b.durationMs)
+      .filter((d): d is number => d != null)
+      .sort((a, b) => a - b);
+    const durationP50Ms = percentile(durations, 50);
+    const durationP95Ms = percentile(durations, 95);
+
+    // Baseline = P95 over the older half. We use the older half rather
+    // than a fixed cohort so the alert tracks "behavior recently changed"
+    // — if P95 was 5min for a long time then jumped to 12min, the older
+    // half still anchors near 5min and the spike trips.
+    const halfIdx = Math.floor(builds.length / 2);
+    const olderHalf = builds
+      .slice(0, halfIdx)
+      .map((b) => b.durationMs)
+      .filter((d): d is number => d != null)
+      .sort((a, b) => a - b);
+    const baselineP95Ms = percentile(olderHalf, 95);
+    const p95SpikeDetected =
+      durationP95Ms != null &&
+      baselineP95Ms != null &&
+      baselineP95Ms > 0 &&
+      durationP95Ms > baselineP95Ms * 2;
+
+    // Success rate over finished decisive builds (ignore cancelled +
+    // still-running so a busy queue doesn't drag the number down).
+    let succ = 0;
+    let fail = 0;
+    for (const b of builds) {
+      if (b.status === 'success') succ += 1;
+      else if (b.status === 'failed') fail += 1;
+    }
+    const successRate = succ + fail > 0 ? succ / (succ + fail) : null;
+
+    const projectName =
+      (db
+        .prepare('SELECT name FROM projects WHERE id = ?')
+        .get(pipeline.projectId) as { name: string } | undefined)?.name ??
+      '(deleted project)';
+
+    const body: BuildTrendsReport = {
+      pipelineId: pipeline.id,
+      pipelineName: pipeline.name,
+      projectId: pipeline.projectId,
+      projectName,
+      buildsAnalyzed: builds.length,
+      durationP50Ms,
+      durationP95Ms,
+      baselineP95Ms,
+      p95SpikeDetected,
+      successRate,
+      builds,
     };
     return body;
   });
