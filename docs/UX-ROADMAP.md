@@ -149,18 +149,18 @@ landing experience.
 
 ### Cluster 10.F · Accessibility
 
-- [ ] **Status indicators carry icon + color** — colorblind-safe; success
-  ✓ green, failure ✗ red, running ⟳ amber, cancelled ⊘ slate
-- [ ] **Focus rings on all interactive elements** — currently many
-  buttons rely on hover state only
-- [ ] **ARIA labels on icon-only buttons** — Trash2, Plus, Settings, etc.
-  are unlabelled to a screen reader
-- [ ] **Keyboard navigation in React Flow** — `Tab` to focus next node,
-  `Enter` to open its properties
-- [ ] **Reduced-motion mode** — respect `prefers-reduced-motion` for
-  step-glow / pulse animations
-- [ ] **Color contrast audit** — slate-400 on slate-950 fails WCAG AA in
-  a few places; sweep with `@axe-core/react`
+- [x] **Status indicators carry icon + color** — colorblind-safe; success
+  ✓ green, failure ✗ red, running ⟳ amber, cancelled ⊘ slate — `97b7850`
+- [x] **Focus rings on all interactive elements** — currently many
+  buttons rely on hover state only — `64d7bf5`
+- [x] **ARIA labels on icon-only buttons** — Trash2, Plus, Settings, etc.
+  are unlabelled to a screen reader — `64d7bf5`
+- [x] **Keyboard navigation in React Flow** — `Tab` to focus next node,
+  `Enter` to open its properties — `df1839a`
+- [x] **Reduced-motion mode** — respect `prefers-reduced-motion` for
+  step-glow / pulse animations — `fd835c6`
+- [x] **Color contrast audit** — slate-400 on slate-950 fails WCAG AA in
+  a few places; sweep with `@axe-core/react` — `4af6f5d`
 
 ### Cluster 10.G · Mobile / small-screen experience
 
