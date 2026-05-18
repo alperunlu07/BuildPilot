@@ -76,7 +76,7 @@ export function UndoToast() {
             </div>
             <div className="h-0.5 bg-slate-800">
               <div
-                className="h-full bg-rose-500/70 transition-[width] duration-100 ease-linear"
+                className="h-full bg-rose-500/70 motion-safe:transition-[width] motion-safe:duration-100 motion-safe:ease-linear"
                 style={{ width: `${pct}%` }}
               />
             </div>

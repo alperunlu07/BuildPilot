@@ -125,7 +125,7 @@ export function CommitItem({ row, width, isFirst, isLast, highlight, isHead }: P
               stroke="#38bdf8"
               strokeOpacity={0.55}
               strokeWidth={1.25}
-              className="animate-pulse"
+              className="motion-safe:animate-pulse"
             />
           )}
           {/* Dot */}

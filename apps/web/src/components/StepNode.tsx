@@ -276,7 +276,9 @@ function runtimeAppearance(status: RuntimeStatus): {
   switch (status) {
     case 'running':
       return {
-        className: 'animate-pulse',
+        // motion-safe so reduced-motion users get the steady amber glow
+        // without the pulse animation.
+        className: 'motion-safe:animate-pulse',
         borderColor: '#fbbf24',
         boxShadow: '0 0 0 2px rgba(251,191,36,0.35), 0 0 24px rgba(251,191,36,0.55)',
         badgeClass: 'bg-amber-500/20 text-amber-300',

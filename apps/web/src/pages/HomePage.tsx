@@ -82,9 +82,9 @@ export function HomePage() {
           type="button"
           onClick={() => void reload()}
           disabled={loading}
-          className="inline-flex items-center gap-1 rounded-md border border-slate-700 px-2.5 py-1 text-xs text-slate-200 hover:border-sky-500 hover:text-sky-400 disabled:opacity-50"
+          className="focusable inline-flex items-center gap-1 rounded-md border border-slate-700 px-2.5 py-1 text-xs text-slate-200 hover:border-sky-500 hover:text-sky-400 disabled:opacity-50"
         >
-          <RefreshCw size={12} className={loading ? 'animate-spin' : ''} /> Refresh
+          <RefreshCw size={12} className={loading ? 'motion-safe:animate-spin' : ''} /> Refresh
         </button>
       </div>
 
