@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Background,
   Controls,
+  MiniMap,
   ReactFlow,
   ReactFlowProvider,
   addEdge,
@@ -14,7 +15,7 @@ import {
   type Node,
   type NodeChange,
 } from '@xyflow/react';
-import { ChevronDown, ChevronRight, Hammer, Save, Square, Trash2 } from 'lucide-react';
+import { ChevronDown, ChevronRight, Hammer, Map as MapIcon, Save, Square, Trash2 } from 'lucide-react';
 import type {
   NodeTemplate,
   Pipeline,
@@ -174,6 +175,10 @@ function Editor({ pipeline }: Props) {
   // Save-as-template dialog state. Holds the source node id whose data we
   // will snapshot when the user confirms.
   const [saveTemplateNodeId, setSaveTemplateNodeId] = useState<string | null>(null);
+  const [showMinimap, setShowMinimap] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return window.localStorage.getItem('buildpilot:editor:minimap') === '1';
+  });
   const wrapperRef = useRef<HTMLDivElement>(null);
   const { screenToFlowPosition } = useReactFlow();
 
@@ -422,6 +427,26 @@ function Editor({ pipeline }: Props) {
           {dirty && <span className="text-[11px] text-amber-400">unsaved</span>}
           <button
             type="button"
+            onClick={() => {
+              setShowMinimap((v) => {
+                const next = !v;
+                if (typeof window !== 'undefined') {
+                  window.localStorage.setItem('buildpilot:editor:minimap', next ? '1' : '0');
+                }
+                return next;
+              });
+            }}
+            className={`inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs ${
+              showMinimap
+                ? 'border-sky-500 bg-sky-950/40 text-sky-300'
+                : 'border-slate-700 text-slate-300 hover:border-sky-500 hover:text-sky-400'
+            }`}
+            title="Toggle minimap"
+          >
+            <MapIcon size={12} />
+          </button>
+          <button
+            type="button"
             onClick={save}
             disabled={!dirty || saving}
             className="inline-flex items-center gap-1 rounded-md border border-slate-700 px-2.5 py-1 text-xs text-slate-200 hover:border-sky-500 hover:text-sky-400 disabled:cursor-not-allowed disabled:opacity-40"
@@ -618,6 +643,20 @@ function Editor({ pipeline }: Props) {
           >
             <Background gap={16} color="#1e293b" />
             <Controls position="bottom-right" showInteractive={false} />
+            {showMinimap && (
+              <MiniMap
+                pannable
+                zoomable
+                position="bottom-left"
+                maskColor="rgba(2, 6, 23, 0.7)"
+                style={{ backgroundColor: '#0f172a', border: '1px solid #1e293b' }}
+                nodeColor={(n) => {
+                  const def = STEP_DEFINITIONS[n.type as StepType];
+                  return def?.color ?? '#475569';
+                }}
+                nodeStrokeColor="#1e293b"
+              />
+            )}
           </ReactFlow>
         </div>
 
