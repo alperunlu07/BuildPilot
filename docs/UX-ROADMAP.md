@@ -11,7 +11,7 @@ Power-user affordances for the React-Flow-based pipeline editor at
 
 - [x] Minimap (React Flow ships `<MiniMap />` — add it with a toggle in the editor toolbar) — `2d3e92f`
 - [x] Undo / redo stack — keyboard `Cmd/Ctrl+Z` / `Cmd/Ctrl+Shift+Z`; snapshot nodes+edges after each mutation — `fb69f68`
-- [ ] Multi-select + bulk edit — Shift+click or drag-rectangle; side panel applies common fields (host, continueOnError, retry policy) to all
+- [x] Multi-select + bulk edit — Shift+click or drag-rectangle; side panel applies common fields (host, continueOnError, retry policy) to all — `2c54d18`
 - [x] Auto-layout button using `dagre` (add as dep) — tidies the graph — `67f48a7`
 - [x] Inline validation badges — red dot on nodes with missing required fields (use step-registry field schemas) — `0d0075c`
 - [x] Palette node preview on hover — card showing required + optional fields — `f7b38ab`
