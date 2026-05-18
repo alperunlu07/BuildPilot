@@ -133,8 +133,8 @@ landing experience.
   dialog — `88c88ad`
 - [ ] **Pipeline editor draft auto-save** — debounced save to
   `localStorage` so a tab close / accidental refresh doesn't lose work
-- [ ] **Optimistic UI** for run / cancel — the button flips state
-  immediately and rolls back on server error
+- [x] **Optimistic UI** for run / cancel — the button flips state
+  immediately and rolls back on server error — `4170c8f`
 - [ ] **In-app changelog drawer** — surfaces newly-shipped features after
   each release (reads a server-shipped `CHANGELOG.md`)
 - [x] **Per-build copy-link button** — shareable deep link to a build /

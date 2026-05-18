@@ -30,6 +30,14 @@ import { api } from '../lib/api';
 import { usePipelineClipboard } from '../lib/usePipelineClipboard';
 import { usePipelineHistory } from '../lib/usePipelineHistory';
 import { useStore } from '../store/store';
+import {
+  clearDraft,
+  draftDiffersFromPipeline,
+  readDraft,
+  writeDraft,
+  type PipelineDraft,
+} from '../lib/draftStorage';
+import { formatRelative } from '../lib/formatDate';
 import { BranchSelect } from './BranchSelect';
 import { NodeContextMenu } from './NodeContextMenu';
 import { SaveTemplateDialog } from './SaveTemplateDialog';
@@ -190,6 +198,10 @@ function Editor({ pipeline }: Props) {
     if (typeof window === 'undefined') return false;
     return window.localStorage.getItem('buildpilot:editor:minimap') === '1';
   });
+  // Cluster 10.E — draft auto-save. We surface a banner if a localStorage
+  // draft is newer than the server pipeline so the user can choose to
+  // restore. Drafts are written debounced as they edit.
+  const [draftBanner, setDraftBanner] = useState<PipelineDraft | null>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const { screenToFlowPosition, setCenter } = useReactFlow();
   const history = usePipelineHistory();
@@ -212,6 +224,15 @@ function Editor({ pipeline }: Props) {
     setSelectedNodeId(null);
     setSelectedNodeIds([]);
     history.reset();
+    // Surface a banner if a localStorage draft is newer than the server
+    // pipeline. We don't auto-restore so the user keeps control.
+    const draft = readDraft(pipeline.id);
+    if (draft && draftDiffersFromPipeline(draft, pipeline)) {
+      setDraftBanner(draft);
+    } else {
+      setDraftBanner(null);
+      if (draft) clearDraft(pipeline.id);
+    }
   }, [pipeline.id]);
 
   // Push the current per-node runtime status + timing into each node's data
@@ -598,6 +619,23 @@ function Editor({ pipeline }: Props) {
     [screenToFlowPosition, nodeTemplates, recordHistory],
   );
 
+  // Debounced draft write — anytime the user touches the editor we shove
+  // the current state into localStorage so a tab crash doesn't lose work.
+  // The 1s debounce keeps us from thrashing localStorage on every drag tick.
+  useEffect(() => {
+    if (!dirty) return;
+    const handle = window.setTimeout(() => {
+      writeDraft(pipeline.id, {
+        name,
+        watch,
+        nodes: reactFlowNodesToPipeline(nodes),
+        edges: reactFlowEdgesToPipeline(edges),
+        savedAt: Date.now(),
+      });
+    }, 1000);
+    return () => window.clearTimeout(handle);
+  }, [pipeline.id, dirty, name, watch, nodes, edges]);
+
   const save = async () => {
     setSaving(true);
     try {
@@ -609,9 +647,29 @@ function Editor({ pipeline }: Props) {
       });
       upsertPipeline(updated);
       setDirty(false);
+      // Successful save — the draft is now redundant. Clearing here means
+      // the banner doesn't re-appear when the user closes and reopens.
+      clearDraft(pipeline.id);
+      setDraftBanner(null);
     } finally {
       setSaving(false);
     }
+  };
+
+  const restoreDraft = () => {
+    if (!draftBanner) return;
+    setName(draftBanner.name);
+    setWatch(draftBanner.watch);
+    setNodes(pipelineNodesToReactFlow(draftBanner.nodes));
+    setEdges(pipelineEdgesToReactFlow(draftBanner.edges));
+    setDirty(true);
+    setDraftBanner(null);
+    history.reset();
+  };
+
+  const discardDraft = () => {
+    clearDraft(pipeline.id);
+    setDraftBanner(null);
   };
 
   const runNow = async () => {
@@ -768,6 +826,32 @@ function Editor({ pipeline }: Props) {
           </button>
         </div>
       </header>
+
+      {draftBanner && (
+        <div className="flex items-center gap-3 border-b border-amber-700/50 bg-amber-950/30 px-4 py-2 text-xs text-amber-200">
+          <span className="font-medium">Unsaved changes from {formatRelative(draftBanner.savedAt)}</span>
+          <span className="text-amber-300/70">
+            ({draftBanner.nodes.length} step{draftBanner.nodes.length === 1 ? '' : 's'},{' '}
+            {draftBanner.edges.length} edge{draftBanner.edges.length === 1 ? '' : 's'})
+          </span>
+          <div className="ml-auto flex items-center gap-2">
+            <button
+              type="button"
+              onClick={restoreDraft}
+              className="rounded-md border border-amber-600 bg-amber-900/30 px-2.5 py-0.5 text-amber-100 hover:bg-amber-800/40"
+            >
+              Restore
+            </button>
+            <button
+              type="button"
+              onClick={discardDraft}
+              className="rounded-md border border-slate-700 px-2.5 py-0.5 text-slate-300 hover:border-rose-500 hover:text-rose-300"
+            >
+              Discard
+            </button>
+          </div>
+        </div>
+      )}
 
       {triggersOpen && (
         <div className="border-b border-slate-800 bg-slate-900/60 px-4 py-3">
