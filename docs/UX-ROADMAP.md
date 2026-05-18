@@ -28,4 +28,4 @@ satellite widgets.
 - [x] Active builds widget — sticky element showing in-flight builds with
       progress + cancel button. Build a self-contained widget; integrate
       into App.tsx if possible (one line of import + render), otherwise
-      return a "ready to integrate" component and note follow-up. *(commit TBD)*
+      return a "ready to integrate" component and note follow-up. (ca49d02)
