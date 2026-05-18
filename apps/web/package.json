@@ -12,8 +12,10 @@
   "dependencies": {
     "@buildpilot/shared-types": "workspace:*",
     "@buildpilot/step-registry": "workspace:*",
+    "@types/dagre": "^0.7.54",
     "@xyflow/react": "^12.3.5",
     "clsx": "^2.1.1",
+    "dagre": "^0.8.5",
     "date-fns": "^4.1.0",
     "lucide-react": "^0.460.0",
     "react": "^18.3.1",
