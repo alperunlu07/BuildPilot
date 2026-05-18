@@ -1,5 +1,5 @@
 import { verify } from 'node:crypto';
-import type { FastifyInstance, FastifyRequest } from 'fastify';
+import type { FastifyInstance } from 'fastify';
 import { logger } from './logger';
 import { getDiscordConfigRuntime } from './config';
 import { listPipelines } from './store/pipelines';
@@ -214,8 +214,3 @@ export async function discordBotRoutes(app: FastifyInstance): Promise<void> {
 // Helper exported for tests so we can exercise verify path without going
 // through Fastify.
 export const _internal = { verifyDiscordSignature, dispatch };
-
-function _unused(_: FastifyRequest): void {
-  void _;
-}
-void _unused;

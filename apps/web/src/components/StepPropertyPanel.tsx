@@ -6,6 +6,7 @@ import { BranchSelect } from './BranchSelect';
 import { LogTable } from './LogTable';
 import { LevelToggleBar, defaultActiveLevels } from './LevelToggleBar';
 import { useStore } from '../store/store';
+import { api } from '../lib/api';
 import { cn } from '../lib/cn';
 
 const EMPTY: BuildLogEntry[] = [];
@@ -187,12 +188,18 @@ export function StepPropertyPanel({
             }
           />
           {NOTIFY_STEP_TYPES.has(stepType) && (
-            <NotifyPolicySection
-              data={node.data as Record<string, unknown>}
-              onChange={(patch) =>
-                onChange(node.id, { ...(node.data as Record<string, unknown>), ...patch })
-              }
-            />
+            <>
+              <NotifyPolicySection
+                data={node.data as Record<string, unknown>}
+                onChange={(patch) =>
+                  onChange(node.id, { ...(node.data as Record<string, unknown>), ...patch })
+                }
+              />
+              <TestChannelSection
+                stepType={stepType}
+                data={node.data as Record<string, unknown>}
+              />
+            </>
           )}
           <AiAutoFixSection
             value={(node.data as Record<string, unknown>).aiAutoFix as Record<string, unknown> | undefined}
@@ -538,6 +545,88 @@ function NotifyPolicySection({
           (TODO engine: filter on this at run time)
         </span>
       </p>
+    </div>
+  );
+}
+
+// Cluster 11.I — fires the actual notify executor with this step's data
+// and reports the response inline. Mirrors the existing /api/config/telegram/test
+// "Send test message" button on the Settings page, but generalised so every
+// notify step type gets one.
+function TestChannelSection({
+  stepType,
+  data,
+}: {
+  stepType: StepType;
+  data: Record<string, unknown>;
+}) {
+  type Status =
+    | { kind: 'idle' }
+    | { kind: 'running' }
+    | { kind: 'ok'; lines: Array<{ level: string; message: string }> }
+    | { kind: 'fail'; error: string; lines: Array<{ level: string; message: string }> };
+  const [status, setStatus] = useState<Status>({ kind: 'idle' });
+
+  async function run(): Promise<void> {
+    setStatus({ kind: 'running' });
+    try {
+      const res = await api.testNotify({ stepType, data });
+      if (res.ok) {
+        setStatus({ kind: 'ok', lines: res.lines });
+      } else {
+        setStatus({ kind: 'fail', error: res.error, lines: res.lines ?? [] });
+      }
+    } catch (err) {
+      setStatus({
+        kind: 'fail',
+        error: err instanceof Error ? err.message : String(err),
+        lines: [],
+      });
+    }
+  }
+
+  return (
+    <div className="mt-2 rounded-md border border-slate-800 bg-slate-900/40 p-3 space-y-2">
+      <div className="flex items-center justify-between gap-2">
+        <div className="text-[10px] uppercase tracking-wider text-slate-400">
+          Test channel
+        </div>
+        <button
+          type="button"
+          onClick={run}
+          disabled={status.kind === 'running'}
+          className="focusable rounded-md border border-slate-700 px-2 py-0.5 text-[11px] text-slate-200 hover:border-sky-500 hover:text-sky-300 disabled:opacity-50"
+          title="Send a test message using this step's current configuration"
+        >
+          {status.kind === 'running' ? 'Sending…' : 'Send test'}
+        </button>
+      </div>
+      {status.kind === 'ok' && (
+        <div className="text-[11px] text-emerald-400">
+          ✓ Test message delivered.
+          {status.lines.length > 0 && (
+            <pre className="mt-1 max-h-24 overflow-y-auto rounded bg-slate-950 p-1.5 font-mono text-[10px] text-slate-300">
+              {status.lines.map((l) => `[${l.level}] ${l.message}`).join('\n').slice(0, 800)}
+            </pre>
+          )}
+        </div>
+      )}
+      {status.kind === 'fail' && (
+        <div className="text-[11px] text-amber-400">
+          ✖ Test failed: {status.error}
+          {status.lines.length > 0 && (
+            <pre className="mt-1 max-h-24 overflow-y-auto rounded bg-slate-950 p-1.5 font-mono text-[10px] text-slate-400">
+              {status.lines.map((l) => `[${l.level}] ${l.message}`).join('\n').slice(0, 800)}
+            </pre>
+          )}
+        </div>
+      )}
+      {status.kind === 'idle' && (
+        <p className="text-[10px] text-slate-400">
+          Uses this step&apos;s data — saves nothing. Server-side log lines from the
+          executor are echoed back here.
+        </p>
+      )}
     </div>
   );
 }

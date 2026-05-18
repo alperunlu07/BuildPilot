@@ -286,9 +286,9 @@ Cross-refs: `TODO.md` Phase 3.
   existing Telegram bot _(ac40f70)_
 - [x] **Discord slash commands** ditto _(fb84f6f)_
 - [x] **Per-step `notifyOn` policy** — `always | failure | recovered`;
-  reduces "build green again" notification noise _(SHA3)_
-- [ ] **Test the channel** button on each notify step — sends a sample
-  payload from the property panel without running the whole pipeline
+  reduces "build green again" notification noise _(427ea05)_
+- [x] **Test the channel** button on each notify step — sends a sample
+  payload from the property panel without running the whole pipeline _(SHA4)_
 
 ---
 

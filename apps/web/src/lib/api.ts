@@ -198,6 +198,15 @@ export const api = {
       body: JSON.stringify(input),
     }),
 
+  // ── Test channel (Cluster 11.I) ──────────────────────────
+  // Fires the step's runtime executor with the supplied data and reports
+  // the result inline. Used by the "Send test" button on every notify step.
+  testNotify: (input: { stepType: string; data: Record<string, unknown> }) =>
+    http<
+      | { ok: true; lines: Array<{ level: string; message: string }> }
+      | { ok: false; error: string; lines?: Array<{ level: string; message: string }> }
+    >('/test-notify', { method: 'POST', body: JSON.stringify(input) }),
+
   // ── Metrics (Cluster 10.D) ───────────────────────────────
   homeMetrics: () => http<HomeMetrics>('/metrics/home'),
   pipelineMetrics: (id: string) => http<PipelineMetrics>(`/metrics/pipeline/${id}`),

@@ -17,6 +17,7 @@ import { eventBus } from './events/bus';
 import { startTelegramBot } from './runner/telegramBot';
 import { registerSlackParser, slackBotRoutes } from './slack-bot';
 import { discordBotRoutes } from './discord-bot';
+import { testNotifyRoutes } from './api/test-notify';
 import { migratePlaintextSecrets } from './crypto/migrateSecrets';
 import { migrateHostsFile } from './store/hosts';
 import { pruneOldBuilds } from './store/retention';
@@ -72,6 +73,7 @@ async function main(): Promise<void> {
   await metricsRoutes(app);
   await slackBotRoutes(app);
   await discordBotRoutes(app);
+  await testNotifyRoutes(app);
 
   // Re-sync poller whenever projects change. Pipeline mutations also trigger sync;
   // for now we just sync on any project event and rely on listPipelines() returning
