@@ -3,6 +3,7 @@ import { ArrowDownCircle } from 'lucide-react';
 import { FixedSizeList, type ListChildComponentProps } from 'react-window';
 import type { BuildLogEntry, BuildLogLevel, StepType } from '@buildpilot/shared-types';
 import { cn } from '../lib/cn';
+import { renderAnsi, type AnsiSegment } from '../lib/ansi';
 
 interface Props {
   entries: BuildLogEntry[];
@@ -190,8 +191,9 @@ function Row({ index, style, data }: ListChildComponentProps<RowItemData>) {
         </span>
         <span
           // Single-line truncation; full text on hover so virtualization
-          // can keep a fixed row height.
-          title={e.message}
+          // can keep a fixed row height. ANSI sequences are stripped from
+          // the title attr so the tooltip stays readable.
+          title={e.message.replace(/\x1b\[[0-9;]*[A-Za-z]/g, '')}
           className={cn(
             'truncate text-slate-200',
             e.level === 'stderr' && 'text-amber-200',
@@ -199,10 +201,28 @@ function Row({ index, style, data }: ListChildComponentProps<RowItemData>) {
             e.level === 'success' && 'text-emerald-300',
           )}
         >
-          {e.message}
+          <AnsiMessage text={e.message} />
         </span>
       </div>
     </div>
+  );
+}
+
+// Renders a log message with inline ANSI SGR colors. Falls back to plain
+// text when the message contains no escape sequences (no work, no dom).
+function AnsiMessage({ text }: { text: string }) {
+  const segments = useMemo<AnsiSegment[]>(() => renderAnsi(text), [text]);
+  if (segments.length === 1 && Object.keys(segments[0]!.style).length === 0) {
+    return <>{segments[0]!.text}</>;
+  }
+  return (
+    <>
+      {segments.map((seg, i) => (
+        <span key={i} style={seg.style}>
+          {seg.text}
+        </span>
+      ))}
+    </>
   );
 }
 
