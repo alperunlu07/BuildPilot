@@ -27,6 +27,7 @@ import { startTelegramBot } from './runner/telegramBot';
 import { registerSlackParser, slackBotRoutes } from './slack-bot';
 import { discordBotRoutes } from './discord-bot';
 import { testNotifyRoutes } from './api/test-notify';
+import { initScheduler } from './runner/coordinator';
 import { migratePlaintextSecrets } from './crypto/migrateSecrets';
 import { migrateHostsFile } from './store/hosts';
 import { pruneOldBuilds } from './store/retention';
@@ -42,6 +43,9 @@ async function main(): Promise<void> {
   initDb(config.dbPath);
   migratePlaintextSecrets();
   migrateHostsFile();
+  // WP3 (queue): fail orphaned 'running' rows from a previous process and
+  // kick each lane so pending rows that survived the restart get scheduled.
+  initScheduler();
 
   const app = Fastify({
     logger: {

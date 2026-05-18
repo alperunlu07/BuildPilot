@@ -6,6 +6,8 @@ import { getPipeline } from '../store/pipelines';
 import { getProject } from '../store/projects';
 import { createBuild, getBuild, listChildBuilds, updateBuildStatus } from '../store/builds';
 import { getCurrentBranch, getHeadSha } from '../git/operations';
+import { getLane, listLanes } from '../store/lanes';
+import { getDb } from '../store/db';
 import { appendBuildLogEntry } from '../store/buildLogs';
 import { eventBus } from '../events/bus';
 import { fanOutMatrix, interpolatePipelineForMatrix, matrixLabel } from './matrix';
@@ -19,9 +21,14 @@ interface RunArgs {
   fromNodeId?: string;
 }
 
-// One FIFO queue per project so two builds against the same working tree
-// don't race on git operations or output files.
-const projectQueues = new Map<string, Promise<unknown>>();
+// WP3 (queue): lane-aware scheduler. Replaces the per-project FIFO chain that
+// lived here previously. Each lane has its own max-concurrency budget; within
+// a lane, pending builds run in (pipeline.priority ASC, build.startedAt ASC)
+// order. Across lanes, picks are fully independent.
+
+// laneId → buildIds currently mid-run on that lane. Used to gate tick()
+// against the lane's maxConcurrency budget.
+const runningByLane = new Map<string, Set<string>>();
 
 // Active child processes keyed by build id, used for hard-kill on cancel.
 const activeChildren = new Map<string, Set<ChildProcess>>();
@@ -35,10 +42,81 @@ const cancelledBuilds = new Set<string>();
 // the previous build for the same pipeline before queuing the new one.
 const pipelineInflight = new Map<string, Set<string>>();
 
+// buildId → resolver to call when the build finishes. Lets enqueueBuild()
+// callers await build completion just like the old project-FIFO chain did.
+// Failures still resolve (never reject) so callers don't have to handle
+// rejection separately — runPipeline already finalises the DB row with
+// 'failed' / 'cancelled' status.
+const buildCompletionResolvers = new Map<string, () => void>();
+
+// buildId → fromNodeId for "restart from step" runs. This is in-memory only;
+// a server restart between createBuild() and tick() picking it up means the
+// restart-marker is lost and the build runs from scratch. Acceptable for
+// "restart" UX — a fresh full run is the safe fallback.
+const pendingFromNode = new Map<string, string>();
+
+// Pluggable pipeline runner. Production code uses the real engine; tests can
+// inject a fast stub via __setPipelineRunner() to avoid spinning up the full
+// DAG executor for queue-ordering assertions.
+type PipelineRunner = (args: RunArgs) => Promise<void>;
+let pipelineRunner: PipelineRunner = runPipeline;
+
+// Test-only hook. Returns the previous runner so tests can restore it on
+// teardown. Not part of the public surface — the leading underscore signals
+// "do not call from production code".
+export function __setPipelineRunner(fn: PipelineRunner): PipelineRunner {
+  const prev = pipelineRunner;
+  pipelineRunner = fn;
+  return prev;
+}
+
+export function __resetCoordinatorState(): void {
+  runningByLane.clear();
+  activeChildren.clear();
+  cancelledBuilds.clear();
+  pipelineInflight.clear();
+  buildCompletionResolvers.clear();
+  pendingFromNode.clear();
+  pipelineRunner = runPipeline;
+}
+
+interface PendingBuildRow {
+  id: string;
+  pipeline_id: string;
+  project_id: string;
+  trigger_sha: string;
+  trigger_branch: string;
+  status: string;
+  started_at: number;
+  finished_at: number | null;
+  log: string;
+  lane_id: string;
+}
+
+function pickNextPendingForLane(laneId: string): PendingBuildRow | null {
+  // Sort order: pipeline.priority ASC (smaller is more urgent), then build's
+  // started_at ASC (FIFO within equal priority — started_at is the row's
+  // create timestamp while still in 'pending' state). We join on pipelines
+  // because priority lives there; if a pipeline is deleted while a build is
+  // still pending we fall back to the highest sortable priority via COALESCE.
+  return (
+    getDb()
+      .prepare(
+        `SELECT b.*
+         FROM builds b
+         LEFT JOIN pipelines p ON p.id = b.pipeline_id
+         WHERE b.lane_id = ? AND b.status = 'pending'
+         ORDER BY COALESCE(p.priority, 100) ASC, b.started_at ASC
+         LIMIT 1`,
+      )
+      .get(laneId) as PendingBuildRow | undefined
+  ) ?? null;
+}
+
 export function enqueueBuild(args: RunArgs): Promise<void> {
-  const projectId = args.project.id;
   const pipelineId = args.pipeline.id;
   const buildId = args.build.id;
+  const laneId = args.build.laneId;
 
   // Cluster 11.C — matrix fan-out. A pipeline with a non-null matrix
   // expands the trigger into N child builds plus this parent "summary"
@@ -51,34 +129,162 @@ export function enqueueBuild(args: RunArgs): Promise<void> {
     return enqueueMatrixParent(args);
   }
 
-  // Track this build as in-flight for its pipeline so cancelInProgressForPipeline
-  // can find it on the next commit. We add eagerly (pre-runPipeline) so a
-  // queued-but-not-yet-running build is still cancellable.
+  // Track in-flight (pending or running) for the rolling-build canceller.
+  // Added eagerly so a queued-but-not-yet-running build is still cancellable.
   const set = pipelineInflight.get(pipelineId) ?? new Set<string>();
   set.add(buildId);
   pipelineInflight.set(pipelineId, set);
 
-  const prev = projectQueues.get(projectId) ?? Promise.resolve();
-  const next = prev
-    .catch(() => null)
-    .then(() => runPipeline(args))
-    .catch((err) => {
-      logger.error({ err, buildId }, 'pipeline crashed');
-    });
-  projectQueues.set(projectId, next);
-  void next.finally(() => {
-    if (projectQueues.get(projectId) === next) {
-      projectQueues.delete(projectId);
-    }
-    activeChildren.delete(buildId);
-    cancelledBuilds.delete(buildId);
-    const s = pipelineInflight.get(pipelineId);
-    if (s) {
-      s.delete(buildId);
-      if (s.size === 0) pipelineInflight.delete(pipelineId);
-    }
+  if (args.fromNodeId) pendingFromNode.set(buildId, args.fromNodeId);
+
+  // Promise that resolves when the build is fully done (success / failed /
+  // cancelled). Mirrors the old behaviour where awaiting enqueueBuild waited
+  // on the per-project FIFO chain.
+  const completion = new Promise<void>((resolve) => {
+    buildCompletionResolvers.set(buildId, resolve);
   });
-  return next;
+
+  // Kick the lane scheduler. tick() is synchronous up to the void-runPipeline
+  // launch, so by the time enqueueBuild returns the build is either running
+  // or properly queued behind the lane's concurrency budget.
+  tick(laneId);
+
+  return completion;
+}
+
+function tick(laneId: string): void {
+  const lane = getLane(laneId);
+  if (!lane) {
+    logger.warn({ laneId }, 'tick: lane not found, skipping');
+    return;
+  }
+  const running = runningByLane.get(laneId) ?? new Set<string>();
+  runningByLane.set(laneId, running);
+
+  // Greedy slot-fill: as long as we have headroom AND there's a pending
+  // build for this lane in the DB, start it. Each launch is fire-and-forget
+  // via void; the .finally() reschedules tick() so the next pending build
+  // picks up the freed slot.
+  while (running.size < lane.maxConcurrency) {
+    const row = pickNextPendingForLane(laneId);
+    if (!row) return;
+
+    const buildId = row.id;
+    // Guard against the same row being re-picked while still "pending" in
+    // the DB but already racing toward 'running'. updateBuildStatus is the
+    // atomic transition — once it succeeds the next pickNextPendingForLane
+    // call won't see this row again.
+    updateBuildStatus(buildId, 'running');
+    running.add(buildId);
+
+    const build = getBuild(buildId);
+    if (!build) {
+      // Disappeared between SELECT and getBuild — rare, but unwind gracefully.
+      running.delete(buildId);
+      buildCompletionResolvers.get(buildId)?.();
+      buildCompletionResolvers.delete(buildId);
+      continue;
+    }
+    const pipeline = getPipeline(row.pipeline_id);
+    const project = getProject(row.project_id);
+    if (!pipeline || !project) {
+      // Pipeline/project deleted between enqueue and pick. Mark the build
+      // failed so the UI doesn't show a permanently-running ghost, log a
+      // line, and move on.
+      logger.warn(
+        { buildId, pipelineId: row.pipeline_id, projectId: row.project_id },
+        'tick: pipeline or project missing, failing build',
+      );
+      try {
+        appendBuildLogEntry({
+          buildId,
+          ts: Date.now(),
+          level: 'failure',
+          nodeId: null,
+          stepType: null,
+          message: 'Pipeline or project no longer exists — build failed.',
+        });
+      } catch {
+        /* best-effort */
+      }
+      updateBuildStatus(buildId, 'failed');
+      const fresh = getBuild(buildId);
+      if (fresh) eventBus.publish({ type: 'buildFinished', build: fresh });
+      running.delete(buildId);
+      cleanupAfterBuild(buildId, row.pipeline_id);
+      // Open slot — try the next pending row in this lane.
+      continue;
+    }
+
+    const fromNodeId = pendingFromNode.get(buildId);
+    pendingFromNode.delete(buildId);
+    const pipelineIdForCleanup = row.pipeline_id;
+
+    const runArgs: RunArgs = { pipeline, project, build, fromNodeId };
+    void pipelineRunner(runArgs)
+      .catch((err) => {
+        logger.error({ err, buildId }, 'pipeline crashed');
+      })
+      .finally(() => {
+        const laneRunning = runningByLane.get(laneId);
+        laneRunning?.delete(buildId);
+        cleanupAfterBuild(buildId, pipelineIdForCleanup);
+        // Drain any further work for this lane. Self-recursion is bounded by
+        // the maxConcurrency check + "no pending rows" early return above.
+        tick(laneId);
+      });
+  }
+}
+
+function cleanupAfterBuild(buildId: string, pipelineId: string): void {
+  activeChildren.delete(buildId);
+  cancelledBuilds.delete(buildId);
+  const s = pipelineInflight.get(pipelineId);
+  if (s) {
+    s.delete(buildId);
+    if (s.size === 0) pipelineInflight.delete(pipelineId);
+  }
+  buildCompletionResolvers.get(buildId)?.();
+  buildCompletionResolvers.delete(buildId);
+}
+
+// Boot recovery: a server restart while a build was 'running' would leave an
+// orphan row that never finishes. We fail those rows up-front and then kick
+// every lane's scheduler so pending rows pre-existing the restart get picked
+// up. Safe to call multiple times.
+export function initScheduler(): void {
+  const db = getDb();
+  const now = Date.now();
+  const orphans = db
+    .prepare(`SELECT id FROM builds WHERE status = 'running'`)
+    .all() as { id: string }[];
+  if (orphans.length > 0) {
+    db.prepare(
+      `UPDATE builds SET status = 'failed', finished_at = ? WHERE status = 'running'`,
+    ).run(now);
+    for (const { id } of orphans) {
+      try {
+        appendBuildLogEntry({
+          buildId: id,
+          ts: now,
+          level: 'failure',
+          nodeId: null,
+          stepType: null,
+          message: 'Server restarted while build was running — marked failed.',
+        });
+      } catch {
+        /* best-effort */
+      }
+      const fresh = getBuild(id);
+      if (fresh) eventBus.publish({ type: 'buildFinished', build: fresh });
+    }
+    logger.info({ count: orphans.length }, 'scheduler: failed orphaned running builds');
+  }
+  // Now nudge each lane so any 'pending' rows that survived the restart
+  // (or rows that were inserted before initScheduler ran) get scheduled.
+  for (const lane of listLanes()) {
+    tick(lane.id);
+  }
 }
 
 // ── Matrix parent orchestration ─────────────────────────────────────────
