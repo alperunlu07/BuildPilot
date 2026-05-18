@@ -256,7 +256,7 @@ Cross-refs: `TODO.md` Phase 9.
   last N runs with quarantine flag (engine wiring to honor quarantine
   is a follow-up) — `add331e`
 - [x] **Build duration trend page** — per-pipeline P50/P95 sparkline +
-  regression alert when P95 spikes 2× baseline
+  regression alert when P95 spikes 2× baseline — `d0fa828`
 
 ### Cluster 11.G · Schedules & triggers UX
 
