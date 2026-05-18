@@ -69,8 +69,8 @@ export function StepDurationCompare({ build, entries, nodeLabel }: Props) {
   if (!finished || state !== 'ready' || deltas.length === 0) return null;
 
   return (
-    <div className="border-b border-slate-800 bg-slate-900/30 px-6 py-3">
-      <div className="mb-2 flex items-baseline justify-between">
+    <div className="border-b border-slate-800 bg-slate-900/30 px-3 py-3 sm:px-6">
+      <div className="mb-2 flex flex-wrap items-baseline justify-between gap-1">
         <span className="text-[10px] uppercase tracking-wider text-slate-400">
           Step durations vs last green build
         </span>

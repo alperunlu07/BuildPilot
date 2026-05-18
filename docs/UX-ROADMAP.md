@@ -164,7 +164,7 @@ landing experience.
 
 ### Cluster 10.G · Mobile / small-screen experience
 
-- [ ] **Responsive sidebar** — collapses into a drawer below `md:` (768px)
+- [x] **Responsive sidebar** — collapses into a drawer below `md:` (768px) — `52ffdf4`
 - [ ] **Mobile-optimized build detail page** — log table currently
   unusable below 640px (fixed column widths)
 - [ ] **PWA install** — manifest + service worker (also needed for Web

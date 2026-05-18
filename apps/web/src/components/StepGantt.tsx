@@ -48,12 +48,16 @@ export function StepGantt({
   const totalMs = Math.max(1, t1 - t0);
 
   return (
-    <div className="space-y-1 px-6 py-3">
+    <div className="space-y-1 px-3 py-3 sm:px-6">
       <div className="flex items-baseline justify-between text-[10px] uppercase tracking-wider text-slate-400">
         <span>Step timeline</span>
         <span className="font-mono">{formatDuration(totalMs)} total</span>
       </div>
-      <div className="space-y-1">
+      {/* On small screens the bars get cramped — let the inner container
+          horizontally scroll when needed so labels stay legible. The
+          min-width of 32rem matches the smallest "useful" gantt width. */}
+      <div className="overflow-x-auto sm:overflow-visible">
+      <div className="min-w-[32rem] space-y-1 sm:min-w-0">
         {spans.map((s) => {
           const left = ((s.start - t0) / totalMs) * 100;
           const width = Math.max(0.5, ((s.end - s.start) / totalMs) * 100);
@@ -92,6 +96,7 @@ export function StepGantt({
             </button>
           );
         })}
+      </div>
       </div>
     </div>
   );

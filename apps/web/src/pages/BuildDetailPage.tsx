@@ -245,7 +245,7 @@ export function BuildDetailPage({ buildId }: Props) {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <header className="border-b border-slate-800 bg-slate-900/40 px-6 py-3">
+      <header className="border-b border-slate-800 bg-slate-900/40 px-3 py-3 sm:px-6">
         <button
           type="button"
           onClick={() => setView({ type: 'builds' })}
@@ -308,7 +308,7 @@ export function BuildDetailPage({ buildId }: Props) {
               <Time ts={build.finishedAt} prefix="finished" />
             </>
           )}
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex flex-wrap items-center gap-2">
             {!finished && (
               <button
                 type="button"
@@ -394,7 +394,7 @@ export function BuildDetailPage({ buildId }: Props) {
       )}
 
       {artifacts.length > 0 && (
-        <div className="border-b border-slate-800 bg-slate-900/30 px-6 py-3">
+        <div className="border-b border-slate-800 bg-slate-900/30 px-3 py-3 sm:px-6">
           <div className="mb-2 flex items-baseline justify-between">
             <span className="text-[10px] uppercase tracking-wider text-slate-400">
               Artifacts ({artifacts.length})
@@ -459,7 +459,7 @@ export function BuildDetailPage({ buildId }: Props) {
         }
       />
 
-      <div className="flex flex-wrap items-center gap-3 border-b border-t border-slate-800 bg-slate-900/30 px-6 py-2 text-xs">
+      <div className="flex flex-wrap items-center gap-3 border-b border-t border-slate-800 bg-slate-900/30 px-3 py-2 text-xs sm:px-6">
         <Filter size={12} className="text-slate-400" />
         <span className="text-slate-400">Levels</span>
         <div className="flex flex-wrap gap-1">
@@ -549,7 +549,7 @@ export function BuildDetailPage({ buildId }: Props) {
       />
 
       {tsBounds && (
-        <div className="flex items-center gap-3 border-b border-slate-800 bg-slate-900/20 px-6 py-2">
+        <div className="flex items-center gap-3 border-b border-slate-800 bg-slate-900/20 px-3 py-2 sm:px-6">
           <span className="shrink-0 text-[10px] uppercase tracking-wider text-slate-400">
             Time range
           </span>

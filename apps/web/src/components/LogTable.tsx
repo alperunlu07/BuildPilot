@@ -4,6 +4,7 @@ import { FixedSizeList, type ListChildComponentProps } from 'react-window';
 import type { BuildLogEntry, BuildLogLevel, StepType } from '@buildpilot/shared-types';
 import { cn } from '../lib/cn';
 import { renderAnsi, type AnsiSegment } from '../lib/ansi';
+import { useMinWidth } from '../lib/breakpoint';
 
 interface Props {
   entries: BuildLogEntry[];
@@ -34,10 +35,18 @@ const LEVEL_STYLE: Record<BuildLogLevel, { dot: string; pill: string }> = {
 // VariableSizeList + per-row measurement, which costs more for big logs.
 const ROW_H = 24;
 const ROW_H_COMPACT = 20;
+// On sub-640px viewports we drop the timestamp + node columns and let the
+// level pill + message span the row in a tighter two-column layout. The row
+// height stays the same — message remains single-line truncated.
+const ROW_H_MOBILE = 28;
 
 // Grid column template — kept in sync between header and body rows so they
 // align. Last column (message) flexes.
 const GRID_COLS = 'minmax(0, 88px) minmax(0, 78px) minmax(0, 150px) minmax(0, 1fr)';
+// Mobile collapses the four-column desktop grid down to level + message so
+// the message has room to breathe on a 320px-wide viewport. Time + node
+// columns are surfaced via a hover/tap-friendly title attribute.
+const GRID_COLS_MOBILE = 'minmax(0, 64px) minmax(0, 1fr)';
 
 export function LogTable({
   entries,
@@ -47,7 +56,12 @@ export function LogTable({
   emptyMessage = 'Waiting for output…',
   copyCommandFor,
 }: Props) {
-  const rowH = compact ? ROW_H_COMPACT : ROW_H;
+  // Below `sm:` we collapse to a level + message layout. We resolve this in
+  // JS rather than CSS because react-window needs a fixed numeric row height
+  // and the cell rendering is also branched on the viewport.
+  const isWide = useMinWidth('sm');
+  const rowH = !isWide ? ROW_H_MOBILE : compact ? ROW_H_COMPACT : ROW_H;
+  const gridCols = isWide ? GRID_COLS : GRID_COLS_MOBILE;
   const listRef = useRef<FixedSizeList>(null);
   const followRef = useRef(follow);
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -88,8 +102,8 @@ export function LogTable({
   }, [entries.length]);
 
   const itemData = useMemo(
-    () => ({ entries, nodeLabel, compact, rowH, copyCommandFor }),
-    [entries, nodeLabel, compact, rowH, copyCommandFor],
+    () => ({ entries, nodeLabel, compact, rowH, copyCommandFor, isWide, gridCols }),
+    [entries, nodeLabel, compact, rowH, copyCommandFor, isWide, gridCols],
   );
 
   if (entries.length === 0) {
@@ -107,11 +121,11 @@ export function LogTable({
           'sticky top-0 z-10 grid border-b border-slate-800 bg-slate-950/95 px-2 backdrop-blur',
           compact ? 'py-1' : 'py-1.5',
         )}
-        style={{ gridTemplateColumns: GRID_COLS }}
+        style={{ gridTemplateColumns: gridCols }}
       >
-        <Th>Time</Th>
+        {isWide && <Th>Time</Th>}
         <Th>Level</Th>
-        <Th>Node</Th>
+        {isWide && <Th>Node</Th>}
         <Th>Message</Th>
       </div>
       <div ref={wrapperRef} className="flex-1 min-h-0">
@@ -159,13 +173,24 @@ interface RowItemData {
   compact: boolean;
   rowH: number;
   copyCommandFor?(entry: BuildLogEntry): string | null;
+  isWide: boolean;
+  gridCols: string;
 }
 
 function Row({ index, style, data }: ListChildComponentProps<RowItemData>) {
-  const { entries, nodeLabel, compact, copyCommandFor } = data;
+  const { entries, nodeLabel, compact, copyCommandFor, isWide, gridCols } = data;
   const e = entries[index]!;
   const lvlStyle = LEVEL_STYLE[e.level];
   const cmd = copyCommandFor?.(e) ?? null;
+  // On narrow viewports, surface time + node info via title since the
+  // dedicated columns are hidden. This keeps the row terse without losing
+  // the metadata for users who long-press / hover.
+  const nodeLabelText = e.nodeId
+    ? (nodeLabel ? nodeLabel(e.nodeId, e.stepType) : `${e.stepType ?? '?'}:${e.nodeId.slice(0, 8)}`)
+    : 'pipeline';
+  const rowTitle = !isWide
+    ? `${fmtTime(e.ts)} · ${nodeLabelText} · ${e.message.replace(/\x1b\[[0-9;]*[A-Za-z]/g, '')}`
+    : e.message.replace(/\x1b\[[0-9;]*[A-Za-z]/g, '');
   return (
     <div
       style={style}
@@ -176,9 +201,9 @@ function Row({ index, style, data }: ListChildComponentProps<RowItemData>) {
     >
       <div
         className="grid w-full items-center"
-        style={{ gridTemplateColumns: GRID_COLS, height: '100%' }}
+        style={{ gridTemplateColumns: gridCols, height: '100%' }}
       >
-        <span className="truncate text-slate-400">{fmtTime(e.ts)}</span>
+        {isWide && <span className="truncate text-slate-400">{fmtTime(e.ts)}</span>}
         <span
           className={cn(
             'inline-flex w-fit items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider',
@@ -188,18 +213,18 @@ function Row({ index, style, data }: ListChildComponentProps<RowItemData>) {
           <span className={cn('h-1.5 w-1.5 rounded-full', lvlStyle.dot)} />
           {e.level}
         </span>
-        <span className="truncate text-slate-300">
-          {e.nodeId
-            ? nodeLabel
-              ? nodeLabel(e.nodeId, e.stepType)
-              : `${e.stepType ?? '?'}:${e.nodeId.slice(0, 8)}`
-            : <span className="text-slate-400">—</span>}
-        </span>
+        {isWide && (
+          <span className="truncate text-slate-300">
+            {e.nodeId
+              ? nodeLabelText
+              : <span className="text-slate-400">—</span>}
+          </span>
+        )}
         <span
           // Single-line truncation; full text on hover so virtualization
           // can keep a fixed row height. ANSI sequences are stripped from
           // the title attr so the tooltip stays readable.
-          title={e.message.replace(/\x1b\[[0-9;]*[A-Za-z]/g, '')}
+          title={rowTitle}
           className={cn(
             'relative flex items-center truncate text-slate-200',
             e.level === 'stderr' && 'text-amber-200',
@@ -217,8 +242,12 @@ function Row({ index, style, data }: ListChildComponentProps<RowItemData>) {
                 ev.stopPropagation();
                 void navigator.clipboard?.writeText(cmd);
               }}
-              className="ml-2 hidden shrink-0 rounded border border-slate-700 px-1.5 py-0 text-[10px] uppercase tracking-wider text-slate-400 hover:border-sky-500 hover:text-sky-300 group-hover:inline-flex"
+              // On touch devices the hover-revealed copy button is unreachable,
+              // so make it always visible there via touch-target. On precise
+              // pointers it remains a group-hover affordance to keep rows tidy.
+              className="touch-target ml-2 hidden shrink-0 rounded border border-slate-700 px-1.5 py-0 text-[10px] uppercase tracking-wider text-slate-400 hover:border-sky-500 hover:text-sky-300 group-hover:inline-flex"
               title={`Copy: ${cmd}`}
+              aria-label={`Copy command: ${cmd}`}
             >
               copy
             </button>

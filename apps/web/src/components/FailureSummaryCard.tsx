@@ -63,8 +63,8 @@ export function FailureSummaryCard({ entries, nodeLabel, onRetry, onJumpToNode }
     : `${summary.stepType ?? '?'} · ${summary.nodeId.slice(0, 8)}`;
 
   return (
-    <div className="border-b border-rose-900/40 bg-rose-950/20 px-6 py-3">
-      <div className="flex items-start gap-3">
+    <div className="border-b border-rose-900/40 bg-rose-950/20 px-3 py-3 sm:px-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
         <div className="mt-0.5 shrink-0 rounded-md bg-rose-950/60 p-1.5 text-rose-300">
           <AlertTriangle size={16} />
         </div>
@@ -123,7 +123,7 @@ export function FailureSummaryCard({ entries, nodeLabel, onRetry, onJumpToNode }
           <button
             type="button"
             onClick={() => onRetry(summary.nodeId)}
-            className="inline-flex shrink-0 items-center gap-1 rounded-md border border-amber-700/60 px-2 py-1 text-[11px] text-amber-300 hover:border-amber-500 hover:text-amber-200"
+            className="focusable touch-target inline-flex shrink-0 items-center gap-1 self-start rounded-md border border-amber-700/60 px-2 py-1 text-[11px] text-amber-300 hover:border-amber-500 hover:text-amber-200"
             title={`Re-run from the failed step (${summary.nodeId.slice(0, 8)})`}
           >
             <RotateCcw size={11} /> Retry
