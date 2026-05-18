@@ -14,6 +14,7 @@ import { LogTable } from '../components/LogTable';
 import { StepGantt } from '../components/StepGantt';
 import { defaultActiveLevels } from '../components/LevelToggleBar';
 import { ArtifactPreviewModal } from '../components/ArtifactPreviewModal';
+import { FailureSummaryCard } from '../components/FailureSummaryCard';
 
 const EMPTY: BuildLogEntry[] = [];
 
@@ -282,6 +283,20 @@ export function BuildDetailPage({ buildId }: Props) {
           </div>
         </div>
       </header>
+
+      {build.status === 'failed' && (
+        <FailureSummaryCard
+          entries={entries}
+          nodeLabel={(id, type) =>
+            `${nodeLabelMap.get(id) ?? type ?? '?'} · ${id.slice(0, 8)}`
+          }
+          onRetry={async (nodeId) => {
+            const next = await triggerBuild(build.pipelineId, nodeId);
+            setView({ type: 'build', id: next.id });
+          }}
+          onJumpToNode={(nodeId) => setActiveNodeId(nodeId)}
+        />
+      )}
 
       {artifacts.length > 0 && (
         <div className="border-b border-slate-800 bg-slate-900/30 px-6 py-3">
