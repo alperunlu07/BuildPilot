@@ -143,7 +143,7 @@ function Editor({ pipeline }: Props) {
   const upsertPipeline = useStore((s) => s.upsertPipeline);
   const triggerBuild = useStore((s) => s.triggerBuild);
   const cancelBuildAction = useStore((s) => s.cancelBuild);
-  const deletePipelineAction = useStore((s) => s.deletePipeline);
+  const softDeletePipeline = useStore((s) => s.softDeletePipeline);
   const requestConfirmation = useStore((s) => s.requestConfirmation);
   const nodeTemplates = useStore((s) => s.nodeTemplates);
   const saveNodeTemplate = useStore((s) => s.saveNodeTemplate);
@@ -760,15 +760,7 @@ function Editor({ pipeline }: Props) {
           )}
           <button
             type="button"
-            onClick={() => {
-              requestConfirmation({
-                title: `Delete pipeline "${pipeline.name}"?`,
-                body: "Build history for this pipeline is kept; only the pipeline definition is removed.",
-                variant: 'destructive',
-                confirmLabel: 'Delete pipeline',
-                onConfirm: () => deletePipelineAction(pipeline.id),
-              });
-            }}
+            onClick={() => softDeletePipeline(pipeline.id)}
             className="inline-flex items-center gap-1 rounded-md border border-slate-700 px-2 py-1 text-xs text-rose-400 hover:border-rose-500 hover:text-rose-300"
             title="Delete this pipeline"
           >

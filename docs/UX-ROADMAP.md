@@ -137,8 +137,8 @@ landing experience.
   immediately and rolls back on server error
 - [ ] **In-app changelog drawer** — surfaces newly-shipped features after
   each release (reads a server-shipped `CHANGELOG.md`)
-- [ ] **Per-build copy-link button** — shareable deep link to a build /
-  step that auto-opens the right view
+- [x] **Per-build copy-link button** — shareable deep link to a build /
+  step that auto-opens the right view — `e0a15f7`
 - [x] **Improved confirm dialog** — current dialog has Title + Body +
   Confirm; add a typed-confirmation input (`type "delete" to confirm`)
   for irreversible actions like project removal — `7354ed4`

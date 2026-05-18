@@ -36,10 +36,10 @@ export function ProjectDetailPage({ projectId }: Props) {
     [allBuilds, projectId],
   );
   const setView = useStore((s) => s.setView);
-  const removeProject = useStore((s) => s.removeProject);
+  const softDeleteProject = useStore((s) => s.softDeleteProject);
+  const softDeletePipeline = useStore((s) => s.softDeletePipeline);
   const triggerBuild = useStore((s) => s.triggerBuild);
   const loadBuilds = useStore((s) => s.loadBuilds);
-  const requestConfirmation = useStore((s) => s.requestConfirmation);
 
   const [currentBranch, setCurrentBranch] = useState<string>('');
   const [headSha, setHeadSha] = useState<string>('');
@@ -156,18 +156,7 @@ export function ProjectDetailPage({ projectId }: Props) {
           <h1 className="text-lg font-semibold text-slate-100">{project.name}</h1>
           <button
             type="button"
-            onClick={() => {
-              requestConfirmation({
-                title: `Remove project "${project.name}"?`,
-                body:
-                  'Pipelines belonging to this project will also be deleted. ' +
-                  'Build history is kept.',
-                variant: 'destructive',
-                confirmLabel: 'Remove project',
-                typedConfirmation: 'delete',
-                onConfirm: () => removeProject(project.id),
-              });
-            }}
+            onClick={() => softDeleteProject(project.id)}
             className="text-[11px] text-rose-400 hover:text-rose-300"
             title="Remove project"
           >
@@ -300,15 +289,7 @@ export function ProjectDetailPage({ projectId }: Props) {
                     useStore.getState().upsertPipeline(cloned);
                     setView({ type: 'pipeline', id: cloned.id });
                   }}
-                  onDelete={() => {
-                    requestConfirmation({
-                      title: `Delete pipeline "${pl.name}"?`,
-                      body: "Build history for this pipeline is kept; only the pipeline definition is removed.",
-                      variant: 'destructive',
-                      confirmLabel: 'Delete pipeline',
-                      onConfirm: () => useStore.getState().deletePipeline(pl.id),
-                    });
-                  }}
+                  onDelete={() => softDeletePipeline(pl.id)}
                 />
               ))}
             </ul>

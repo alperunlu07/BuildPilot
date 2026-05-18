@@ -5,6 +5,7 @@ import { BuildLogPanel } from './components/BuildLogPanel';
 import { ConfirmDialog } from './components/ConfirmDialog';
 import { HostsDialog } from './components/HostsDialog';
 import { ToastContainer } from './components/ToastContainer';
+import { UndoToast } from './components/UndoToast';
 import { ActiveBuildsWidget } from './components/ActiveBuildsWidget';
 import { Breadcrumb } from './components/Breadcrumb';
 import { CommandPalette } from './components/CommandPalette';
@@ -128,6 +129,7 @@ export function App() {
       </main>
 
       <ToastContainer />
+      <UndoToast />
       <ActiveBuildsWidget />
       <CommandPalette
         onAddProject={() => setOpenAdd(true)}

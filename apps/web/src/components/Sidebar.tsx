@@ -27,9 +27,8 @@ export function Sidebar({ onAddProject, onManageHosts }: Props) {
   const pipelines = useStore((s) => s.pipelines);
   const view = useStore((s) => s.view);
   const setView = useStore((s) => s.setView);
-  const removeProject = useStore((s) => s.removeProject);
-  const deletePipelineAction = useStore((s) => s.deletePipeline);
-  const requestConfirmation = useStore((s) => s.requestConfirmation);
+  const softDeleteProject = useStore((s) => s.softDeleteProject);
+  const softDeletePipeline = useStore((s) => s.softDeletePipeline);
   const favorites = useStore((s) => s.favorites);
   const toggleFavoriteProject = useStore((s) => s.toggleFavoriteProject);
   const toggleFavoritePipeline = useStore((s) => s.toggleFavoritePipeline);
@@ -220,16 +219,7 @@ export function Sidebar({ onAddProject, onManageHosts }: Props) {
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
-                      requestConfirmation({
-                        title: `Remove project "${p.name}"?`,
-                        body:
-                          'Pipelines belonging to this project will also be deleted. ' +
-                          'Build history is kept.',
-                        variant: 'destructive',
-                        confirmLabel: 'Remove project',
-                        typedConfirmation: 'delete',
-                        onConfirm: () => removeProject(p.id),
-                      });
+                      softDeleteProject(p.id);
                     }}
                     className="rounded p-0.5 text-slate-500 opacity-0 transition-opacity hover:text-rose-400 group-hover:opacity-100"
                     title="Remove this project"
@@ -282,13 +272,7 @@ export function Sidebar({ onAddProject, onManageHosts }: Props) {
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                requestConfirmation({
-                                  title: `Delete pipeline "${pl.name}"?`,
-                                  body: "Build history for this pipeline is kept; only the pipeline definition is removed.",
-                                  variant: 'destructive',
-                                  confirmLabel: 'Delete pipeline',
-                                  onConfirm: () => deletePipelineAction(pl.id),
-                                });
+                                softDeletePipeline(pl.id);
                               }}
                               className="rounded p-0.5 text-slate-500 opacity-0 transition-opacity hover:text-rose-400 group-hover:opacity-100"
                               title="Delete this pipeline"

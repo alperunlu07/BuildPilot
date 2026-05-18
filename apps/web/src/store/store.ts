@@ -130,6 +130,26 @@ export interface ConfirmationRequest {
   onConfirm(): void | Promise<void>;
 }
 
+// A pending soft-delete that fires the real API call once the undo grace
+// period expires. The server has no trash-bin concept, so this exists
+// purely as a client-side deferral — the UI hides the entity immediately
+// and either commits or restores after the timer.
+export interface PendingDeletion {
+  id: string;
+  kind: 'project' | 'pipeline';
+  label: string;
+  // Original entity, kept verbatim so an UNDO can splice it back into the
+  // visible list at the right index.
+  snapshot: ProjectSummary | Pipeline;
+  // Position in the original list. Used to put the row back where it was.
+  index: number;
+  // setTimeout handle so undo can cancel before the API call fires.
+  timeoutHandle: ReturnType<typeof setTimeout>;
+  // When the toast will auto-expire (commit the delete). Used to drive a
+  // countdown bar in the UI.
+  expiresAt: number;
+}
+
 interface State {
   projects: ProjectSummary[];
   pipelines: Pipeline[];
@@ -159,6 +179,7 @@ interface State {
   recents: RecentItem[];
   paletteOpen: boolean;
   shortcutsHelpOpen: boolean;
+  pendingDeletions: PendingDeletion[];
 
   loadProjects(): Promise<void>;
   loadPipelines(projectId?: string): Promise<void>;
@@ -217,8 +238,15 @@ interface State {
   togglePalette(): void;
   openShortcutsHelp(): void;
   closeShortcutsHelp(): void;
+  // Cluster 10.E — schedule a soft delete that the user can undo within the
+  // grace window. After the timer fires, the real API call is dispatched.
+  softDeleteProject(id: string): void;
+  softDeletePipeline(id: string): void;
+  undoDeletion(deletionId: string): void;
   handleEvent(event: ServerEvent): void;
 }
+
+const UNDO_GRACE_MS = 5000;
 
 export const useStore = create<State>((set, get) => ({
   projects: [],
@@ -240,6 +268,7 @@ export const useStore = create<State>((set, get) => ({
   recents: readRecents(),
   paletteOpen: false,
   shortcutsHelpOpen: false,
+  pendingDeletions: [],
 
   async loadProjects() {
     set({ projects: await api.listProjects() });
@@ -451,6 +480,107 @@ export const useStore = create<State>((set, get) => ({
   },
   closeShortcutsHelp() {
     set({ shortcutsHelpOpen: false });
+  },
+  softDeleteProject(id) {
+    const state = get();
+    const projects = state.projects;
+    const idx = projects.findIndex((p) => p.id === id);
+    if (idx === -1) return;
+    const snapshot = projects[idx]!;
+    const deletionId = `del-project-${id}-${Date.now().toString(36)}`;
+    const expiresAt = Date.now() + UNDO_GRACE_MS;
+    const handle = setTimeout(() => {
+      // Time's up — commit the delete to the server. Local state is already
+      // mutated; clean up the pending entry. The SSE projectRemoved event
+      // will reconcile any other tabs.
+      void api.removeProject(id).catch(() => {
+        // If the server call fails, snap the entity back so users don't
+        // silently lose data.
+        const cur = get();
+        const stillGone = !cur.projects.some((p) => p.id === id);
+        if (stillGone) {
+          set({ projects: [...cur.projects, snapshot] });
+        }
+      });
+      set({
+        pendingDeletions: get().pendingDeletions.filter((d) => d.id !== deletionId),
+      });
+    }, UNDO_GRACE_MS);
+    const pending: PendingDeletion = {
+      id: deletionId,
+      kind: 'project',
+      label: snapshot.name,
+      snapshot,
+      index: idx,
+      timeoutHandle: handle,
+      expiresAt,
+    };
+    set({
+      projects: projects.filter((p) => p.id !== id),
+      pendingDeletions: [...state.pendingDeletions, pending],
+      view: state.view.type === 'project' && state.view.id === id
+        ? { type: 'projects' }
+        : state.view,
+    });
+  },
+  softDeletePipeline(id) {
+    const state = get();
+    const pipelines = state.pipelines;
+    const idx = pipelines.findIndex((p) => p.id === id);
+    if (idx === -1) return;
+    const snapshot = pipelines[idx]!;
+    const deletionId = `del-pipeline-${id}-${Date.now().toString(36)}`;
+    const expiresAt = Date.now() + UNDO_GRACE_MS;
+    const handle = setTimeout(() => {
+      void api.deletePipeline(id).catch(() => {
+        const cur = get();
+        const stillGone = !cur.pipelines.some((p) => p.id === id);
+        if (stillGone) {
+          set({ pipelines: [...cur.pipelines, snapshot] });
+        }
+      });
+      set({
+        pendingDeletions: get().pendingDeletions.filter((d) => d.id !== deletionId),
+      });
+    }, UNDO_GRACE_MS);
+    const pending: PendingDeletion = {
+      id: deletionId,
+      kind: 'pipeline',
+      label: snapshot.name,
+      snapshot,
+      index: idx,
+      timeoutHandle: handle,
+      expiresAt,
+    };
+    const nextView =
+      state.view.type === 'pipeline' && state.view.id === id
+        ? ({ type: 'project', id: snapshot.projectId } as View)
+        : state.view;
+    set({
+      pipelines: pipelines.filter((p) => p.id !== id),
+      pendingDeletions: [...state.pendingDeletions, pending],
+      view: nextView,
+    });
+  },
+  undoDeletion(deletionId) {
+    const state = get();
+    const pending = state.pendingDeletions.find((d) => d.id === deletionId);
+    if (!pending) return;
+    clearTimeout(pending.timeoutHandle);
+    if (pending.kind === 'project') {
+      const next = [...state.projects];
+      const snap = pending.snapshot as ProjectSummary;
+      next.splice(Math.min(pending.index, next.length), 0, snap);
+      set({ projects: next });
+    } else {
+      const next = [...state.pipelines];
+      const snap = pending.snapshot as Pipeline;
+      next.splice(Math.min(pending.index, next.length), 0, snap);
+      set({ pipelines: next });
+    }
+    set({
+      pendingDeletions: state.pendingDeletions.filter((d) => d.id !== deletionId),
+    });
   },
   handleEvent(event) {
     switch (event.type) {
