@@ -42,12 +42,12 @@ landing experience.
   the sidebar, persisted in `localStorage`
 - [ ] **Recent items menu** — last 5 builds / pipelines accessed, in
   sidebar footer or palette
-- [ ] **Density toggle** — `comfortable` (current) vs `compact` setting,
-  applied to LogTable, Sidebar, ProjectsPage cards
-- [ ] **Light theme + system-default theme toggle** — currently only dark;
-  Tailwind already supports `dark:` variant flip
-- [ ] **i18n scaffolding** — `react-intl` or `i18next`; ship `en` +
-  `tr` to start; language picker in settings
+- [x] **Density toggle** — `comfortable` (current) vs `compact` setting,
+  applied to LogTable, Sidebar, ProjectsPage cards — `9c5f223`
+- [x] **Light theme + system-default theme toggle** — currently only dark;
+  Tailwind already supports `dark:` variant flip — `9c5f223`
+- [x] **i18n scaffolding** — `react-intl` or `i18next`; ship `en` +
+  `tr` to start; language picker in settings — `9c5f223`
 
 ### Cluster 10.B · Pipeline editor power features
 
