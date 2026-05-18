@@ -223,8 +223,8 @@ Cross-refs: `TODO.md` Phase 2.6.A (file vault, secret references).
 
 Cross-refs: `TODO.md` Phase 2.6.C.
 
-- [ ] **Matrix editor panel** — declarative `matrix: { xcode: [15,16], scheme: [Free,Pro] }`
-  side panel in the pipeline editor with preview of generated runs
+- [x] **Matrix editor panel** — declarative `matrix: { xcode: [15,16], scheme: [Free,Pro] }`
+  side panel in the pipeline editor with preview of generated runs — `e2b98fb`
 - [ ] **Matrix run summary view** — collapsed N×M grid; each cell links
   to its build; "rerun failed cells only" action
 - [ ] **Matrix-aware notifications** — single summary message per matrix

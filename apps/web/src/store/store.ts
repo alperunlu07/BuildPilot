@@ -844,6 +844,14 @@ export const useStore = create<State>((set, get) => ({
         }
         void get().loadBuilds();
         break;
+      case 'notifyMatrix':
+        // Cluster 11.C — rolled-up summary for matrix pipelines. The
+        // current dashboard surface treats this as a hint to refresh the
+        // build list (so the parent + every child's status flips at
+        // once); detailed UI rendering lives on BuildDetailPage which
+        // re-fetches when the user opens the parent.
+        void get().loadBuilds();
+        break;
       case 'projectAdded':
       case 'projectRemoved':
         void get().loadProjects();

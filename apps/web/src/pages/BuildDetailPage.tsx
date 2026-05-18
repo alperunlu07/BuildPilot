@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Check, ChevronLeft, Download, FileBarChart, Filter, GitCompareArrows, Link2, RotateCcw, Square } from 'lucide-react';
+import { Check, ChevronLeft, Download, FileBarChart, Filter, GitCompareArrows, Grid3X3, Link2, RotateCcw, Square } from 'lucide-react';
 import type {
   Build,
   BuildArtifact,
@@ -12,6 +12,7 @@ import { api } from '../lib/api';
 import { cn } from '../lib/cn';
 import { statusIcon, statusIconAnimationClass, statusLabel } from '../lib/statusIcon';
 import { LogTable } from '../components/LogTable';
+import { MatrixRunSummary } from '../components/MatrixRunSummary';
 import { StepGantt } from '../components/StepGantt';
 import { defaultActiveLevels } from '../components/LevelToggleBar';
 import { ArtifactPreviewModal } from '../components/ArtifactPreviewModal';
@@ -67,6 +68,11 @@ export function BuildDetailPage({ buildId }: Props) {
   const [artifacts, setArtifacts] = useState<BuildArtifact[]>([]);
   // Selected artifact for the inline log viewer modal. null = closed.
   const [previewArtifact, setPreviewArtifact] = useState<BuildArtifact | null>(null);
+  // Cluster 11.C — matrix children. Populated only when this build is the
+  // parent of a matrix fan-out; non-matrix builds keep this empty and
+  // skip rendering MatrixRunSummary.
+  const [matrixChildren, setMatrixChildren] = useState<Build[]>([]);
+  const [matrixRerunning, setMatrixRerunning] = useState(false);
 
   const [activeLevels, setActiveLevels] = useState<Set<BuildLogLevel>>(
     () => defaultActiveLevels(),
@@ -92,11 +98,13 @@ export function BuildDetailPage({ buildId }: Props) {
       api.getBuild(buildId),
       api.getBuildEntries(buildId),
       api.getBuildArtifacts(buildId).catch(() => []),
+      api.listChildBuilds(buildId).catch(() => [] as Build[]),
     ])
-      .then(([b, ents, arts]) => {
+      .then(([b, ents, arts, children]) => {
         if (!alive) return;
         setBuild(b);
         setArtifacts(arts);
+        setMatrixChildren(children);
         // Legacy builds (created before the structured-log table) only have
         // the flat `build.log` text. Synthesize one stdout-level entry per
         // line so the table view still shows them.
@@ -127,6 +135,34 @@ export function BuildDetailPage({ buildId }: Props) {
       alive = false;
     };
   }, [buildId, seedBuildEntries]);
+
+  // Cluster 11.C — refresh child rows while the parent is still running
+  // so the MatrixRunSummary grid reflects each cell's progress without
+  // requiring the user to reload the page. 2s polling matches the cadence
+  // the rest of the dashboard uses for in-flight builds.
+  useEffect(() => {
+    if (!build || matrixChildren.length === 0) return;
+    const stillMoving =
+      build.status === 'running' ||
+      build.status === 'pending' ||
+      matrixChildren.some(
+        (c) => c.status === 'running' || c.status === 'pending',
+      );
+    if (!stillMoving) return;
+    const handle = window.setInterval(async () => {
+      try {
+        const [refreshed, refreshedChildren] = await Promise.all([
+          api.getBuild(buildId),
+          api.listChildBuilds(buildId),
+        ]);
+        setBuild(refreshed);
+        setMatrixChildren(refreshedChildren);
+      } catch {
+        /* swallow — next tick retries */
+      }
+    }, 2000);
+    return () => window.clearInterval(handle);
+  }, [buildId, build, matrixChildren]);
 
   const proj = build ? projects.find((p) => p.id === build.projectId) : null;
   const pipe = build ? pipelines.find((p) => p.id === build.pipelineId) : null;
@@ -256,17 +292,35 @@ export function BuildDetailPage({ buildId }: Props) {
     build.status === 'failed' ||
     build.status === 'cancelled';
 
+  // Cluster 11.C — this build is a parent matrix run when it has children
+  // (children rows reference this build via parent_build_id). The reverse
+  // — a build with a parentBuildId — is a matrix child that gets a "back
+  // to matrix" link instead of the regular Builds back button.
+  const isMatrixParent = matrixChildren.length > 0;
+  const isMatrixChild = build.parentBuildId !== null;
+
   return (
     <div className="flex h-full min-h-0 flex-col">
       <header className="border-b border-slate-800 bg-slate-900/40 px-3 py-3 sm:px-6">
-        <button
-          type="button"
-          onClick={() => setView({ type: 'builds' })}
-          className="focusable inline-flex items-center gap-1 rounded text-[11px] uppercase tracking-wider text-slate-400 hover:text-slate-300"
-          aria-label="Back to builds list"
-        >
-          <ChevronLeft size={12} /> Builds
-        </button>
+        {isMatrixChild && build.parentBuildId ? (
+          <button
+            type="button"
+            onClick={() => setView({ type: 'build', id: build.parentBuildId! })}
+            className="focusable inline-flex items-center gap-1 rounded text-[11px] uppercase tracking-wider text-sky-400 hover:text-sky-300"
+            aria-label="Back to parent matrix build"
+          >
+            <ChevronLeft size={12} /> Matrix
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setView({ type: 'builds' })}
+            className="focusable inline-flex items-center gap-1 rounded text-[11px] uppercase tracking-wider text-slate-400 hover:text-slate-300"
+            aria-label="Back to builds list"
+          >
+            <ChevronLeft size={12} /> Builds
+          </button>
+        )}
         <div className="mt-1 flex flex-wrap items-baseline gap-x-4 gap-y-1">
           <h1 className="text-lg font-semibold text-slate-100">
             {pipe?.name ?? 'Unknown pipeline'}
@@ -298,6 +352,23 @@ export function BuildDetailPage({ buildId }: Props) {
           <span className="text-xs text-slate-400">
             in <span className="text-slate-300">{proj?.name ?? '—'}</span>
           </span>
+          {isMatrixParent && (
+            <span
+              className="inline-flex items-center gap-1 rounded-md bg-indigo-950/50 px-2 py-0.5 text-[11px] font-medium uppercase tracking-wider text-indigo-300"
+              title={`Matrix run with ${matrixChildren.length} cell${matrixChildren.length === 1 ? '' : 's'}`}
+            >
+              <Grid3X3 size={11} aria-hidden="true" /> matrix · {matrixChildren.length}
+            </span>
+          )}
+          {isMatrixChild && build.matrixLabel && (
+            <span
+              className="inline-flex items-center gap-1 rounded-md bg-indigo-950/50 px-2 py-0.5 text-[11px] font-medium uppercase tracking-wider text-indigo-300"
+              title="This build is one cell of a matrix run"
+            >
+              <Grid3X3 size={11} aria-hidden="true" />{' '}
+              <span className="font-mono normal-case">{build.matrixLabel}</span>
+            </span>
+          )}
         </div>
         <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[11px] text-slate-400">
           <span className="font-mono">{build.id}</span>
@@ -402,7 +473,37 @@ export function BuildDetailPage({ buildId }: Props) {
         </div>
       </header>
 
-      {build.status === 'failed' && (
+      {isMatrixParent && (
+        <MatrixRunSummary
+          parent={build}
+          children={matrixChildren}
+          onOpenChild={(id) => setView({ type: 'build', id })}
+          rerunning={matrixRerunning}
+          onRerunFailed={async () => {
+            if (matrixRerunning) return;
+            setMatrixRerunning(true);
+            try {
+              const res = await api.rerunFailedMatrixCells(build.id);
+              // The server has flipped the parent back to 'running' and
+              // appended new child rows. Re-fetch both so the grid updates
+              // immediately.
+              const [refreshed, refreshedChildren] = await Promise.all([
+                api.getBuild(build.id),
+                api.listChildBuilds(build.id),
+              ]);
+              setBuild(refreshed);
+              setMatrixChildren(refreshedChildren);
+              if (res.rerun === 0) {
+                /* no-op — UI already shows the "no failed cells" state */
+              }
+            } finally {
+              setMatrixRerunning(false);
+            }
+          }}
+        />
+      )}
+
+      {build.status === 'failed' && !isMatrixParent && (
         <FailureSummaryCard
           entries={entries}
           nodeLabel={(id, type) =>
