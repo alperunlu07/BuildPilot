@@ -1,4 +1,6 @@
 import {
+  ChevronsLeft,
+  ChevronsRight,
   Folder,
   GitBranch,
   History,
@@ -13,9 +15,37 @@ import {
   Sun,
   Trash2,
 } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useStore } from '../store/store';
 import { cn } from '../lib/cn';
+
+const WIDTH_KEY = 'buildpilot.sidebar.width';
+const COLLAPSED_KEY = 'buildpilot.sidebar.collapsed';
+const MIN_WIDTH = 200;
+const MAX_WIDTH = 400;
+const COLLAPSED_WIDTH = 56;
+const DEFAULT_WIDTH = 288; // 18rem
+
+function readStoredWidth(): number {
+  try {
+    const raw = localStorage.getItem(WIDTH_KEY);
+    if (!raw) return DEFAULT_WIDTH;
+    const n = parseInt(raw, 10);
+    if (!Number.isFinite(n)) return DEFAULT_WIDTH;
+    return Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, n));
+  } catch {
+    return DEFAULT_WIDTH;
+  }
+}
+
+function readStoredCollapsed(): boolean {
+  try {
+    return localStorage.getItem(COLLAPSED_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
 
 interface Props {
   onAddProject(): void;
@@ -38,6 +68,55 @@ export function Sidebar({ onAddProject, onManageHosts }: Props) {
   const openPalette = useStore((s) => s.openPalette);
   const { t } = useTranslation();
 
+  const [width, setWidth] = useState<number>(() => readStoredWidth());
+  const [collapsed, setCollapsed] = useState<boolean>(() => readStoredCollapsed());
+  const dragStartRef = useRef<{ x: number; w: number } | null>(null);
+
+  // Drag-to-resize handle. We move width on every mousemove so the layout
+  // tracks the cursor, then persist on mouseup. Clamped to MIN/MAX so the
+  // sidebar can't disappear or eat the whole viewport.
+  const onResizeMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      if (collapsed) return;
+      e.preventDefault();
+      dragStartRef.current = { x: e.clientX, w: width };
+      const onMove = (ev: MouseEvent) => {
+        if (!dragStartRef.current) return;
+        const next = Math.max(
+          MIN_WIDTH,
+          Math.min(MAX_WIDTH, dragStartRef.current.w + (ev.clientX - dragStartRef.current.x)),
+        );
+        setWidth(next);
+      };
+      const onUp = () => {
+        dragStartRef.current = null;
+        window.removeEventListener('mousemove', onMove);
+        window.removeEventListener('mouseup', onUp);
+      };
+      window.addEventListener('mousemove', onMove);
+      window.addEventListener('mouseup', onUp);
+    },
+    [collapsed, width],
+  );
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(WIDTH_KEY, String(width));
+    } catch {
+      // ignore
+    }
+  }, [width]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(COLLAPSED_KEY, collapsed ? '1' : '0');
+    } catch {
+      // ignore
+    }
+  }, [collapsed]);
+
+  const effectiveWidth = collapsed ? COLLAPSED_WIDTH : width;
+
   const favProjects = projects.filter((p) => favorites.projectIds.includes(p.id));
   const favPipelines = pipelines.filter((p) => favorites.pipelineIds.includes(p.id));
 
@@ -47,8 +126,65 @@ export function Sidebar({ onAddProject, onManageHosts }: Props) {
   }
   const ThemeIcon = theme === 'dark' ? Moon : theme === 'light' ? Sun : Monitor;
 
+  if (collapsed) {
+    return (
+      <aside
+        style={{ width: COLLAPSED_WIDTH }}
+        className="density-card relative flex h-full shrink-0 flex-col items-center border-r border-slate-800 bg-slate-950 py-2"
+      >
+        <button
+          type="button"
+          onClick={() => setCollapsed(false)}
+          className="mb-2 rounded-md p-1.5 text-slate-400 hover:bg-slate-800/60 hover:text-slate-100"
+          title="Expand sidebar"
+          aria-label="Expand sidebar"
+        >
+          <ChevronsRight size={16} />
+        </button>
+        <div className="flex flex-col items-center gap-1">
+          <IconRail
+            icon={<Home size={16} className="text-sky-400" />}
+            active={view.type === 'home' || view.type === 'diskUsage'}
+            onClick={() => setView({ type: 'home' })}
+            label={t('nav.home')}
+          />
+          <IconRail
+            icon={<History size={16} className="text-amber-400" />}
+            active={view.type === 'builds' || view.type === 'build'}
+            onClick={() => setView({ type: 'builds' })}
+            label={t('nav.builds')}
+          />
+          <IconRail
+            icon={<Server size={16} className="text-slate-300" />}
+            onClick={onManageHosts}
+            label={t('nav.hosts')}
+          />
+          <IconRail
+            icon={<Settings size={16} className="text-slate-300" />}
+            active={view.type === 'settings'}
+            onClick={() => setView({ type: 'settings' })}
+            label={t('nav.settings')}
+          />
+          <IconRail
+            icon={<Search size={16} className="text-slate-300" />}
+            onClick={openPalette}
+            label="Command palette"
+          />
+          <IconRail
+            icon={<Plus size={16} className="text-slate-300" />}
+            onClick={onAddProject}
+            label={t('actions.addProject')}
+          />
+        </div>
+      </aside>
+    );
+  }
+
   return (
-    <aside className="density-card flex h-full w-72 shrink-0 flex-col border-r border-slate-800 bg-slate-950">
+    <aside
+      style={{ width: effectiveWidth }}
+      className="density-card relative flex h-full shrink-0 flex-col border-r border-slate-800 bg-slate-950"
+    >
       <div className="flex items-center justify-between border-b border-slate-800 px-4 py-3">
         <button
           type="button"
@@ -85,6 +221,15 @@ export function Sidebar({ onAddProject, onManageHosts }: Props) {
             aria-label={t('actions.addProject')}
           >
             <Plus size={14} />
+          </button>
+          <button
+            type="button"
+            onClick={() => setCollapsed(true)}
+            className="rounded-md border border-slate-700 p-1.5 text-slate-300 hover:border-sky-500 hover:text-sky-400"
+            title="Collapse sidebar"
+            aria-label="Collapse sidebar"
+          >
+            <ChevronsLeft size={14} />
           </button>
         </div>
       </div>
@@ -325,7 +470,42 @@ export function Sidebar({ onAddProject, onManageHosts }: Props) {
           </ul>
         </div>
       )}
+
+      {/* Drag-to-resize handle pinned to the right edge — Tailwind cursor-col-resize hits the gap. */}
+      <div
+        onMouseDown={onResizeMouseDown}
+        className="group absolute right-0 top-0 z-10 h-full w-1 cursor-col-resize bg-transparent hover:bg-sky-500/30"
+        title="Drag to resize"
+        aria-hidden="true"
+      />
     </aside>
+  );
+}
+
+function IconRail({
+  icon,
+  active,
+  onClick,
+  label,
+}: {
+  icon: React.ReactNode;
+  active?: boolean;
+  onClick(): void;
+  label: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={label}
+      aria-label={label}
+      className={cn(
+        'flex h-9 w-9 items-center justify-center rounded-md',
+        active ? 'bg-slate-800 text-slate-100' : 'text-slate-400 hover:bg-slate-800/60 hover:text-slate-100',
+      )}
+    >
+      {icon}
+    </button>
   );
 }
 

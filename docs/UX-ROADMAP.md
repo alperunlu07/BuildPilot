@@ -125,9 +125,9 @@ landing experience.
 
 ### Cluster 10.E · Small UX polish
 
-- [ ] **Empty-state CTAs** — Projects, Pipelines, Builds and Hosts pages
+- [x] **Empty-state CTAs** — Projects, Pipelines, Builds and Hosts pages
   show actionable empty states with a primary CTA + a "load sample
-  pipeline" option for first-run users
+  pipeline" option for first-run users — `542b9b2`
 - [x] **Toast-with-undo** for destructive actions — pipeline / project
   delete shows a 5s undo toast instead of relying solely on the confirm
   dialog — `88c88ad`
