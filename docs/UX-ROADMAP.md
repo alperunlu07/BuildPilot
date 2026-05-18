@@ -19,7 +19,7 @@ Power-user affordances for the React-Flow-based pipeline editor at
 - [ ] Right-click context menu on a node — Run from here / Clone / Delete / Copy / Disable
 - [ ] Find / replace within a pipeline — `Cmd/Ctrl+F` searches node ids, types, field values
 - [ ] Copy / paste nodes across pipelines — clipboard-backed, re-ids on paste
-- [ ] Disable / skip flag on a node — visually grays out, engine treats as no-op (UI only for now; add a TODO comment for engine support)
+- [x] Disable / skip flag on a node — visually grays out, engine treats as no-op (UI only for now; add a TODO comment for engine support) — `e57c7b0`
 - [ ] Group / lane visualization — colored swimlane backgrounds (stretch)
 
 ### Follow-ups
