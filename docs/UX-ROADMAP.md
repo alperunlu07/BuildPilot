@@ -17,14 +17,14 @@ satellite widgets.
 - [x] Per-pipeline metrics panel — duration P50/P95 sparkline + step
       duration breakdown over last 30 builds. Endpoint
       `GET /api/metrics/pipeline/:id`. Render as a section on the home page
-      or as a standalone component callable from the pipeline page. *(commit TBD)*
+      or as a standalone component callable from the pipeline page. (da7f723)
 - [x] Slowest-step leaderboard per pipeline — top 5 longest-running steps
       with average duration. Endpoint or computed in
-      `/api/metrics/pipeline/:id`. *(commit TBD)*
-- [ ] Disk usage page — bytes consumed by `~/.buildpilot/artifacts/` broken
+      `/api/metrics/pipeline/:id`. (da7f723)
+- [x] Disk usage page — bytes consumed by `~/.buildpilot/artifacts/` broken
       down by pipeline, with a "prune older than N days" action that reuses
       existing `pruneOldBuilds`. Endpoints `GET /api/metrics/disk-usage` +
-      `POST /api/builds/prune?olderThanDays=N`.
+      `POST /api/builds/prune?olderThanDays=N`. *(commit TBD)*
 - [ ] Active builds widget — sticky element showing in-flight builds with
       progress + cancel button. Build a self-contained widget; integrate
       into App.tsx if possible (one line of import + render), otherwise
