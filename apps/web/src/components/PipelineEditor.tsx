@@ -44,6 +44,7 @@ import { NodeContextMenu } from './NodeContextMenu';
 import { SaveTemplateDialog } from './SaveTemplateDialog';
 import { StepNode } from './StepNode';
 import { StepPropertyPanel, EMPTY_ENTRIES } from './StepPropertyPanel';
+import { TagPatternPreview } from './TagPatternPreview';
 
 const nodeTypes = {
   checkout: StepNode,
@@ -863,21 +864,19 @@ function Editor({ pipeline }: Props) {
       {triggersOpen && (
         <div className="border-b border-slate-800 bg-slate-900/60 px-4 py-3">
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-            <label className="block text-xs text-slate-300">
+            <div className="block text-xs text-slate-300">
               <span className="mb-1 block text-[11px] uppercase tracking-wide text-slate-400">
-                Tag pattern (glob — e.g. v*.*.*)
+                Tag pattern (glob)
               </span>
-              <input
-                type="text"
+              <TagPatternPreview
+                projectId={pipeline.projectId}
                 value={watch.tagPattern ?? ''}
-                onChange={(e) => {
-                  setWatch({ ...watch, tagPattern: e.target.value });
+                onChange={(pattern) => {
+                  setWatch({ ...watch, tagPattern: pattern });
                   setDirty(true);
                 }}
-                placeholder="v*.*.*"
-                className="w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1.5 text-xs text-slate-100"
               />
-            </label>
+            </div>
             <div className="block text-xs text-slate-300">
               <span className="mb-1 block text-[11px] uppercase tracking-wide text-slate-400">
                 Cron (5-field, UTC)

@@ -137,6 +137,33 @@ export async function listTagsWithSha(
   }
 }
 
+// File-system paths changed in a single commit (against its first parent).
+// Used by the path-filter preview in the dashboard. Root commits (no
+// parent) return [] — the filter wouldn't have anything to match anyway.
+export async function changedPathsInCommit(
+  repoPath: string,
+  sha: string,
+): Promise<string[]> {
+  if (!sha) return [];
+  try {
+    // --diff-filter excludes pure rename detection noise; `^!` is the
+    // shortcut for "this commit vs its first parent".
+    const raw = await git(repoPath).raw([
+      'show',
+      '--no-color',
+      '--name-only',
+      '--pretty=format:',
+      sha,
+    ]);
+    return raw
+      .split('\n')
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
+  } catch {
+    return [];
+  }
+}
+
 // File-system paths changed between two refs (inclusive of the right side).
 // Returns [] if either ref is unknown — caller treats that as "no filter
 // info" rather than throwing, so a transient git failure doesn't block the
