@@ -31,6 +31,7 @@ import { usePipelineClipboard } from '../lib/usePipelineClipboard';
 import { usePipelineHistory } from '../lib/usePipelineHistory';
 import { useStore } from '../store/store';
 import { BranchSelect } from './BranchSelect';
+import { NodeContextMenu } from './NodeContextMenu';
 import { SaveTemplateDialog } from './SaveTemplateDialog';
 import { StepNode } from './StepNode';
 import { StepPropertyPanel, EMPTY_ENTRIES } from './StepPropertyPanel';
@@ -179,6 +180,7 @@ function Editor({ pipeline }: Props) {
   // Save-as-template dialog state. Holds the source node id whose data we
   // will snapshot when the user confirms.
   const [saveTemplateNodeId, setSaveTemplateNodeId] = useState<string | null>(null);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; nodeId: string } | null>(null);
   const [edgeTooltip, setEdgeTooltip] = useState<{ x: number; y: number; text: string } | null>(null);
   const [showMinimap, setShowMinimap] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
@@ -240,6 +242,50 @@ function Editor({ pipeline }: Props) {
       }),
     );
   }, [stepStatus, stepTimings]);
+
+  const cloneNode = useCallback((nodeId: string) => {
+    const src = nodesRef.current.find((n) => n.id === nodeId);
+    if (!src) return;
+    recordHistory();
+    const id = `n_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 5)}`;
+    const data = { ...(src.data as Record<string, unknown>) };
+    delete (data as { runtimeStatus?: unknown }).runtimeStatus;
+    delete (data as { runtimeStartedAt?: unknown }).runtimeStartedAt;
+    delete (data as { runtimeFinishedAt?: unknown }).runtimeFinishedAt;
+    setNodes((nds) => [
+      ...nds,
+      {
+        ...src,
+        id,
+        position: { x: src.position.x + 40, y: src.position.y + 40 },
+        data,
+        selected: false,
+      },
+    ]);
+    setDirty(true);
+  }, [recordHistory]);
+
+  const toggleDisableNode = useCallback((nodeId: string) => {
+    recordHistory();
+    setNodes((nds) =>
+      nds.map((n) => {
+        if (n.id !== nodeId) return n;
+        const data = n.data as Record<string, unknown> & { disabled?: boolean | string };
+        const cur = data.disabled === true || data.disabled === 'true';
+        return { ...n, data: { ...data, disabled: !cur } };
+      }),
+    );
+    setDirty(true);
+  }, [recordHistory]);
+
+  const copySingle = useCallback(
+    (nodeId: string) => {
+      const node = nodesRef.current.find((n) => n.id === nodeId);
+      if (!node) return;
+      clipboard.copy([node], edgesRef.current);
+    },
+    [clipboard],
+  );
 
   const doCopy = useCallback(() => {
     const ids = new Set(selectedNodeIds);
@@ -753,6 +799,11 @@ function Editor({ pipeline }: Props) {
             onEdgesChange={onEdgesChange}
             onConnect={onConnect}
             onSelectionChange={handleSelectionChange}
+            onNodeContextMenu={(ev, node) => {
+              ev.preventDefault();
+              setContextMenu({ x: ev.clientX, y: ev.clientY, nodeId: node.id });
+            }}
+            onPaneContextMenu={() => setContextMenu(null)}
             onEdgeMouseEnter={(ev, edge) => {
               const tip =
                 (edge.data as { conditionTooltip?: string } | undefined)?.conditionTooltip ??
@@ -811,6 +862,28 @@ function Editor({ pipeline }: Props) {
             )}
           </ReactFlow>
         </div>
+
+        {contextMenu && (
+          <NodeContextMenu
+            x={contextMenu.x}
+            y={contextMenu.y}
+            nodeId={contextMenu.nodeId}
+            disabled={(() => {
+              const n = nodesRef.current.find((x) => x.id === contextMenu.nodeId);
+              const d = (n?.data as { disabled?: boolean | string } | undefined)?.disabled;
+              return d === true || d === 'true';
+            })()}
+            onClose={() => setContextMenu(null)}
+            onRunFrom={async (nodeId) => {
+              if (dirty) await save();
+              await triggerBuild(pipeline.id, nodeId);
+            }}
+            onClone={cloneNode}
+            onDelete={deleteNode}
+            onCopy={copySingle}
+            onToggleDisable={toggleDisableNode}
+          />
+        )}
 
         <StepPropertyPanel
           node={selectedNode}
