@@ -9,7 +9,7 @@ item ships.
 Power-user affordances for the React-Flow-based pipeline editor at
 `apps/web/src/components/PipelineEditor.tsx`.
 
-- [ ] Minimap (React Flow ships `<MiniMap />` — add it with a toggle in the editor toolbar)
+- [x] Minimap (React Flow ships `<MiniMap />` — add it with a toggle in the editor toolbar) — `2d3e92f`
 - [ ] Undo / redo stack — keyboard `Cmd/Ctrl+Z` / `Cmd/Ctrl+Shift+Z`; snapshot nodes+edges after each mutation
 - [ ] Multi-select + bulk edit — Shift+click or drag-rectangle; side panel applies common fields (host, continueOnError, retry policy) to all
 - [ ] Auto-layout button using `dagre` (add as dep) — tidies the graph
