@@ -44,11 +44,16 @@ export function initDb(path: string): DB {
       status TEXT NOT NULL,
       started_at INTEGER NOT NULL,
       finished_at INTEGER,
-      log TEXT NOT NULL DEFAULT ''
+      log TEXT NOT NULL DEFAULT '',
+      -- Cluster 11.C — matrix fan-out. All NULL on ordinary single builds.
+      parent_build_id TEXT,
+      matrix_values_json TEXT,
+      matrix_label TEXT
     );
     CREATE INDEX IF NOT EXISTS idx_builds_project_id ON builds(project_id);
     CREATE INDEX IF NOT EXISTS idx_builds_pipeline_id ON builds(pipeline_id);
     CREATE INDEX IF NOT EXISTS idx_builds_started_at ON builds(started_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_builds_parent_build_id ON builds(parent_build_id);
 
     CREATE TABLE IF NOT EXISTS poller_state (
       project_id TEXT NOT NULL,
@@ -236,6 +241,13 @@ export function initDb(path: string): DB {
     // failures from these as soft-fail) is a future step; the column
     // captures intent today so the UI roundtrips correctly.
     'flaky_quarantine_json TEXT',
+    // Cluster 11.C — declarative build matrix. NULL when the pipeline
+    // has no matrix; otherwise serialised as
+    //   {"axes":{"xcode":["15","16"],"scheme":["Free","Pro"]}}
+    'matrix_json TEXT',
+    // Cluster 11.C — when true (1), suppress per-child notifications and
+    // emit a single rolled-up summary on the parent build. Default 1.
+    'matrix_summary INTEGER NOT NULL DEFAULT 1',
   ];
   for (const decl of additivePipelineCols) {
     try {
@@ -243,6 +255,29 @@ export function initDb(path: string): DB {
     } catch {
       /* column already present */
     }
+  }
+
+  // Cluster 11.C — additive `builds` columns for matrix fan-out. New
+  // installs already get these from the CREATE TABLE above; existing
+  // databases need the ALTERs.
+  const additiveBuildCols = [
+    'parent_build_id TEXT',
+    'matrix_values_json TEXT',
+    'matrix_label TEXT',
+  ];
+  for (const decl of additiveBuildCols) {
+    try {
+      db.exec(`ALTER TABLE builds ADD COLUMN ${decl}`);
+    } catch {
+      /* column already present */
+    }
+  }
+  try {
+    db.exec(
+      'CREATE INDEX IF NOT EXISTS idx_builds_parent_build_id ON builds(parent_build_id)',
+    );
+  } catch {
+    /* index already present */
   }
 
   _db = db;

@@ -8,6 +8,7 @@ import {
   deletePipeline,
   getPipeline,
   listPipelines,
+  setPipelineMatrix,
   updatePipeline,
 } from '../store/pipelines';
 import { getProject } from '../store/projects';
@@ -41,7 +42,23 @@ const watchSchema = z.object({
   cronExpr: z.string().optional(),
   pathFilter: z.string().optional(),
   cancelInProgressOnNewCommit: z.boolean().optional(),
+  // Cluster 11.C — opt-in flag. Default true on the server when omitted.
+  matrixSummary: z.boolean().optional(),
 });
+
+// Cluster 11.C — matrix declaration. Per-axis arrays must have ≥1 value
+// (an empty axis would collapse the cross-product to zero builds). We
+// coerce arbitrary values to strings on the server boundary to keep
+// interpolation simple.
+const matrixSchema = z
+  .object({
+    axes: z.record(
+      z.string().min(1),
+      z.array(z.string().min(1)).min(1),
+    ),
+  })
+  .refine((m) => Object.keys(m.axes).length > 0, 'matrix.axes must have at least one axis')
+  .nullable();
 
 const createSchema = z.object({
   projectId: z.string().min(1),
@@ -49,6 +66,7 @@ const createSchema = z.object({
   watch: watchSchema,
   nodes: z.array(nodeSchema),
   edges: z.array(edgeSchema),
+  matrix: matrixSchema.optional(),
 });
 
 const updateSchema = z.object({
@@ -56,6 +74,11 @@ const updateSchema = z.object({
   watch: watchSchema.optional(),
   nodes: z.array(nodeSchema).optional(),
   edges: z.array(edgeSchema).optional(),
+  matrix: matrixSchema.optional(),
+});
+
+const setMatrixSchema = z.object({
+  matrix: matrixSchema,
 });
 
 export async function pipelinesRoutes(app: FastifyInstance): Promise<void> {
@@ -98,6 +121,20 @@ export async function pipelinesRoutes(app: FastifyInstance): Promise<void> {
     deletePipeline(id);
     eventBus.publish({ type: 'pipelineChanged', pipelineId: id, action: 'deleted' });
     return { ok: true };
+  });
+
+  // Cluster 11.C — dedicated matrix setter. The full PATCH route also
+  // accepts a `matrix` field but this endpoint is easier to call from the
+  // editor's MatrixEditor panel because it doesn't require round-tripping
+  // the entire pipeline shape.
+  app.post('/api/pipelines/:id/matrix', async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const parsed = setMatrixSchema.safeParse(req.body);
+    if (!parsed.success) return reply.code(400).send({ error: parsed.error.flatten() });
+    const updated = setPipelineMatrix(id, parsed.data.matrix);
+    if (!updated) return reply.code(404).send({ error: 'not found' });
+    eventBus.publish({ type: 'pipelineChanged', pipelineId: id, action: 'updated' });
+    return updated;
   });
 
   app.post('/api/pipelines/:id/clone', async (req, reply) => {

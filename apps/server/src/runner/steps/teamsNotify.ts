@@ -1,5 +1,6 @@
 import type { TeamsNotifyStepData } from '@buildpilot/shared-types';
 import type { StepContext } from '../engine';
+import { suppressForMatrixSummary } from './_matrixGuard';
 
 // Microsoft Teams supports two webhook surfaces:
 //   - Legacy Office 365 connector: accepts `{ "text": "..." }` or a richer
@@ -58,6 +59,11 @@ export async function runTeamsNotify(
   const d = data as Partial<TeamsNotifyStepData>;
   if (!d.webhookUrl) throw new Error('teamsNotify: missing "webhookUrl"');
   const payload = buildTeamsPayload(d);
+
+  if (suppressForMatrixSummary(ctx)) {
+    ctx.log('teamsNotify: skipped (matrix child — parent will send rolled-up summary)');
+    return;
+  }
 
   ctx.log(`teams → ${maskUrl(d.webhookUrl)}`);
   ctx.log(d.text ?? '', 'stdout');

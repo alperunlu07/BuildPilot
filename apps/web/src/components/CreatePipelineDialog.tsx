@@ -55,6 +55,7 @@ export function CreatePipelineDialog({ open, projectId, defaultBranch, onClose, 
         watch: { branch, intervalSec, autoTrigger: 'ask' },
         nodes,
         edges,
+        matrix: null,
       });
       upsertPipeline(created);
       onCreated(created);

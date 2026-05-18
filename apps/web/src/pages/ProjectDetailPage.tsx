@@ -308,6 +308,7 @@ export function ProjectDetailPage({ projectId }: Props) {
                         { id: 'e_checkout_pull', source: 'n_checkout', target: 'n_pull', condition: 'success' },
                         { id: 'e_pull_shell', source: 'n_pull', target: 'n_shell', condition: 'success' },
                       ],
+                      matrix: null,
                     });
                     useStore.getState().upsertPipeline(sample);
                     setView({ type: 'pipeline', id: sample.id });

@@ -12,9 +12,24 @@ interface BuildRow {
   started_at: number;
   finished_at: number | null;
   log: string;
+  // Cluster 11.C — matrix fan-out columns. All nullable so non-matrix
+  // (legacy) rows round-trip cleanly through the additive migration in
+  // db.ts.
+  parent_build_id: string | null;
+  matrix_values_json: string | null;
+  matrix_label: string | null;
 }
 
 function rowToBuild(row: BuildRow): Build {
+  let matrixValues: Record<string, string> | null = null;
+  if (row.matrix_values_json) {
+    try {
+      const parsed = JSON.parse(row.matrix_values_json) as Record<string, string>;
+      if (parsed && typeof parsed === 'object') matrixValues = parsed;
+    } catch {
+      /* malformed JSON — treat as no matrix data */
+    }
+  }
   return {
     id: row.id,
     pipelineId: row.pipeline_id,
@@ -25,6 +40,9 @@ function rowToBuild(row: BuildRow): Build {
     startedAt: row.started_at,
     finishedAt: row.finished_at,
     log: row.log,
+    parentBuildId: row.parent_build_id,
+    matrixValues,
+    matrixLabel: row.matrix_label,
   };
 }
 
@@ -63,19 +81,42 @@ export interface BuildInput {
   projectId: string;
   triggerSha: string;
   triggerBranch: string;
+  // Cluster 11.C — matrix fan-out. Pass parentBuildId + matrixValues +
+  // matrixLabel together when creating a child build; pass none for
+  // ordinary builds and parent rows.
+  parentBuildId?: string | null;
+  matrixValues?: Record<string, string> | null;
+  matrixLabel?: string | null;
 }
 
 export function createBuild(input: BuildInput): Build {
   const id = randomUUID();
   const startedAt = Date.now();
   const status: BuildStatus = 'pending';
+  const parentBuildId = input.parentBuildId ?? null;
+  const matrixValues = input.matrixValues ?? null;
+  const matrixLabel = input.matrixLabel ?? null;
+  const matrixValuesJson = matrixValues ? JSON.stringify(matrixValues) : null;
   getDb()
     .prepare(
       `INSERT INTO builds
-       (id, pipeline_id, project_id, trigger_sha, trigger_branch, status, started_at, finished_at, log)
-       VALUES (?, ?, ?, ?, ?, ?, ?, NULL, '')`,
+       (id, pipeline_id, project_id, trigger_sha, trigger_branch, status,
+        started_at, finished_at, log,
+        parent_build_id, matrix_values_json, matrix_label)
+       VALUES (?, ?, ?, ?, ?, ?, ?, NULL, '', ?, ?, ?)`,
     )
-    .run(id, input.pipelineId, input.projectId, input.triggerSha, input.triggerBranch, status, startedAt);
+    .run(
+      id,
+      input.pipelineId,
+      input.projectId,
+      input.triggerSha,
+      input.triggerBranch,
+      status,
+      startedAt,
+      parentBuildId,
+      matrixValuesJson,
+      matrixLabel,
+    );
   return {
     id,
     pipelineId: input.pipelineId,
@@ -86,7 +127,21 @@ export function createBuild(input: BuildInput): Build {
     startedAt,
     finishedAt: null,
     log: '',
+    parentBuildId,
+    matrixValues,
+    matrixLabel,
   };
+}
+
+// Cluster 11.C — fetch child builds belonging to a parent matrix build,
+// in insertion order so the grid layout is stable across reloads.
+export function listChildBuilds(parentBuildId: string): Build[] {
+  const rows = getDb()
+    .prepare(
+      'SELECT * FROM builds WHERE parent_build_id = ? ORDER BY started_at ASC',
+    )
+    .all(parentBuildId) as BuildRow[];
+  return rows.map(rowToBuild);
 }
 
 export function updateBuildStatus(id: string, status: BuildStatus): void {

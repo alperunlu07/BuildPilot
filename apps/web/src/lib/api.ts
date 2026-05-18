@@ -14,6 +14,7 @@ import type {
   DiskUsageReport,
   FlakyTestsReport,
   HomeMetrics,
+  Matrix,
   MeResponse,
   NodeTemplate,
   NotificationPrefs,
@@ -122,6 +123,13 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(name ? { name } : {}),
     }),
+  // Cluster 11.C — declare / clear a matrix on a pipeline. Pass `null`
+  // to revert to the single-build (non-matrix) behavior.
+  pipelineSetMatrix: (id: string, matrix: Matrix | null) =>
+    http<Pipeline>(`/pipelines/${id}/matrix`, {
+      method: 'POST',
+      body: JSON.stringify({ matrix }),
+    }),
 
   // ── Builds ───────────────────────────────────────────────
   listBuilds: (filter: { projectId?: string; pipelineId?: string; limit?: number } = {}) => {
@@ -157,6 +165,19 @@ export const api = {
     }),
   cancelBuild: (id: string) =>
     http<{ ok: true }>(`/builds/${id}/cancel`, { method: 'POST' }),
+  // Cluster 11.C — child builds for a matrix parent. Returns [] when
+  // the parent isn't a matrix run or when the id refers to a regular
+  // single build.
+  listChildBuilds: (parentId: string) =>
+    http<Build[]>(`/builds/${parentId}/children`),
+  // Cluster 11.C — re-run only the failed (or cancelled) cells of a
+  // matrix parent. Spawns replacement child builds in place; the parent
+  // build is flipped back to running until the new pass settles.
+  rerunFailedMatrixCells: (parentId: string) =>
+    http<{ ok: true; rerun: number; children: Build[] }>(
+      `/builds/${parentId}/rerun-failed`,
+      { method: 'POST' },
+    ),
 
   // ── Node templates ───────────────────────────────────────
   listNodeTemplates: () => http<NodeTemplate[]>('/node-templates'),

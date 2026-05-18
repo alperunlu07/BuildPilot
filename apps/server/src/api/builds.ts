@@ -3,13 +3,13 @@ import { createReadStream, statSync } from 'node:fs';
 import { open } from 'node:fs/promises';
 import { basename } from 'node:path';
 import { z } from 'zod';
-import { createBuild, getBuild, listBuilds, updateBuildStatus } from '../store/builds';
+import { createBuild, getBuild, listBuilds, listChildBuilds, updateBuildStatus } from '../store/builds';
 import { listBuildLogEntries } from '../store/buildLogs';
 import { getBuildArtifact, listBuildArtifacts } from '../store/buildArtifacts';
 import { getPipeline } from '../store/pipelines';
 import { getProject } from '../store/projects';
 import { getCurrentBranch, getHeadSha } from '../git/operations';
-import { cancelBuild, enqueueBuild } from '../runner/coordinator';
+import { cancelBuild, enqueueBuild, rerunFailedMatrixChildren } from '../runner/coordinator';
 import { eventBus } from '../events/bus';
 import { logger } from '../logger';
 
@@ -35,6 +35,29 @@ export async function buildsRoutes(app: FastifyInstance): Promise<void> {
     const build = getBuild(id);
     if (!build) return reply.code(404).send({ error: 'not found' });
     return build;
+  });
+
+  // Cluster 11.C — fetch the child builds for a matrix parent. Used by
+  // the dashboard's MatrixRunSummary grid. Returns [] for non-matrix
+  // builds (no rows have parent_build_id = this id). Children come back
+  // in insertion order so the grid layout is stable.
+  app.get('/api/builds/:id/children', async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const build = getBuild(id);
+    if (!build) return reply.code(404).send({ error: 'not found' });
+    return listChildBuilds(id);
+  });
+
+  // Cluster 11.C — rerun-failed cells. Spawns new child builds for every
+  // cell of the parent that landed in failed or cancelled, attaching
+  // them to the same parent so the grid view stitches old + new passes
+  // together.
+  app.post('/api/builds/:parentId/rerun-failed', async (req, reply) => {
+    const { parentId } = req.params as { parentId: string };
+    const parent = getBuild(parentId);
+    if (!parent) return reply.code(404).send({ error: 'not found' });
+    const replacements = await rerunFailedMatrixChildren(parentId);
+    return { ok: true, rerun: replacements.length, children: replacements };
   });
 
   app.get('/api/builds/:id/entries', async (req, reply) => {

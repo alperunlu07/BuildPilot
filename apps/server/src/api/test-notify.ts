@@ -80,6 +80,9 @@ function mockBuild(): Build {
     startedAt: Date.now(),
     finishedAt: null,
     log: '',
+    parentBuildId: null,
+    matrixValues: null,
+    matrixLabel: null,
   };
 }
 

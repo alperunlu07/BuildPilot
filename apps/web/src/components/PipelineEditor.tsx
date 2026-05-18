@@ -18,6 +18,7 @@ import {
 import dagre from 'dagre';
 import { ChevronDown, ChevronRight, Hammer, LayoutGrid, Map as MapIcon, Redo2, Save, Search, Square, Trash2, Undo2, X } from 'lucide-react';
 import type {
+  Matrix,
   NodeTemplate,
   Pipeline,
   PipelineEdge,
@@ -40,6 +41,7 @@ import {
 import { formatRelative } from '../lib/formatDate';
 import { BranchSelect } from './BranchSelect';
 import { CronBuilder } from './CronBuilder';
+import { MatrixEditor } from './MatrixEditor';
 import { NodeContextMenu } from './NodeContextMenu';
 import { PathFilterPreview } from './PathFilterPreview';
 import { SaveTemplateDialog } from './SaveTemplateDialog';
@@ -184,10 +186,14 @@ function Editor({ pipeline }: Props) {
   const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([]);
   const [name, setName] = useState(pipeline.name);
   const [watch, setWatch] = useState<PipelineWatch>(pipeline.watch);
+  const [matrix, setMatrix] = useState<Matrix | null>(pipeline.matrix ?? null);
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [branches, setBranches] = useState<string[]>([]);
   const [triggersOpen, setTriggersOpen] = useState(false);
+  // Cluster 11.C — matrix editor panel toggle. Lives alongside the
+  // existing "Triggers" disclosure so the header stays uncluttered.
+  const [matrixOpen, setMatrixOpen] = useState(false);
   // Save-as-template dialog state. Holds the source node id whose data we
   // will snapshot when the user confirms.
   const [saveTemplateNodeId, setSaveTemplateNodeId] = useState<string | null>(null);
@@ -223,6 +229,7 @@ function Editor({ pipeline }: Props) {
     setEdges(pipelineEdgesToReactFlow(pipeline.edges));
     setName(pipeline.name);
     setWatch(pipeline.watch);
+    setMatrix(pipeline.matrix ?? null);
     setDirty(false);
     setSelectedNodeId(null);
     setSelectedNodeIds([]);
@@ -633,11 +640,12 @@ function Editor({ pipeline }: Props) {
         watch,
         nodes: reactFlowNodesToPipeline(nodes),
         edges: reactFlowEdgesToPipeline(edges),
+        matrix,
         savedAt: Date.now(),
       });
     }, 1000);
     return () => window.clearTimeout(handle);
-  }, [pipeline.id, dirty, name, watch, nodes, edges]);
+  }, [pipeline.id, dirty, name, watch, nodes, edges, matrix]);
 
   const save = async () => {
     setSaving(true);
@@ -647,6 +655,7 @@ function Editor({ pipeline }: Props) {
         watch,
         nodes: reactFlowNodesToPipeline(nodes),
         edges: reactFlowEdgesToPipeline(edges),
+        matrix,
       });
       upsertPipeline(updated);
       setDirty(false);
@@ -663,6 +672,7 @@ function Editor({ pipeline }: Props) {
     if (!draftBanner) return;
     setName(draftBanner.name);
     setWatch(draftBanner.watch);
+    setMatrix(draftBanner.matrix ?? null);
     setNodes(pipelineNodesToReactFlow(draftBanner.nodes));
     setEdges(pipelineEdgesToReactFlow(draftBanner.edges));
     setDirty(true);
@@ -742,6 +752,14 @@ function Editor({ pipeline }: Props) {
             {watch.tagPattern || watch.cronExpr || watch.pathFilter || watch.cancelInProgressOnNewCommit
               ? '●'
               : '…'}
+          </button>
+          <button
+            type="button"
+            onClick={() => setMatrixOpen((v) => !v)}
+            className="inline-flex items-center gap-1 rounded-md bg-slate-800 px-2 py-0.5 text-[11px] text-slate-300 hover:text-slate-100"
+            title="Declarative build matrix — fan one trigger out into N parallel builds"
+          >
+            Matrix {matrix && Object.keys(matrix.axes).length > 0 ? '●' : '…'}
           </button>
         </div>
 
@@ -918,6 +936,33 @@ function Editor({ pipeline }: Props) {
               (rolling-build mode)
             </label>
           </div>
+        </div>
+      )}
+
+      {matrixOpen && (
+        <div className="border-b border-slate-800 bg-slate-900/60 px-4 py-3">
+          <MatrixEditor
+            value={matrix}
+            onChange={(next) => {
+              setMatrix(next);
+              setDirty(true);
+            }}
+          />
+          <label
+            className="mt-3 inline-flex items-center gap-2 text-[11px] text-slate-300"
+            title="When on, child cells skip their notify steps; the parent build emits one rolled-up notification when all cells finish."
+          >
+            <input
+              type="checkbox"
+              checked={watch.matrixSummary !== false}
+              onChange={(e) => {
+                setWatch({ ...watch, matrixSummary: e.target.checked });
+                setDirty(true);
+              }}
+              className="h-3 w-3"
+            />
+            Rolled-up notifications (single message per matrix instead of one per cell)
+          </label>
         </div>
       )}
 

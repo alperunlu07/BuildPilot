@@ -443,6 +443,9 @@ export const useStore = create<State>((set, get) => ({
       startedAt: Date.now(),
       finishedAt: null,
       log: '',
+      parentBuildId: null,
+      matrixValues: null,
+      matrixLabel: null,
     };
     set({
       activeBuild: placeholder,

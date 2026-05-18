@@ -161,6 +161,24 @@ export interface PipelineWatch {
   // previous build for the same pipeline is still running, the previous
   // build is cancelled before the new one starts (rolling-build mode).
   cancelInProgressOnNewCommit?: boolean;
+  // Cluster 11.C — when true (default), a matrix pipeline emits a single
+  // rolled-up notification when the parent finishes instead of letting
+  // each child build send its own notify-step output. Individual notify
+  // steps inside child builds short-circuit with a "skipped (matrixSummary)"
+  // log line. Set false to keep per-child notifications.
+  matrixSummary?: boolean;
+}
+
+// Cluster 11.C — declarative build matrix. Each axis is a named list of
+// values; the runner expands the cross product into one child build per
+// combination and interpolates `${{ matrix.<axis> }}` placeholders in every
+// step's data.
+//
+// Example: { xcode: ["15", "16"], scheme: ["Free", "Pro"] } generates four
+// child builds with matrixValues = {xcode: "15", scheme: "Free"}, … and a
+// stable matrixLabel of "xcode=15, scheme=Free".
+export interface Matrix {
+  axes: Record<string, string[]>;
 }
 
 export interface Pipeline {
@@ -173,6 +191,10 @@ export interface Pipeline {
   createdAt: number;
   updatedAt: number;
   lastBuiltSha: string | null;
+  // Cluster 11.C — null when the pipeline has no matrix (single build per
+  // trigger, current behavior). When set, every trigger fans out into N
+  // child builds plus one parent summary build.
+  matrix: Matrix | null;
 }
 
 // ── Build ───────────────────────────────────────────────────────────────────
@@ -188,6 +210,26 @@ export interface Build {
   startedAt: number;
   finishedAt: number | null;
   log: string;
+  // Cluster 11.C — matrix support.
+  //   parentBuildId: id of the parent "summary" build when this row is a
+  //     child of a matrix fan-out. null for ordinary (non-matrix) builds
+  //     and for the parent row itself.
+  //   matrixValues: the {axis: value} snapshot for this child build.
+  //     Populated only on children; null for the parent and for non-matrix
+  //     runs.
+  //   matrixLabel: stable human-readable label (e.g. "xcode=15, scheme=Free")
+  //     mirrored from matrixValues so the UI doesn't have to recompute.
+  parentBuildId: string | null;
+  matrixValues: Record<string, string> | null;
+  matrixLabel: string | null;
+}
+
+// Cluster 11.C — when a parent matrix build is being viewed, we want the
+// per-child status grid at a glance. This type is purely what the
+// MatrixRunSummary component renders; the server returns it inline on the
+// parent build response when applicable.
+export interface BuildWithMatrix extends Build {
+  children: Build[];
 }
 
 // ── Step data shapes ────────────────────────────────────────────────────────
@@ -1742,6 +1784,23 @@ export type ServerEvent =
       status: 'success' | 'failed' | 'skipped';
     }
   | { type: 'buildFinished'; build: Build }
+  // Cluster 11.C — emitted exactly once when a parent matrix build finishes
+  // (all children have settled). Carries the rolled-up child outcomes so
+  // notification consumers can render "3/4 succeeded, 1 failed (xcode=15,
+  // scheme=Pro)" without re-querying each child. Existing notify-step types
+  // ignore this event by default; bots/webhooks listening to the stream may
+  // opt to surface it.
+  | {
+      type: 'notifyMatrix';
+      parentBuildId: string;
+      pipelineId: string;
+      projectId: string;
+      total: number;
+      success: number;
+      failed: number;
+      cancelled: number;
+      children: Array<{ id: string; matrixLabel: string; status: BuildStatus }>;
+    }
   | { type: 'projectAdded'; project: Project }
   | { type: 'projectRemoved'; projectId: string }
   | { type: 'pipelineChanged'; pipelineId: string; action: 'created' | 'updated' | 'deleted' }

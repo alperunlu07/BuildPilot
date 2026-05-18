@@ -1,4 +1,4 @@
-import type { Pipeline, PipelineEdge, PipelineNode, PipelineWatch } from '@buildpilot/shared-types';
+import type { Matrix, Pipeline, PipelineEdge, PipelineNode, PipelineWatch } from '@buildpilot/shared-types';
 
 // One key per pipeline so drafts don't collide. The prefix lets us iterate
 // + clean up later if we ever grow a "discard all drafts" affordance.
@@ -9,6 +9,8 @@ export interface PipelineDraft {
   watch: PipelineWatch;
   nodes: PipelineNode[];
   edges: PipelineEdge[];
+  // Cluster 11.C — declarative build matrix, null when not set.
+  matrix?: Matrix | null;
   savedAt: number;
 }
 
@@ -58,12 +60,14 @@ export function draftDiffersFromPipeline(
     watch: draft.watch,
     nodes: draft.nodes,
     edges: draft.edges,
+    matrix: draft.matrix ?? null,
   });
   const b = JSON.stringify({
     name: pipeline.name,
     watch: pipeline.watch,
     nodes: pipeline.nodes,
     edges: pipeline.edges,
+    matrix: pipeline.matrix ?? null,
   });
   return a !== b;
 }
