@@ -111,6 +111,7 @@ export function initDb(path: string): DB {
       updated_at INTEGER NOT NULL
     );
 
+<<<<<<< HEAD
     -- Cluster 11.A — Auth, identity, audit. Tables exist on every install
     -- regardless of the auth.enabled flag so flipping the flag at runtime
     -- doesn't require a schema migration. Default config.auth.enabled is
@@ -243,7 +244,24 @@ export function initDb(path: string): DB {
       updated_at INTEGER NOT NULL,
       PRIMARY KEY (build_id, provider)
     );
+
+    -- WP1 (queue feature) — execution lanes. Each pipeline is assigned to
+    -- exactly one lane; the scheduler enforces max_concurrency per lane.
+    -- The "default" sentinel is seeded immediately below.
+    CREATE TABLE IF NOT EXISTS lanes (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL UNIQUE,
+      max_concurrency INTEGER NOT NULL,
+      created_at INTEGER NOT NULL
+    );
   `);
+
+  // Seed the sentinel "default" lane. Idempotent: existing rows are kept.
+  // The "cannot delete default" rule is enforced by the API layer, not here.
+  db.prepare(
+    `INSERT OR IGNORE INTO lanes (id, name, max_concurrency, created_at)
+     VALUES ('default', 'Default', 1, ?)`,
+  ).run(Date.now());
 
   // Lightweight migration for existing installs: SQLite's CREATE TABLE IF
   // NOT EXISTS doesn't add new columns, so additive schema changes need an

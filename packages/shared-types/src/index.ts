@@ -19,6 +19,16 @@ export interface ProjectSummary extends Project {
   lastBuildAt: number | null;
 }
 
+// ── Lane ────────────────────────────────────────────────────────────────────
+// Execution lane: a named bucket with a max-concurrency cap. Pipelines (WP2)
+// will declare which lane they run on so the scheduler can throttle them.
+export interface Lane {
+  id: string;
+  name: string;
+  maxConcurrency: number;
+  createdAt: number;
+}
+
 // Commit info — surfaced to the dashboard for collapsible commit lists.
 export interface Commit {
   sha: string;
