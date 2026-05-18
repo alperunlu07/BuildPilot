@@ -73,9 +73,9 @@ export function BuildsPage() {
           type="button"
           onClick={() => void reload()}
           disabled={loading}
-          className="inline-flex items-center gap-1 rounded-md border border-slate-700 px-2.5 py-1 text-xs text-slate-200 hover:border-sky-500 hover:text-sky-400 disabled:opacity-50"
+          className="focusable inline-flex items-center gap-1 rounded-md border border-slate-700 px-2.5 py-1 text-xs text-slate-200 hover:border-sky-500 hover:text-sky-400 disabled:opacity-50"
         >
-          <RefreshCw size={12} className={loading ? 'animate-spin' : ''} /> Refresh
+          <RefreshCw size={12} className={loading ? 'motion-safe:animate-spin' : ''} /> Refresh
         </button>
       </div>
 
@@ -89,7 +89,7 @@ export function BuildsPage() {
               setProjectId(e.target.value);
               setPipelineId('');
             }}
-            className="rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-slate-100 focus:border-sky-500 focus:outline-none"
+            className="focusable rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-slate-100 focus:border-sky-500 focus:outline-none"
           >
             <option value="">(all)</option>
             {projects.map((p) => (
@@ -104,7 +104,7 @@ export function BuildsPage() {
           <select
             value={pipelineId}
             onChange={(e) => setPipelineId(e.target.value)}
-            className="rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-slate-100 focus:border-sky-500 focus:outline-none"
+            className="focusable rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-slate-100 focus:border-sky-500 focus:outline-none"
           >
             <option value="">(all)</option>
             {visiblePipelines.map((p) => (
@@ -119,7 +119,7 @@ export function BuildsPage() {
           <select
             value={status}
             onChange={(e) => setStatus(e.target.value as StatusFilter)}
-            className="rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-slate-100 focus:border-sky-500 focus:outline-none"
+            className="focusable rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-slate-100 focus:border-sky-500 focus:outline-none"
           >
             <option value="all">(all)</option>
             {Object.entries(STATUS_LABELS).map(([k, v]) => (
@@ -170,7 +170,16 @@ export function BuildsPage() {
                   <tr
                     key={b.id}
                     onClick={() => setView({ type: 'build', id: b.id })}
-                    className="cursor-pointer border-t border-slate-800 hover:bg-slate-900/60"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        setView({ type: 'build', id: b.id });
+                      }
+                    }}
+                    tabIndex={0}
+                    role="link"
+                    aria-label={`Open build for ${proj?.name ?? 'project'} / ${pipe?.name ?? 'pipeline'}, status ${b.status}`}
+                    className="focusable cursor-pointer border-t border-slate-800 hover:bg-slate-900/60"
                   >
                     <td className="px-3 py-2">
                       <StatusBadge status={b.status} />
@@ -216,7 +225,7 @@ function BuildsEmptyState({
         <button
           type="button"
           onClick={onClear}
-          className="mt-4 inline-flex items-center gap-1 rounded-md border border-slate-700 px-3 py-1.5 text-xs text-slate-200 hover:border-sky-500 hover:text-sky-300"
+          className="focusable mt-4 inline-flex items-center gap-1 rounded-md border border-slate-700 px-3 py-1.5 text-xs text-slate-200 hover:border-sky-500 hover:text-sky-300"
         >
           Clear filters
         </button>
@@ -235,7 +244,7 @@ function BuildsEmptyState({
         <button
           type="button"
           onClick={onTriggerFirst}
-          className="inline-flex items-center gap-1.5 rounded-md bg-sky-600 px-3.5 py-2 text-sm font-medium text-white hover:bg-sky-500"
+          className="focusable inline-flex items-center gap-1.5 rounded-md bg-sky-600 px-3.5 py-2 text-sm font-medium text-white hover:bg-sky-500"
         >
           <Hammer size={14} /> {hasAnyPipeline ? 'Open a pipeline' : 'Add a project'}
         </button>

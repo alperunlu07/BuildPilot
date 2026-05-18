@@ -138,7 +138,7 @@ export function Sidebar({ onAddProject, onManageHosts, onShowChangelog, changelo
         <button
           type="button"
           onClick={() => setCollapsed(false)}
-          className="mb-2 rounded-md p-1.5 text-slate-400 hover:bg-slate-800/60 hover:text-slate-100"
+          className="focusable mb-2 rounded-md p-1.5 text-slate-400 hover:bg-slate-800/60 hover:text-slate-100"
           title="Expand sidebar"
           aria-label="Expand sidebar"
         >
@@ -192,7 +192,8 @@ export function Sidebar({ onAddProject, onManageHosts, onShowChangelog, changelo
         <button
           type="button"
           onClick={() => setView({ type: 'projects' })}
-          className="text-left"
+          className="focusable text-left"
+          aria-label="Go to projects"
         >
           <div className="text-base font-semibold tracking-tight text-slate-100">BuildPilot</div>
           <div className="text-[11px] uppercase tracking-wider text-slate-500">Local CI/CD</div>
@@ -201,7 +202,7 @@ export function Sidebar({ onAddProject, onManageHosts, onShowChangelog, changelo
           <button
             type="button"
             onClick={openPalette}
-            className="rounded-md border border-slate-700 p-1.5 text-slate-300 hover:border-sky-500 hover:text-sky-400"
+            className="focusable rounded-md border border-slate-700 p-1.5 text-slate-300 hover:border-sky-500 hover:text-sky-400"
             title="Command palette (Cmd/Ctrl+K)"
             aria-label="Command palette"
           >
@@ -210,7 +211,7 @@ export function Sidebar({ onAddProject, onManageHosts, onShowChangelog, changelo
           <button
             type="button"
             onClick={cycleTheme}
-            className="rounded-md border border-slate-700 p-1.5 text-slate-300 hover:border-sky-500 hover:text-sky-400"
+            className="focusable rounded-md border border-slate-700 p-1.5 text-slate-300 hover:border-sky-500 hover:text-sky-400"
             title={`${t('actions.toggleTheme')} (now: ${theme})`}
             aria-label={t('actions.toggleTheme')}
           >
@@ -219,7 +220,7 @@ export function Sidebar({ onAddProject, onManageHosts, onShowChangelog, changelo
           <button
             type="button"
             onClick={onAddProject}
-            className="rounded-md border border-slate-700 p-1.5 text-slate-300 hover:border-sky-500 hover:text-sky-400"
+            className="focusable rounded-md border border-slate-700 p-1.5 text-slate-300 hover:border-sky-500 hover:text-sky-400"
             title={t('actions.addProject')}
             aria-label={t('actions.addProject')}
           >
@@ -228,7 +229,7 @@ export function Sidebar({ onAddProject, onManageHosts, onShowChangelog, changelo
           <button
             type="button"
             onClick={() => setCollapsed(true)}
-            className="rounded-md border border-slate-700 p-1.5 text-slate-300 hover:border-sky-500 hover:text-sky-400"
+            className="focusable rounded-md border border-slate-700 p-1.5 text-slate-300 hover:border-sky-500 hover:text-sky-400"
             title="Collapse sidebar"
             aria-label="Collapse sidebar"
           >
@@ -278,7 +279,7 @@ export function Sidebar({ onAddProject, onManageHosts, onShowChangelog, changelo
                     type="button"
                     onClick={() => setView({ type: 'project', id: p.id })}
                     className={cn(
-                      'density-row flex w-full items-center gap-2 rounded-md px-2 py-1 text-left text-xs',
+                      'focusable density-row flex w-full items-center gap-2 rounded-md px-2 py-1 text-left text-xs',
                       active
                         ? 'bg-slate-800 text-slate-100'
                         : 'text-slate-300 hover:bg-slate-800/60',
@@ -298,7 +299,7 @@ export function Sidebar({ onAddProject, onManageHosts, onShowChangelog, changelo
                     type="button"
                     onClick={() => setView({ type: 'pipeline', id: pl.id })}
                     className={cn(
-                      'density-row flex w-full items-center gap-2 rounded-md px-2 py-1 text-left text-xs',
+                      'focusable density-row flex w-full items-center gap-2 rounded-md px-2 py-1 text-left text-xs',
                       active
                         ? 'bg-slate-800 text-slate-100'
                         : 'text-slate-300 hover:bg-slate-800/60',
@@ -341,7 +342,7 @@ export function Sidebar({ onAddProject, onManageHosts, onShowChangelog, changelo
                   <button
                     type="button"
                     onClick={() => setView({ type: 'project', id: p.id })}
-                    className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                    className="focusable flex min-w-0 flex-1 items-center gap-2 rounded-md text-left"
                   >
                     <Folder size={14} className="text-sky-400" />
                     <span className="truncate">{p.name}</span>
@@ -353,7 +354,7 @@ export function Sidebar({ onAddProject, onManageHosts, onShowChangelog, changelo
                       toggleFavoriteProject(p.id);
                     }}
                     className={cn(
-                      'rounded p-0.5 transition-opacity',
+                      'focusable rounded p-0.5 transition-opacity',
                       isFav
                         ? 'text-amber-400 opacity-100'
                         : 'text-slate-500 opacity-0 hover:text-amber-400 group-hover:opacity-100',
@@ -369,7 +370,7 @@ export function Sidebar({ onAddProject, onManageHosts, onShowChangelog, changelo
                       e.stopPropagation();
                       softDeleteProject(p.id);
                     }}
-                    className="rounded p-0.5 text-slate-500 opacity-0 transition-opacity hover:text-rose-400 group-hover:opacity-100"
+                    className="focusable rounded p-0.5 text-slate-500 opacity-0 transition-opacity hover:text-rose-400 group-hover:opacity-100"
                     title="Remove this project"
                     aria-label="Remove project"
                   >
@@ -394,7 +395,7 @@ export function Sidebar({ onAddProject, onManageHosts, onShowChangelog, changelo
                             <button
                               type="button"
                               onClick={() => setView({ type: 'pipeline', id: pl.id })}
-                              className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                              className="focusable flex min-w-0 flex-1 items-center gap-2 rounded-md text-left"
                             >
                               <GitBranch size={12} className="text-emerald-400" />
                               <span className="truncate">{pl.name}</span>
@@ -406,7 +407,7 @@ export function Sidebar({ onAddProject, onManageHosts, onShowChangelog, changelo
                                 toggleFavoritePipeline(pl.id);
                               }}
                               className={cn(
-                                'rounded p-0.5 transition-opacity',
+                                'focusable rounded p-0.5 transition-opacity',
                                 plFav
                                   ? 'text-amber-400 opacity-100'
                                   : 'text-slate-500 opacity-0 hover:text-amber-400 group-hover:opacity-100',
@@ -422,7 +423,7 @@ export function Sidebar({ onAddProject, onManageHosts, onShowChangelog, changelo
                                 e.stopPropagation();
                                 softDeletePipeline(pl.id);
                               }}
-                              className="rounded p-0.5 text-slate-500 opacity-0 transition-opacity hover:text-rose-400 group-hover:opacity-100"
+                              className="focusable rounded p-0.5 text-slate-500 opacity-0 transition-opacity hover:text-rose-400 group-hover:opacity-100"
                               title="Delete this pipeline"
                               aria-label="Delete pipeline"
                             >
@@ -461,7 +462,7 @@ export function Sidebar({ onAddProject, onManageHosts, onShowChangelog, changelo
                             : { type: 'build', id: r.id },
                       )
                     }
-                    className="density-row flex w-full items-center gap-2 truncate rounded px-2 py-0.5 text-left text-[11px] text-slate-400 hover:bg-slate-800/60 hover:text-slate-200"
+                    className="focusable density-row flex w-full items-center gap-2 truncate rounded px-2 py-0.5 text-left text-[11px] text-slate-400 hover:bg-slate-800/60 hover:text-slate-200"
                     title={r.label}
                   >
                     <Icon size={11} className="shrink-0 text-slate-500" />
@@ -478,7 +479,8 @@ export function Sidebar({ onAddProject, onManageHosts, onShowChangelog, changelo
         <button
           type="button"
           onClick={onShowChangelog}
-          className="flex w-full items-center gap-2 rounded px-2 py-1 text-left text-[11px] text-slate-400 hover:bg-slate-800/60 hover:text-slate-200"
+          className="focusable flex w-full items-center gap-2 rounded px-2 py-1 text-left text-[11px] text-slate-400 hover:bg-slate-800/60 hover:text-slate-200"
+          aria-label={changelogHasUnread ? "What's new (unread)" : "What's new"}
         >
           <Sparkles size={11} className="shrink-0 text-sky-400" />
           <span className="flex-1">What's new</span>
@@ -488,12 +490,17 @@ export function Sidebar({ onAddProject, onManageHosts, onShowChangelog, changelo
         </button>
       </div>
 
-      {/* Drag-to-resize handle pinned to the right edge — Tailwind cursor-col-resize hits the gap. */}
+      {/* Drag-to-resize handle pinned to the right edge — Tailwind cursor-col-resize hits the gap.
+          role=separator + aria-label so screen-readers can announce it; aria-orientation=vertical
+          since dragging changes width. Not a tab stop (no tabIndex) because keyboard users
+          drive sidebar width via the collapse button. */}
       <div
         onMouseDown={onResizeMouseDown}
         className="group absolute right-0 top-0 z-10 h-full w-1 cursor-col-resize bg-transparent hover:bg-sky-500/30"
         title="Drag to resize"
-        aria-hidden="true"
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="Resize sidebar"
       />
     </aside>
   );
@@ -517,7 +524,7 @@ function IconRail({
       title={label}
       aria-label={label}
       className={cn(
-        'flex h-9 w-9 items-center justify-center rounded-md',
+        'focusable flex h-9 w-9 items-center justify-center rounded-md',
         active ? 'bg-slate-800 text-slate-100' : 'text-slate-400 hover:bg-slate-800/60 hover:text-slate-100',
       )}
     >
@@ -545,7 +552,7 @@ function NavItem({
       onClick={onClick}
       title={title}
       className={cn(
-        'density-row flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm',
+        'focusable density-row flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm',
         active ? 'bg-slate-800 text-slate-100' : 'text-slate-300 hover:bg-slate-800/60',
       )}
     >

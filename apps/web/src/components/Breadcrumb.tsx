@@ -69,7 +69,7 @@ export function Breadcrumb() {
             <button
               type="button"
               onClick={c.onClick}
-              className="rounded px-1 py-0.5 hover:bg-slate-800 hover:text-slate-200"
+              className="focusable rounded px-1 py-0.5 hover:bg-slate-800 hover:text-slate-200"
             >
               {c.label}
             </button>

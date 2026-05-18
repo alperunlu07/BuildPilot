@@ -24,7 +24,7 @@ export function ProjectsPage({ onAdd }: Props) {
         <button
           type="button"
           onClick={onAdd}
-          className="inline-flex items-center gap-1 rounded-md bg-sky-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-sky-500"
+          className="focusable inline-flex items-center gap-1 rounded-md bg-sky-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-sky-500"
         >
           <Plus size={14} /> Add project
         </button>
@@ -42,7 +42,7 @@ export function ProjectsPage({ onAdd }: Props) {
             <button
               type="button"
               onClick={onAdd}
-              className="inline-flex items-center gap-1.5 rounded-md bg-sky-600 px-3.5 py-2 text-sm font-medium text-white hover:bg-sky-500"
+              className="focusable inline-flex items-center gap-1.5 rounded-md bg-sky-600 px-3.5 py-2 text-sm font-medium text-white hover:bg-sky-500"
             >
               <Plus size={14} /> Add your first project
             </button>
@@ -62,8 +62,9 @@ export function ProjectsPage({ onAdd }: Props) {
                   e.stopPropagation();
                   softDeleteProject(p.id);
                 }}
-                className="absolute right-3 top-3 rounded-md border border-transparent p-1 text-slate-500 opacity-0 transition-opacity hover:border-rose-700 hover:text-rose-400 group-hover:opacity-100"
+                className="focusable absolute right-3 top-3 rounded-md border border-transparent p-1 text-slate-500 opacity-0 transition-opacity hover:border-rose-700 hover:text-rose-400 group-hover:opacity-100"
                 title="Remove this project"
+                aria-label={`Remove project ${p.name}`}
               >
                 <Trash2 size={14} />
               </button>

@@ -35,7 +35,8 @@ export function UndoToast() {
           <button
             type="button"
             onClick={() => dismissError(e.id)}
-            className="text-slate-500 hover:text-slate-300"
+            className="focusable rounded text-slate-500 hover:text-slate-300"
+            aria-label="Dismiss error toast"
           >
             <X size={13} />
           </button>
@@ -68,7 +69,7 @@ export function UndoToast() {
               <button
                 type="button"
                 onClick={() => undoDeletion(d.id)}
-                className="inline-flex items-center gap-1.5 rounded-md border border-slate-700 px-2.5 py-1 text-xs font-medium text-slate-100 hover:border-emerald-500 hover:text-emerald-300"
+                className="focusable inline-flex items-center gap-1.5 rounded-md border border-slate-700 px-2.5 py-1 text-xs font-medium text-slate-100 hover:border-emerald-500 hover:text-emerald-300"
               >
                 <Undo2 size={12} /> Undo
               </button>

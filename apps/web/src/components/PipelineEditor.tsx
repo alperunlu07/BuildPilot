@@ -748,8 +748,9 @@ function Editor({ pipeline }: Props) {
             type="button"
             onClick={doUndo}
             disabled={!history.canUndo}
-            className="inline-flex items-center gap-1 rounded-md border border-slate-700 px-2 py-1 text-xs text-slate-300 hover:border-sky-500 hover:text-sky-400 disabled:cursor-not-allowed disabled:opacity-40"
+            className="focusable inline-flex items-center gap-1 rounded-md border border-slate-700 px-2 py-1 text-xs text-slate-300 hover:border-sky-500 hover:text-sky-400 disabled:cursor-not-allowed disabled:opacity-40"
             title="Undo (Cmd/Ctrl+Z)"
+            aria-label="Undo last edit"
           >
             <Undo2 size={12} />
           </button>
@@ -757,16 +758,18 @@ function Editor({ pipeline }: Props) {
             type="button"
             onClick={doRedo}
             disabled={!history.canRedo}
-            className="inline-flex items-center gap-1 rounded-md border border-slate-700 px-2 py-1 text-xs text-slate-300 hover:border-sky-500 hover:text-sky-400 disabled:cursor-not-allowed disabled:opacity-40"
+            className="focusable inline-flex items-center gap-1 rounded-md border border-slate-700 px-2 py-1 text-xs text-slate-300 hover:border-sky-500 hover:text-sky-400 disabled:cursor-not-allowed disabled:opacity-40"
             title="Redo (Cmd/Ctrl+Shift+Z)"
+            aria-label="Redo edit"
           >
             <Redo2 size={12} />
           </button>
           <button
             type="button"
             onClick={autoLayout}
-            className="inline-flex items-center gap-1 rounded-md border border-slate-700 px-2 py-1 text-xs text-slate-300 hover:border-sky-500 hover:text-sky-400"
+            className="focusable inline-flex items-center gap-1 rounded-md border border-slate-700 px-2 py-1 text-xs text-slate-300 hover:border-sky-500 hover:text-sky-400"
             title="Auto-layout graph"
+            aria-label="Auto-layout graph"
           >
             <LayoutGrid size={12} />
           </button>
@@ -781,12 +784,14 @@ function Editor({ pipeline }: Props) {
                 return next;
               });
             }}
-            className={`inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs ${
+            className={`focusable inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs ${
               showMinimap
                 ? 'border-sky-500 bg-sky-950/40 text-sky-300'
                 : 'border-slate-700 text-slate-300 hover:border-sky-500 hover:text-sky-400'
             }`}
             title="Toggle minimap"
+            aria-label="Toggle minimap"
+            aria-pressed={showMinimap}
           >
             <MapIcon size={12} />
           </button>
@@ -794,7 +799,7 @@ function Editor({ pipeline }: Props) {
             type="button"
             onClick={save}
             disabled={!dirty || saving}
-            className="inline-flex items-center gap-1 rounded-md border border-slate-700 px-2.5 py-1 text-xs text-slate-200 hover:border-sky-500 hover:text-sky-400 disabled:cursor-not-allowed disabled:opacity-40"
+            className="focusable inline-flex items-center gap-1 rounded-md border border-slate-700 px-2.5 py-1 text-xs text-slate-200 hover:border-sky-500 hover:text-sky-400 disabled:cursor-not-allowed disabled:opacity-40"
           >
             <Save size={12} /> {saving ? 'Saving…' : 'Save'}
           </button>
@@ -802,7 +807,7 @@ function Editor({ pipeline }: Props) {
             <button
               type="button"
               onClick={() => void cancelBuildAction(activeBuild.id)}
-              className="inline-flex items-center gap-1 rounded-md border border-rose-700 bg-rose-950/40 px-2.5 py-1 text-xs font-medium text-rose-200 hover:border-rose-500"
+              className="focusable inline-flex items-center gap-1 rounded-md border border-rose-700 bg-rose-950/40 px-2.5 py-1 text-xs font-medium text-rose-200 hover:border-rose-500"
               title={`Cancel running build ${activeBuild.id.slice(0, 8)}`}
             >
               <Square size={11} /> Cancel
@@ -811,7 +816,7 @@ function Editor({ pipeline }: Props) {
             <button
               type="button"
               onClick={runNow}
-              className="inline-flex items-center gap-1 rounded-md bg-sky-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-sky-500"
+              className="focusable inline-flex items-center gap-1 rounded-md bg-sky-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-sky-500"
             >
               <Hammer size={12} /> Run
             </button>
@@ -819,8 +824,9 @@ function Editor({ pipeline }: Props) {
           <button
             type="button"
             onClick={() => softDeletePipeline(pipeline.id)}
-            className="inline-flex items-center gap-1 rounded-md border border-slate-700 px-2 py-1 text-xs text-rose-400 hover:border-rose-500 hover:text-rose-300"
+            className="focusable inline-flex items-center gap-1 rounded-md border border-slate-700 px-2 py-1 text-xs text-rose-400 hover:border-rose-500 hover:text-rose-300"
             title="Delete this pipeline"
+            aria-label="Delete this pipeline"
           >
             <Trash2 size={11} />
           </button>
@@ -1007,8 +1013,9 @@ function Editor({ pipeline }: Props) {
                 <button
                   type="button"
                   onClick={() => setFindOpen(false)}
-                  className="rounded p-0.5 text-slate-500 hover:text-slate-300"
+                  className="focusable rounded p-0.5 text-slate-500 hover:text-slate-300"
                   title="Close"
+                  aria-label="Close find/replace"
                 >
                   <X size={12} />
                 </button>

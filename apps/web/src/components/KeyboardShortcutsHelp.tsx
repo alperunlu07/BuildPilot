@@ -45,7 +45,7 @@ export function KeyboardShortcutsHelp() {
           <button
             type="button"
             onClick={close}
-            className="rounded p-1 text-slate-500 hover:bg-slate-800 hover:text-slate-200"
+            className="focusable rounded p-1 text-slate-500 hover:bg-slate-800 hover:text-slate-200"
             aria-label="Close"
           >
             <X size={14} />

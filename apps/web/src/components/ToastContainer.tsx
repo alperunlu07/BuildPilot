@@ -40,7 +40,8 @@ export function ToastContainer() {
               <button
                 type="button"
                 onClick={() => dismissToast(t.id)}
-                className="text-slate-500 hover:text-slate-300"
+                className="focusable rounded text-slate-500 hover:text-slate-300"
+                aria-label="Dismiss new-commit toast"
               >
                 <X size={14} />
               </button>
@@ -67,7 +68,7 @@ export function ToastContainer() {
                   setView({ type: 'project', id: t.projectId });
                   dismissToast(t.id);
                 }}
-                className="text-[11px] uppercase tracking-wider text-slate-400 hover:text-slate-200"
+                className="focusable rounded text-[11px] uppercase tracking-wider text-slate-400 hover:text-slate-200"
               >
                 Open project
               </button>
@@ -77,7 +78,7 @@ export function ToastContainer() {
                   onClick={async () => {
                     await api.fetchProject(t.projectId);
                   }}
-                  className="inline-flex items-center gap-1 rounded-md border border-slate-700 px-2.5 py-1 text-xs text-slate-200 hover:border-sky-500 hover:text-sky-400"
+                  className="focusable inline-flex items-center gap-1 rounded-md border border-slate-700 px-2.5 py-1 text-xs text-slate-200 hover:border-sky-500 hover:text-sky-400"
                   title="git fetch --all --prune"
                 >
                   <RefreshCw size={12} /> Fetch
@@ -88,7 +89,7 @@ export function ToastContainer() {
                     await api.pullProject(t.projectId);
                     dismissToast(t.id);
                   }}
-                  className="inline-flex items-center gap-1 rounded-md border border-slate-700 px-2.5 py-1 text-xs text-slate-200 hover:border-emerald-500 hover:text-emerald-400"
+                  className="focusable inline-flex items-center gap-1 rounded-md border border-slate-700 px-2.5 py-1 text-xs text-slate-200 hover:border-emerald-500 hover:text-emerald-400"
                 >
                   <ArrowDownToLine size={12} /> Pull
                 </button>
@@ -100,7 +101,7 @@ export function ToastContainer() {
                       await triggerBuild(t.pipelineId);
                       dismissToast(t.id);
                     }}
-                    className="inline-flex items-center gap-1 rounded-md bg-sky-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-sky-500"
+                    className="focusable inline-flex items-center gap-1 rounded-md bg-sky-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-sky-500"
                   >
                     <Hammer size={12} /> Pull &amp; Build
                   </button>

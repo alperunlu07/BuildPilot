@@ -99,7 +99,7 @@ export function StepPropertyPanel({
               <button
                 type="button"
                 onClick={() => onSaveAsTemplate(node.id)}
-                className="text-[11px] text-sky-400 hover:text-sky-300"
+                className="focusable rounded text-[11px] text-sky-400 hover:text-sky-300"
                 title="Save this node's configuration as a reusable palette entry"
               >
                 Save as template
@@ -109,7 +109,7 @@ export function StepPropertyPanel({
               <button
                 type="button"
                 onClick={() => onRunFrom(node.id)}
-                className="text-[11px] text-emerald-400 hover:text-emerald-300"
+                className="focusable rounded text-[11px] text-emerald-400 hover:text-emerald-300"
                 title="Trigger a build that runs this step and everything after it"
               >
                 Run from here
@@ -118,7 +118,7 @@ export function StepPropertyPanel({
             <button
               type="button"
               onClick={() => onDelete(node.id)}
-              className="text-xs text-rose-400 hover:text-rose-300"
+              className="focusable rounded text-xs text-rose-400 hover:text-rose-300"
             >
               Delete
             </button>
@@ -199,8 +199,9 @@ function TabButton({
     <button
       type="button"
       onClick={onClick}
+      aria-pressed={active}
       className={cn(
-        'rounded-md px-2 py-0.5 font-semibold transition-colors',
+        'focusable rounded-md px-2 py-0.5 font-semibold transition-colors',
         active
           ? 'bg-slate-800 text-slate-100'
           : 'text-slate-500 hover:bg-slate-900 hover:text-slate-300',
@@ -683,13 +684,13 @@ function Field({
           placeholder={field.placeholder}
           rows={4}
           spellCheck={false}
-          className="w-full rounded-md border border-slate-700 bg-slate-900 px-2.5 py-1.5 font-mono text-[12px] text-slate-100 placeholder:text-slate-600 focus:border-sky-500 focus:outline-none"
+          className="focusable w-full rounded-md border border-slate-700 bg-slate-900 px-2.5 py-1.5 font-mono text-[12px] text-slate-100 placeholder:text-slate-600 focus:border-sky-500 focus:outline-none"
         />
       ) : field.type === 'select' ? (
         <select
           value={stringValue}
           onChange={(e) => onChange(e.target.value)}
-          className="w-full rounded-md border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-[13px] text-slate-100 focus:border-sky-500 focus:outline-none"
+          className="focusable w-full rounded-md border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-[13px] text-slate-100 focus:border-sky-500 focus:outline-none"
         >
           <option value="" disabled>
             (choose…)
@@ -712,7 +713,7 @@ function Field({
         <select
           value={stringValue}
           onChange={(e) => onChange(e.target.value)}
-          className="w-full rounded-md border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-[13px] text-slate-100 focus:border-sky-500 focus:outline-none"
+          className="focusable w-full rounded-md border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-[13px] text-slate-100 focus:border-sky-500 focus:outline-none"
         >
           <option value="">(inline / fill below)</option>
           {hosts.map((h) => (
@@ -730,7 +731,7 @@ function Field({
           }
           placeholder={field.placeholder}
           spellCheck={false}
-          className="w-full rounded-md border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-[13px] text-slate-100 placeholder:text-slate-600 focus:border-sky-500 focus:outline-none"
+          className="focusable w-full rounded-md border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-[13px] text-slate-100 placeholder:text-slate-600 focus:border-sky-500 focus:outline-none"
         />
       )}
       {field.help && <p className="mt-1 text-[11px] text-slate-500">{field.help}</p>}

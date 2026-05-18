@@ -249,7 +249,8 @@ export function BuildDetailPage({ buildId }: Props) {
         <button
           type="button"
           onClick={() => setView({ type: 'builds' })}
-          className="inline-flex items-center gap-1 text-[11px] uppercase tracking-wider text-slate-500 hover:text-slate-300"
+          className="focusable inline-flex items-center gap-1 rounded text-[11px] uppercase tracking-wider text-slate-500 hover:text-slate-300"
+          aria-label="Back to builds list"
         >
           <ChevronLeft size={12} /> Builds
         </button>
@@ -312,7 +313,7 @@ export function BuildDetailPage({ buildId }: Props) {
               <button
                 type="button"
                 onClick={() => void cancelBuild(build.id)}
-                className="inline-flex items-center gap-1 rounded-md border border-rose-700/60 px-2 py-0.5 text-rose-300 hover:border-rose-500 hover:text-rose-200"
+                className="focusable inline-flex items-center gap-1 rounded-md border border-rose-700/60 px-2 py-0.5 text-rose-300 hover:border-rose-500 hover:text-rose-200"
               >
                 <Square size={10} /> Cancel
               </button>
@@ -324,7 +325,7 @@ export function BuildDetailPage({ buildId }: Props) {
                   const next = await triggerBuild(build.pipelineId, failedNodeId);
                   setView({ type: 'build', id: next.id });
                 }}
-                className="inline-flex items-center gap-1 rounded-md border border-amber-700/60 px-2 py-0.5 text-amber-300 hover:border-amber-500 hover:text-amber-200"
+                className="focusable inline-flex items-center gap-1 rounded-md border border-amber-700/60 px-2 py-0.5 text-amber-300 hover:border-amber-500 hover:text-amber-200"
                 title={`Re-run from the failed step (${failedNodeId.slice(0, 8)}) and onwards`}
               >
                 <RotateCcw size={11} /> Retry from failed step
@@ -342,7 +343,7 @@ export function BuildDetailPage({ buildId }: Props) {
                 }
                 setDiffOpen(true);
               }}
-              className="inline-flex items-center gap-1 rounded-md border border-slate-700 px-2 py-0.5 text-slate-300 hover:border-sky-500 hover:text-sky-400"
+              className="focusable inline-flex items-center gap-1 rounded-md border border-slate-700 px-2 py-0.5 text-slate-300 hover:border-sky-500 hover:text-sky-400"
               title="Compare with another build"
             >
               <GitCompareArrows size={11} /> Compare
@@ -360,7 +361,7 @@ export function BuildDetailPage({ buildId }: Props) {
                 setLinkCopied(true);
                 window.setTimeout(() => setLinkCopied(false), 1500);
               }}
-              className="inline-flex items-center gap-1 rounded-md border border-slate-700 px-2 py-0.5 text-slate-300 hover:border-sky-500 hover:text-sky-400"
+              className="focusable inline-flex items-center gap-1 rounded-md border border-slate-700 px-2 py-0.5 text-slate-300 hover:border-sky-500 hover:text-sky-400"
               title="Copy a shareable link to this build"
             >
               {linkCopied ? <Check size={11} className="text-emerald-400" /> : <Link2 size={11} />}{' '}
@@ -369,7 +370,7 @@ export function BuildDetailPage({ buildId }: Props) {
             <button
               type="button"
               onClick={downloadLog}
-              className="inline-flex items-center gap-1 rounded-md border border-slate-700 px-2 py-0.5 text-slate-300 hover:border-sky-500 hover:text-sky-400"
+              className="focusable inline-flex items-center gap-1 rounded-md border border-slate-700 px-2 py-0.5 text-slate-300 hover:border-sky-500 hover:text-sky-400"
               title="Download log as .txt"
             >
               <Download size={11} /> Download
@@ -485,7 +486,7 @@ export function BuildDetailPage({ buildId }: Props) {
         <select
           value={activeNodeId}
           onChange={(e) => setActiveNodeId(e.target.value as typeof activeNodeId)}
-          className="rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-slate-100 focus:border-sky-500 focus:outline-none"
+          className="focusable rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-slate-100 focus:border-sky-500 focus:outline-none"
         >
           <option value="all">(all)</option>
           <option value="__pipeline__">pipeline-level</option>
