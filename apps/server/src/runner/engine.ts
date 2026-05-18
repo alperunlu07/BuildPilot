@@ -13,6 +13,8 @@ import { setPipelineLastBuiltSha } from '../store/pipelines';
 import { eventBus } from '../events/bus';
 import { cancelBuild, isCancelled, trackChild } from './coordinator';
 import { interpolateStepData } from '../secrets/interpolation';
+import { logger } from '../logger';
+import { postCheckRun } from '../vcs';
 import { runCheckout } from './steps/checkout';
 import { runPull } from './steps/pull';
 import { runShell } from './steps/shell';
@@ -548,6 +550,15 @@ export async function runPipeline(args: {
   // The build may have been cancelled while still queued — short-circuit.
   if (isCancelled(build.id)) {
     persist('system', 'Pipeline cancelled before start.', null, null);
+    void postCheckRun({
+      project,
+      pipeline,
+      build,
+      state: 'cancelled',
+      summary: 'BuildPilot pipeline cancelled before start.',
+    }).catch((err) => {
+      logger.warn({ err: String(err), buildId: build.id }, 'vcs: pre-start cancel POST crashed');
+    });
     finalize(build, 'cancelled', pipeline);
     return;
   }
@@ -555,6 +566,19 @@ export async function runPipeline(args: {
   updateBuildStatus(build.id, 'running');
   build.status = 'running';
   eventBus.publish({ type: 'buildStarted', build });
+
+  // Cluster 11.E — fire-and-forget outbound check-run POST. Skipped silently
+  // when the project has no VCS link or the build has no triggerSha (e.g.
+  // local-only manual runs).
+  void postCheckRun({
+    project,
+    pipeline,
+    build,
+    state: 'in_progress',
+    summary: `Build #${build.id.slice(0, 8)} started on ${build.triggerBranch || 'unknown branch'}`,
+  }).catch((err) => {
+    logger.warn({ err: String(err), buildId: build.id }, 'vcs: in_progress POST crashed');
+  });
 
   persist('system', `Pipeline "${pipeline.name}" started`, null, null);
   if (build.triggerSha || build.triggerBranch) {
@@ -790,6 +814,26 @@ export async function runPipeline(args: {
     null,
     null,
   );
+
+  // Cluster 11.E — terminal outbound POST. Same fire-and-forget pattern.
+  const vcsState: 'success' | 'failure' | 'cancelled' =
+    finalStatus === 'success' ? 'success' : finalStatus === 'cancelled' ? 'cancelled' : 'failure';
+  const finishSummary =
+    finalStatus === 'success'
+      ? 'BuildPilot pipeline finished successfully.'
+      : finalStatus === 'cancelled'
+        ? 'BuildPilot pipeline cancelled.'
+        : 'BuildPilot pipeline failed — open the build for details.';
+  void postCheckRun({
+    project,
+    pipeline,
+    build,
+    state: vcsState,
+    summary: finishSummary,
+  }).catch((err) => {
+    logger.warn({ err: String(err), buildId: build.id }, 'vcs: terminal POST crashed');
+  });
+
   finalize(build, finalStatus, pipeline);
 }
 

@@ -15,6 +15,7 @@ import { useStore } from '../store/store';
 import { api } from '../lib/api';
 import { CommitItem } from '../components/CommitItem';
 import { CreatePipelineDialog } from '../components/CreatePipelineDialog';
+import { VcsLinkPanel } from '../components/VcsLinkPanel';
 import { computeGraph } from '../lib/graph';
 import { cn } from '../lib/cn';
 
@@ -338,6 +339,7 @@ export function ProjectDetailPage({ projectId }: Props) {
               ))}
             </ul>
           )}
+          <VcsLinkPanel projectId={project.id} />
         </aside>
       </div>
 

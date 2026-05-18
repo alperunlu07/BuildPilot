@@ -4,6 +4,7 @@ import { randomBytes } from 'node:crypto';
 import type {
   AuthConfig,
   DiscordConfig,
+  GithubOAuthConfig,
   ServerConfig,
   SlackConfig,
   TelegramConfig,
@@ -98,6 +99,14 @@ function toOnDisk(cfg: ServerConfig): ServerConfig {
       sessionSecret: cfg.auth.sessionSecret ? encryptSecret(cfg.auth.sessionSecret) : '',
     };
   }
+  if (cfg.githubOAuth) {
+    out.githubOAuth = {
+      ...cfg.githubOAuth,
+      clientSecret: cfg.githubOAuth.clientSecret
+        ? encryptSecret(cfg.githubOAuth.clientSecret)
+        : '',
+    };
+  }
   return out;
 }
 
@@ -131,6 +140,12 @@ function toRuntime(cfg: ServerConfig): ServerConfig {
       sessionSecret: readSecret(cfg.auth.sessionSecret),
     };
   }
+  if (cfg.githubOAuth) {
+    out.githubOAuth = {
+      ...cfg.githubOAuth,
+      clientSecret: readSecret(cfg.githubOAuth.clientSecret),
+    };
+  }
   return out;
 }
 
@@ -154,6 +169,10 @@ function needsRewrite(cfg: ServerConfig): boolean {
   const a = cfg.auth;
   if (a) {
     if (a.sessionSecret && !isEncrypted(a.sessionSecret)) return true;
+  }
+  const g = cfg.githubOAuth;
+  if (g) {
+    if (g.clientSecret && !isEncrypted(g.clientSecret)) return true;
   }
   return false;
 }
@@ -240,21 +259,30 @@ export function saveDiscordConfig(next: DiscordConfig): DiscordConfig {
 
 // ── Auth (Cluster 11.A) ────────────────────────────────────────────────────
 export function getAuthConfigRuntime(): AuthConfig {
-  // Always returns a populated AuthConfig — older configs that predate the
-  // block get the disabled-by-default shape.
   return cachedConfig?.auth ?? { enabled: false, sessionSecret: '' };
 }
 
 export function saveAuthConfig(next: AuthConfig): AuthConfig {
   const base = cachedConfig ?? loadConfig();
   let merged: ServerConfig = { ...base, auth: { ...next } };
-  // Generate-on-save: if the caller flips enabled=true without supplying a
-  // secret, mint one here so we never persist `{ enabled: true, sessionSecret: '' }`.
   const ensured = ensureSessionSecret(merged);
   merged = ensured.cfg;
   writeFileSync(CONFIG_FILE, JSON.stringify(toOnDisk(merged), null, 2), 'utf-8');
   cachedConfig = merged;
   return merged.auth!;
+}
+
+// ── GitHub OAuth (Cluster 11.E) ─────────────────────────────────────────────
+export function getGithubOAuthRuntime(): GithubOAuthConfig | null {
+  return cachedConfig?.githubOAuth ?? null;
+}
+
+export function saveGithubOAuthConfig(next: GithubOAuthConfig): GithubOAuthConfig {
+  const base = cachedConfig ?? loadConfig();
+  const updated: ServerConfig = { ...base, githubOAuth: { ...next } };
+  writeFileSync(CONFIG_FILE, JSON.stringify(toOnDisk(updated), null, 2), 'utf-8');
+  cachedConfig = updated;
+  return updated.githubOAuth!;
 }
 
 export const CONFIG_PATH = CONFIG_FILE;

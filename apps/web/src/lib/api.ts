@@ -20,8 +20,11 @@ import type {
   NotificationPrefs,
   Pipeline,
   PipelineMetrics,
+  PrContext,
   Project,
   ProjectSummary,
+  ProjectVcsConfig,
+  ProjectVcsUpdate,
   PruneBuildsResponse,
   Secret,
   SecretUsage,
@@ -34,6 +37,8 @@ import type {
   UpdateUserInput,
   User,
   VaultFile,
+  VcsCredential,
+  VcsCredentialCreate,
 } from '@buildpilot/shared-types';
 
 const API = '/api';
@@ -403,4 +408,26 @@ export const api = {
     http<{ ok: true }>(`/vault-files/${encodeURIComponent(name)}`, { method: 'DELETE' }),
   vaultFileDownloadUrl: (name: string) =>
     `${API}/vault-files/${encodeURIComponent(name)}/download`,
+
+  // ── VCS credentials + per-project link (Cluster 11.E) ────────────────────
+  listVcsCredentials: () => http<VcsCredential[]>('/vcs/credentials'),
+  createVcsCredential: (input: VcsCredentialCreate) =>
+    http<VcsCredential>('/vcs/credentials', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
+  deleteVcsCredential: (id: string) =>
+    http<{ ok: true }>(`/vcs/credentials/${id}`, { method: 'DELETE' }),
+  getProjectVcs: (id: string) => http<ProjectVcsConfig>(`/projects/${id}/vcs`),
+  setProjectVcs: (id: string, input: ProjectVcsUpdate) =>
+    http<ProjectVcsConfig>(`/projects/${id}/vcs`, {
+      method: 'PUT',
+      body: JSON.stringify(input),
+    }),
+
+  // PR context for a build (Cluster 11.E item 3).
+  buildPrContext: (buildId: string) =>
+    http<PrContext & { provider: VcsCredential['provider'] | null; repo: string | null }>(
+      `/builds/${buildId}/pr-context`,
+    ),
 };

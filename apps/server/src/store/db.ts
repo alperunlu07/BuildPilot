@@ -224,6 +224,31 @@ export function initDb(path: string): DB {
       ON build_approvals(build_id);
     CREATE INDEX IF NOT EXISTS idx_build_approvals_pending
       ON build_approvals(decision, requested_at);
+    -- Cluster 11.E — VCS feedback credentials. The token field is encrypted
+    -- at rest with the same field-level crypto used elsewhere (see
+    -- crypto/secrets.ts; allow-list key is vcsToken).
+    CREATE TABLE IF NOT EXISTS vcs_credentials (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      provider TEXT NOT NULL,
+      base_url TEXT,
+      token TEXT NOT NULL,
+      created_at INTEGER NOT NULL
+    );
+
+    -- Cluster 11.E — per-build check-run posts so reruns can cancel the
+    -- previous external entry instead of stacking them. One row per
+    -- (build_id, provider). The ref column holds the provider id
+    -- (GitHub check_run id, GitLab status id, Gitea status id) so we can
+    -- update / overwrite it later.
+    CREATE TABLE IF NOT EXISTS vcs_check_runs (
+      build_id TEXT NOT NULL,
+      provider TEXT NOT NULL,
+      ref TEXT NOT NULL,
+      state TEXT NOT NULL,
+      updated_at INTEGER NOT NULL,
+      PRIMARY KEY (build_id, provider)
+    );
   `);
 
   // Lightweight migration for existing installs: SQLite's CREATE TABLE IF
@@ -257,9 +282,7 @@ export function initDb(path: string): DB {
     }
   }
 
-  // Cluster 11.C — additive `builds` columns for matrix fan-out. New
-  // installs already get these from the CREATE TABLE above; existing
-  // databases need the ALTERs.
+  // Cluster 11.C — additive `builds` columns for matrix fan-out.
   const additiveBuildCols = [
     'parent_build_id TEXT',
     'matrix_values_json TEXT',
@@ -278,6 +301,33 @@ export function initDb(path: string): DB {
     );
   } catch {
     /* index already present */
+  }
+
+  // Cluster 11.E — additive project VCS link columns.
+  const additiveProjectCols = [
+    "vcs_provider TEXT",
+    "vcs_repo TEXT",
+    "vcs_credential_id TEXT",
+  ];
+  for (const decl of additiveProjectCols) {
+    try {
+      db.exec(`ALTER TABLE projects ADD COLUMN ${decl}`);
+    } catch {
+      /* column already present */
+    }
+  }
+
+  // Cluster 11.E — additive pipeline-level PR-comment trigger columns.
+  const additivePipelineColsLate = [
+    'pr_commands TEXT',
+    'pr_command_authors TEXT',
+  ];
+  for (const decl of additivePipelineColsLate) {
+    try {
+      db.exec(`ALTER TABLE pipelines ADD COLUMN ${decl}`);
+    } catch {
+      /* column already present */
+    }
   }
 
   _db = db;

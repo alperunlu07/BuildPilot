@@ -5,6 +5,7 @@ import {
   FileLock,
   Folder,
   GitBranch,
+  Github,
   History,
   Home,
   KeyRound,
@@ -223,6 +224,12 @@ export function Sidebar({
             label="File vault"
           />
           <IconRail
+            icon={<Github size={16} className="text-slate-300" />}
+            active={view.type === 'vcsCredentials'}
+            onClick={() => setView({ type: 'vcsCredentials' })}
+            label="VCS credentials"
+          />
+          <IconRail
             icon={<Settings size={16} className="text-slate-300" />}
             active={view.type === 'settings'}
             onClick={() => setView({ type: 'settings' })}
@@ -370,6 +377,13 @@ export function Sidebar({
           label="File vault"
           onClick={() => setView({ type: 'vaultFiles' })}
           title="Encrypted file storage referenced via ${{ files.NAME }}"
+        />
+        <NavItem
+          active={view.type === 'vcsCredentials'}
+          icon={<Github size={14} className="text-slate-300" />}
+          label="VCS credentials"
+          onClick={() => setView({ type: 'vcsCredentials' })}
+          title="Manage tokens used to post check-runs back to GitHub / GitLab / Gitea"
         />
         <NavItem
           active={view.type === 'settings'}

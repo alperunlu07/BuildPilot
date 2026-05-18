@@ -50,6 +50,8 @@ export function viewToPath(view: View): string {
         : '/secrets';
     case 'vaultFiles':
       return '/vault-files';
+    case 'vcsCredentials':
+      return '/vcs-credentials';
   }
 }
 
@@ -63,6 +65,7 @@ export function pathToView(path: string): View {
   if (clean === '/settings') return { type: 'settings' };
   if (clean === '/disk-usage') return { type: 'diskUsage' };
   if (clean === '/hosts') return { type: 'hosts' };
+  if (clean === '/vcs-credentials') return { type: 'vcsCredentials' };
   if (clean === '/flaky-tests') {
     const pid = qs.get('pipelineId');
     return pid ? { type: 'flakyTests', pipelineId: pid } : { type: 'flakyTests' };

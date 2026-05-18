@@ -246,13 +246,16 @@ Cross-refs: `TODO.md` Phase 2.6.C, 4.B.
 
 Cross-refs: `TODO.md` Phase 2.6.B, 4.A.
 
-- [ ] **Outbound check-run state POST** — green/red status on the PR so
-  branch protection can require BuildPilot
-- [ ] **PR comment-driven triggers** — `/run-ios`, `/run all` style; UI
-  to configure allowed slash commands
-- [ ] **PR summary card on BuildDetailPage** — head/base branch, PR
-  title, linked issues fetched from the configured VCS provider
-- [ ] **GitHub / GitLab OAuth app** for the above outbound side
+- [x] **Outbound check-run state POST** — green/red status on the PR so
+  branch protection can require BuildPilot — `bdd4bd5`
+- [x] **PR comment-driven triggers** — `/run-ios`, `/run all` style; UI
+  to configure allowed slash commands — `2f13995`
+- [x] **PR summary card on BuildDetailPage** — head/base branch, PR
+  title, linked issues fetched from the configured VCS provider —
+  `c224e8e`
+- [x] **GitHub / GitLab OAuth app** for the above outbound side (GitHub
+  OAuth only — GitLab + Gitea remain token-based; see follow-ups) —
+  `3db6970`
 
 ### Cluster 11.F · Observability deep dive
 

@@ -42,6 +42,7 @@ import { formatRelative } from '../lib/formatDate';
 import { BranchSelect } from './BranchSelect';
 import { CronBuilder } from './CronBuilder';
 import { MatrixEditor } from './MatrixEditor';
+import { SlashCommandConfig } from './SlashCommandConfig';
 import { NodeContextMenu } from './NodeContextMenu';
 import { PathFilterPreview } from './PathFilterPreview';
 import { SaveTemplateDialog } from './SaveTemplateDialog';
@@ -749,7 +750,11 @@ function Editor({ pipeline }: Props) {
             title="Advanced trigger options (tag pattern, cron schedule, path filter, rolling builds)"
           >
             Triggers{' '}
-            {watch.tagPattern || watch.cronExpr || watch.pathFilter || watch.cancelInProgressOnNewCommit
+            {watch.tagPattern ||
+            watch.cronExpr ||
+            watch.pathFilter ||
+            watch.cancelInProgressOnNewCommit ||
+            watch.prCommands
               ? '●'
               : '…'}
           </button>
@@ -935,6 +940,20 @@ function Editor({ pipeline }: Props) {
               Cancel previous in-flight build when a new commit / trigger arrives
               (rolling-build mode)
             </label>
+            <div className="md:col-span-2 border-t border-slate-800 pt-3">
+              <SlashCommandConfig
+                commands={watch.prCommands ?? ''}
+                onCommandsChange={(value) => {
+                  setWatch({ ...watch, prCommands: value });
+                  setDirty(true);
+                }}
+                authors={watch.prCommandAuthors ?? ''}
+                onAuthorsChange={(value) => {
+                  setWatch({ ...watch, prCommandAuthors: value });
+                  setDirty(true);
+                }}
+              />
+            </div>
           </div>
         </div>
       )}

@@ -17,6 +17,7 @@ import { StepGantt } from '../components/StepGantt';
 import { defaultActiveLevels } from '../components/LevelToggleBar';
 import { ArtifactPreviewModal } from '../components/ArtifactPreviewModal';
 import { FailureSummaryCard } from '../components/FailureSummaryCard';
+import { PrSummaryCard } from '../components/PrSummaryCard';
 import {
   LogSearchBar,
   loadLogPresets,
@@ -473,6 +474,8 @@ export function BuildDetailPage({ buildId }: Props) {
         </div>
       </header>
 
+      <PrSummaryCard buildId={build.id} />
+
       {isMatrixParent && (
         <MatrixRunSummary
           parent={build}
@@ -484,9 +487,6 @@ export function BuildDetailPage({ buildId }: Props) {
             setMatrixRerunning(true);
             try {
               const res = await api.rerunFailedMatrixCells(build.id);
-              // The server has flipped the parent back to 'running' and
-              // appended new child rows. Re-fetch both so the grid updates
-              // immediately.
               const [refreshed, refreshedChildren] = await Promise.all([
                 api.getBuild(build.id),
                 api.listChildBuilds(build.id),
@@ -494,7 +494,7 @@ export function BuildDetailPage({ buildId }: Props) {
               setBuild(refreshed);
               setMatrixChildren(refreshedChildren);
               if (res.rerun === 0) {
-                /* no-op — UI already shows the "no failed cells" state */
+                /* no-op */
               }
             } finally {
               setMatrixRerunning(false);

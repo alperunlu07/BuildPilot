@@ -42,6 +42,9 @@ interface PipelineRow {
   // Cluster 11.C — matrix declaration + summary-notification flag.
   matrix_json: string | null;
   matrix_summary: number | null;
+  // Cluster 11.E — PR comment trigger settings.
+  pr_commands: string | null;
+  pr_command_authors: string | null;
 }
 
 function parseMatrix(raw: string | null): Matrix | null {
@@ -50,8 +53,6 @@ function parseMatrix(raw: string | null): Matrix | null {
     const parsed = JSON.parse(raw) as Matrix;
     if (!parsed || typeof parsed !== 'object') return null;
     if (!parsed.axes || typeof parsed.axes !== 'object') return null;
-    // Reject empty matrices — they would expand to zero child builds and
-    // collapse back to regular single-build semantics. Treat as no matrix.
     const axisNames = Object.keys(parsed.axes);
     if (axisNames.length === 0) return null;
     for (const k of axisNames) {
@@ -82,6 +83,8 @@ function rowToPipeline(row: PipelineRow): Pipeline {
       // pipelines with a matrix get the rolled-up notification behavior
       // for free.
       matrixSummary: row.matrix_summary === null ? true : row.matrix_summary === 1,
+      prCommands: row.pr_commands ?? undefined,
+      prCommandAuthors: row.pr_command_authors ?? undefined,
     },
     nodes: decryptNodes(JSON.parse(row.nodes_json) as PipelineNode[]),
     edges: JSON.parse(row.edges_json) as PipelineEdge[],
@@ -149,6 +152,7 @@ export function createPipeline(input: PipelineInput): Pipeline {
         nodes_json, edges_json, created_at, updated_at, telegram_approvals,
         tag_pattern, cron_expr, path_filter, cancel_in_progress_on_new_commit,
         matrix_json, matrix_summary)
+        pr_commands, pr_command_authors)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     .run(
@@ -169,6 +173,8 @@ export function createPipeline(input: PipelineInput): Pipeline {
       input.watch.cancelInProgressOnNewCommit ? 1 : 0,
       matrixJson,
       matrixSummary,
+      input.watch.prCommands ?? null,
+      input.watch.prCommandAuthors ?? null,
     );
   return {
     id,
@@ -214,6 +220,7 @@ export function updatePipeline(
          tag_pattern = ?, cron_expr = ?, path_filter = ?,
          cancel_in_progress_on_new_commit = ?,
          matrix_json = ?, matrix_summary = ?
+         pr_commands = ?, pr_command_authors = ?
        WHERE id = ?`,
     )
     .run(
@@ -231,6 +238,8 @@ export function updatePipeline(
       merged.watch.cancelInProgressOnNewCommit ? 1 : 0,
       matrixJson,
       matrixSummary,
+      merged.watch.prCommands ?? null,
+      merged.watch.prCommandAuthors ?? null,
       id,
     );
   merged.matrix = matrixJson ? merged.matrix : null;

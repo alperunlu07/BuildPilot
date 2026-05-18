@@ -48,7 +48,8 @@ export type View =
   | { type: 'audit' }
   | { type: 'apiTokens' }
   | { type: 'secrets'; name?: string }
-  | { type: 'vaultFiles' };
+  | { type: 'vaultFiles' }
+  | { type: 'vcsCredentials' };
 
 export interface CommitToast {
   id: string;
