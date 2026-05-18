@@ -39,6 +39,7 @@ import {
 } from '../lib/draftStorage';
 import { formatRelative } from '../lib/formatDate';
 import { BranchSelect } from './BranchSelect';
+import { CronBuilder } from './CronBuilder';
 import { NodeContextMenu } from './NodeContextMenu';
 import { SaveTemplateDialog } from './SaveTemplateDialog';
 import { StepNode } from './StepNode';
@@ -877,21 +878,18 @@ function Editor({ pipeline }: Props) {
                 className="w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1.5 text-xs text-slate-100"
               />
             </label>
-            <label className="block text-xs text-slate-300">
+            <div className="block text-xs text-slate-300">
               <span className="mb-1 block text-[11px] uppercase tracking-wide text-slate-400">
-                Cron (5-field, UTC — e.g. "0 9 * * *")
+                Cron (5-field, UTC)
               </span>
-              <input
-                type="text"
+              <CronBuilder
                 value={watch.cronExpr ?? ''}
-                onChange={(e) => {
-                  setWatch({ ...watch, cronExpr: e.target.value });
+                onChange={(expr) => {
+                  setWatch({ ...watch, cronExpr: expr });
                   setDirty(true);
                 }}
-                placeholder="0 9 * * *"
-                className="w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1.5 text-xs text-slate-100"
               />
-            </label>
+            </div>
             <label className="block text-xs text-slate-300 md:col-span-2">
               <span className="mb-1 block text-[11px] uppercase tracking-wide text-slate-400">
                 Path filter globs (one per line — empty = build on every commit)
