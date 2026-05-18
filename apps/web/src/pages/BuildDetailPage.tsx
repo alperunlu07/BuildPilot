@@ -15,6 +15,7 @@ import { StepGantt } from '../components/StepGantt';
 import { defaultActiveLevels } from '../components/LevelToggleBar';
 import { ArtifactPreviewModal } from '../components/ArtifactPreviewModal';
 import { FailureSummaryCard } from '../components/FailureSummaryCard';
+import { LogSearchBar, useCompiledFilter } from '../components/LogSearchBar';
 
 const EMPTY: BuildLogEntry[] = [];
 
@@ -57,6 +58,9 @@ export function BuildDetailPage({ buildId }: Props) {
     () => defaultActiveLevels(),
   );
   const [activeNodeId, setActiveNodeId] = useState<string | 'all'>('all');
+  const [query, setQuery] = useState('');
+  const [regex, setRegex] = useState(false);
+  const filter = useCompiledFilter(query, regex);
 
   useEffect(() => {
     let alive = true;
@@ -146,9 +150,10 @@ export function BuildDetailPage({ buildId }: Props) {
           return false;
         }
       }
+      if (!filter.match(e.message)) return false;
       return true;
     });
-  }, [entries, activeLevels, activeNodeId]);
+  }, [entries, activeLevels, activeNodeId, filter]);
 
   const downloadLog = () => {
     if (!build) return;
@@ -393,10 +398,19 @@ export function BuildDetailPage({ buildId }: Props) {
             </option>
           ))}
         </select>
-        <span className="ml-auto text-slate-500">
+        <span className="text-slate-500">
           {filtered.length} / {entries.length} rows
           {entries.length >= 5000 && ' (capped at 5000 in memory)'}
         </span>
+        <div className="ml-auto flex w-full max-w-md items-center">
+          <LogSearchBar
+            query={query}
+            onQueryChange={setQuery}
+            regex={regex}
+            onRegexChange={setRegex}
+            regexError={filter.error}
+          />
+        </div>
       </div>
 
       <div className="min-h-0 flex-1 px-2 pb-2">
