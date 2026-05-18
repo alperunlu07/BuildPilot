@@ -23,7 +23,9 @@ import {
   type SavedLogFilter,
 } from '../components/LogSearchBar';
 import { TimestampRangeSlider } from '../components/TimestampRangeSlider';
+import { LogGroupBar } from '../components/LogGroupBar';
 import { commandFromEntry } from '../lib/copyCommand';
+import { buildGroupFilter, detectLogGroups } from '../lib/logGroups';
 
 const EMPTY: BuildLogEntry[] = [];
 
@@ -72,6 +74,7 @@ export function BuildDetailPage({ buildId }: Props) {
   // Selected timestamp window — null = full build duration (no filter).
   const [tsRange, setTsRange] = useState<[number, number] | null>(null);
   const [presets, setPresets] = useState<SavedLogFilter[]>(() => loadLogPresets());
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(() => new Set());
 
   useEffect(() => {
     let alive = true;
@@ -151,6 +154,12 @@ export function BuildDetailPage({ buildId }: Props) {
     return [...seen.entries()];
   }, [entries]);
 
+  const logGroups = useMemo(() => detectLogGroups(entries), [entries]);
+  const groupFilter = useMemo(
+    () => buildGroupFilter(logGroups, collapsedGroups),
+    [logGroups, collapsedGroups],
+  );
+
   const filtered = useMemo(() => {
     return entries.filter((e) => {
       if (!activeLevels.has(e.level)) return false;
@@ -162,10 +171,11 @@ export function BuildDetailPage({ buildId }: Props) {
         }
       }
       if (tsRange && (e.ts < tsRange[0] || e.ts > tsRange[1])) return false;
+      if (!groupFilter(e)) return false;
       if (!filter.match(e.message)) return false;
       return true;
     });
-  }, [entries, activeLevels, activeNodeId, filter, tsRange]);
+  }, [entries, activeLevels, activeNodeId, filter, tsRange, groupFilter]);
 
   // Bounds for the timestamp slider — earliest / latest log timestamp,
   // falling back to the build start/finish if no entries yet.
@@ -457,6 +467,22 @@ export function BuildDetailPage({ buildId }: Props) {
           />
         </div>
       </div>
+
+      <LogGroupBar
+        groups={logGroups}
+        collapsed={collapsedGroups}
+        onToggle={(id) =>
+          setCollapsedGroups((prev) => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id);
+            else next.add(id);
+            return next;
+          })
+        }
+        onToggleAll={(allCollapsed) =>
+          setCollapsedGroups(allCollapsed ? new Set() : new Set(logGroups.map((g) => g.id)))
+        }
+      />
 
       {tsBounds && (
         <div className="flex items-center gap-3 border-b border-slate-800 bg-slate-900/20 px-6 py-2">
