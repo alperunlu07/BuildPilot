@@ -15,7 +15,7 @@ import {
   type Node,
   type NodeChange,
 } from '@xyflow/react';
-import { ChevronDown, ChevronRight, Hammer, Map as MapIcon, Save, Square, Trash2 } from 'lucide-react';
+import { ChevronDown, ChevronRight, Hammer, Map as MapIcon, Redo2, Save, Square, Trash2, Undo2 } from 'lucide-react';
 import type {
   NodeTemplate,
   Pipeline,
@@ -26,6 +26,7 @@ import type {
 } from '@buildpilot/shared-types';
 import { STEP_CATEGORIES, STEP_DEFINITIONS } from '@buildpilot/step-registry';
 import { api } from '../lib/api';
+import { usePipelineHistory } from '../lib/usePipelineHistory';
 import { useStore } from '../store/store';
 import { BranchSelect } from './BranchSelect';
 import { SaveTemplateDialog } from './SaveTemplateDialog';
@@ -181,6 +182,14 @@ function Editor({ pipeline }: Props) {
   });
   const wrapperRef = useRef<HTMLDivElement>(null);
   const { screenToFlowPosition } = useReactFlow();
+  const history = usePipelineHistory();
+  const nodesRef = useRef<Node[]>(nodes);
+  const edgesRef = useRef<Edge[]>(edges);
+  nodesRef.current = nodes;
+  edgesRef.current = edges;
+  const recordHistory = useCallback(() => {
+    history.record({ nodes: nodesRef.current, edges: edgesRef.current });
+  }, [history]);
 
   // Reset when the underlying pipeline changes (user navigated).
   useEffect(() => {
@@ -190,6 +199,7 @@ function Editor({ pipeline }: Props) {
     setWatch(pipeline.watch);
     setDirty(false);
     setSelectedNodeId(null);
+    history.reset();
   }, [pipeline.id]);
 
   // Push the current per-node runtime status + timing into each node's data
@@ -225,6 +235,43 @@ function Editor({ pipeline }: Props) {
     );
   }, [stepStatus, stepTimings]);
 
+  const doUndo = useCallback(() => {
+    const prev = history.undo({ nodes: nodesRef.current, edges: edgesRef.current });
+    if (!prev) return;
+    setNodes(prev.nodes);
+    setEdges(prev.edges);
+    setDirty(true);
+  }, [history]);
+
+  const doRedo = useCallback(() => {
+    const next = history.redo({ nodes: nodesRef.current, edges: edgesRef.current });
+    if (!next) return;
+    setNodes(next.nodes);
+    setEdges(next.edges);
+    setDirty(true);
+  }, [history]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const mod = e.metaKey || e.ctrlKey;
+      if (!mod) return;
+      const target = e.target as HTMLElement | null;
+      // Skip undo/redo when the user is editing inside a text field — those
+      // have their own native undo we don't want to clobber.
+      const tag = target?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || target?.isContentEditable) return;
+      if (e.key.toLowerCase() === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        doUndo();
+      } else if ((e.key.toLowerCase() === 'z' && e.shiftKey) || e.key.toLowerCase() === 'y') {
+        e.preventDefault();
+        doRedo();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [doUndo, doRedo]);
+
   // Load branches for the project so the watch + checkout combobox have data.
   useEffect(() => {
     let alive = true;
@@ -246,21 +293,30 @@ function Editor({ pipeline }: Props) {
 
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {
+      const commit = changes.some(
+        (c) =>
+          c.type === 'remove' ||
+          (c.type === 'position' && c.dragging === false),
+      );
+      if (commit) recordHistory();
       setNodes((nds) => applyNodeChanges(changes, nds));
       if (changes.some((c) => c.type === 'position' || c.type === 'remove')) setDirty(true);
     },
-    [],
+    [recordHistory],
   );
 
   const onEdgesChange = useCallback(
     (changes: EdgeChange[]) => {
+      const commit = changes.some((c) => c.type === 'remove');
+      if (commit) recordHistory();
       setEdges((eds) => applyEdgeChanges(changes, eds));
       if (changes.length > 0) setDirty(true);
     },
-    [],
+    [recordHistory],
   );
 
   const onConnect = useCallback((connection: Connection) => {
+    recordHistory();
     const newEdge: Edge = pipelineEdgeToReactFlow({
       id: `e_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 5)}`,
       source: connection.source!,
@@ -269,7 +325,7 @@ function Editor({ pipeline }: Props) {
     });
     setEdges((eds) => addEdge(newEdge, eds));
     setDirty(true);
-  }, []);
+  }, [recordHistory]);
 
   const handleSelectionChange = useCallback(
     ({ nodes: selected }: { nodes: Node[]; edges: Edge[] }) => {
@@ -279,16 +335,18 @@ function Editor({ pipeline }: Props) {
   );
 
   const updateNodeData = useCallback((nodeId: string, data: Record<string, unknown>) => {
+    recordHistory();
     setNodes((nds) => nds.map((n) => (n.id === nodeId ? { ...n, data } : n)));
     setDirty(true);
-  }, []);
+  }, [recordHistory]);
 
   const deleteNode = useCallback((nodeId: string) => {
+    recordHistory();
     setNodes((nds) => nds.filter((n) => n.id !== nodeId));
     setEdges((eds) => eds.filter((e) => e.source !== nodeId && e.target !== nodeId));
     setSelectedNodeId(null);
     setDirty(true);
-  }, []);
+  }, [recordHistory]);
 
   const onDragOver = useCallback((event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
@@ -306,6 +364,7 @@ function Editor({ pipeline }: Props) {
       if (templateId) {
         const tpl = nodeTemplates.find((t) => t.id === templateId);
         if (!tpl) return;
+        recordHistory();
         setNodes((nds) => [
           ...nds,
           {
@@ -323,6 +382,7 @@ function Editor({ pipeline }: Props) {
 
       const stepType = event.dataTransfer.getData('application/buildpilot-step') as StepType;
       if (!stepType || !STEP_DEFINITIONS[stepType]) return;
+      recordHistory();
       setNodes((nds) => [
         ...nds,
         {
@@ -334,7 +394,7 @@ function Editor({ pipeline }: Props) {
       ]);
       setDirty(true);
     },
-    [screenToFlowPosition, nodeTemplates],
+    [screenToFlowPosition, nodeTemplates, recordHistory],
   );
 
   const save = async () => {
@@ -425,6 +485,24 @@ function Editor({ pipeline }: Props) {
 
         <div className="flex items-center gap-2">
           {dirty && <span className="text-[11px] text-amber-400">unsaved</span>}
+          <button
+            type="button"
+            onClick={doUndo}
+            disabled={!history.canUndo}
+            className="inline-flex items-center gap-1 rounded-md border border-slate-700 px-2 py-1 text-xs text-slate-300 hover:border-sky-500 hover:text-sky-400 disabled:cursor-not-allowed disabled:opacity-40"
+            title="Undo (Cmd/Ctrl+Z)"
+          >
+            <Undo2 size={12} />
+          </button>
+          <button
+            type="button"
+            onClick={doRedo}
+            disabled={!history.canRedo}
+            className="inline-flex items-center gap-1 rounded-md border border-slate-700 px-2 py-1 text-xs text-slate-300 hover:border-sky-500 hover:text-sky-400 disabled:cursor-not-allowed disabled:opacity-40"
+            title="Redo (Cmd/Ctrl+Shift+Z)"
+          >
+            <Redo2 size={12} />
+          </button>
           <button
             type="button"
             onClick={() => {
@@ -622,6 +700,7 @@ function Editor({ pipeline }: Props) {
             onConnect={onConnect}
             onSelectionChange={handleSelectionChange}
             onEdgeClick={(_e, edge) => {
+              recordHistory();
               setEdges((eds) =>
                 eds.map((x) => {
                   if (x.id !== edge.id) return x;
