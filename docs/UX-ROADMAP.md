@@ -94,8 +94,8 @@ landing experience.
 - [ ] **"Copy as terminal command"** — every step that shells out should
   expose a "Copy command" button on its log entry to paste into a
   local terminal verbatim
-- [ ] **Live tail auto-scroll lock** — when the user scrolls up, stop
-  auto-scrolling; floating "Jump to latest" button on the right
+- [x] **Live tail auto-scroll lock** — when the user scrolls up, stop
+  auto-scrolling; floating "Jump to latest" button on the right — `ee4ba44`
 - [ ] **Step duration comparison** — on a finished build, show each step's
   duration alongside the previous successful build's duration with
   delta colored (+12% red, -8% green)
