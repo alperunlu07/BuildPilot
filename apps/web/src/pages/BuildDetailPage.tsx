@@ -10,6 +10,7 @@ import type {
 import { useStore } from '../store/store';
 import { api } from '../lib/api';
 import { cn } from '../lib/cn';
+import { statusIcon, statusIconAnimationClass, statusLabel } from '../lib/statusIcon';
 import { LogTable } from '../components/LogTable';
 import { StepGantt } from '../components/StepGantt';
 import { defaultActiveLevels } from '../components/LevelToggleBar';
@@ -256,18 +257,30 @@ export function BuildDetailPage({ buildId }: Props) {
           <h1 className="text-lg font-semibold text-slate-100">
             {pipe?.name ?? 'Unknown pipeline'}
           </h1>
-          <span
-            className={cn(
-              'rounded-md px-2 py-0.5 text-[11px] font-medium uppercase tracking-wider',
-              build.status === 'running' && 'bg-amber-950/50 text-amber-300',
-              build.status === 'success' && 'bg-emerald-950/50 text-emerald-300',
-              build.status === 'failed' && 'bg-rose-950/50 text-rose-300',
-              build.status === 'pending' && 'bg-slate-800 text-slate-400',
-              build.status === 'cancelled' && 'bg-slate-800 text-slate-500',
-            )}
-          >
-            {build.status}
-          </span>
+          {(() => {
+            const StatusIcon = statusIcon(build.status);
+            return (
+              <span
+                className={cn(
+                  'inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-[11px] font-medium uppercase tracking-wider',
+                  build.status === 'running' && 'bg-amber-950/50 text-amber-300',
+                  build.status === 'success' && 'bg-emerald-950/50 text-emerald-300',
+                  build.status === 'failed' && 'bg-rose-950/50 text-rose-300',
+                  build.status === 'pending' && 'bg-slate-800 text-slate-400',
+                  build.status === 'cancelled' && 'bg-slate-800 text-slate-500',
+                )}
+                role="status"
+                aria-label={statusLabel(build.status)}
+              >
+                <StatusIcon
+                  size={11}
+                  className={statusIconAnimationClass(build.status)}
+                  aria-hidden="true"
+                />
+                {build.status}
+              </span>
+            );
+          })()}
           <span className="text-xs text-slate-500">
             in <span className="text-slate-300">{proj?.name ?? '—'}</span>
           </span>

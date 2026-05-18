@@ -4,17 +4,20 @@ import {
   Apple,
   ArrowDownToLine,
   BadgeCheck,
+  Ban,
   Box,
   Boxes,
   Bug,
   AlignLeft,
   Camera,
+  Check,
   CloudUpload,
   CodeXml,
   FileCog,
   Frame,
   Gauge,
   GitBranch,
+  Loader2,
   Microscope,
   PenTool,
   Percent,
@@ -41,6 +44,7 @@ import {
   Upload,
   Wand2,
   Wrench,
+  X,
   type LucideIcon,
 } from 'lucide-react';
 import type { StepType } from '@buildpilot/shared-types';
@@ -142,7 +146,8 @@ export function StepNode({ type, data, selected }: NodeProps) {
         >
           <Icon size={13} />
           {status === 'running' && (
-            <span className="absolute inset-0 animate-ping rounded-md ring-2 ring-amber-400/50" />
+            // motion-safe so reduced-motion users don't get the ping pulse
+            <span className="absolute inset-0 motion-safe:animate-ping rounded-md ring-2 ring-amber-400/50" />
           )}
         </span>
         <span className="flex min-w-0 flex-1 flex-col">
@@ -156,14 +161,26 @@ export function StepNode({ type, data, selected }: NodeProps) {
           )}
         </span>
         {disabled && (
-          <span className="ml-auto rounded bg-slate-700/40 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-slate-400">
-            skipped
+          <span
+            className="ml-auto inline-flex items-center gap-1 rounded bg-slate-700/40 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-slate-400"
+            role="status"
+            aria-label="Skipped"
+          >
+            <Ban size={9} aria-hidden="true" /> skipped
           </span>
         )}
         {status && !disabled && (
           <span
-            className={`ml-auto rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider ${runtime.badgeClass}`}
+            className={`ml-auto inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider ${runtime.badgeClass}`}
+            role="status"
+            aria-label={`Step ${status}`}
           >
+            {status === 'running' && (
+              <Loader2 size={9} className="motion-safe:animate-spin" aria-hidden="true" />
+            )}
+            {status === 'success' && <Check size={9} aria-hidden="true" />}
+            {status === 'failed' && <X size={9} aria-hidden="true" />}
+            {status === 'skipped' && <Ban size={9} aria-hidden="true" />}
             {status}
           </span>
         )}

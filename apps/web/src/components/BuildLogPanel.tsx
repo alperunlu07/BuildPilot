@@ -6,6 +6,7 @@ import { LogTable } from './LogTable';
 import { LevelToggleBar, defaultActiveLevels } from './LevelToggleBar';
 import { cn } from '../lib/cn';
 import { commandFromEntry } from '../lib/copyCommand';
+import { statusIcon, statusIconAnimationClass, statusLabel } from '../lib/statusIcon';
 
 // Stable empty-array reference: returning a fresh `[]` from a Zustand
 // selector triggers an infinite re-render loop because every call produces
@@ -46,16 +47,29 @@ export function BuildLogPanel() {
     <div className="flex h-72 shrink-0 flex-col border-t border-slate-800 bg-slate-950">
       <div className="flex items-center justify-between border-b border-slate-800 px-4 py-2 text-xs">
         <div className="flex items-center gap-2">
-          <span
-            className={cn(
-              'inline-block h-2 w-2 rounded-full',
-              activeBuild.status === 'running' && 'animate-pulse bg-amber-400',
-              activeBuild.status === 'success' && 'bg-emerald-400',
-              activeBuild.status === 'failed' && 'bg-rose-400',
-              activeBuild.status === 'cancelled' && 'bg-slate-500',
-              activeBuild.status === 'pending' && 'bg-slate-500',
-            )}
-          />
+          {(() => {
+            const StatusIcon = statusIcon(activeBuild.status);
+            return (
+              <span
+                role="status"
+                aria-label={statusLabel(activeBuild.status)}
+                className={cn(
+                  'inline-flex h-3.5 w-3.5 items-center justify-center rounded-full',
+                  activeBuild.status === 'running' && 'text-amber-400',
+                  activeBuild.status === 'success' && 'text-emerald-400',
+                  activeBuild.status === 'failed' && 'text-rose-400',
+                  activeBuild.status === 'cancelled' && 'text-slate-400',
+                  activeBuild.status === 'pending' && 'text-slate-400',
+                )}
+              >
+                <StatusIcon
+                  size={12}
+                  className={statusIconAnimationClass(activeBuild.status)}
+                  aria-hidden="true"
+                />
+              </span>
+            );
+          })()}
           <span className="font-medium uppercase tracking-wider text-slate-300">
             Build {activeBuild.status}
           </span>

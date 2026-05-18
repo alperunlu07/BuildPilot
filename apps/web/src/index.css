@@ -110,6 +110,42 @@ html[data-density='compact'] .density-pad { padding: 0.25rem 0.5rem !important; 
 html[data-density='compact'] .density-card { padding: 0.5rem 0.75rem !important; }
 html[data-density='compact'] .density-gap { gap: 0.25rem !important; }
 
+/* ---------------------------------------------------------------------------
+   Cluster 10.F — Accessibility
+   ---------------------------------------------------------------------------*/
+
+/* Shared focus-visible ring. Apply with `className="focusable"` to any
+   interactive surface (button, input, role=button div, etc.). We render the
+   ring only on keyboard focus (focus-visible), not on mouse clicks, so
+   pointer users don't see distracting rings on every press.
+
+   The sky-500 (#0ea5e9) outline meets WCAG AA contrast against both
+   slate-950 (dark) and slate-50 (light) at 2px width. */
+.focusable:focus { outline: none; }
+.focusable:focus-visible {
+  outline: 2px solid #0ea5e9;
+  outline-offset: 2px;
+  border-radius: inherit;
+}
+
+/* Reduced motion — when a user opts in via OS / browser, kill all the
+   non-essential animations: spinners, pulses, the StepNode running glow,
+   the toast slide-ins, the live tail smooth-scroll. Keep instantaneous
+   state transitions (color flips for hover) — those don't move the page.
+   Tailwind ships `motion-safe:` / `motion-reduce:` variants we use at the
+   component level, but a global guard also catches lucide `animate-*`
+   utility classes attached directly. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 /* cmdk command palette */
 .cmdk-group {
   margin-bottom: 0.25rem;

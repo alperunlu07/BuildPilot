@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { Check, Loader2, X } from 'lucide-react';
 import type { BuildLogEntry, StepType } from '@buildpilot/shared-types';
 import { cn } from '../lib/cn';
 
@@ -59,23 +60,33 @@ export function StepGantt({
           const label = nodeLabel ? nodeLabel(s.nodeId, s.stepType) : `${s.stepType ?? '?'}`;
           const dur = formatDuration(s.end - s.start);
           const isSelected = selectedNodeId === s.nodeId;
+          const StatusIcon =
+            s.status === 'running' ? Loader2 : s.status === 'success' ? Check : X;
           return (
             <button
               type="button"
               key={s.nodeId}
               onClick={() => onSelect?.(s.nodeId)}
               className={cn(
-                'group relative block h-5 w-full overflow-hidden rounded-sm border text-left',
+                'focusable group relative block h-5 w-full overflow-hidden rounded-sm border text-left',
                 isSelected ? 'border-sky-500' : 'border-slate-800 hover:border-slate-600',
               )}
-              title={`${label} · ${dur}`}
+              title={`${label} · ${s.status} · ${dur}`}
+              aria-label={`${label}, ${s.status}, duration ${dur}`}
             >
               <span
                 className={cn('absolute top-0 h-full', COLOR[s.status])}
                 style={{ left: `${left}%`, width: `${width}%` }}
               />
               <span className="relative z-10 flex h-full items-center justify-between px-2 text-[10px] font-mono text-slate-100 mix-blend-difference">
-                <span className="truncate">{label}</span>
+                <span className="flex min-w-0 items-center gap-1.5">
+                  <StatusIcon
+                    size={10}
+                    className={s.status === 'running' ? 'motion-safe:animate-spin' : ''}
+                    aria-hidden="true"
+                  />
+                  <span className="truncate">{label}</span>
+                </span>
                 <span className="ml-2 shrink-0 text-slate-200/90">{dur}</span>
               </span>
             </button>

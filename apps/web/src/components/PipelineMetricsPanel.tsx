@@ -98,6 +98,7 @@ export function PipelineMetricsPanel({ pipelineId, compact }: Props) {
                 <span
                   key={b.id}
                   title={`${b.status} · ${formatDurationMs(b.durationMs)} · ${new Date(b.startedAt).toLocaleString()}`}
+                  aria-label={`${b.status}, ${formatDurationMs(b.durationMs)}`}
                   className={`w-1 rounded-sm ${colour}`}
                   style={{ height: `${h}px` }}
                 />

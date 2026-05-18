@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Activity, Square } from 'lucide-react';
+import { Activity, Circle, Loader2, Square } from 'lucide-react';
 import type { Build } from '@buildpilot/shared-types';
 import { useStore } from '../store/store';
 import { cn } from '../lib/cn';
+import { statusLabel } from '../lib/statusIcon';
 
 // Cluster 10.D — active-builds widget. A sticky pill that floats at the
 // bottom-right of the dashboard whenever there is at least one
@@ -51,14 +52,15 @@ export function ActiveBuildsWidget() {
         <div className="w-80 overflow-hidden rounded-md border border-slate-700 bg-slate-900 shadow-xl">
           <div className="flex items-center justify-between border-b border-slate-800 px-3 py-2">
             <div className="flex items-center gap-2 text-xs font-medium text-slate-200">
-              <Activity size={12} className="animate-pulse text-amber-400" />
+              <Activity size={12} className="motion-safe:animate-pulse text-amber-400" aria-hidden="true" />
               {active.length} active build{active.length === 1 ? '' : 's'}
             </div>
             <button
               type="button"
               onClick={() => setExpanded(false)}
-              className="rounded p-0.5 text-slate-400 hover:text-slate-100"
+              className="focusable rounded p-0.5 text-slate-400 hover:text-slate-100"
               title="Collapse"
+              aria-label="Collapse active builds widget"
             >
               ×
             </button>
@@ -89,14 +91,18 @@ export function ActiveBuildsWidget() {
                             b.status === 'running' && 'bg-amber-950/50 text-amber-300',
                             b.status === 'pending' && 'bg-slate-800 text-slate-400',
                           )}
+                          role="status"
+                          aria-label={statusLabel(b.status)}
                         >
-                          <span
-                            className={cn(
-                              'h-1.5 w-1.5 rounded-full',
-                              b.status === 'running' && 'animate-pulse bg-amber-400',
-                              b.status === 'pending' && 'bg-slate-500',
-                            )}
-                          />
+                          {b.status === 'running' ? (
+                            <Loader2
+                              size={10}
+                              className="motion-safe:animate-spin text-amber-300"
+                              aria-hidden="true"
+                            />
+                          ) : (
+                            <Circle size={8} className="text-slate-400" aria-hidden="true" />
+                          )}
                           {b.status}
                         </span>
                         <span className="font-mono text-emerald-400">{b.triggerBranch}</span>
@@ -115,8 +121,9 @@ export function ActiveBuildsWidget() {
                           onConfirm: () => cancelBuild(b.id),
                         })
                       }
-                      className="rounded-md border border-slate-700 p-1 text-slate-300 hover:border-rose-700 hover:text-rose-400"
+                      className="focusable rounded-md border border-slate-700 p-1 text-slate-300 hover:border-rose-700 hover:text-rose-400"
                       title="Cancel this build"
+                      aria-label="Cancel this build"
                     >
                       <Square size={12} />
                     </button>
@@ -130,9 +137,10 @@ export function ActiveBuildsWidget() {
         <button
           type="button"
           onClick={() => setExpanded(true)}
-          className="flex items-center gap-2 rounded-full border border-amber-700/60 bg-amber-950/80 px-3 py-1.5 text-xs font-medium text-amber-200 shadow-lg backdrop-blur hover:border-amber-600"
+          className="focusable flex items-center gap-2 rounded-full border border-amber-700/60 bg-amber-950/80 px-3 py-1.5 text-xs font-medium text-amber-200 shadow-lg backdrop-blur hover:border-amber-600"
+          aria-label={`Show ${active.length} active build${active.length === 1 ? '' : 's'}`}
         >
-          <Activity size={12} className="animate-pulse" />
+          <Activity size={12} className="motion-safe:animate-pulse" aria-hidden="true" />
           {active.length} active build{active.length === 1 ? '' : 's'}
         </button>
       )}

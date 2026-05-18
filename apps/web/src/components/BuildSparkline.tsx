@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../lib/api';
+import { statusLabel } from '../lib/statusIcon';
 
 // 30-cell coloured strip rendering the most recent builds for a project.
 // Newest-on-the-right; missing slots from the left are rendered as empty
@@ -48,7 +49,12 @@ export function BuildSparkline({ projectId, cells = 30 }: Props) {
     ...items,
   ];
   return (
-    <div className="flex items-end gap-[2px]" title={`${items.length} of last ${cells} builds`}>
+    <div
+      className="flex items-end gap-[2px]"
+      title={`${items.length} of last ${cells} builds`}
+      role="img"
+      aria-label={`Sparkline of last ${items.length} builds`}
+    >
       {padded.map((cell, i) => (
         <span
           key={cell?.id ?? `empty-${i}`}
@@ -57,6 +63,11 @@ export function BuildSparkline({ projectId, cells = 30 }: Props) {
               ? `h-3 w-1 rounded-sm ${STATUS_COLOUR[cell.status]}`
               : 'h-3 w-1 rounded-sm bg-slate-800/60'
           }
+          // No icon — too small to render — but `title` + `aria-label`
+          // surface the status so screen readers and color-blind users still
+          // get the signal.
+          title={cell ? statusLabel(cell.status) : 'no build'}
+          aria-label={cell ? statusLabel(cell.status) : 'no build'}
         />
       ))}
     </div>

@@ -5,6 +5,7 @@ import { useStore } from '../store/store';
 import { api } from '../lib/api';
 import { cn } from '../lib/cn';
 import { Time } from '../lib/formatDate';
+import { statusIcon, statusIconAnimationClass, statusLabel } from '../lib/statusIcon';
 
 type StatusFilter = 'all' | BuildStatus;
 
@@ -244,6 +245,7 @@ function BuildsEmptyState({
 }
 
 function StatusBadge({ status }: { status: BuildStatus }) {
+  const Icon = statusIcon(status);
   return (
     <span
       className={cn(
@@ -254,17 +256,10 @@ function StatusBadge({ status }: { status: BuildStatus }) {
         status === 'pending' && 'bg-slate-800 text-slate-400',
         status === 'cancelled' && 'bg-slate-800 text-slate-500',
       )}
+      role="status"
+      aria-label={statusLabel(status)}
     >
-      <span
-        className={cn(
-          'h-1.5 w-1.5 rounded-full',
-          status === 'running' && 'animate-pulse bg-amber-400',
-          status === 'success' && 'bg-emerald-400',
-          status === 'failed' && 'bg-rose-400',
-          status === 'pending' && 'bg-slate-500',
-          status === 'cancelled' && 'bg-slate-600',
-        )}
-      />
+      <Icon size={11} className={statusIconAnimationClass(status)} aria-hidden="true" />
       {STATUS_LABELS[status]}
     </span>
   );
