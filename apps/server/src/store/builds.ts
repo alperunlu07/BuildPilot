@@ -18,6 +18,8 @@ interface BuildRow {
   parent_build_id: string | null;
   matrix_values_json: string | null;
   matrix_label: string | null;
+  // WP2 (queue): snapshot of pipeline.laneId at enqueue time.
+  lane_id: string;
 }
 
 function rowToBuild(row: BuildRow): Build {
@@ -43,6 +45,7 @@ function rowToBuild(row: BuildRow): Build {
     parentBuildId: row.parent_build_id,
     matrixValues,
     matrixLabel: row.matrix_label,
+    laneId: row.lane_id,
   };
 }
 
@@ -87,6 +90,11 @@ export interface BuildInput {
   parentBuildId?: string | null;
   matrixValues?: Record<string, string> | null;
   matrixLabel?: string | null;
+  // WP2 (queue): caller passes pipeline.laneId to snapshot it onto the
+  // build row at enqueue time. Optional — defaults to the sentinel
+  // 'default' lane so remote callers (matrix, pr-commands, etc.) that
+  // pre-date the queue feature keep compiling.
+  laneId?: string;
 }
 
 export function createBuild(input: BuildInput): Build {
@@ -102,8 +110,8 @@ export function createBuild(input: BuildInput): Build {
       `INSERT INTO builds
        (id, pipeline_id, project_id, trigger_sha, trigger_branch, status,
         started_at, finished_at, log,
-        parent_build_id, matrix_values_json, matrix_label)
-       VALUES (?, ?, ?, ?, ?, ?, ?, NULL, '', ?, ?, ?)`,
+        parent_build_id, matrix_values_json, matrix_label, lane_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, NULL, '', ?, ?, ?, ?)`,
     )
     .run(
       id,
@@ -116,6 +124,7 @@ export function createBuild(input: BuildInput): Build {
       parentBuildId,
       matrixValuesJson,
       matrixLabel,
+      input.laneId ?? 'default',
     );
   return {
     id,
@@ -130,6 +139,7 @@ export function createBuild(input: BuildInput): Build {
     parentBuildId,
     matrixValues,
     matrixLabel,
+    laneId: input.laneId ?? 'default',
   };
 }
 

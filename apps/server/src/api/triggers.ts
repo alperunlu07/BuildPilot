@@ -57,6 +57,7 @@ async function fireTriggeredBuild(pipelineId: string, opts: TriggerOpts) {
     projectId: project.id,
     triggerSha: sha,
     triggerBranch: branch,
+    laneId: pipeline.laneId,
   });
 
   void enqueueBuild({ pipeline, project, build, fromNodeId: undefined }).catch((err) => {

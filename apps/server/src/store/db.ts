@@ -111,7 +111,6 @@ export function initDb(path: string): DB {
       updated_at INTEGER NOT NULL
     );
 
-<<<<<<< HEAD
     -- Cluster 11.A — Auth, identity, audit. Tables exist on every install
     -- regardless of the auth.enabled flag so flipping the flag at runtime
     -- doesn't require a schema migration. Default config.auth.enabled is
@@ -285,6 +284,11 @@ export function initDb(path: string): DB {
     // Cluster 11.C — when true (1), suppress per-child notifications and
     // emit a single rolled-up summary on the parent build. Default 1.
     'matrix_summary INTEGER NOT NULL DEFAULT 1',
+    // WP2 (queue): lane assignment + priority. No FK on lane_id because
+    // SQLite can't add a foreign key via ALTER TABLE; lane validity is
+    // enforced by the API layer instead.
+    "lane_id TEXT NOT NULL DEFAULT 'default'",
+    'priority INTEGER NOT NULL DEFAULT 100',
   ];
   for (const decl of additivePipelineCols) {
     try {
@@ -295,10 +299,13 @@ export function initDb(path: string): DB {
   }
 
   // Cluster 11.C — additive `builds` columns for matrix fan-out.
+  // WP2 (queue): snapshot lane id onto each build at enqueue time so
+  // re-pinning a pipeline later doesn't rewrite history.
   const additiveBuildCols = [
     'parent_build_id TEXT',
     'matrix_values_json TEXT',
     'matrix_label TEXT',
+    "lane_id TEXT NOT NULL DEFAULT 'default'",
   ];
   for (const decl of additiveBuildCols) {
     try {

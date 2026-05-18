@@ -38,6 +38,7 @@ describe('pruneOldBuilds', () => {
       projectId: 'pj1',
       triggerSha: '',
       triggerBranch: 'main',
+      laneId: 'default',
     });
     updateBuildStatus(b.id, 'success');
     expect(pruneOldBuilds(0).builds).toBe(0);
@@ -50,6 +51,7 @@ describe('pruneOldBuilds', () => {
       projectId: 'pj1',
       triggerSha: '',
       triggerBranch: 'main',
+      laneId: 'default',
     });
     updateBuildStatus(old.id, 'success');
     appendBuildLogEntry({
@@ -69,6 +71,7 @@ describe('pruneOldBuilds', () => {
       projectId: 'pj1',
       triggerSha: '',
       triggerBranch: 'main',
+      laneId: 'default',
     });
     updateBuildStatus(fresh.id, 'success');
 
@@ -84,6 +87,7 @@ describe('pruneOldBuilds', () => {
       projectId: 'pj1',
       triggerSha: '',
       triggerBranch: 'main',
+      laneId: 'default',
     });
     // Leave status='pending'. Retro-date 100d back anyway.
     backdate(b.id, Date.now() - 100 * 24 * 60 * 60 * 1000);

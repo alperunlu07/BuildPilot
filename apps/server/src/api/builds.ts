@@ -159,6 +159,7 @@ export async function buildsRoutes(app: FastifyInstance): Promise<void> {
       projectId: project.id,
       triggerSha: head,
       triggerBranch: branch,
+      laneId: pipeline.laneId,
     });
 
     void enqueueBuild({

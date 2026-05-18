@@ -45,6 +45,10 @@ interface PipelineRow {
   // Cluster 11.E — PR comment trigger settings.
   pr_commands: string | null;
   pr_command_authors: string | null;
+  // WP2 (queue): lane assignment + priority. DB defaults to 'default'/100
+  // so existing rows are non-null after the additive migration.
+  lane_id: string;
+  priority: number;
 }
 
 function parseMatrix(raw: string | null): Matrix | null {
@@ -92,6 +96,8 @@ function rowToPipeline(row: PipelineRow): Pipeline {
     updatedAt: row.updated_at,
     lastBuiltSha: row.last_built_sha,
     matrix: parseMatrix(row.matrix_json),
+    laneId: row.lane_id,
+    priority: row.priority,
   };
 }
 
@@ -125,6 +131,10 @@ export interface PipelineInput {
   edges: PipelineEdge[];
   // Cluster 11.C — declarative matrix. Omit / null for non-matrix pipelines.
   matrix?: Matrix | null;
+  // WP2 (queue): optional on create; default to the sentinel 'default'
+  // lane + priority 100 so existing callers don't need to change.
+  laneId?: string;
+  priority?: number;
 }
 
 function serialiseMatrix(matrix: Matrix | null | undefined): string | null {
@@ -145,6 +155,8 @@ export function createPipeline(input: PipelineInput): Pipeline {
   const matrixJson = serialiseMatrix(input.matrix ?? null);
   // matrixSummary defaults to true to match the documented opt-in flag.
   const matrixSummary = input.watch.matrixSummary === false ? 0 : 1;
+  const laneId = input.laneId ?? 'default';
+  const priority = input.priority ?? 100;
   getDb()
     .prepare(
       `INSERT INTO pipelines
@@ -152,8 +164,9 @@ export function createPipeline(input: PipelineInput): Pipeline {
         nodes_json, edges_json, created_at, updated_at, telegram_approvals,
         tag_pattern, cron_expr, path_filter, cancel_in_progress_on_new_commit,
         matrix_json, matrix_summary,
-        pr_commands, pr_command_authors)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        pr_commands, pr_command_authors,
+        lane_id, priority)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     .run(
       id,
@@ -175,6 +188,8 @@ export function createPipeline(input: PipelineInput): Pipeline {
       matrixSummary,
       input.watch.prCommands ?? null,
       input.watch.prCommandAuthors ?? null,
+      laneId,
+      priority,
     );
   return {
     id,
@@ -190,6 +205,8 @@ export function createPipeline(input: PipelineInput): Pipeline {
     updatedAt: now,
     lastBuiltSha: null,
     matrix: matrixJson ? (input.matrix ?? null) : null,
+    laneId,
+    priority,
   };
 }
 
@@ -205,6 +222,8 @@ export function updatePipeline(
     watch: input.watch ?? existing.watch,
     nodes: input.nodes ?? existing.nodes,
     edges: input.edges ?? existing.edges,
+    laneId: input.laneId ?? existing.laneId,
+    priority: input.priority ?? existing.priority,
     updatedAt: Date.now(),
     // `matrix` may be explicitly nulled — only fall back to the existing
     // value when the caller didn't include the key at all.
@@ -220,7 +239,8 @@ export function updatePipeline(
          tag_pattern = ?, cron_expr = ?, path_filter = ?,
          cancel_in_progress_on_new_commit = ?,
          matrix_json = ?, matrix_summary = ?,
-         pr_commands = ?, pr_command_authors = ?
+         pr_commands = ?, pr_command_authors = ?,
+         lane_id = ?, priority = ?
        WHERE id = ?`,
     )
     .run(
@@ -240,6 +260,8 @@ export function updatePipeline(
       matrixSummary,
       merged.watch.prCommands ?? null,
       merged.watch.prCommandAuthors ?? null,
+      merged.laneId,
+      merged.priority,
       id,
     );
   merged.matrix = matrixJson ? merged.matrix : null;

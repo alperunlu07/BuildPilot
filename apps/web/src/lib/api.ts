@@ -119,8 +119,13 @@ export const api = {
   listPipelines: (projectId?: string) =>
     http<Pipeline[]>(projectId ? `/pipelines?projectId=${projectId}` : '/pipelines'),
   getPipeline: (id: string) => http<Pipeline>(`/pipelines/${id}`),
-  createPipeline: (input: Omit<Pipeline, 'id' | 'createdAt' | 'updatedAt' | 'lastBuiltSha'>) =>
-    http<Pipeline>('/pipelines', { method: 'POST', body: JSON.stringify(input) }),
+  createPipeline: (
+    // WP2 added laneId/priority to Pipeline, but the server defaults them
+    // ('default' lane + priority 100) so callers (the create dialog) don't
+    // need to supply them yet — WP7 will surface them in the UI.
+    input: Omit<Pipeline, 'id' | 'createdAt' | 'updatedAt' | 'lastBuiltSha' | 'laneId' | 'priority'> &
+      Partial<Pick<Pipeline, 'laneId' | 'priority'>>,
+  ) => http<Pipeline>('/pipelines', { method: 'POST', body: JSON.stringify(input) }),
   updatePipeline: (id: string, input: Partial<Omit<Pipeline, 'id' | 'projectId' | 'createdAt' | 'updatedAt' | 'lastBuiltSha'>>) =>
     http<Pipeline>(`/pipelines/${id}`, { method: 'PATCH', body: JSON.stringify(input) }),
   deletePipeline: (id: string) =>

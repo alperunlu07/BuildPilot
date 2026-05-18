@@ -151,6 +151,7 @@ async function cronTick(): Promise<void> {
       projectId: project.id,
       triggerSha: head,
       triggerBranch: pipeline.watch.branch,
+      laneId: pipeline.laneId,
     });
     void enqueueBuild({ pipeline, project, build }).catch((err) => {
       logger.error({ err, pipelineId: pipeline.id }, 'cron-triggered pipeline crashed');
@@ -288,6 +289,7 @@ async function maybeFireTagTriggers(pipelineId: string, projectPath: string): Pr
       projectId: project.id,
       triggerSha: sha,
       triggerBranch: `refs/tags/${tag}`,
+      laneId: pipeline.laneId,
     });
     void enqueueBuild({ pipeline, project, build }).catch((err) => {
       logger.error({ err, pipelineId, tag }, 'tag-triggered pipeline crashed');

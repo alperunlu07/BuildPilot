@@ -12,6 +12,7 @@ import {
   updatePipeline,
 } from '../store/pipelines';
 import { getProject } from '../store/projects';
+import { getLane } from '../store/lanes';
 import { eventBus } from '../events/bus';
 
 // Sourced from the step-registry so new step types automatically pass the
@@ -75,6 +76,11 @@ const updateSchema = z.object({
   nodes: z.array(nodeSchema).optional(),
   edges: z.array(edgeSchema).optional(),
   matrix: matrixSchema.optional(),
+  // WP2 (queue): repinning a pipeline to a different lane / changing its
+  // queue priority. laneId existence is validated below against the lanes
+  // store — store-level FK can't be added via additive ALTER TABLE.
+  laneId: z.string().min(1).optional(),
+  priority: z.number().int().min(0).max(10000).optional(),
 });
 
 const setMatrixSchema = z.object({
@@ -109,6 +115,10 @@ export async function pipelinesRoutes(app: FastifyInstance): Promise<void> {
     const { id } = req.params as { id: string };
     const parsed = updateSchema.safeParse(req.body);
     if (!parsed.success) return reply.code(400).send({ error: parsed.error.flatten() });
+    // WP2: validate lane existence before accepting the patch.
+    if (parsed.data.laneId !== undefined && !getLane(parsed.data.laneId)) {
+      return reply.code(400).send({ error: 'lane not found' });
+    }
     const updated = updatePipeline(id, parsed.data);
     if (!updated) return reply.code(404).send({ error: 'not found' });
     eventBus.publish({ type: 'pipelineChanged', pipelineId: id, action: 'updated' });

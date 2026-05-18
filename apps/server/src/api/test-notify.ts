@@ -83,6 +83,7 @@ function mockBuild(): Build {
     parentBuildId: null,
     matrixValues: null,
     matrixLabel: null,
+    laneId: 'default',
   };
 }
 

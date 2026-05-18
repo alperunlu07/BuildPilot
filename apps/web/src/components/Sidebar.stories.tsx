@@ -65,6 +65,8 @@ const SAMPLE_PIPELINES: Pipeline[] = [
     updatedAt: Date.now(),
     lastBuiltSha: null,
     matrix: null,
+  laneId: 'default',
+  priority: 100,
   },
   {
     id: 'pl2',
@@ -77,6 +79,8 @@ const SAMPLE_PIPELINES: Pipeline[] = [
     updatedAt: Date.now(),
     lastBuiltSha: null,
     matrix: null,
+  laneId: 'default',
+  priority: 100,
   },
 ];
 

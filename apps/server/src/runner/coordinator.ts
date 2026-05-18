@@ -391,6 +391,7 @@ export async function startBuildForPipeline(
     projectId: project.id,
     triggerSha: head,
     triggerBranch: branch,
+    laneId: pipeline.laneId,
   });
   void enqueueBuild({ pipeline, project, build, fromNodeId: opts.fromNodeId }).catch((err) => {
     logger.error({ err }, 'pipeline crashed');

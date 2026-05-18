@@ -32,6 +32,8 @@ const PIPELINES: Pipeline[] = [
     updatedAt: Date.now(),
     lastBuiltSha: null,
     matrix: null,
+  laneId: 'default',
+  priority: 100,
   },
 ];
 
@@ -49,6 +51,7 @@ const BUILDS: Build[] = [
     parentBuildId: null,
     matrixValues: null,
     matrixLabel: null,
+  laneId: 'default',
   },
 ];
 

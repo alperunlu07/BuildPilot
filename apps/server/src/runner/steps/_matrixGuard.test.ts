@@ -52,6 +52,7 @@ describe('suppressForMatrixSummary', () => {
       projectId: proj.id,
       triggerSha: 'sha',
       triggerBranch: 'main',
+      laneId: 'default',
     });
     expect(suppressForMatrixSummary(ctx(build))).toBe(false);
   });
@@ -75,12 +76,14 @@ describe('suppressForMatrixSummary', () => {
       projectId: proj.id,
       triggerSha: 'sha',
       triggerBranch: 'main',
+      laneId: 'default',
     });
     const child = createBuild({
       pipelineId: pipeline.id,
       projectId: proj.id,
       triggerSha: 'sha',
       triggerBranch: 'main',
+      laneId: 'default',
       parentBuildId: parent.id,
       matrixValues: { x: '1' },
       matrixLabel: 'x=1',
@@ -112,12 +115,14 @@ describe('suppressForMatrixSummary', () => {
       projectId: proj.id,
       triggerSha: 'sha',
       triggerBranch: 'main',
+      laneId: 'default',
     });
     const child = createBuild({
       pipelineId: pipeline.id,
       projectId: proj.id,
       triggerSha: 'sha',
       triggerBranch: 'main',
+      laneId: 'default',
       parentBuildId: parent.id,
       matrixValues: { x: '1' },
       matrixLabel: 'x=1',

@@ -206,6 +206,11 @@ export interface Pipeline {
   // trigger, current behavior). When set, every trigger fans out into N
   // child builds plus one parent summary build.
   matrix: Matrix | null;
+  // WP2 (queue): which lane this pipeline is pinned to and its priority
+  // within that lane. Both have DB-side defaults ('default' / 100) so
+  // existing rows round-trip cleanly through the additive migration.
+  laneId: string;
+  priority: number;
 }
 
 // ── Build ───────────────────────────────────────────────────────────────────
@@ -242,6 +247,10 @@ export interface Build {
   parentBuildId: string | null;
   matrixValues: Record<string, string> | null;
   matrixLabel: string | null;
+  // WP2 (queue): snapshot of the pipeline's lane at the moment this build
+  // was enqueued. Captured up-front so re-pinning the pipeline later
+  // doesn't retroactively rewrite history for past builds.
+  laneId: string;
 }
 
 // Cluster 11.C — when a parent matrix build is being viewed, we want the

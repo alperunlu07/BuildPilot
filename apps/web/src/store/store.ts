@@ -448,6 +448,7 @@ export const useStore = create<State>((set, get) => ({
       parentBuildId: null,
       matrixValues: null,
       matrixLabel: null,
+      laneId: pipeline?.laneId ?? 'default',
     };
     set({
       activeBuild: placeholder,
