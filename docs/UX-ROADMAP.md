@@ -183,7 +183,7 @@ docs) in coordinated batches.
 
 ### Cluster 11.A · Auth, identity, audit
 
-Cross-refs: `TODO.md` Phase 2.6.A.
+Cross-refs: `TODO.md` Phase 2.6.A. Shipped together in `7f9cf94`.
 
 - [x] **Login screen + session cookie** — opt-in via
   `auth: { enabled: true }` in `config.json`. Session cookies are
