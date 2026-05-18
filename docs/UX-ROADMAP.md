@@ -91,9 +91,9 @@ landing experience.
   log view to a window (handy for hour-long Unity builds) — `af12a84`
 - [x] **Saved log filters** — named filter presets ("errors only",
   "Xcode warnings", "build commands") shared across builds — `94ca61f`
-- [ ] **"Copy as terminal command"** — every step that shells out should
+- [x] **"Copy as terminal command"** — every step that shells out should
   expose a "Copy command" button on its log entry to paste into a
-  local terminal verbatim
+  local terminal verbatim — `b974181`
 - [x] **Live tail auto-scroll lock** — when the user scrolls up, stop
   auto-scrolling; floating "Jump to latest" button on the right — `ee4ba44`
 - [ ] **Step duration comparison** — on a finished build, show each step's
