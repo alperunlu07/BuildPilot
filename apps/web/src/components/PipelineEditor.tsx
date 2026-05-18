@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Background,
   Controls,
+  MiniMap,
   ReactFlow,
   ReactFlowProvider,
   addEdge,
@@ -14,7 +15,8 @@ import {
   type Node,
   type NodeChange,
 } from '@xyflow/react';
-import { ChevronDown, ChevronRight, Hammer, Save, Square, Trash2 } from 'lucide-react';
+import dagre from 'dagre';
+import { ChevronDown, ChevronRight, Hammer, LayoutGrid, Map as MapIcon, Redo2, Save, Search, Square, Trash2, Undo2, X } from 'lucide-react';
 import type {
   NodeTemplate,
   Pipeline,
@@ -25,8 +27,11 @@ import type {
 } from '@buildpilot/shared-types';
 import { STEP_CATEGORIES, STEP_DEFINITIONS } from '@buildpilot/step-registry';
 import { api } from '../lib/api';
+import { usePipelineClipboard } from '../lib/usePipelineClipboard';
+import { usePipelineHistory } from '../lib/usePipelineHistory';
 import { useStore } from '../store/store';
 import { BranchSelect } from './BranchSelect';
+import { NodeContextMenu } from './NodeContextMenu';
 import { SaveTemplateDialog } from './SaveTemplateDialog';
 import { StepNode } from './StepNode';
 import { StepPropertyPanel, EMPTY_ENTRIES } from './StepPropertyPanel';
@@ -165,6 +170,7 @@ function Editor({ pipeline }: Props) {
   const [nodes, setNodes] = useState<Node[]>(() => pipelineNodesToReactFlow(pipeline.nodes));
   const [edges, setEdges] = useState<Edge[]>(() => pipelineEdgesToReactFlow(pipeline.edges));
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([]);
   const [name, setName] = useState(pipeline.name);
   const [watch, setWatch] = useState<PipelineWatch>(pipeline.watch);
   const [saving, setSaving] = useState(false);
@@ -174,8 +180,27 @@ function Editor({ pipeline }: Props) {
   // Save-as-template dialog state. Holds the source node id whose data we
   // will snapshot when the user confirms.
   const [saveTemplateNodeId, setSaveTemplateNodeId] = useState<string | null>(null);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; nodeId: string } | null>(null);
+  const [edgeTooltip, setEdgeTooltip] = useState<{ x: number; y: number; text: string } | null>(null);
+  const [findOpen, setFindOpen] = useState(false);
+  const [findQuery, setFindQuery] = useState('');
+  const [replaceQuery, setReplaceQuery] = useState('');
+  const [findIndex, setFindIndex] = useState(0);
+  const [showMinimap, setShowMinimap] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return window.localStorage.getItem('buildpilot:editor:minimap') === '1';
+  });
   const wrapperRef = useRef<HTMLDivElement>(null);
-  const { screenToFlowPosition } = useReactFlow();
+  const { screenToFlowPosition, setCenter } = useReactFlow();
+  const history = usePipelineHistory();
+  const clipboard = usePipelineClipboard();
+  const nodesRef = useRef<Node[]>(nodes);
+  const edgesRef = useRef<Edge[]>(edges);
+  nodesRef.current = nodes;
+  edgesRef.current = edges;
+  const recordHistory = useCallback(() => {
+    history.record({ nodes: nodesRef.current, edges: edgesRef.current });
+  }, [history]);
 
   // Reset when the underlying pipeline changes (user navigated).
   useEffect(() => {
@@ -185,6 +210,8 @@ function Editor({ pipeline }: Props) {
     setWatch(pipeline.watch);
     setDirty(false);
     setSelectedNodeId(null);
+    setSelectedNodeIds([]);
+    history.reset();
   }, [pipeline.id]);
 
   // Push the current per-node runtime status + timing into each node's data
@@ -220,6 +247,215 @@ function Editor({ pipeline }: Props) {
     );
   }, [stepStatus, stepTimings]);
 
+  const cloneNode = useCallback((nodeId: string) => {
+    const src = nodesRef.current.find((n) => n.id === nodeId);
+    if (!src) return;
+    recordHistory();
+    const id = `n_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 5)}`;
+    const data = { ...(src.data as Record<string, unknown>) };
+    delete (data as { runtimeStatus?: unknown }).runtimeStatus;
+    delete (data as { runtimeStartedAt?: unknown }).runtimeStartedAt;
+    delete (data as { runtimeFinishedAt?: unknown }).runtimeFinishedAt;
+    setNodes((nds) => [
+      ...nds,
+      {
+        ...src,
+        id,
+        position: { x: src.position.x + 40, y: src.position.y + 40 },
+        data,
+        selected: false,
+      },
+    ]);
+    setDirty(true);
+  }, [recordHistory]);
+
+  const toggleDisableNode = useCallback((nodeId: string) => {
+    recordHistory();
+    setNodes((nds) =>
+      nds.map((n) => {
+        if (n.id !== nodeId) return n;
+        const data = n.data as Record<string, unknown> & { disabled?: boolean | string };
+        const cur = data.disabled === true || data.disabled === 'true';
+        return { ...n, data: { ...data, disabled: !cur } };
+      }),
+    );
+    setDirty(true);
+  }, [recordHistory]);
+
+  const copySingle = useCallback(
+    (nodeId: string) => {
+      const node = nodesRef.current.find((n) => n.id === nodeId);
+      if (!node) return;
+      clipboard.copy([node], edgesRef.current);
+    },
+    [clipboard],
+  );
+
+  const doCopy = useCallback(() => {
+    const ids = new Set(selectedNodeIds);
+    const picked = nodesRef.current.filter((n) => ids.has(n.id));
+    if (picked.length === 0) return;
+    clipboard.copy(picked, edgesRef.current);
+  }, [clipboard, selectedNodeIds]);
+
+  const doPaste = useCallback(() => {
+    const payload = clipboard.paste();
+    if (!payload) return;
+    recordHistory();
+    setNodes((nds) => [
+      ...nds.map((n) => ({ ...n, selected: false })),
+      ...payload.nodes.map((n) => ({ ...n, selected: true })),
+    ]);
+    setEdges((eds) => [...eds, ...payload.edges]);
+    setSelectedNodeIds(payload.nodes.map((n) => n.id));
+    setSelectedNodeId(payload.nodes[0]?.id ?? null);
+    setDirty(true);
+  }, [clipboard, recordHistory]);
+
+  const findMatches = useMemo(() => {
+    const q = findQuery.trim().toLowerCase();
+    if (!q) return [] as Node[];
+    return nodes.filter((n) => {
+      if (n.id.toLowerCase().includes(q)) return true;
+      if (String(n.type ?? '').toLowerCase().includes(q)) return true;
+      const data = n.data as Record<string, unknown>;
+      for (const k of Object.keys(data)) {
+        const v = data[k];
+        if (typeof v === 'string' && v.toLowerCase().includes(q)) return true;
+        if (typeof v === 'number' && String(v).includes(q)) return true;
+      }
+      return false;
+    });
+  }, [nodes, findQuery]);
+
+  const focusMatch = useCallback(
+    (idx: number) => {
+      if (findMatches.length === 0) return;
+      const wrapped = ((idx % findMatches.length) + findMatches.length) % findMatches.length;
+      const target = findMatches[wrapped];
+      if (!target) return;
+      setFindIndex(wrapped);
+      setSelectedNodeId(target.id);
+      setSelectedNodeIds([target.id]);
+      setNodes((nds) =>
+        nds.map((n) => ({ ...n, selected: n.id === target.id })),
+      );
+      const w = target.width ?? 200;
+      const h = target.height ?? 80;
+      setCenter(target.position.x + w / 2, target.position.y + h / 2, { zoom: 1.25, duration: 200 });
+    },
+    [findMatches, setCenter],
+  );
+
+  const replaceCurrent = useCallback(() => {
+    if (findMatches.length === 0) return;
+    const target = findMatches[findIndex % findMatches.length];
+    if (!target) return;
+    const q = findQuery;
+    if (!q) return;
+    recordHistory();
+    setNodes((nds) =>
+      nds.map((n) => {
+        if (n.id !== target.id) return n;
+        const data = n.data as Record<string, unknown>;
+        const next: Record<string, unknown> = { ...data };
+        for (const k of Object.keys(next)) {
+          const v = next[k];
+          if (typeof v === 'string' && v.toLowerCase().includes(q.toLowerCase())) {
+            const re = new RegExp(escapeRegExp(q), 'gi');
+            next[k] = v.replace(re, replaceQuery);
+          }
+        }
+        return { ...n, data: next };
+      }),
+    );
+    setDirty(true);
+  }, [findMatches, findIndex, findQuery, replaceQuery, recordHistory]);
+
+  const replaceAll = useCallback(() => {
+    const q = findQuery;
+    if (!q) return;
+    const ids = new Set(findMatches.map((m) => m.id));
+    if (ids.size === 0) return;
+    recordHistory();
+    const re = new RegExp(escapeRegExp(q), 'gi');
+    setNodes((nds) =>
+      nds.map((n) => {
+        if (!ids.has(n.id)) return n;
+        const data = n.data as Record<string, unknown>;
+        const next: Record<string, unknown> = { ...data };
+        for (const k of Object.keys(next)) {
+          const v = next[k];
+          if (typeof v === 'string') next[k] = v.replace(re, replaceQuery);
+        }
+        return { ...n, data: next };
+      }),
+    );
+    setDirty(true);
+  }, [findMatches, findQuery, replaceQuery, recordHistory]);
+
+  const autoLayout = useCallback(() => {
+    recordHistory();
+    setNodes((nds) => {
+      const next = layoutWithDagre(nds, edgesRef.current);
+      return next;
+    });
+    setDirty(true);
+  }, [recordHistory]);
+
+  const doUndo = useCallback(() => {
+    const prev = history.undo({ nodes: nodesRef.current, edges: edgesRef.current });
+    if (!prev) return;
+    setNodes(prev.nodes);
+    setEdges(prev.edges);
+    setDirty(true);
+  }, [history]);
+
+  const doRedo = useCallback(() => {
+    const next = history.redo({ nodes: nodesRef.current, edges: edgesRef.current });
+    if (!next) return;
+    setNodes(next.nodes);
+    setEdges(next.edges);
+    setDirty(true);
+  }, [history]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const mod = e.metaKey || e.ctrlKey;
+      if (!mod) return;
+      // Cmd/Ctrl+F is special: open even when focus is in an input. The find
+      // overlay's own input then takes over.
+      if (e.key.toLowerCase() === 'f') {
+        e.preventDefault();
+        setFindOpen(true);
+        return;
+      }
+      const target = e.target as HTMLElement | null;
+      // Skip undo/redo when the user is editing inside a text field — those
+      // have their own native undo we don't want to clobber.
+      const tag = target?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || target?.isContentEditable) return;
+      if (e.key.toLowerCase() === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        doUndo();
+      } else if ((e.key.toLowerCase() === 'z' && e.shiftKey) || e.key.toLowerCase() === 'y') {
+        e.preventDefault();
+        doRedo();
+      } else if (e.key.toLowerCase() === 'c') {
+        // Don't preempt the browser when nothing is selected; let native
+        // text-copy work in case the user has a selection elsewhere.
+        if (selectedNodeIds.length === 0) return;
+        e.preventDefault();
+        doCopy();
+      } else if (e.key.toLowerCase() === 'v') {
+        e.preventDefault();
+        doPaste();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [doUndo, doRedo, doCopy, doPaste, selectedNodeIds.length]);
+
   // Load branches for the project so the watch + checkout combobox have data.
   useEffect(() => {
     let alive = true;
@@ -238,24 +474,49 @@ function Editor({ pipeline }: Props) {
     () => nodes.find((n) => n.id === selectedNodeId) ?? null,
     [nodes, selectedNodeId],
   );
+  const selectedNodes = useMemo(
+    () => nodes.filter((n) => selectedNodeIds.includes(n.id)),
+    [nodes, selectedNodeIds],
+  );
+
+  const bulkChange = useCallback(
+    (ids: string[], patch: Record<string, unknown>) => {
+      recordHistory();
+      const idSet = new Set(ids);
+      setNodes((nds) =>
+        nds.map((n) => (idSet.has(n.id) ? { ...n, data: { ...(n.data as Record<string, unknown>), ...patch } } : n)),
+      );
+      setDirty(true);
+    },
+    [recordHistory],
+  );
 
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {
+      const commit = changes.some(
+        (c) =>
+          c.type === 'remove' ||
+          (c.type === 'position' && c.dragging === false),
+      );
+      if (commit) recordHistory();
       setNodes((nds) => applyNodeChanges(changes, nds));
       if (changes.some((c) => c.type === 'position' || c.type === 'remove')) setDirty(true);
     },
-    [],
+    [recordHistory],
   );
 
   const onEdgesChange = useCallback(
     (changes: EdgeChange[]) => {
+      const commit = changes.some((c) => c.type === 'remove');
+      if (commit) recordHistory();
       setEdges((eds) => applyEdgeChanges(changes, eds));
       if (changes.length > 0) setDirty(true);
     },
-    [],
+    [recordHistory],
   );
 
   const onConnect = useCallback((connection: Connection) => {
+    recordHistory();
     const newEdge: Edge = pipelineEdgeToReactFlow({
       id: `e_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 5)}`,
       source: connection.source!,
@@ -264,26 +525,29 @@ function Editor({ pipeline }: Props) {
     });
     setEdges((eds) => addEdge(newEdge, eds));
     setDirty(true);
-  }, []);
+  }, [recordHistory]);
 
   const handleSelectionChange = useCallback(
     ({ nodes: selected }: { nodes: Node[]; edges: Edge[] }) => {
       setSelectedNodeId(selected[0]?.id ?? null);
+      setSelectedNodeIds(selected.map((n) => n.id));
     },
     [],
   );
 
   const updateNodeData = useCallback((nodeId: string, data: Record<string, unknown>) => {
+    recordHistory();
     setNodes((nds) => nds.map((n) => (n.id === nodeId ? { ...n, data } : n)));
     setDirty(true);
-  }, []);
+  }, [recordHistory]);
 
   const deleteNode = useCallback((nodeId: string) => {
+    recordHistory();
     setNodes((nds) => nds.filter((n) => n.id !== nodeId));
     setEdges((eds) => eds.filter((e) => e.source !== nodeId && e.target !== nodeId));
     setSelectedNodeId(null);
     setDirty(true);
-  }, []);
+  }, [recordHistory]);
 
   const onDragOver = useCallback((event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
@@ -301,6 +565,7 @@ function Editor({ pipeline }: Props) {
       if (templateId) {
         const tpl = nodeTemplates.find((t) => t.id === templateId);
         if (!tpl) return;
+        recordHistory();
         setNodes((nds) => [
           ...nds,
           {
@@ -318,6 +583,7 @@ function Editor({ pipeline }: Props) {
 
       const stepType = event.dataTransfer.getData('application/buildpilot-step') as StepType;
       if (!stepType || !STEP_DEFINITIONS[stepType]) return;
+      recordHistory();
       setNodes((nds) => [
         ...nds,
         {
@@ -329,7 +595,7 @@ function Editor({ pipeline }: Props) {
       ]);
       setDirty(true);
     },
-    [screenToFlowPosition, nodeTemplates],
+    [screenToFlowPosition, nodeTemplates, recordHistory],
   );
 
   const save = async () => {
@@ -420,6 +686,52 @@ function Editor({ pipeline }: Props) {
 
         <div className="flex items-center gap-2">
           {dirty && <span className="text-[11px] text-amber-400">unsaved</span>}
+          <button
+            type="button"
+            onClick={doUndo}
+            disabled={!history.canUndo}
+            className="inline-flex items-center gap-1 rounded-md border border-slate-700 px-2 py-1 text-xs text-slate-300 hover:border-sky-500 hover:text-sky-400 disabled:cursor-not-allowed disabled:opacity-40"
+            title="Undo (Cmd/Ctrl+Z)"
+          >
+            <Undo2 size={12} />
+          </button>
+          <button
+            type="button"
+            onClick={doRedo}
+            disabled={!history.canRedo}
+            className="inline-flex items-center gap-1 rounded-md border border-slate-700 px-2 py-1 text-xs text-slate-300 hover:border-sky-500 hover:text-sky-400 disabled:cursor-not-allowed disabled:opacity-40"
+            title="Redo (Cmd/Ctrl+Shift+Z)"
+          >
+            <Redo2 size={12} />
+          </button>
+          <button
+            type="button"
+            onClick={autoLayout}
+            className="inline-flex items-center gap-1 rounded-md border border-slate-700 px-2 py-1 text-xs text-slate-300 hover:border-sky-500 hover:text-sky-400"
+            title="Auto-layout graph"
+          >
+            <LayoutGrid size={12} />
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setShowMinimap((v) => {
+                const next = !v;
+                if (typeof window !== 'undefined') {
+                  window.localStorage.setItem('buildpilot:editor:minimap', next ? '1' : '0');
+                }
+                return next;
+              });
+            }}
+            className={`inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs ${
+              showMinimap
+                ? 'border-sky-500 bg-sky-950/40 text-sky-300'
+                : 'border-slate-700 text-slate-300 hover:border-sky-500 hover:text-sky-400'
+            }`}
+            title="Toggle minimap"
+          >
+            <MapIcon size={12} />
+          </button>
           <button
             type="button"
             onClick={save}
@@ -588,6 +900,70 @@ function Editor({ pipeline }: Props) {
         />
 
         <div ref={wrapperRef} className="relative min-h-0 flex-1" onDragOver={onDragOver} onDrop={onDrop}>
+          {findOpen && (
+            <div className="absolute right-3 top-3 z-30 w-80 rounded-md border border-slate-700 bg-slate-900/95 p-2 shadow-xl backdrop-blur">
+              <div className="flex items-center gap-2">
+                <Search size={12} className="text-slate-400" />
+                <input
+                  autoFocus
+                  type="text"
+                  value={findQuery}
+                  onChange={(e) => {
+                    setFindQuery(e.target.value);
+                    setFindIndex(0);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      focusMatch(findIndex + (e.shiftKey ? -1 : 1));
+                    } else if (e.key === 'Escape') {
+                      setFindOpen(false);
+                    }
+                  }}
+                  placeholder="Find in node ids, types, field values…"
+                  className="flex-1 rounded border border-slate-700 bg-slate-950 px-2 py-1 text-[12px] text-slate-100 focus:border-sky-500 focus:outline-none"
+                />
+                <span className="font-mono text-[10px] text-slate-500">
+                  {findMatches.length === 0
+                    ? '0/0'
+                    : `${(findIndex % findMatches.length) + 1}/${findMatches.length}`}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setFindOpen(false)}
+                  className="rounded p-0.5 text-slate-500 hover:text-slate-300"
+                  title="Close"
+                >
+                  <X size={12} />
+                </button>
+              </div>
+              <div className="mt-1.5 flex items-center gap-2">
+                <input
+                  type="text"
+                  value={replaceQuery}
+                  onChange={(e) => setReplaceQuery(e.target.value)}
+                  placeholder="Replace with…"
+                  className="flex-1 rounded border border-slate-700 bg-slate-950 px-2 py-1 text-[12px] text-slate-100 focus:border-sky-500 focus:outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={replaceCurrent}
+                  disabled={findMatches.length === 0 || findQuery === ''}
+                  className="rounded border border-slate-700 px-2 py-1 text-[11px] text-slate-200 hover:border-sky-500 disabled:opacity-40"
+                >
+                  Replace
+                </button>
+                <button
+                  type="button"
+                  onClick={replaceAll}
+                  disabled={findMatches.length === 0 || findQuery === ''}
+                  className="rounded border border-slate-700 px-2 py-1 text-[11px] text-slate-200 hover:border-sky-500 disabled:opacity-40"
+                >
+                  All
+                </button>
+              </div>
+            </div>
+          )}
           <ReactFlow
             nodes={nodes}
             edges={edges}
@@ -596,7 +972,23 @@ function Editor({ pipeline }: Props) {
             onEdgesChange={onEdgesChange}
             onConnect={onConnect}
             onSelectionChange={handleSelectionChange}
+            onNodeContextMenu={(ev, node) => {
+              ev.preventDefault();
+              setContextMenu({ x: ev.clientX, y: ev.clientY, nodeId: node.id });
+            }}
+            onPaneContextMenu={() => setContextMenu(null)}
+            onEdgeMouseEnter={(ev, edge) => {
+              const tip =
+                (edge.data as { conditionTooltip?: string } | undefined)?.conditionTooltip ??
+                'condition';
+              setEdgeTooltip({ x: ev.clientX, y: ev.clientY, text: tip });
+            }}
+            onEdgeMouseMove={(ev) => {
+              setEdgeTooltip((prev) => (prev ? { ...prev, x: ev.clientX, y: ev.clientY } : null));
+            }}
+            onEdgeMouseLeave={() => setEdgeTooltip(null)}
             onEdgeClick={(_e, edge) => {
+              recordHistory();
               setEdges((eds) =>
                 eds.map((x) => {
                   if (x.id !== edge.id) return x;
@@ -618,14 +1010,61 @@ function Editor({ pipeline }: Props) {
           >
             <Background gap={16} color="#1e293b" />
             <Controls position="bottom-right" showInteractive={false} />
+            {edgeTooltip && (
+              <div
+                className="pointer-events-none fixed z-50 rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-[11px] text-slate-200 shadow-lg"
+                style={{ left: edgeTooltip.x + 12, top: edgeTooltip.y + 12 }}
+              >
+                {edgeTooltip.text}
+                <div className="text-[9px] text-slate-500">click to cycle</div>
+              </div>
+            )}
+            {showMinimap && (
+              <MiniMap
+                pannable
+                zoomable
+                position="bottom-left"
+                maskColor="rgba(2, 6, 23, 0.7)"
+                style={{ backgroundColor: '#0f172a', border: '1px solid #1e293b' }}
+                nodeColor={(n) => {
+                  const def = STEP_DEFINITIONS[n.type as StepType];
+                  return def?.color ?? '#475569';
+                }}
+                nodeStrokeColor="#1e293b"
+              />
+            )}
           </ReactFlow>
         </div>
 
+        {contextMenu && (
+          <NodeContextMenu
+            x={contextMenu.x}
+            y={contextMenu.y}
+            nodeId={contextMenu.nodeId}
+            disabled={(() => {
+              const n = nodesRef.current.find((x) => x.id === contextMenu.nodeId);
+              const d = (n?.data as { disabled?: boolean | string } | undefined)?.disabled;
+              return d === true || d === 'true';
+            })()}
+            onClose={() => setContextMenu(null)}
+            onRunFrom={async (nodeId) => {
+              if (dirty) await save();
+              await triggerBuild(pipeline.id, nodeId);
+            }}
+            onClone={cloneNode}
+            onDelete={deleteNode}
+            onCopy={copySingle}
+            onToggleDisable={toggleDisableNode}
+          />
+        )}
+
         <StepPropertyPanel
           node={selectedNode}
+          selectedNodes={selectedNodes}
           branches={branches}
           entries={latestEntries}
           onChange={updateNodeData}
+          onBulkChange={bulkChange}
           onDelete={deleteNode}
           onRunFrom={async (nodeId) => {
             if (dirty) await save();
@@ -702,19 +1141,7 @@ function Palette({
             </button>
             {isOpen &&
               items.map(({ type, def }) => (
-                <div
-                  key={type}
-                  draggable
-                  onDragStart={(e) => {
-                    e.dataTransfer.setData('application/buildpilot-step', type);
-                    e.dataTransfer.effectAllowed = 'move';
-                  }}
-                  className="cursor-grab rounded-md border bg-slate-900 px-2.5 py-1.5 text-[12px] text-slate-200 hover:border-slate-500"
-                  style={{ borderColor: def.color }}
-                  title={def.description}
-                >
-                  {def.label}
-                </div>
+                <PaletteItem key={type} type={type} def={def} />
               ))}
           </div>
         );
@@ -757,6 +1184,84 @@ function Palette({
               </div>
             );
           })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PaletteItem({
+  type,
+  def,
+}: {
+  type: StepType;
+  def: (typeof STEP_DEFINITIONS)[StepType];
+}) {
+  const [hover, setHover] = useState(false);
+  const required = def.fields.filter((f) => f.required);
+  const optional = def.fields.filter((f) => !f.required);
+  return (
+    <div
+      className="relative"
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+    >
+      <div
+        draggable
+        onDragStart={(e) => {
+          e.dataTransfer.setData('application/buildpilot-step', type);
+          e.dataTransfer.effectAllowed = 'move';
+          setHover(false);
+        }}
+        className="cursor-grab rounded-md border bg-slate-900 px-2.5 py-1.5 text-[12px] text-slate-200 hover:border-slate-500"
+        style={{ borderColor: def.color }}
+      >
+        {def.label}
+      </div>
+      {hover && (
+        <div className="pointer-events-none absolute left-full top-0 z-50 ml-2 w-72 rounded-md border border-slate-700 bg-slate-900 p-3 text-[11px] text-slate-200 shadow-xl">
+          <div className="flex items-center gap-2">
+            <span
+              className="inline-block h-2 w-2 rounded-full"
+              style={{ backgroundColor: def.color }}
+            />
+            <span className="font-semibold text-slate-100">{def.label}</span>
+          </div>
+          <p className="mt-1 text-[10.5px] text-slate-400">{def.description}</p>
+          {required.length > 0 && (
+            <div className="mt-2">
+              <div className="text-[9px] font-semibold uppercase tracking-wider text-rose-400">
+                Required ({required.length})
+              </div>
+              <ul className="mt-0.5 space-y-0.5">
+                {required.slice(0, 8).map((f) => (
+                  <li key={f.name} className="truncate">
+                    · {f.label}
+                  </li>
+                ))}
+                {required.length > 8 && (
+                  <li className="text-slate-500">+{required.length - 8} more…</li>
+                )}
+              </ul>
+            </div>
+          )}
+          {optional.length > 0 && (
+            <div className="mt-2">
+              <div className="text-[9px] font-semibold uppercase tracking-wider text-slate-500">
+                Optional ({optional.length})
+              </div>
+              <ul className="mt-0.5 space-y-0.5 text-slate-400">
+                {optional.slice(0, 6).map((f) => (
+                  <li key={f.name} className="truncate">
+                    · {f.label}
+                  </li>
+                ))}
+                {optional.length > 6 && (
+                  <li className="text-slate-500">+{optional.length - 6} more…</li>
+                )}
+              </ul>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -1215,6 +1720,34 @@ function defaultData(type: StepType): Record<string, unknown> {
   return {};
 }
 
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function layoutWithDagre(nodes: Node[], edges: Edge[]): Node[] {
+  if (nodes.length === 0) return nodes;
+  const g = new dagre.graphlib.Graph();
+  g.setGraph({ rankdir: 'TB', nodesep: 60, ranksep: 90, marginx: 20, marginy: 20 });
+  g.setDefaultEdgeLabel(() => ({}));
+  const NODE_W = 200;
+  const NODE_H = 80;
+  for (const n of nodes) {
+    const width = n.width ?? NODE_W;
+    const height = n.height ?? NODE_H;
+    g.setNode(n.id, { width, height });
+  }
+  for (const e of edges) g.setEdge(e.source, e.target);
+  dagre.layout(g);
+  return nodes.map((n) => {
+    const laid = g.node(n.id);
+    if (!laid) return n;
+    return {
+      ...n,
+      position: { x: laid.x - (laid.width ?? NODE_W) / 2, y: laid.y - (laid.height ?? NODE_H) / 2 },
+    };
+  });
+}
+
 function pipelineNodesToReactFlow(nodes: PipelineNode[]): Node[] {
   return nodes.map((n) => ({
     id: n.id,
@@ -1224,10 +1757,10 @@ function pipelineNodesToReactFlow(nodes: PipelineNode[]): Node[] {
   }));
 }
 
-const EDGE_STYLE: Record<'success' | 'failure' | 'always', { stroke: string; label: string }> = {
-  success: { stroke: '#10b981', label: '' },
-  failure: { stroke: '#fb7185', label: 'on failure' },
-  always:  { stroke: '#94a3b8', label: 'always' },
+const EDGE_STYLE: Record<'success' | 'failure' | 'always', { stroke: string; glyph: string; tooltip: string }> = {
+  success: { stroke: '#10b981', glyph: '✓', tooltip: 'on success (default)' },
+  failure: { stroke: '#fb7185', glyph: '✕', tooltip: 'on failure' },
+  always:  { stroke: '#94a3b8', glyph: '∞', tooltip: 'always (success or failure)' },
 };
 
 function pipelineEdgeToReactFlow(e: PipelineEdge): Edge {
@@ -1238,12 +1771,13 @@ function pipelineEdgeToReactFlow(e: PipelineEdge): Edge {
     source: e.source,
     target: e.target,
     animated: true,
-    label: style.label || undefined,
-    labelStyle: { fill: style.stroke, fontSize: 10, fontWeight: 600 },
-    labelBgStyle: { fill: '#0f172a' },
-    labelBgPadding: [4, 2],
+    label: style.glyph,
+    labelStyle: { fill: style.stroke, fontSize: 13, fontWeight: 700 },
+    labelBgStyle: { fill: '#0f172a', stroke: style.stroke, strokeWidth: 1 },
+    labelBgPadding: [6, 4],
+    labelBgBorderRadius: 999,
     style: { stroke: style.stroke, strokeWidth: 1.5 },
-    data: { condition: cond },
+    data: { condition: cond, conditionTooltip: style.tooltip },
   };
 }
 

@@ -12,10 +12,13 @@ const EMPTY: BuildLogEntry[] = [];
 
 interface Props {
   node: Node | null;
+  // Full set of selected nodes; when > 1 the panel shows bulk-edit UI.
+  selectedNodes?: Node[];
   branches: string[];
   // Live entries from the latest build for this pipeline (any nodeId).
   entries: BuildLogEntry[];
   onChange(nodeId: string, data: Record<string, unknown>): void;
+  onBulkChange?(nodeIds: string[], patch: Record<string, unknown>): void;
   onDelete(nodeId: string): void;
   onRunFrom?(nodeId: string): void;
   onSaveAsTemplate?(nodeId: string): void;
@@ -25,9 +28,11 @@ type Tab = 'properties' | 'logs';
 
 export function StepPropertyPanel({
   node,
+  selectedNodes,
   branches,
   entries,
   onChange,
+  onBulkChange,
   onDelete,
   onRunFrom,
   onSaveAsTemplate,
@@ -60,6 +65,16 @@ export function StepPropertyPanel({
       <aside className="flex h-full w-80 shrink-0 flex-col border-l border-slate-800 bg-slate-950 p-4 text-sm text-slate-500">
         Select a node to edit its properties.
       </aside>
+    );
+  }
+
+  if (selectedNodes && selectedNodes.length > 1 && onBulkChange) {
+    return (
+      <BulkEditPanel
+        nodes={selectedNodes}
+        hosts={hosts}
+        onApply={(patch) => onBulkChange(selectedNodes.map((n) => n.id), patch)}
+      />
     );
   }
 
@@ -283,6 +298,7 @@ function CommonControlsSection({
   data: Record<string, unknown>;
   onChange(patch: Record<string, unknown>): void;
 }) {
+  const disabled = data.disabled === true || data.disabled === 'true';
   const continueOnError = data.continueOnError === 'true' || data.continueOnError === true;
   const retry = (data.retryPolicy as Record<string, unknown> | undefined) ?? {};
   const retryEnabled = retry.enabled === true;
@@ -295,6 +311,18 @@ function CommonControlsSection({
   return (
     <div className="mt-2 rounded-md border border-slate-800 bg-slate-900/40 p-3 space-y-3">
       <div className="text-[10px] uppercase tracking-wider text-slate-500">Step controls</div>
+      <label className="flex items-center gap-2 text-[12px] text-slate-300">
+        <input
+          type="checkbox"
+          checked={disabled}
+          onChange={(e) => onChange({ disabled: e.target.checked })}
+          className="h-3.5 w-3.5"
+        />
+        Disable / skip this step
+      </label>
+      <p className="-mt-1 text-[10px] text-slate-500">
+        Visually grayed out. TODO(engine): treat as a no-op at run time.
+      </p>
       <label className="flex items-center gap-2 text-[12px] text-slate-300">
         <input
           type="checkbox"
@@ -434,6 +462,194 @@ function CommonControlsSection({
         )}
       </div>
     </div>
+  );
+}
+
+function BulkEditPanel({
+  nodes,
+  hosts,
+  onApply,
+}: {
+  nodes: Node[];
+  hosts: SshHost[];
+  onApply(patch: Record<string, unknown>): void;
+}) {
+  const [setHost, setSetHost] = useState(false);
+  const [hostId, setHostId] = useState('');
+  const [applyContinue, setApplyContinue] = useState(false);
+  const [continueOnError, setContinueOnError] = useState(false);
+  const [applyDisabled, setApplyDisabled] = useState(false);
+  const [disabledFlag, setDisabledFlag] = useState(false);
+  const [applyRetry, setApplyRetry] = useState(false);
+  const [retryEnabled, setRetryEnabled] = useState(true);
+  const [retryMax, setRetryMax] = useState(3);
+  const [retryBackoff, setRetryBackoff] = useState(1000);
+
+  const apply = () => {
+    const patch: Record<string, unknown> = {};
+    if (setHost) patch.hostId = hostId;
+    if (applyContinue) patch.continueOnError = continueOnError ? 'true' : 'false';
+    if (applyDisabled) patch.disabled = disabledFlag;
+    if (applyRetry) {
+      patch.retryPolicy = {
+        enabled: retryEnabled,
+        maxRetries: retryMax,
+        backoffMs: retryBackoff,
+        backoffMaxMs: Math.max(retryBackoff, 30000),
+      };
+    }
+    if (Object.keys(patch).length === 0) return;
+    onApply(patch);
+  };
+
+  return (
+    <aside className="flex h-full w-80 shrink-0 flex-col border-l border-slate-800 bg-slate-950">
+      <div className="border-b border-slate-800 px-4 py-3">
+        <div className="text-[11px] uppercase tracking-wider text-slate-500">Bulk edit</div>
+        <h3 className="mt-1 text-sm font-semibold text-slate-100">
+          {nodes.length} steps selected
+        </h3>
+        <p className="mt-1 text-xs text-slate-400">
+          Tick a field and set a value; only ticked fields are applied to every selected node.
+        </p>
+      </div>
+
+      <div className="flex-1 space-y-4 overflow-y-auto px-4 py-3 text-[12px] text-slate-200">
+        <div className="rounded-md border border-slate-800 bg-slate-900/40 p-3">
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={setHost}
+              onChange={(e) => setSetHost(e.target.checked)}
+              className="h-3.5 w-3.5"
+            />
+            <span className="text-[11px] uppercase tracking-wider text-slate-400">
+              Saved Mac host
+            </span>
+          </label>
+          {setHost && (
+            <select
+              value={hostId}
+              onChange={(e) => setHostId(e.target.value)}
+              className="mt-2 w-full rounded-md border border-slate-700 bg-slate-900 px-2 py-1.5 text-[12px] text-slate-100"
+            >
+              <option value="">(inline / clear)</option>
+              {hosts.map((h) => (
+                <option key={h.id} value={h.id}>
+                  {h.name} — {h.host}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
+
+        <div className="rounded-md border border-slate-800 bg-slate-900/40 p-3">
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={applyContinue}
+              onChange={(e) => setApplyContinue(e.target.checked)}
+              className="h-3.5 w-3.5"
+            />
+            <span className="text-[11px] uppercase tracking-wider text-slate-400">
+              Continue on error
+            </span>
+          </label>
+          {applyContinue && (
+            <label className="mt-2 flex items-center gap-2 text-slate-300">
+              <input
+                type="checkbox"
+                checked={continueOnError}
+                onChange={(e) => setContinueOnError(e.target.checked)}
+                className="h-3.5 w-3.5"
+              />
+              soft-fail
+            </label>
+          )}
+        </div>
+
+        <div className="rounded-md border border-slate-800 bg-slate-900/40 p-3">
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={applyDisabled}
+              onChange={(e) => setApplyDisabled(e.target.checked)}
+              className="h-3.5 w-3.5"
+            />
+            <span className="text-[11px] uppercase tracking-wider text-slate-400">
+              Disable / skip
+            </span>
+          </label>
+          {applyDisabled && (
+            <label className="mt-2 flex items-center gap-2 text-slate-300">
+              <input
+                type="checkbox"
+                checked={disabledFlag}
+                onChange={(e) => setDisabledFlag(e.target.checked)}
+                className="h-3.5 w-3.5"
+              />
+              skip these steps
+            </label>
+          )}
+        </div>
+
+        <div className="rounded-md border border-slate-800 bg-slate-900/40 p-3">
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={applyRetry}
+              onChange={(e) => setApplyRetry(e.target.checked)}
+              className="h-3.5 w-3.5"
+            />
+            <span className="text-[11px] uppercase tracking-wider text-slate-400">
+              Retry policy
+            </span>
+          </label>
+          {applyRetry && (
+            <div className="mt-2 space-y-2">
+              <label className="flex items-center gap-2 text-slate-300">
+                <input
+                  type="checkbox"
+                  checked={retryEnabled}
+                  onChange={(e) => setRetryEnabled(e.target.checked)}
+                  className="h-3.5 w-3.5"
+                />
+                enabled
+              </label>
+              <label className="block text-[10px] uppercase tracking-wider text-slate-500">
+                Max retries
+                <input
+                  type="number"
+                  min={0}
+                  max={10}
+                  value={retryMax}
+                  onChange={(e) => setRetryMax(Math.max(0, Math.min(10, Number(e.target.value) || 0)))}
+                  className="mt-0.5 w-full rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-[12px] text-slate-100"
+                />
+              </label>
+              <label className="block text-[10px] uppercase tracking-wider text-slate-500">
+                Backoff (ms)
+                <input
+                  type="number"
+                  min={0}
+                  value={retryBackoff}
+                  onChange={(e) => setRetryBackoff(Math.max(0, Number(e.target.value) || 0))}
+                  className="mt-0.5 w-full rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-[12px] text-slate-100"
+                />
+              </label>
+            </div>
+          )}
+        </div>
+
+        <button
+          type="button"
+          onClick={apply}
+          className="w-full rounded-md bg-sky-600 px-3 py-2 text-[12px] font-medium text-white hover:bg-sky-500"
+        >
+          Apply to {nodes.length} step{nodes.length === 1 ? '' : 's'}
+        </button>
+      </div>
+    </aside>
   );
 }
 

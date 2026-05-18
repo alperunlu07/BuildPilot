@@ -51,34 +51,34 @@ landing experience.
 
 ### Cluster 10.B · Pipeline editor power features
 
-- [ ] **Minimap** — React Flow ships one for free; toggle in the editor
-  toolbar
-- [ ] **Undo / redo stack** — keyboard `Cmd/Ctrl + Z` / `Cmd/Ctrl + Shift + Z`;
-  snapshots after every node add / move / edit / delete
-- [ ] **Multi-select + bulk edit** — `Shift + click` or drag-rectangle to
+- [x] **Minimap** — React Flow ships one for free; toggle in the editor
+  toolbar — `2d3e92f`
+- [x] **Undo / redo stack** — keyboard `Cmd/Ctrl + Z` / `Cmd/Ctrl + Shift + Z`;
+  snapshots after every node add / move / edit / delete — `fb69f68`
+- [x] **Multi-select + bulk edit** — `Shift + click` or drag-rectangle to
   select N nodes; "Bulk edit" side panel applies common fields (host,
-  `continueOnError`, retry policy) to all
-- [ ] **Auto-layout** — `dagre` or `elk` layout button to tidy up a
-  hand-drawn graph; respects manual positions otherwise
-- [ ] **Inline validation badges** — red dot on nodes with missing
+  `continueOnError`, retry policy) to all — `2c54d18`
+- [x] **Auto-layout** — `dagre` or `elk` layout button to tidy up a
+  hand-drawn graph; respects manual positions otherwise — `67f48a7`
+- [x] **Inline validation badges** — red dot on nodes with missing
   required fields; click → jumps to the offending field in the property
-  panel
-- [ ] **Palette node preview on hover** — quick-glance card showing the
-  step's required + optional fields before you drag it onto the canvas
-- [ ] **Edge condition icons + tooltip** — render `success` (✓ green),
+  panel — `0d0075c`
+- [x] **Palette node preview on hover** — quick-glance card showing the
+  step's required + optional fields before you drag it onto the canvas — `f7b38ab`
+- [x] **Edge condition icons + tooltip** — render `success` (✓ green),
   `failure` (✗ red), `always` (∞ slate) as colored icons on edges
-  instead of plain edge lines + edit dialog
-- [ ] **Right-click context menu** on a node — Run from here / Clone /
-  Delete / Copy / Disable temporarily
-- [ ] **Find / replace within a pipeline** — `Cmd/Ctrl + F` in the editor
-  searches node ids, types, and field values
-- [ ] **Copy / paste nodes across pipelines** — clipboard-backed, re-ids
-  on paste
-- [ ] **Disable / skip flag on a node** — visually grays the step out and
+  instead of plain edge lines + edit dialog — `765c628`
+- [x] **Right-click context menu** on a node — Run from here / Clone /
+  Delete / Copy / Disable temporarily — `74c5b14`
+- [x] **Find / replace within a pipeline** — `Cmd/Ctrl + F` in the editor
+  searches node ids, types, and field values — `20901d8`
+- [x] **Copy / paste nodes across pipelines** — clipboard-backed, re-ids
+  on paste — `748e461`
+- [x] **Disable / skip flag on a node** — visually grays the step out and
   the engine treats it as a no-op success (faster than deleting and
-  re-adding when debugging)
+  re-adding when debugging) — `e57c7b0` (UI only; engine-side support is follow-up)
 - [ ] **Group / lane visualization** — colored swimlane backgrounds for
-  the iOS / Android / Notify portion of long pipelines
+  the iOS / Android / Notify portion of long pipelines (deferred — stretch)
 
 ### Cluster 10.C · Build & log experience
 
