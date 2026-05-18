@@ -24,6 +24,7 @@ import { useTranslation } from 'react-i18next';
 import { useStore } from '../store/store';
 import { cn } from '../lib/cn';
 import { useMinWidth } from '../lib/breakpoint';
+import { UserMenu } from './UserMenu';
 
 const WIDTH_KEY = 'buildpilot.sidebar.width';
 const COLLAPSED_KEY = 'buildpilot.sidebar.collapsed';
@@ -268,6 +269,7 @@ export function Sidebar({
           <div className="text-[11px] uppercase tracking-wider text-slate-400">Local CI/CD</div>
         </button>
         <div className="flex items-center gap-1">
+          <UserMenu />
           <button
             type="button"
             onClick={openPalette}

@@ -1729,6 +1729,10 @@ export interface ServerConfig {
   // (and their associated log entries + artifact rows) are pruned on a daily
   // cleanup pass. Set to 0 / omitted to keep everything forever.
   buildRetentionDays?: number;
+  // Cluster 11.A — opt-in LAN auth. Default `{ enabled: false }` keeps the
+  // server open exactly like today; the auth tables + session/token
+  // middleware are wired regardless but skip enforcement when disabled.
+  auth?: AuthConfig;
 }
 
 // ── Slack (Cluster 11.I) ────────────────────────────────────────────────────
@@ -2100,4 +2104,150 @@ export interface BuildTrendsBuild {
   startedAt: number;
   finishedAt: number | null;
   durationMs: number | null;
+}
+
+// ── Cluster 11.A — Auth, identity, audit ───────────────────────────────────
+// All of this only ships behind `auth.enabled` in config.json. When the flag
+// is false the endpoints below still exist but the session middleware skips
+// enforcement, so existing single-user installs work identically to today.
+
+export type UserRole = 'admin' | 'maintainer' | 'viewer';
+
+export interface NotificationPrefs {
+  desktop: boolean;
+  telegram: boolean;
+  slack: boolean;
+  discord: boolean;
+  email: boolean;
+}
+
+export const DEFAULT_NOTIFICATION_PREFS: NotificationPrefs = {
+  desktop: true,
+  telegram: true,
+  slack: true,
+  discord: true,
+  email: false,
+};
+
+// Public shape returned by all user-listing endpoints. The password hash
+// never leaves the server.
+export interface User {
+  id: string;
+  username: string;
+  displayName: string;
+  role: UserRole;
+  createdAt: number;
+  updatedAt: number;
+  lastLoginAt: number | null;
+  notificationPrefs: NotificationPrefs;
+}
+
+export interface CreateUserInput {
+  username: string;
+  password: string;
+  displayName?: string;
+  role?: UserRole;
+}
+
+export interface UpdateUserInput {
+  displayName?: string;
+  role?: UserRole;
+  // Setting a non-empty password resets it; empty/undefined leaves it as-is.
+  password?: string;
+  notificationPrefs?: NotificationPrefs;
+}
+
+export interface LoginRequest {
+  username: string;
+  password: string;
+}
+
+// Returned by GET /api/auth/me — `null` (HTTP 200 with `{ user: null }`)
+// means "auth is enabled but no session"; the special `authDisabled` flag
+// short-circuits the login screen when the server isn't enforcing auth.
+export interface MeResponse {
+  authEnabled: boolean;
+  user: User | null;
+}
+
+// Audit log row. `actor` is the username (or `'anonymous'` when auth is off
+// for a request that mutates state). `resourceId` is best-effort — it's
+// extracted from the URL pattern where possible.
+export type AuditAction = 'create' | 'update' | 'delete' | 'login' | 'logout' | 'other';
+export type AuditResource =
+  | 'project'
+  | 'pipeline'
+  | 'build'
+  | 'host'
+  | 'config'
+  | 'user'
+  | 'auth'
+  | 'apiToken'
+  | 'nodeTemplate'
+  | 'other';
+
+export interface AuditEvent {
+  id: number;
+  ts: number;
+  actor: string;
+  actorUserId: string | null;
+  action: AuditAction;
+  resource: AuditResource;
+  resourceId: string | null;
+  method: string;
+  path: string;
+  statusCode: number;
+  requestId: string | null;
+}
+
+export interface AuditEventsQuery {
+  actor?: string;
+  action?: AuditAction;
+  resource?: AuditResource;
+  since?: number;
+  until?: number;
+  limit?: number;
+}
+
+export interface AuditEventsResponse {
+  events: AuditEvent[];
+  // Set when the result was capped by `limit`. UI shows a "load older" hint.
+  truncated: boolean;
+}
+
+// API tokens are random 32-byte hex values handed to CI scripts. Only the
+// bcrypt hash lives in SQLite; the plaintext is shown once on creation.
+export interface ApiToken {
+  id: string;
+  userId: string;
+  name: string;
+  createdAt: number;
+  lastUsedAt: number | null;
+  // The username + role of the owner — pre-joined so the UI doesn't need a
+  // second fetch to render the list.
+  ownerUsername: string;
+  ownerRole: UserRole;
+}
+
+export interface CreateApiTokenInput {
+  name: string;
+  // Optional. When the caller is an admin this can target another user;
+  // non-admins always create tokens for themselves.
+  userId?: string;
+}
+
+// Server response immediately after a token is created — includes the
+// plaintext value exactly once. Subsequent GETs return only the metadata
+// shape above.
+export interface CreatedApiToken extends ApiToken {
+  token: string;
+}
+
+// Auth block in ServerConfig. Both fields default to "disabled / empty" so
+// brand-new installs behave identically to today. The session secret is
+// generated and persisted automatically the first time `auth.enabled` flips
+// to true.
+export interface AuthConfig {
+  enabled: boolean;
+  sessionSecret: string;
 }

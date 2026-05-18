@@ -1,8 +1,27 @@
 // Tiny wrapper around the browser Notification API. We only fire native
 // notifications when the tab is hidden (or unfocused) so the in-page toast
 // covers the visible case without surfacing two prompts at once.
+//
+// Cluster 11.A — when auth is enabled and the current user has explicitly
+// opted out of desktop notifications via their account preferences, we
+// suppress the native notification regardless of the local opt-in below.
+// When auth is disabled the preference layer is bypassed and the existing
+// behavior is preserved.
 
 const STORAGE_KEY = 'buildpilot.nativeNotifications';
+
+// Bridge for the Zustand store to publish the current user's desktop
+// preference without notifications.ts having to import the store module
+// (which would create a cycle: store -> notifications -> store).
+//
+// `App.tsx` subscribes to the store and pushes the value in here on every
+// change; default is `true` so behavior matches today before the bridge
+// has any chance to fire.
+let desktopAllowedByUserPref = true;
+
+export function setDesktopNotificationsAllowedByUserPref(v: boolean): void {
+  desktopAllowedByUserPref = v;
+}
 
 export type NotificationsState = 'unsupported' | 'denied' | 'default' | 'granted';
 
@@ -15,7 +34,12 @@ export function notificationsEnabled(): boolean {
   if (notificationsState() !== 'granted') return false;
   const v = localStorage.getItem(STORAGE_KEY);
   // Default ON once permission is granted; users can mute via setEnabled(false).
-  return v === null ? true : v === '1';
+  const local = v === null ? true : v === '1';
+  if (!local) return false;
+  // Per-user override (Cluster 11.A). The bridge above is updated by
+  // App.tsx whenever the current user's preferences change; when auth is
+  // disabled it stays true and preserves the pre-existing behavior.
+  return desktopAllowedByUserPref;
 }
 
 export function setEnabled(on: boolean): void {

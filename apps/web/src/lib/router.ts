@@ -34,6 +34,16 @@ export function viewToPath(view: View): string {
       return view.pipelineId
         ? `/flaky-tests?pipelineId=${encodeURIComponent(view.pipelineId)}`
         : '/flaky-tests';
+    case 'login':
+      return '/login';
+    case 'users':
+      return '/users';
+    case 'account':
+      return '/account';
+    case 'audit':
+      return '/audit';
+    case 'apiTokens':
+      return '/api-tokens';
   }
 }
 
@@ -55,6 +65,11 @@ export function pathToView(path: string): View {
     const pid = qs.get('pipelineId');
     return pid ? { type: 'trends', pipelineId: pid } : { type: 'trends' };
   }
+  if (clean === '/login') return { type: 'login' };
+  if (clean === '/users') return { type: 'users' };
+  if (clean === '/account') return { type: 'account' };
+  if (clean === '/audit') return { type: 'audit' };
+  if (clean === '/api-tokens') return { type: 'apiTokens' };
 
   const projectMatch = clean.match(/^\/projects\/([^/]+)$/);
   if (projectMatch) return { type: 'project', id: decodeURIComponent(projectMatch[1]!) };

@@ -1,6 +1,8 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { randomBytes } from 'node:crypto';
 import type {
+  AuthConfig,
   DiscordConfig,
   ServerConfig,
   SlackConfig,
@@ -29,6 +31,13 @@ const DEFAULT_CONFIG: ServerConfig = {
   },
   // Phase 4 Cluster D — disabled by default; opt in via config.json or env.
   buildRetentionDays: 0,
+  // Cluster 11.A — auth is disabled by default. Flipping `enabled` to true
+  // and restarting the server activates session + API-token enforcement; a
+  // sessionSecret is generated automatically on first save if missing.
+  auth: {
+    enabled: false,
+    sessionSecret: '',
+  },
 };
 
 // Configs written by older builds that still carry the previous well-known
@@ -83,6 +92,12 @@ function toOnDisk(cfg: ServerConfig): ServerConfig {
       publicKey: cfg.discord.publicKey ? encryptSecret(cfg.discord.publicKey) : '',
     };
   }
+  if (cfg.auth) {
+    out.auth = {
+      ...cfg.auth,
+      sessionSecret: cfg.auth.sessionSecret ? encryptSecret(cfg.auth.sessionSecret) : '',
+    };
+  }
   return out;
 }
 
@@ -110,6 +125,12 @@ function toRuntime(cfg: ServerConfig): ServerConfig {
       publicKey: readSecret(cfg.discord.publicKey),
     };
   }
+  if (cfg.auth) {
+    out.auth = {
+      ...cfg.auth,
+      sessionSecret: readSecret(cfg.auth.sessionSecret),
+    };
+  }
   return out;
 }
 
@@ -130,7 +151,21 @@ function needsRewrite(cfg: ServerConfig): boolean {
   if (d) {
     if (d.publicKey && !isEncrypted(d.publicKey)) return true;
   }
+  const a = cfg.auth;
+  if (a) {
+    if (a.sessionSecret && !isEncrypted(a.sessionSecret)) return true;
+  }
   return false;
+}
+
+// Generate a fresh 32-byte hex session signing secret if auth is enabled
+// but no secret has been provisioned yet. Idempotent: returns the input
+// unchanged when a secret is already set or auth is disabled.
+function ensureSessionSecret(cfg: ServerConfig): { cfg: ServerConfig; changed: boolean } {
+  if (!cfg.auth || !cfg.auth.enabled) return { cfg, changed: false };
+  if (cfg.auth.sessionSecret) return { cfg, changed: false };
+  const secret = randomBytes(32).toString('hex');
+  return { cfg: { ...cfg, auth: { ...cfg.auth, sessionSecret: secret } }, changed: true };
 }
 
 export function loadConfig(): ServerConfig {
@@ -145,15 +180,19 @@ export function loadConfig(): ServerConfig {
   const raw = readFileSync(CONFIG_FILE, 'utf-8');
   const parsed = JSON.parse(raw) as Partial<ServerConfig>;
   const merged = { ...DEFAULT_CONFIG, ...parsed } as ServerConfig;
+  // Old configs predate the auth block — backfill the default so the rest
+  // of the helpers can assume `cfg.auth` is always present.
+  if (!merged.auth) merged.auth = { ...DEFAULT_CONFIG.auth! };
   const migrated = migrateLegacyDefaults(merged);
+  const { cfg: withSecret, changed: secretChanged } = ensureSessionSecret(migrated);
 
   // Encrypt-at-rest sweep: if the file holds any plaintext telegram secrets,
   // rewrite the file with everything encrypted. Defaults migration also
   // triggers a rewrite so old port/origin pairs get pinned to the new ones.
-  if (migrated !== merged || needsRewrite(migrated)) {
-    writeFileSync(CONFIG_FILE, JSON.stringify(toOnDisk(migrated), null, 2), 'utf-8');
+  if (withSecret !== merged || secretChanged || needsRewrite(withSecret)) {
+    writeFileSync(CONFIG_FILE, JSON.stringify(toOnDisk(withSecret), null, 2), 'utf-8');
   }
-  const runtime = toRuntime(migrated);
+  const runtime = toRuntime(withSecret);
   cachedConfig = runtime;
   return runtime;
 }
@@ -197,6 +236,25 @@ export function saveDiscordConfig(next: DiscordConfig): DiscordConfig {
   writeFileSync(CONFIG_FILE, JSON.stringify(toOnDisk(updated), null, 2), 'utf-8');
   cachedConfig = updated;
   return updated.discord!;
+}
+
+// ── Auth (Cluster 11.A) ────────────────────────────────────────────────────
+export function getAuthConfigRuntime(): AuthConfig {
+  // Always returns a populated AuthConfig — older configs that predate the
+  // block get the disabled-by-default shape.
+  return cachedConfig?.auth ?? { enabled: false, sessionSecret: '' };
+}
+
+export function saveAuthConfig(next: AuthConfig): AuthConfig {
+  const base = cachedConfig ?? loadConfig();
+  let merged: ServerConfig = { ...base, auth: { ...next } };
+  // Generate-on-save: if the caller flips enabled=true without supplying a
+  // secret, mint one here so we never persist `{ enabled: true, sessionSecret: '' }`.
+  const ensured = ensureSessionSecret(merged);
+  merged = ensured.cfg;
+  writeFileSync(CONFIG_FILE, JSON.stringify(toOnDisk(merged), null, 2), 'utf-8');
+  cachedConfig = merged;
+  return merged.auth!;
 }
 
 export const CONFIG_PATH = CONFIG_FILE;

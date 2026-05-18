@@ -24,9 +24,14 @@ import { HostsPage } from './pages/HostsPage';
 import { TestReportPage } from './pages/TestReportPage';
 import { FlakyTestsPage } from './pages/FlakyTestsPage';
 import { BuildTrendsPage } from './pages/BuildTrendsPage';
+import { LoginPage } from './pages/LoginPage';
+import { UsersPage } from './pages/UsersPage';
+import { AccountPage } from './pages/AccountPage';
+import { AuditLogPage } from './pages/AuditLogPage';
+import { ApiTokensPage } from './pages/ApiTokensPage';
 import { useStore } from './store/store';
 import { onConnected, subscribe } from './lib/events';
-import { ensurePermission } from './lib/notifications';
+import { ensurePermission, setDesktopNotificationsAllowedByUserPref } from './lib/notifications';
 import { useGlobalShortcuts } from './lib/keyboard';
 import { applyTheme, subscribeSystemTheme } from './lib/theme';
 import { pathToView, viewToPath, viewsEqual } from './lib/router';
@@ -43,6 +48,10 @@ export function App() {
   const handleEvent = useStore((s) => s.handleEvent);
   const confirmation = useStore((s) => s.confirmation);
   const closeConfirmation = useStore((s) => s.closeConfirmation);
+  const refreshAuth = useStore((s) => s.refreshAuth);
+  const authEnabled = useStore((s) => s.authEnabled);
+  const currentUser = useStore((s) => s.currentUser);
+  const authChecked = useStore((s) => s.authChecked);
 
   const [openAdd, setOpenAdd] = useState(false);
   const [openHosts, setOpenHosts] = useState(false);
@@ -73,15 +82,46 @@ export function App() {
   }, [hasUnread]);
 
   useEffect(() => {
+    // Cluster 11.A — resolve auth state before loading anything that
+    // requires authentication. When auth is disabled this resolves
+    // immediately and the rest of the loaders proceed normally.
+    void refreshAuth();
+  }, [refreshAuth]);
+
+  useEffect(() => {
+    if (!authChecked) return;
+    // When auth is on and the user isn't signed in yet, skip the data
+    // loaders — every request would 401 and surface noise in the console.
+    if (authEnabled && !currentUser) return;
     void loadProjects();
     void loadPipelines();
     void loadBuilds();
     void loadNodeTemplates();
     void loadHosts();
     void ensurePermission();
-  }, [loadProjects, loadPipelines, loadBuilds, loadNodeTemplates, loadHosts]);
+  }, [
+    authChecked,
+    authEnabled,
+    currentUser,
+    loadProjects,
+    loadPipelines,
+    loadBuilds,
+    loadNodeTemplates,
+    loadHosts,
+  ]);
 
   useEffect(() => subscribe(handleEvent), [handleEvent]);
+
+  // Cluster 11.A — keep notifications.ts in sync with the current user's
+  // desktop preference without creating a circular import between the
+  // store and the notifications helper.
+  useEffect(() => {
+    if (!authEnabled || !currentUser) {
+      setDesktopNotificationsAllowedByUserPref(true);
+      return;
+    }
+    setDesktopNotificationsAllowedByUserPref(currentUser.notificationPrefs?.desktop !== false);
+  }, [authEnabled, currentUser]);
 
   // Refresh data whenever the SSE stream (re)connects so the dashboard recovers
   // automatically after a server restart or a slow first start.
@@ -160,6 +200,11 @@ export function App() {
           {view.type === 'testReport' && <TestReportPage buildId={view.buildId} />}
           {view.type === 'flakyTests' && <FlakyTestsPage />}
           {view.type === 'trends' && <BuildTrendsPage />}
+          {view.type === 'login' && <LoginPage />}
+          {view.type === 'users' && <UsersPage />}
+          {view.type === 'account' && <AccountPage />}
+          {view.type === 'audit' && <AuditLogPage />}
+          {view.type === 'apiTokens' && <ApiTokensPage />}
         </div>
         <BuildLogPanel />
       </main>
