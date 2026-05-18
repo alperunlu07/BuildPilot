@@ -224,9 +224,9 @@ Cross-refs: `TODO.md` Phase 2.6.C.
 
 Cross-refs: `TODO.md` Phase 2.6.C, 4.B.
 
-- [ ] **Approval step type** — pauses the build; renders an in-app card
+- [x] **Approval step type** — pauses the build; renders an in-app card
   on `BuildDetailPage` with custom input fields (release notes, version,
-  destination group)
+  destination group) — `10a5122`
 - [ ] **Approvals inbox** — a top-level view listing every pipeline
   currently waiting on the current user
 - [ ] **Required-reviewer policy** — `N approvers, M of them with role X`
