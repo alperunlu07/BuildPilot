@@ -1,6 +1,11 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import type { ServerConfig, TelegramConfig } from '@buildpilot/shared-types';
+import type {
+  DiscordConfig,
+  ServerConfig,
+  SlackConfig,
+  TelegramConfig,
+} from '@buildpilot/shared-types';
 import { decryptSecret, encryptSecret, isEncrypted } from './crypto/secrets';
 import { CONFIG_DIR } from './paths';
 
@@ -57,38 +62,74 @@ function readSecret(v: string | undefined): string {
 // We always re-encrypt even if the input was already an enc: blob — encryptSecret
 // is idempotent for that case (returns as-is).
 function toOnDisk(cfg: ServerConfig): ServerConfig {
-  if (!cfg.telegram) return cfg;
-  return {
-    ...cfg,
-    telegram: {
+  const out: ServerConfig = { ...cfg };
+  if (cfg.telegram) {
+    out.telegram = {
       ...cfg.telegram,
       botToken: cfg.telegram.botToken ? encryptSecret(cfg.telegram.botToken) : '',
       defaultChatId: cfg.telegram.defaultChatId ? encryptSecret(cfg.telegram.defaultChatId) : '',
-    },
-  };
+    };
+  }
+  if (cfg.slack) {
+    out.slack = {
+      ...cfg.slack,
+      signingSecret: cfg.slack.signingSecret ? encryptSecret(cfg.slack.signingSecret) : '',
+      botToken: cfg.slack.botToken ? encryptSecret(cfg.slack.botToken) : '',
+    };
+  }
+  if (cfg.discord) {
+    out.discord = {
+      ...cfg.discord,
+      publicKey: cfg.discord.publicKey ? encryptSecret(cfg.discord.publicKey) : '',
+    };
+  }
+  return out;
 }
 
 // Build the runtime representation: secrets are decrypted so callers (the
 // telegram bot, the telegramNotify step) can use them directly.
 function toRuntime(cfg: ServerConfig): ServerConfig {
-  if (!cfg.telegram) return cfg;
-  return {
-    ...cfg,
-    telegram: {
+  const out: ServerConfig = { ...cfg };
+  if (cfg.telegram) {
+    out.telegram = {
       ...cfg.telegram,
       botToken: readSecret(cfg.telegram.botToken),
       defaultChatId: readSecret(cfg.telegram.defaultChatId),
-    },
-  };
+    };
+  }
+  if (cfg.slack) {
+    out.slack = {
+      ...cfg.slack,
+      signingSecret: readSecret(cfg.slack.signingSecret),
+      botToken: readSecret(cfg.slack.botToken),
+    };
+  }
+  if (cfg.discord) {
+    out.discord = {
+      ...cfg.discord,
+      publicKey: readSecret(cfg.discord.publicKey),
+    };
+  }
+  return out;
 }
 
 // True when the file representation differs from what toOnDisk would write —
 // i.e. some secret-shaped field is still plaintext and needs to be migrated.
 function needsRewrite(cfg: ServerConfig): boolean {
   const t = cfg.telegram;
-  if (!t) return false;
-  if (t.botToken && !isEncrypted(t.botToken)) return true;
-  if (t.defaultChatId && !isEncrypted(t.defaultChatId)) return true;
+  if (t) {
+    if (t.botToken && !isEncrypted(t.botToken)) return true;
+    if (t.defaultChatId && !isEncrypted(t.defaultChatId)) return true;
+  }
+  const s = cfg.slack;
+  if (s) {
+    if (s.signingSecret && !isEncrypted(s.signingSecret)) return true;
+    if (s.botToken && !isEncrypted(s.botToken)) return true;
+  }
+  const d = cfg.discord;
+  if (d) {
+    if (d.publicKey && !isEncrypted(d.publicKey)) return true;
+  }
   return false;
 }
 
@@ -130,6 +171,32 @@ export function saveTelegramConfig(next: TelegramConfig): TelegramConfig {
 
 export function getTelegramConfigRuntime(): TelegramConfig | null {
   return cachedConfig?.telegram ?? null;
+}
+
+// ── Slack (Cluster 11.I) ────────────────────────────────────────────────────
+export function getSlackConfigRuntime(): SlackConfig | null {
+  return cachedConfig?.slack ?? null;
+}
+
+export function saveSlackConfig(next: SlackConfig): SlackConfig {
+  const base = cachedConfig ?? loadConfig();
+  const updated: ServerConfig = { ...base, slack: { ...next } };
+  writeFileSync(CONFIG_FILE, JSON.stringify(toOnDisk(updated), null, 2), 'utf-8');
+  cachedConfig = updated;
+  return updated.slack!;
+}
+
+// ── Discord (Cluster 11.I) ──────────────────────────────────────────────────
+export function getDiscordConfigRuntime(): DiscordConfig | null {
+  return cachedConfig?.discord ?? null;
+}
+
+export function saveDiscordConfig(next: DiscordConfig): DiscordConfig {
+  const base = cachedConfig ?? loadConfig();
+  const updated: ServerConfig = { ...base, discord: { ...next } };
+  writeFileSync(CONFIG_FILE, JSON.stringify(toOnDisk(updated), null, 2), 'utf-8');
+  cachedConfig = updated;
+  return updated.discord!;
 }
 
 export const CONFIG_PATH = CONFIG_FILE;

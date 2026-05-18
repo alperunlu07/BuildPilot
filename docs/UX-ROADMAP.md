@@ -282,8 +282,8 @@ Cross-refs: `TODO.md` Phase 4.D.
 
 Cross-refs: `TODO.md` Phase 3.
 
-- [ ] **Slack slash commands** — `/build pipeline-name` parity with the
-  existing Telegram bot
+- [x] **Slack slash commands** — `/build pipeline-name` parity with the
+  existing Telegram bot _(ac40f70)_
 - [ ] **Discord slash commands** ditto
 - [ ] **Per-step `notifyOn` policy** — `always | failure | recovered`;
   reduces "build green again" notification noise
