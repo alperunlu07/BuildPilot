@@ -162,6 +162,9 @@ function Editor({ pipeline }: Props) {
   const nodeTemplates = useStore((s) => s.nodeTemplates);
   const saveNodeTemplate = useStore((s) => s.saveNodeTemplate);
   const deleteNodeTemplate = useStore((s) => s.deleteNodeTemplate);
+  // WP7: lanes feed the Triggers panel's execution-lane dropdown. Loaded
+  // app-wide in App.tsx; we just read here.
+  const lanes = useStore((s) => s.lanes);
   const stepStatus = useStore((s) => s.stepStatus[pipeline.id]);
   const stepTimings = useStore((s) => s.stepTimings[pipeline.id]);
   // Pull entries for the most recent build of this pipeline so the per-node
@@ -188,6 +191,9 @@ function Editor({ pipeline }: Props) {
   const [name, setName] = useState(pipeline.name);
   const [watch, setWatch] = useState<PipelineWatch>(pipeline.watch);
   const [matrix, setMatrix] = useState<Matrix | null>(pipeline.matrix ?? null);
+  // WP7: lane assignment + scheduling priority (lower = earlier inside the lane).
+  const [laneId, setLaneId] = useState(pipeline.laneId);
+  const [priority, setPriority] = useState(pipeline.priority);
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [branches, setBranches] = useState<string[]>([]);
@@ -231,6 +237,8 @@ function Editor({ pipeline }: Props) {
     setName(pipeline.name);
     setWatch(pipeline.watch);
     setMatrix(pipeline.matrix ?? null);
+    setLaneId(pipeline.laneId);
+    setPriority(pipeline.priority);
     setDirty(false);
     setSelectedNodeId(null);
     setSelectedNodeIds([]);
@@ -654,6 +662,8 @@ function Editor({ pipeline }: Props) {
       const updated = await api.updatePipeline(pipeline.id, {
         name,
         watch,
+        laneId,
+        priority,
         nodes: reactFlowNodesToPipeline(nodes),
         edges: reactFlowEdgesToPipeline(edges),
         matrix,
@@ -888,6 +898,60 @@ function Editor({ pipeline }: Props) {
       {triggersOpen && (
         <div className="border-b border-slate-800 bg-slate-900/60 px-4 py-3">
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            <label className="block text-xs text-slate-300">
+              <span className="mb-1 block text-[11px] uppercase tracking-wide text-slate-500">
+                Execution Lane
+              </span>
+              {lanes.length === 0 ? (
+                <select
+                  disabled
+                  className="w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1.5 text-xs text-slate-500"
+                >
+                  <option>Loading lanes…</option>
+                </select>
+              ) : (
+                <select
+                  value={laneId}
+                  onChange={(e) => {
+                    setLaneId(e.target.value);
+                    setDirty(true);
+                  }}
+                  className="w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1.5 text-xs text-slate-100 focus:border-sky-500 focus:outline-none"
+                >
+                  {/* If the pipeline's current laneId no longer exists in the
+                      lanes list (e.g. lane was deleted out-of-band), surface
+                      it as an orphan placeholder so the user notices and can
+                      reassign. The server's DELETE 409 normally prevents this. */}
+                  {!lanes.some((l) => l.id === laneId) && (
+                    <option value={laneId}>(orphan: {laneId})</option>
+                  )}
+                  {lanes.map((l) => (
+                    <option key={l.id} value={l.id}>
+                      {l.name} (max {l.maxConcurrency})
+                    </option>
+                  ))}
+                </select>
+              )}
+            </label>
+            <label className="block text-xs text-slate-300">
+              <span className="mb-1 block text-[11px] uppercase tracking-wide text-slate-500">
+                Priority
+              </span>
+              <input
+                type="number"
+                min={0}
+                max={10000}
+                value={priority}
+                onChange={(e) => {
+                  setPriority(Number(e.target.value));
+                  setDirty(true);
+                }}
+                className="w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1.5 text-xs text-slate-100 focus:border-sky-500 focus:outline-none"
+              />
+              <span className="mt-1 block text-[10px] text-slate-500">
+                Lower runs first within the lane. Default 100.
+              </span>
+            </label>
             <div className="block text-xs text-slate-300">
               <span className="mb-1 block text-[11px] uppercase tracking-wide text-slate-400">
                 Tag pattern (glob)
