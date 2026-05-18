@@ -99,8 +99,8 @@ landing experience.
 - [ ] **Step duration comparison** — on a finished build, show each step's
   duration alongside the previous successful build's duration with
   delta colored (+12% red, -8% green)
-- [ ] **Log section grouping** — collapsible groups via existing CI
-  conventions (`::group::name` / `--- name`), auto-detected in stdout
+- [x] **Log section grouping** — collapsible groups via existing CI
+  conventions (`::group::name` / `--- name`), auto-detected in stdout — `a7ddef7`
 - [x] **Inline ANSI color support** in LogTable — many shell tools emit
   color; LogTable currently strips — `4ac2c44`
 - [ ] **Build diff view** — pick two builds; show step-by-step duration
