@@ -1760,3 +1760,123 @@ export interface TelegramApprovalConfig {
   // When unset, falls back to telegram.defaultChatId.
   chatId?: string;
 }
+
+// ── Metrics ─────────────────────────────────────────────────────────────────
+// Phase 4 Cluster 10.D — metrics-led home dashboard. Response shape for
+// `GET /api/metrics/home`. All counts cover *finished* builds unless noted.
+export interface HomeMetrics {
+  // Builds currently in `pending` or `running` state.
+  runningBuildsCount: number;
+  // Number of finished builds in the trailing 24h window.
+  builds24h: number;
+  // success / failed / cancelled breakdown for the same 24h window.
+  successes24h: number;
+  failures24h: number;
+  cancelled24h: number;
+  // 0..1 — successes24h / (successes24h + failures24h). Null when no
+  // success+failure finished in the window (the UI can render "—").
+  successRate24h: number | null;
+  // Most recent 5 *failed* builds.
+  recentFailures: HomeMetricsRecentBuild[];
+  // Top 5 pipelines by average duration over their most recent up-to-30
+  // successful builds.
+  slowestPipelines: HomeMetricsSlowestPipeline[];
+  // Disk usage snapshot. `bytes` is the sum of `build_artifacts.size`.
+  diskUsage: {
+    totalBytes: number;
+    artifactCount: number;
+    buildCount: number;
+  };
+}
+
+export interface HomeMetricsRecentBuild {
+  id: string;
+  pipelineId: string;
+  pipelineName: string;
+  projectId: string;
+  projectName: string;
+  status: BuildStatus;
+  triggerSha: string;
+  triggerBranch: string;
+  startedAt: number;
+  finishedAt: number | null;
+  durationMs: number | null;
+}
+
+export interface HomeMetricsSlowestPipeline {
+  pipelineId: string;
+  pipelineName: string;
+  projectId: string;
+  projectName: string;
+  // Average duration of the up-to-30 most recent successful builds, in ms.
+  avgDurationMs: number;
+  sampleCount: number;
+}
+
+// `GET /api/metrics/pipeline/:id` — duration P50/P95 sparkline + step
+// duration breakdown over the last 30 builds for a single pipeline.
+export interface PipelineMetrics {
+  pipelineId: string;
+  pipelineName: string;
+  // Up-to-30 most recent finished builds, oldest → newest, for sparklines.
+  recentBuilds: PipelineMetricsBuild[];
+  // P50 / P95 over `recentBuilds` where the build has a finishedAt.
+  durationP50Ms: number | null;
+  durationP95Ms: number | null;
+  // Top 5 step types by average duration (descending). Computed from
+  // build_log_entries (▶ step started → ✔ step ok / ✖ step failed) over
+  // the same sample set.
+  slowestSteps: PipelineMetricsStep[];
+}
+
+export interface PipelineMetricsBuild {
+  id: string;
+  status: BuildStatus;
+  startedAt: number;
+  finishedAt: number | null;
+  durationMs: number | null;
+}
+
+export interface PipelineMetricsStep {
+  // Node id (stable within a pipeline) — also returned so the editor can
+  // highlight the actual node.
+  nodeId: string;
+  // The step type (e.g. `shell`, `unityBatch`). Useful as a label when the
+  // node has no human-readable name.
+  stepType: StepType;
+  avgDurationMs: number;
+  maxDurationMs: number;
+  sampleCount: number;
+}
+
+// `GET /api/metrics/disk-usage` — per-pipeline artifact byte breakdown so
+// the Disk Usage page can show where space goes. `pipelines` are sorted
+// descending by bytes.
+export interface DiskUsageReport {
+  totalBytes: number;
+  artifactCount: number;
+  buildCount: number;
+  pipelines: DiskUsagePipelineEntry[];
+  // Artifacts whose owning build was pruned (orphaned rows). They still
+  // consume bytes and can be cleaned up by re-running prune.
+  orphanBytes: number;
+  orphanArtifactCount: number;
+}
+
+export interface DiskUsagePipelineEntry {
+  pipelineId: string;
+  pipelineName: string;
+  projectId: string;
+  projectName: string;
+  bytes: number;
+  artifactCount: number;
+  buildCount: number;
+}
+
+// Response shape for `POST /api/builds/prune?olderThanDays=N`.
+export interface PruneBuildsResponse {
+  cutoffMs: number;
+  builds: number;
+  logEntries: number;
+  artifacts: number;
+}

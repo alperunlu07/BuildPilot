@@ -5,12 +5,14 @@ import { BuildLogPanel } from './components/BuildLogPanel';
 import { ConfirmDialog } from './components/ConfirmDialog';
 import { HostsDialog } from './components/HostsDialog';
 import { ToastContainer } from './components/ToastContainer';
+import { HomePage } from './pages/HomePage';
 import { ProjectsPage } from './pages/ProjectsPage';
 import { ProjectDetailPage } from './pages/ProjectDetailPage';
 import { PipelinePage } from './pages/PipelinePage';
 import { BuildsPage } from './pages/BuildsPage';
 import { BuildDetailPage } from './pages/BuildDetailPage';
 import { SettingsPage } from './pages/SettingsPage';
+import { DiskUsagePage } from './pages/DiskUsagePage';
 import { useStore } from './store/store';
 import { onConnected, subscribe } from './lib/events';
 import { ensurePermission } from './lib/notifications';
@@ -62,12 +64,14 @@ export function App() {
       />
       <main className="flex min-w-0 flex-1 flex-col">
         <div className="min-h-0 flex-1 overflow-y-auto">
+          {view.type === 'home' && <HomePage />}
           {view.type === 'projects' && <ProjectsPage onAdd={() => setOpenAdd(true)} />}
           {view.type === 'project' && <ProjectDetailPage projectId={view.id} />}
           {view.type === 'pipeline' && <PipelinePage pipelineId={view.id} />}
           {view.type === 'builds' && <BuildsPage />}
           {view.type === 'build' && <BuildDetailPage buildId={view.id} />}
           {view.type === 'settings' && <SettingsPage />}
+          {view.type === 'diskUsage' && <DiskUsagePage />}
         </div>
         <BuildLogPanel />
       </main>

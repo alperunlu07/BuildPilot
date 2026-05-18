@@ -10,10 +10,10 @@ metrics-first home view (running builds, success rate, recent failures,
 slowest pipelines, disk usage) plus the supporting endpoints and a few
 satellite widgets.
 
-- [ ] Home dashboard — new landing view with: running builds count, last-24h
+- [x] Home dashboard — new landing view with: running builds count, last-24h
       success rate, recent failures (last 5), slowest pipelines (top 5 by
       avg duration), disk usage summary. Add server endpoint
-      `GET /api/metrics/home`.
+      `GET /api/metrics/home`. *(commit TBD)*
 - [ ] Per-pipeline metrics panel — duration P50/P95 sparkline + step
       duration breakdown over last 30 builds. Endpoint
       `GET /api/metrics/pipeline/:id`. Render as a section on the home page

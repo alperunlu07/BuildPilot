@@ -1,4 +1,4 @@
-import { Plus, Folder, GitBranch, History, Server, Settings, Trash2 } from 'lucide-react';
+import { Home, Plus, Folder, GitBranch, History, Server, Settings, Trash2 } from 'lucide-react';
 import { useStore } from '../store/store';
 import { cn } from '../lib/cn';
 
@@ -38,6 +38,19 @@ export function Sidebar({ onAddProject, onManageHosts }: Props) {
       </div>
 
       <div className="space-y-0.5 px-2 pt-3">
+        <button
+          type="button"
+          onClick={() => setView({ type: 'home' })}
+          className={cn(
+            'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm',
+            view.type === 'home' || view.type === 'diskUsage'
+              ? 'bg-slate-800 text-slate-100'
+              : 'text-slate-300 hover:bg-slate-800/60',
+          )}
+        >
+          <Home size={14} className="text-sky-400" />
+          <span>Home</span>
+        </button>
         <button
           type="button"
           onClick={() => setView({ type: 'builds' })}

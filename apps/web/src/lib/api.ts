@@ -3,10 +3,14 @@ import type {
   BuildArtifact,
   BuildLogEntry,
   Commit,
+  DiskUsageReport,
+  HomeMetrics,
   NodeTemplate,
   Pipeline,
+  PipelineMetrics,
   Project,
   ProjectSummary,
+  PruneBuildsResponse,
   SshHost,
   StepType,
   TelegramConfigPublic,
@@ -192,5 +196,14 @@ export const api = {
     http<{ ok: true } | { ok: false; error: string }>('/config/telegram/test', {
       method: 'POST',
       body: JSON.stringify(input),
+    }),
+
+  // ── Metrics (Cluster 10.D) ───────────────────────────────
+  homeMetrics: () => http<HomeMetrics>('/metrics/home'),
+  pipelineMetrics: (id: string) => http<PipelineMetrics>(`/metrics/pipeline/${id}`),
+  diskUsage: () => http<DiskUsageReport>('/metrics/disk-usage'),
+  pruneBuilds: (olderThanDays: number) =>
+    http<PruneBuildsResponse>(`/builds/prune?olderThanDays=${olderThanDays}`, {
+      method: 'POST',
     }),
 };

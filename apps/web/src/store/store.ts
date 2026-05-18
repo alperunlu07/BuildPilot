@@ -18,12 +18,14 @@ import { notify } from '../lib/notifications';
 const MAX_LIVE_ENTRIES_PER_BUILD = 5000;
 
 export type View =
+  | { type: 'home' }
   | { type: 'projects' }
   | { type: 'project'; id: string }
   | { type: 'pipeline'; id: string }
   | { type: 'builds' }
   | { type: 'build'; id: string }
-  | { type: 'settings' };
+  | { type: 'settings' }
+  | { type: 'diskUsage' };
 
 export interface CommitToast {
   id: string;
@@ -128,7 +130,7 @@ export const useStore = create<State>((set, get) => ({
   nodeTemplates: [],
   hosts: [],
   activeBuild: null,
-  view: { type: 'projects' },
+  view: { type: 'home' },
   toasts: [],
   stepStatus: {},
   stepTimings: {},
