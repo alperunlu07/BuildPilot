@@ -35,7 +35,8 @@ export type View =
   | { type: 'builds' }
   | { type: 'build'; id: string }
   | { type: 'settings' }
-  | { type: 'diskUsage' };
+  | { type: 'diskUsage' }
+  | { type: 'hosts' };
 
 export interface CommitToast {
   id: string;

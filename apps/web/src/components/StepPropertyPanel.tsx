@@ -86,6 +86,11 @@ export function StepPropertyPanel({
     onChange(node.id, { ...(node.data as Record<string, unknown>), [name]: value });
   };
 
+  // Cluster 11.H — only steps that pick a host (iOS / SSH family) get the
+  // "Requires capabilities" affordance. Detect via the field schema so any
+  // new host-aware step type opts in automatically.
+  const stepAcceptsHost = def.fields.some((f) => f.type === 'hostSelect');
+
   return (
     <aside className="flex h-full w-80 shrink-0 flex-col border-l border-slate-800 bg-slate-950">
       <div className="border-b border-slate-800 px-4 py-3">
@@ -153,6 +158,18 @@ export function StepPropertyPanel({
               onChange={(v) => updateField(field.name, v)}
             />
           ))}
+          {stepAcceptsHost && (
+            <CapabilityTagsSection
+              value={(node.data as Record<string, unknown>).requires as string[] | undefined}
+              hostCapabilities={pickHostCapabilities(
+                hosts,
+                (node.data as Record<string, unknown>).hostId as string | undefined,
+              )}
+              onChange={(next) =>
+                onChange(node.id, { ...(node.data as Record<string, unknown>), requires: next })
+              }
+            />
+          )}
           <CommonControlsSection
             data={node.data as Record<string, unknown>}
             onChange={(patch) =>
@@ -286,6 +303,101 @@ function AiAutoFixSection({
             On failure the pipeline runs the chosen CLI with this prompt, then re-runs
             the step. Loops up to maxRetries times before bailing out.
           </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Cluster 11.H — tag-based step routing UI. Persists in `node.data.requires`
+// as a string[] so the dispatcher (TODO Phase 4.D #multi-agent) can later
+// pick an eligible host. For now the chips are documentation-only and we
+// surface a hint when the currently-selected hostId doesn't appear to
+// satisfy a tag (informational; doesn't block save).
+const CAPABILITY_TAG_OPTIONS = [
+  'mac',
+  'linux',
+  'xcode15',
+  'xcode16',
+  'arch:arm64',
+  'arch:x86_64',
+] as const;
+
+function pickHostCapabilities(
+  hosts: SshHost[],
+  hostId: string | undefined,
+): import('@buildpilot/shared-types').HostCapabilities | undefined {
+  if (!hostId || hostId.trim().length === 0) return undefined;
+  return hosts.find((h) => h.id === hostId)?.capabilities;
+}
+
+// Compare a requested tag against a host's capability snapshot. Returns
+// undefined for unknown tags (so we don't render a false-negative warning).
+function tagMatches(
+  tag: string,
+  caps: import('@buildpilot/shared-types').HostCapabilities | undefined,
+): boolean | undefined {
+  if (!caps) return undefined;
+  if (tag === 'mac') return !!caps.macosVersion;
+  if (tag === 'linux') return !caps.macosVersion;
+  if (tag === 'xcode15') return !!caps.xcodeVersion && caps.xcodeVersion.includes('15');
+  if (tag === 'xcode16') return !!caps.xcodeVersion && caps.xcodeVersion.includes('16');
+  if (tag === 'arch:arm64') return caps.arch === 'arm64';
+  if (tag === 'arch:x86_64') return caps.arch === 'x86_64';
+  return undefined;
+}
+
+function CapabilityTagsSection({
+  value,
+  hostCapabilities,
+  onChange,
+}: {
+  value: string[] | undefined;
+  hostCapabilities: import('@buildpilot/shared-types').HostCapabilities | undefined;
+  onChange(next: string[] | undefined): void;
+}) {
+  const tags = Array.isArray(value) ? value : [];
+  const toggle = (tag: string) => {
+    const next = tags.includes(tag) ? tags.filter((t) => t !== tag) : [...tags, tag];
+    onChange(next.length > 0 ? next : undefined);
+  };
+  const unsatisfied = tags
+    .map((t) => ({ tag: t, ok: tagMatches(t, hostCapabilities) }))
+    .filter((x) => x.ok === false);
+  return (
+    <div className="mt-2 rounded-md border border-slate-800 bg-slate-900/40 p-3">
+      <div className="text-[10px] uppercase tracking-wider text-slate-400">
+        Requires capabilities
+      </div>
+      <p className="mt-1 text-[10px] text-slate-400">
+        Capability tags are currently surfaced for documentation; engine routing
+        comes in <code>TODO.md</code> Phase 4.D #multi-agent.
+      </p>
+      <div className="mt-2 flex flex-wrap gap-1">
+        {CAPABILITY_TAG_OPTIONS.map((tag) => {
+          const active = tags.includes(tag);
+          return (
+            <button
+              key={tag}
+              type="button"
+              aria-pressed={active}
+              onClick={() => toggle(tag)}
+              className={cn(
+                'focusable rounded-full border px-2 py-0.5 text-[10px] font-medium',
+                active
+                  ? 'border-sky-500 bg-sky-900/40 text-sky-100'
+                  : 'border-slate-700 bg-slate-900 text-slate-300 hover:border-slate-500',
+              )}
+            >
+              {tag}
+            </button>
+          );
+        })}
+      </div>
+      {unsatisfied.length > 0 && (
+        <div className="mt-2 rounded border border-amber-800/60 bg-amber-950/30 px-2 py-1 text-[10px] text-amber-200">
+          Heads up: the selected host's capability snapshot doesn't satisfy{' '}
+          {unsatisfied.map((u) => u.tag).join(', ')}. Probe the host or pick a different one.
         </div>
       )}
     </div>

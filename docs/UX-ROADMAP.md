@@ -271,12 +271,13 @@ Cross-refs: `TODO.md` Phase 4.A.
 
 Cross-refs: `TODO.md` Phase 4.D.
 
-- [ ] **Hosts page redesign** — current `HostsDialog` is a modal; promote
+- [x] **Hosts page redesign** — current `HostsDialog` is a modal; promote
   to a full page with capability badges, status (online/offline/last
-  seen), inflight build count
-- [ ] **Host load chart** — concurrent build count per host over time
-- [ ] **Tag-based step routing UI** — `requires: [mac, xcode15]` on a
-  step; dispatcher picks an eligible host
+  seen), inflight build count — `736d882`
+- [x] **Host load chart** — concurrent build count per host over time — `01244e9`
+- [x] **Tag-based step routing UI** — `requires: [mac, xcode15]` on a
+  step; dispatcher picks an eligible host — `887525c` (UI only; engine
+  routing comes in `TODO.md` Phase 4.D #multi-agent)
 
 ### Cluster 11.I · Notification channel expansion
 
@@ -341,5 +342,5 @@ theme.
 | Phase                              | Done | Pending | Status |
 | ---------------------------------- | ---: | ------: | ------ |
 | 10. UI/UX overhaul (A–G)           |  54  |    2    | ✅ 96% (split view + swimlanes deferred as stretch) |
-| 11. Platform expansion             |   0  |   30    | ⏸ 0%   |
+| 11. Platform expansion             |   3  |   27    | 🟡 10% (cluster 11.H · multi-agent / fleet complete) |
 | 12. Developer ergonomics           |   0  |    7    | ⏸ 0%   |

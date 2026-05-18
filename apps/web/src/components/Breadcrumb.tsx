@@ -77,6 +77,9 @@ export function Breadcrumb({ onOpenMobileNav }: BreadcrumbProps = {}) {
     case 'diskUsage':
       crumbs.push({ label: t('breadcrumbs.diskUsage') });
       break;
+    case 'hosts':
+      crumbs.push({ label: t('nav.hosts') });
+      break;
   }
 
   return (

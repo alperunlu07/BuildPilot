@@ -52,7 +52,6 @@ function readStoredCollapsed(): boolean {
 
 interface Props {
   onAddProject(): void;
-  onManageHosts(): void;
   onShowChangelog(): void;
   changelogHasUnread?: boolean;
   // Mobile-drawer controls. Above md the drawer flags are ignored and the
@@ -63,7 +62,6 @@ interface Props {
 
 export function Sidebar({
   onAddProject,
-  onManageHosts,
   onShowChangelog,
   changelogHasUnread,
   mobileOpen = false,
@@ -191,7 +189,8 @@ export function Sidebar({
           />
           <IconRail
             icon={<Server size={16} className="text-slate-300" />}
-            onClick={onManageHosts}
+            active={view.type === 'hosts'}
+            onClick={() => setView({ type: 'hosts' })}
             label={t('nav.hosts')}
           />
           <IconRail
@@ -308,9 +307,10 @@ export function Sidebar({
           onClick={() => setView({ type: 'builds' })}
         />
         <NavItem
+          active={view.type === 'hosts'}
           icon={<Server size={14} className="text-slate-400" />}
           label={t('nav.hosts')}
-          onClick={onManageHosts}
+          onClick={() => setView({ type: 'hosts' })}
           title="Manage saved SSH hosts (used by Remote SSH / SFTP / Mac steps)"
         />
         <NavItem

@@ -193,6 +193,21 @@ export const api = {
       `/hosts/${id}/ping`,
       { method: 'POST' },
     ),
+  // Cluster 11.H — recent builds that ran (or are running) on this host.
+  // Pipeline-current-state best-effort; see server-side comment.
+  listHostBuilds: (id: string, limit = 50) =>
+    http<Array<{
+      id: string;
+      pipelineId: string;
+      projectId: string;
+      status: 'pending' | 'running' | 'success' | 'failed' | 'cancelled';
+      startedAt: number;
+      finishedAt: number | null;
+    }>>(`/hosts/${id}/builds?limit=${limit}`),
+  // Cluster 11.H — hourly concurrent build count buckets for a host load
+  // chart. Returns chronological order, oldest → newest.
+  hostLoad: (id: string, hours = 24) =>
+    http<Array<{ t: number; concurrent: number }>>(`/hosts/${id}/load?hours=${hours}`),
 
   // ── Telegram settings ────────────────────────────────────
   getTelegramConfig: () => http<TelegramConfigPublic>('/config/telegram'),
