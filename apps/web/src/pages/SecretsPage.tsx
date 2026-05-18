@@ -5,6 +5,7 @@ import { api } from '../lib/api';
 import { useStore } from '../store/store';
 import { cn } from '../lib/cn';
 import { Time } from '../lib/formatDate';
+import { ImportExportPanel } from '../components/SecretsImportExport';
 
 // Cluster 11.B item 1+3 — secrets vault page. Table of named secrets with
 // create + rotate + delete actions. Selecting a row reveals the "where is
@@ -178,6 +179,8 @@ export function SecretsPage() {
             <Plus size={14} /> New secret
           </button>
         </div>
+
+        <ImportExportPanel onChanged={reload} />
 
         <div className="mb-3 flex items-center gap-2 rounded-md border border-slate-800 bg-slate-900/40 px-3 py-1.5">
           <Search size={14} className="text-slate-400" />

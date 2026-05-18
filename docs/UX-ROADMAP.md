@@ -201,13 +201,13 @@ Cross-refs: `TODO.md` Phase 2.6.A.
 Cross-refs: `TODO.md` Phase 2.6.A (file vault, secret references).
 
 - [x] **Secrets page** — list/create/rotate named secrets;
-  `${{ secrets.NAME }}` autocomplete in step property fields — pending sha
+  `${{ secrets.NAME }}` autocomplete in step property fields — `70e921b`
 - [x] **File vault page** — upload `.p12` / `.mobileprovision` / `.p8` /
-  `GoogleService-Info.plist` once; reference by id in steps — pending sha
+  `GoogleService-Info.plist` once; reference by id in steps — `70e921b`
 - [x] **"Where is this secret used?"** — back-reference panel listing
-  every step / pipeline referencing a given secret — pending sha
-- [ ] **Bulk secret import / export** — encrypted JSON bundle for moving
-  between machines or backing up alongside `master.key`
+  every step / pipeline referencing a given secret — `70e921b`
+- [x] **Bulk secret import / export** — encrypted JSON bundle for moving
+  between machines or backing up alongside `master.key` — pending sha
 
 ### Cluster 11.C · Build matrix UX
 
