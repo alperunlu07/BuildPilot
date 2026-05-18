@@ -24,5 +24,12 @@ Power-user affordances for the React-Flow-based pipeline editor at
 
 ### Follow-ups
 
-(populated by agents as they hit items that need work outside this
-cluster's owned files)
+- **Engine support for `data.disabled`**: today the flag is UI-only. The
+  pipeline runner in `apps/server/` needs to treat a step with
+  `data.disabled === true` as a no-op (skip exec, mark status as
+  `skipped`, propagate down success-edges). Search for the TODO(engine)
+  comments in `apps/web/src/components/StepNode.tsx` and
+  `apps/web/src/components/StepPropertyPanel.tsx`.
+- **Group / lane visualization (item 12)**: skipped — current pipelines
+  in BuildPilot are flat enough that swimlanes wouldn't pull their
+  weight. Revisit if users start grouping steps by host / OS.
