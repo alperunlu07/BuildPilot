@@ -154,6 +154,8 @@ interface State {
   language: string;
   favorites: FavoritesState;
   recents: RecentItem[];
+  paletteOpen: boolean;
+  shortcutsHelpOpen: boolean;
 
   loadProjects(): Promise<void>;
   loadPipelines(projectId?: string): Promise<void>;
@@ -207,6 +209,11 @@ interface State {
   toggleFavoriteProject(id: string): void;
   toggleFavoritePipeline(id: string): void;
   pushRecent(item: Omit<RecentItem, 'at'>): void;
+  openPalette(): void;
+  closePalette(): void;
+  togglePalette(): void;
+  openShortcutsHelp(): void;
+  closeShortcutsHelp(): void;
   handleEvent(event: ServerEvent): void;
 }
 
@@ -228,6 +235,8 @@ export const useStore = create<State>((set, get) => ({
   language: readLanguage(),
   favorites: readFavorites(),
   recents: readRecents(),
+  paletteOpen: false,
+  shortcutsHelpOpen: false,
 
   async loadProjects() {
     set({ projects: await api.listProjects() });
@@ -424,6 +433,21 @@ export const useStore = create<State>((set, get) => ({
     const next: RecentItem[] = [{ ...item, at: Date.now() }, ...filtered].slice(0, 5);
     writeRecents(next);
     set({ recents: next });
+  },
+  openPalette() {
+    set({ paletteOpen: true });
+  },
+  closePalette() {
+    set({ paletteOpen: false });
+  },
+  togglePalette() {
+    set({ paletteOpen: !get().paletteOpen });
+  },
+  openShortcutsHelp() {
+    set({ shortcutsHelpOpen: true });
+  },
+  closeShortcutsHelp() {
+    set({ shortcutsHelpOpen: false });
   },
   handleEvent(event) {
     switch (event.type) {

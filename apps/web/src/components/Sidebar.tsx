@@ -6,6 +6,7 @@ import {
   Monitor,
   Moon,
   Plus,
+  Search,
   Server,
   Settings,
   Star,
@@ -35,6 +36,7 @@ export function Sidebar({ onAddProject, onManageHosts }: Props) {
   const recents = useStore((s) => s.recents);
   const theme = useStore((s) => s.theme);
   const setTheme = useStore((s) => s.setTheme);
+  const openPalette = useStore((s) => s.openPalette);
   const { t } = useTranslation();
 
   const favProjects = projects.filter((p) => favorites.projectIds.includes(p.id));
@@ -58,6 +60,15 @@ export function Sidebar({ onAddProject, onManageHosts }: Props) {
           <div className="text-[11px] uppercase tracking-wider text-slate-500">Local CI/CD</div>
         </button>
         <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={openPalette}
+            className="rounded-md border border-slate-700 p-1.5 text-slate-300 hover:border-sky-500 hover:text-sky-400"
+            title="Command palette (Cmd/Ctrl+K)"
+            aria-label="Command palette"
+          >
+            <Search size={14} />
+          </button>
           <button
             type="button"
             onClick={cycleTheme}

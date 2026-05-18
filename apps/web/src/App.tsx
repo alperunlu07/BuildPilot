@@ -6,6 +6,9 @@ import { ConfirmDialog } from './components/ConfirmDialog';
 import { HostsDialog } from './components/HostsDialog';
 import { ToastContainer } from './components/ToastContainer';
 import { ActiveBuildsWidget } from './components/ActiveBuildsWidget';
+import { CommandPalette } from './components/CommandPalette';
+import { KeyboardShortcutsHelp } from './components/KeyboardShortcutsHelp';
+import { CreatePipelineDialog } from './components/CreatePipelineDialog';
 import { HomePage } from './pages/HomePage';
 import { ProjectsPage } from './pages/ProjectsPage';
 import { ProjectDetailPage } from './pages/ProjectDetailPage';
@@ -17,9 +20,13 @@ import { DiskUsagePage } from './pages/DiskUsagePage';
 import { useStore } from './store/store';
 import { onConnected, subscribe } from './lib/events';
 import { ensurePermission } from './lib/notifications';
+import { useGlobalShortcuts } from './lib/keyboard';
+import { applyTheme, subscribeSystemTheme } from './lib/theme';
 
 export function App() {
   const view = useStore((s) => s.view);
+  const setView = useStore((s) => s.setView);
+  const theme = useStore((s) => s.theme);
   const loadProjects = useStore((s) => s.loadProjects);
   const loadPipelines = useStore((s) => s.loadPipelines);
   const loadBuilds = useStore((s) => s.loadBuilds);
@@ -31,6 +38,7 @@ export function App() {
 
   const [openAdd, setOpenAdd] = useState(false);
   const [openHosts, setOpenHosts] = useState(false);
+  const [openCreatePipeline, setOpenCreatePipeline] = useState<string | null>(null);
 
   useEffect(() => {
     void loadProjects();
@@ -57,6 +65,23 @@ export function App() {
     [loadProjects, loadPipelines, loadBuilds, loadNodeTemplates, loadHosts],
   );
 
+  // System theme listener — only reacts when the user picked `system`.
+  useEffect(() => {
+    if (theme !== 'system') return;
+    return subscribeSystemTheme(() => applyTheme('system'));
+  }, [theme]);
+
+  useGlobalShortcuts({
+    onNewPipeline: () => {
+      const current = useStore.getState().view;
+      if (current.type === 'project') setOpenCreatePipeline(current.id);
+      else if (current.type === 'pipeline') {
+        const pl = useStore.getState().pipelines.find((p) => p.id === current.id);
+        if (pl) setOpenCreatePipeline(pl.projectId);
+      }
+    },
+  });
+
   return (
     <div className="flex h-full bg-slate-950 text-slate-100">
       <Sidebar
@@ -79,8 +104,28 @@ export function App() {
 
       <ToastContainer />
       <ActiveBuildsWidget />
+      <CommandPalette
+        onAddProject={() => setOpenAdd(true)}
+        onManageHosts={() => setOpenHosts(true)}
+      />
+      <KeyboardShortcutsHelp />
       <AddProjectDialog open={openAdd} onClose={() => setOpenAdd(false)} />
       <HostsDialog open={openHosts} onClose={() => setOpenHosts(false)} />
+      {openCreatePipeline && (() => {
+        const proj = useStore.getState().projects.find((p) => p.id === openCreatePipeline);
+        return (
+          <CreatePipelineDialog
+            projectId={openCreatePipeline}
+            defaultBranch={proj?.defaultBranch ?? 'main'}
+            open
+            onClose={() => setOpenCreatePipeline(null)}
+            onCreated={(p) => {
+              setOpenCreatePipeline(null);
+              setView({ type: 'pipeline', id: p.id });
+            }}
+          />
+        );
+      })()}
       <ConfirmDialog
         open={confirmation !== null}
         title={confirmation?.title ?? ''}
