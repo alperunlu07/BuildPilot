@@ -96,9 +96,9 @@ landing experience.
   local terminal verbatim — `b974181`
 - [x] **Live tail auto-scroll lock** — when the user scrolls up, stop
   auto-scrolling; floating "Jump to latest" button on the right — `ee4ba44`
-- [ ] **Step duration comparison** — on a finished build, show each step's
+- [x] **Step duration comparison** — on a finished build, show each step's
   duration alongside the previous successful build's duration with
-  delta colored (+12% red, -8% green)
+  delta colored (+12% red, -8% green) — `00ca0ca`
 - [x] **Log section grouping** — collapsible groups via existing CI
   conventions (`::group::name` / `--- name`), auto-detected in stdout — `a7ddef7`
 - [x] **Inline ANSI color support** in LogTable — many shell tools emit
