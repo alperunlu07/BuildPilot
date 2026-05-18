@@ -3,6 +3,7 @@ import type {
   BuildArtifact,
   BuildLogEntry,
   Commit,
+  CoverageReport,
   DiskUsageReport,
   HomeMetrics,
   NodeTemplate,
@@ -15,6 +16,8 @@ import type {
   StepType,
   TelegramConfigPublic,
   TelegramConfigUpdate,
+  TestReportKind,
+  TestReportTree,
 } from '@buildpilot/shared-types';
 
 const API = '/api';
@@ -206,4 +209,17 @@ export const api = {
     http<PruneBuildsResponse>(`/builds/prune?olderThanDays=${olderThanDays}`, {
       method: 'POST',
     }),
+
+  // ── Observability — test reports + coverage (Cluster 11.F) ───────────
+  testReport: (
+    buildId: string,
+    opts: { kind?: TestReportKind; artifactId?: number } = {},
+  ) => {
+    const qs = new URLSearchParams();
+    if (opts.kind) qs.set('kind', opts.kind);
+    if (opts.artifactId !== undefined) qs.set('artifactId', String(opts.artifactId));
+    const q = qs.toString();
+    return http<TestReportTree>(`/builds/${buildId}/test-report${q ? `?${q}` : ''}`);
+  },
+  buildCoverage: (buildId: string) => http<CoverageReport>(`/builds/${buildId}/coverage`),
 };

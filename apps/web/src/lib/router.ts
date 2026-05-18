@@ -22,6 +22,8 @@ export function viewToPath(view: View): string {
       return '/settings';
     case 'diskUsage':
       return '/disk-usage';
+    case 'testReport':
+      return `/builds/${encodeURIComponent(view.buildId)}/tests`;
   }
 }
 
@@ -37,6 +39,10 @@ export function pathToView(path: string): View {
   if (projectMatch) return { type: 'project', id: decodeURIComponent(projectMatch[1]!) };
   const pipelineMatch = clean.match(/^\/pipelines\/([^/]+)$/);
   if (pipelineMatch) return { type: 'pipeline', id: decodeURIComponent(pipelineMatch[1]!) };
+  // `/builds/:id/tests` must be checked before the generic /builds/:id.
+  const testReportMatch = clean.match(/^\/builds\/([^/]+)\/tests$/);
+  if (testReportMatch)
+    return { type: 'testReport', buildId: decodeURIComponent(testReportMatch[1]!) };
   const buildMatch = clean.match(/^\/builds\/([^/]+)$/);
   if (buildMatch) return { type: 'build', id: decodeURIComponent(buildMatch[1]!) };
   return { type: 'home' };
@@ -51,5 +57,6 @@ export function viewsEqual(a: View, b: View): boolean {
   ) {
     return a.id === b.id;
   }
+  if (a.type === 'testReport' && b.type === 'testReport') return a.buildId === b.buildId;
   return true;
 }

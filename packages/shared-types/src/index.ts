@@ -1880,3 +1880,87 @@ export interface PruneBuildsResponse {
   logEntries: number;
   artifacts: number;
 }
+
+// ── Cluster 11.F · Observability deep dive ─────────────────────────────────
+// Test report tree returned by `GET /api/builds/:id/test-report`. Both
+// xcresult (parsed via `xcrun xcresulttool`) and JUnit XML files collapse
+// to this shape so the UI doesn't care which format produced it. When the
+// server can't parse (e.g. xcresult on a non-macOS host), it returns an
+// empty `suites` array plus a `note` explaining why so the UI can show
+// the reason rather than a silent empty state.
+export type TestReportKind = 'xcresult' | 'junit';
+
+export type TestStatus = 'passed' | 'failed' | 'skipped';
+
+export interface TestCase {
+  name: string;
+  // Optional suite-qualified class/identifier for click-to-jump deep-linking
+  // ("MyApp.LoginViewSpec" etc.). UI uses it as the secondary line on each
+  // row.
+  classname?: string;
+  status: TestStatus;
+  // Duration in seconds (matches JUnit `time=` attribute semantics).
+  durationSec?: number;
+  // Failure / error message captured at parse time. Undefined for passed
+  // tests. May include the full stack trace; the UI truncates with a
+  // "show more" toggle.
+  message?: string;
+  // Best-effort source location ("Tests/Login/LoginViewSpec.swift:42") so
+  // the UI can render a deep-link. Surfaced from JUnit `file`/`line`
+  // attributes or xcresult test issues when present.
+  file?: string;
+  line?: number;
+}
+
+export interface TestSuite {
+  name: string;
+  // Sum of child test durations in seconds. JUnit ships this on the
+  // `<testsuite time=>` attribute directly; for xcresult we sum children.
+  timeSec?: number;
+  tests: TestCase[];
+}
+
+export interface TestReportTree {
+  // The artifact this report was parsed from (relative path + DB id) so
+  // the UI can offer a "Download xcresult bundle" / "View raw XML" link.
+  artifactId: number | null;
+  artifactPath: string | null;
+  kind: TestReportKind;
+  // Totals across all suites — server pre-computes so each client doesn't
+  // have to walk the tree.
+  totalTests: number;
+  totalPassed: number;
+  totalFailed: number;
+  totalSkipped: number;
+  // Sum of all suite `timeSec` values (may be 0 if the source XML had no
+  // timing). Optional so a non-timing JUnit doesn't lie about duration.
+  totalDurationSec: number | null;
+  suites: TestSuite[];
+  // Filled in when parsing was skipped — e.g. xcresult bundle on a Linux
+  // host. Empty suites + a note lets the UI explain the situation cleanly.
+  note?: string;
+}
+
+// `GET /api/builds/:id/coverage` — Cobertura-format coverage parsed from the
+// `coverage.xml` artifact produced by the slatherCoverage step. We surface
+// the overall line-coverage rate plus the top-5 lowest-covered files so
+// the build detail can show a small panel without rendering the full
+// per-line HTML report.
+export interface CoverageReport {
+  artifactId: number | null;
+  artifactPath: string | null;
+  // 0..1 — the Cobertura `<coverage line-rate=>` root attribute. Null when
+  // the file is unparseable (the UI shows "—" rather than 0%).
+  lineRate: number | null;
+  // 0..1 — branch coverage when present. Many slather configurations omit
+  // it; null in that case.
+  branchRate: number | null;
+  // Total lines covered / total lines instrumented across all files.
+  linesCovered: number;
+  linesValid: number;
+  // Bottom-5 by line-rate, ascending. Each entry has the source path and
+  // its own line-rate so we can render a "files most in need of tests"
+  // shortlist.
+  lowestFiles: Array<{ filename: string; lineRate: number; lines: number }>;
+  note?: string;
+}

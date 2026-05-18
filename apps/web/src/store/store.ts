@@ -35,7 +35,11 @@ export type View =
   | { type: 'builds' }
   | { type: 'build'; id: string }
   | { type: 'settings' }
-  | { type: 'diskUsage' };
+  | { type: 'diskUsage' }
+  // Cluster 11.F — full-page test report viewer reachable from a build's
+  // "Tests" tab. Other deep-dive views (trends, flaky tests) are added
+  // in their respective commits.
+  | { type: 'testReport'; buildId: string };
 
 export interface CommitToast {
   id: string;
