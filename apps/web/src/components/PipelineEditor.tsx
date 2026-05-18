@@ -16,7 +16,7 @@ import {
   type NodeChange,
 } from '@xyflow/react';
 import dagre from 'dagre';
-import { ChevronDown, ChevronRight, Hammer, LayoutGrid, Map as MapIcon, Redo2, Save, Square, Trash2, Undo2 } from 'lucide-react';
+import { ChevronDown, ChevronRight, Hammer, LayoutGrid, Map as MapIcon, Redo2, Save, Search, Square, Trash2, Undo2, X } from 'lucide-react';
 import type {
   NodeTemplate,
   Pipeline,
@@ -182,12 +182,16 @@ function Editor({ pipeline }: Props) {
   const [saveTemplateNodeId, setSaveTemplateNodeId] = useState<string | null>(null);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; nodeId: string } | null>(null);
   const [edgeTooltip, setEdgeTooltip] = useState<{ x: number; y: number; text: string } | null>(null);
+  const [findOpen, setFindOpen] = useState(false);
+  const [findQuery, setFindQuery] = useState('');
+  const [replaceQuery, setReplaceQuery] = useState('');
+  const [findIndex, setFindIndex] = useState(0);
   const [showMinimap, setShowMinimap] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
     return window.localStorage.getItem('buildpilot:editor:minimap') === '1';
   });
   const wrapperRef = useRef<HTMLDivElement>(null);
-  const { screenToFlowPosition } = useReactFlow();
+  const { screenToFlowPosition, setCenter } = useReactFlow();
   const history = usePipelineHistory();
   const clipboard = usePipelineClipboard();
   const nodesRef = useRef<Node[]>(nodes);
@@ -308,6 +312,88 @@ function Editor({ pipeline }: Props) {
     setDirty(true);
   }, [clipboard, recordHistory]);
 
+  const findMatches = useMemo(() => {
+    const q = findQuery.trim().toLowerCase();
+    if (!q) return [] as Node[];
+    return nodes.filter((n) => {
+      if (n.id.toLowerCase().includes(q)) return true;
+      if (String(n.type ?? '').toLowerCase().includes(q)) return true;
+      const data = n.data as Record<string, unknown>;
+      for (const k of Object.keys(data)) {
+        const v = data[k];
+        if (typeof v === 'string' && v.toLowerCase().includes(q)) return true;
+        if (typeof v === 'number' && String(v).includes(q)) return true;
+      }
+      return false;
+    });
+  }, [nodes, findQuery]);
+
+  const focusMatch = useCallback(
+    (idx: number) => {
+      if (findMatches.length === 0) return;
+      const wrapped = ((idx % findMatches.length) + findMatches.length) % findMatches.length;
+      const target = findMatches[wrapped];
+      if (!target) return;
+      setFindIndex(wrapped);
+      setSelectedNodeId(target.id);
+      setSelectedNodeIds([target.id]);
+      setNodes((nds) =>
+        nds.map((n) => ({ ...n, selected: n.id === target.id })),
+      );
+      const w = target.width ?? 200;
+      const h = target.height ?? 80;
+      setCenter(target.position.x + w / 2, target.position.y + h / 2, { zoom: 1.25, duration: 200 });
+    },
+    [findMatches, setCenter],
+  );
+
+  const replaceCurrent = useCallback(() => {
+    if (findMatches.length === 0) return;
+    const target = findMatches[findIndex % findMatches.length];
+    if (!target) return;
+    const q = findQuery;
+    if (!q) return;
+    recordHistory();
+    setNodes((nds) =>
+      nds.map((n) => {
+        if (n.id !== target.id) return n;
+        const data = n.data as Record<string, unknown>;
+        const next: Record<string, unknown> = { ...data };
+        for (const k of Object.keys(next)) {
+          const v = next[k];
+          if (typeof v === 'string' && v.toLowerCase().includes(q.toLowerCase())) {
+            const re = new RegExp(escapeRegExp(q), 'gi');
+            next[k] = v.replace(re, replaceQuery);
+          }
+        }
+        return { ...n, data: next };
+      }),
+    );
+    setDirty(true);
+  }, [findMatches, findIndex, findQuery, replaceQuery, recordHistory]);
+
+  const replaceAll = useCallback(() => {
+    const q = findQuery;
+    if (!q) return;
+    const ids = new Set(findMatches.map((m) => m.id));
+    if (ids.size === 0) return;
+    recordHistory();
+    const re = new RegExp(escapeRegExp(q), 'gi');
+    setNodes((nds) =>
+      nds.map((n) => {
+        if (!ids.has(n.id)) return n;
+        const data = n.data as Record<string, unknown>;
+        const next: Record<string, unknown> = { ...data };
+        for (const k of Object.keys(next)) {
+          const v = next[k];
+          if (typeof v === 'string') next[k] = v.replace(re, replaceQuery);
+        }
+        return { ...n, data: next };
+      }),
+    );
+    setDirty(true);
+  }, [findMatches, findQuery, replaceQuery, recordHistory]);
+
   const autoLayout = useCallback(() => {
     recordHistory();
     setNodes((nds) => {
@@ -337,6 +423,13 @@ function Editor({ pipeline }: Props) {
     const onKey = (e: KeyboardEvent) => {
       const mod = e.metaKey || e.ctrlKey;
       if (!mod) return;
+      // Cmd/Ctrl+F is special: open even when focus is in an input. The find
+      // overlay's own input then takes over.
+      if (e.key.toLowerCase() === 'f') {
+        e.preventDefault();
+        setFindOpen(true);
+        return;
+      }
       const target = e.target as HTMLElement | null;
       // Skip undo/redo when the user is editing inside a text field — those
       // have their own native undo we don't want to clobber.
@@ -807,6 +900,70 @@ function Editor({ pipeline }: Props) {
         />
 
         <div ref={wrapperRef} className="relative min-h-0 flex-1" onDragOver={onDragOver} onDrop={onDrop}>
+          {findOpen && (
+            <div className="absolute right-3 top-3 z-30 w-80 rounded-md border border-slate-700 bg-slate-900/95 p-2 shadow-xl backdrop-blur">
+              <div className="flex items-center gap-2">
+                <Search size={12} className="text-slate-400" />
+                <input
+                  autoFocus
+                  type="text"
+                  value={findQuery}
+                  onChange={(e) => {
+                    setFindQuery(e.target.value);
+                    setFindIndex(0);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      focusMatch(findIndex + (e.shiftKey ? -1 : 1));
+                    } else if (e.key === 'Escape') {
+                      setFindOpen(false);
+                    }
+                  }}
+                  placeholder="Find in node ids, types, field values…"
+                  className="flex-1 rounded border border-slate-700 bg-slate-950 px-2 py-1 text-[12px] text-slate-100 focus:border-sky-500 focus:outline-none"
+                />
+                <span className="font-mono text-[10px] text-slate-500">
+                  {findMatches.length === 0
+                    ? '0/0'
+                    : `${(findIndex % findMatches.length) + 1}/${findMatches.length}`}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setFindOpen(false)}
+                  className="rounded p-0.5 text-slate-500 hover:text-slate-300"
+                  title="Close"
+                >
+                  <X size={12} />
+                </button>
+              </div>
+              <div className="mt-1.5 flex items-center gap-2">
+                <input
+                  type="text"
+                  value={replaceQuery}
+                  onChange={(e) => setReplaceQuery(e.target.value)}
+                  placeholder="Replace with…"
+                  className="flex-1 rounded border border-slate-700 bg-slate-950 px-2 py-1 text-[12px] text-slate-100 focus:border-sky-500 focus:outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={replaceCurrent}
+                  disabled={findMatches.length === 0 || findQuery === ''}
+                  className="rounded border border-slate-700 px-2 py-1 text-[11px] text-slate-200 hover:border-sky-500 disabled:opacity-40"
+                >
+                  Replace
+                </button>
+                <button
+                  type="button"
+                  onClick={replaceAll}
+                  disabled={findMatches.length === 0 || findQuery === ''}
+                  className="rounded border border-slate-700 px-2 py-1 text-[11px] text-slate-200 hover:border-sky-500 disabled:opacity-40"
+                >
+                  All
+                </button>
+              </div>
+            </div>
+          )}
           <ReactFlow
             nodes={nodes}
             edges={edges}
@@ -1561,6 +1718,10 @@ function defaultData(type: StepType): Record<string, unknown> {
       };
   }
   return {};
+}
+
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 function layoutWithDagre(nodes: Node[], edges: Edge[]): Node[] {
