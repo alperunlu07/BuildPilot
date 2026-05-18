@@ -283,6 +283,7 @@ function CommonControlsSection({
   data: Record<string, unknown>;
   onChange(patch: Record<string, unknown>): void;
 }) {
+  const disabled = data.disabled === true || data.disabled === 'true';
   const continueOnError = data.continueOnError === 'true' || data.continueOnError === true;
   const retry = (data.retryPolicy as Record<string, unknown> | undefined) ?? {};
   const retryEnabled = retry.enabled === true;
@@ -295,6 +296,18 @@ function CommonControlsSection({
   return (
     <div className="mt-2 rounded-md border border-slate-800 bg-slate-900/40 p-3 space-y-3">
       <div className="text-[10px] uppercase tracking-wider text-slate-500">Step controls</div>
+      <label className="flex items-center gap-2 text-[12px] text-slate-300">
+        <input
+          type="checkbox"
+          checked={disabled}
+          onChange={(e) => onChange({ disabled: e.target.checked })}
+          className="h-3.5 w-3.5"
+        />
+        Disable / skip this step
+      </label>
+      <p className="-mt-1 text-[10px] text-slate-500">
+        Visually grayed out. TODO(engine): treat as a no-op at run time.
+      </p>
       <label className="flex items-center gap-2 text-[12px] text-slate-300">
         <input
           type="checkbox"

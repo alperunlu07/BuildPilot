@@ -98,6 +98,10 @@ interface StepNodeData {
   // Optional friendly name when the node was spawned from a saved template.
   // Falls back to the step type's built-in label.
   templateLabel?: string;
+  // TODO(engine): when true, the engine should treat this step as a no-op
+  // (skip execution and propagate a 'skipped' status to downstream edges).
+  // Until then this flag is UI-only and visually grays the node.
+  disabled?: boolean | string;
   [key: string]: unknown;
 }
 
@@ -107,6 +111,7 @@ export function StepNode({ type, data, selected }: NodeProps) {
   const Icon = ICONS[def.icon] ?? Terminal;
 
   const d = data as StepNodeData;
+  const disabled = d.disabled === true || d.disabled === 'true';
   const status = d.runtimeStatus;
   const runtime = runtimeAppearance(status);
   const duration = formatDuration(d.runtimeStartedAt, d.runtimeFinishedAt, status);
@@ -121,8 +126,13 @@ export function StepNode({ type, data, selected }: NodeProps) {
 
   return (
     <div
-      className={`rounded-md border bg-slate-900 px-3 py-2 shadow-md transition-shadow ${runtime.className}`}
-      style={{ borderColor, boxShadow, minWidth: 180 }}
+      className={`rounded-md border bg-slate-900 px-3 py-2 shadow-md transition-shadow ${runtime.className} ${disabled ? 'opacity-50 [filter:grayscale(0.7)]' : ''}`}
+      style={{
+        borderColor,
+        boxShadow,
+        minWidth: 180,
+        borderStyle: disabled ? 'dashed' : 'solid',
+      }}
     >
       <Handle type="target" position={Position.Top} />
       <div className="flex items-center gap-2">
@@ -145,14 +155,19 @@ export function StepNode({ type, data, selected }: NodeProps) {
             </span>
           )}
         </span>
-        {status && (
+        {disabled && (
+          <span className="ml-auto rounded bg-slate-700/40 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-slate-400">
+            skipped
+          </span>
+        )}
+        {status && !disabled && (
           <span
             className={`ml-auto rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider ${runtime.badgeClass}`}
           >
             {status}
           </span>
         )}
-        {missing.length > 0 && !status && (
+        {missing.length > 0 && !status && !disabled && (
           <span
             className="ml-auto inline-flex h-4 w-4 items-center justify-center rounded-full bg-rose-500/20 text-rose-300"
             title={`Missing required fields: ${missing.join(', ')}`}
