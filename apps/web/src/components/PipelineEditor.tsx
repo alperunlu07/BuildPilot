@@ -381,6 +381,22 @@ function Editor({ pipeline }: Props) {
     () => nodes.find((n) => n.id === selectedNodeId) ?? null,
     [nodes, selectedNodeId],
   );
+  const selectedNodes = useMemo(
+    () => nodes.filter((n) => selectedNodeIds.includes(n.id)),
+    [nodes, selectedNodeIds],
+  );
+
+  const bulkChange = useCallback(
+    (ids: string[], patch: Record<string, unknown>) => {
+      recordHistory();
+      const idSet = new Set(ids);
+      setNodes((nds) =>
+        nds.map((n) => (idSet.has(n.id) ? { ...n, data: { ...(n.data as Record<string, unknown>), ...patch } } : n)),
+      );
+      setDirty(true);
+    },
+    [recordHistory],
+  );
 
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {
@@ -887,9 +903,11 @@ function Editor({ pipeline }: Props) {
 
         <StepPropertyPanel
           node={selectedNode}
+          selectedNodes={selectedNodes}
           branches={branches}
           entries={latestEntries}
           onChange={updateNodeData}
+          onBulkChange={bulkChange}
           onDelete={deleteNode}
           onRunFrom={async (nodeId) => {
             if (dirty) await save();
