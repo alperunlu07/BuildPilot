@@ -177,6 +177,7 @@ function Editor({ pipeline }: Props) {
   // Save-as-template dialog state. Holds the source node id whose data we
   // will snapshot when the user confirms.
   const [saveTemplateNodeId, setSaveTemplateNodeId] = useState<string | null>(null);
+  const [edgeTooltip, setEdgeTooltip] = useState<{ x: number; y: number; text: string } | null>(null);
   const [showMinimap, setShowMinimap] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
     return window.localStorage.getItem('buildpilot:editor:minimap') === '1';
@@ -717,6 +718,16 @@ function Editor({ pipeline }: Props) {
             onEdgesChange={onEdgesChange}
             onConnect={onConnect}
             onSelectionChange={handleSelectionChange}
+            onEdgeMouseEnter={(ev, edge) => {
+              const tip =
+                (edge.data as { conditionTooltip?: string } | undefined)?.conditionTooltip ??
+                'condition';
+              setEdgeTooltip({ x: ev.clientX, y: ev.clientY, text: tip });
+            }}
+            onEdgeMouseMove={(ev) => {
+              setEdgeTooltip((prev) => (prev ? { ...prev, x: ev.clientX, y: ev.clientY } : null));
+            }}
+            onEdgeMouseLeave={() => setEdgeTooltip(null)}
             onEdgeClick={(_e, edge) => {
               recordHistory();
               setEdges((eds) =>
@@ -740,6 +751,15 @@ function Editor({ pipeline }: Props) {
           >
             <Background gap={16} color="#1e293b" />
             <Controls position="bottom-right" showInteractive={false} />
+            {edgeTooltip && (
+              <div
+                className="pointer-events-none fixed z-50 rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-[11px] text-slate-200 shadow-lg"
+                style={{ left: edgeTooltip.x + 12, top: edgeTooltip.y + 12 }}
+              >
+                {edgeTooltip.text}
+                <div className="text-[9px] text-slate-500">click to cycle</div>
+              </div>
+            )}
             {showMinimap && (
               <MiniMap
                 pannable
@@ -1450,10 +1470,10 @@ function pipelineNodesToReactFlow(nodes: PipelineNode[]): Node[] {
   }));
 }
 
-const EDGE_STYLE: Record<'success' | 'failure' | 'always', { stroke: string; label: string }> = {
-  success: { stroke: '#10b981', label: '' },
-  failure: { stroke: '#fb7185', label: 'on failure' },
-  always:  { stroke: '#94a3b8', label: 'always' },
+const EDGE_STYLE: Record<'success' | 'failure' | 'always', { stroke: string; glyph: string; tooltip: string }> = {
+  success: { stroke: '#10b981', glyph: '✓', tooltip: 'on success (default)' },
+  failure: { stroke: '#fb7185', glyph: '✕', tooltip: 'on failure' },
+  always:  { stroke: '#94a3b8', glyph: '∞', tooltip: 'always (success or failure)' },
 };
 
 function pipelineEdgeToReactFlow(e: PipelineEdge): Edge {
@@ -1464,12 +1484,13 @@ function pipelineEdgeToReactFlow(e: PipelineEdge): Edge {
     source: e.source,
     target: e.target,
     animated: true,
-    label: style.label || undefined,
-    labelStyle: { fill: style.stroke, fontSize: 10, fontWeight: 600 },
-    labelBgStyle: { fill: '#0f172a' },
-    labelBgPadding: [4, 2],
+    label: style.glyph,
+    labelStyle: { fill: style.stroke, fontSize: 13, fontWeight: 700 },
+    labelBgStyle: { fill: '#0f172a', stroke: style.stroke, strokeWidth: 1 },
+    labelBgPadding: [6, 4],
+    labelBgBorderRadius: 999,
     style: { stroke: style.stroke, strokeWidth: 1.5 },
-    data: { condition: cond },
+    data: { condition: cond, conditionTooltip: style.tooltip },
   };
 }
 
