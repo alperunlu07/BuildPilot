@@ -165,8 +165,8 @@ landing experience.
 ### Cluster 10.G · Mobile / small-screen experience
 
 - [x] **Responsive sidebar** — collapses into a drawer below `md:` (768px) — `52ffdf4`
-- [ ] **Mobile-optimized build detail page** — log table currently
-  unusable below 640px (fixed column widths)
+- [x] **Mobile-optimized build detail page** — log table currently
+  unusable below 640px (fixed column widths) — `f87a609`
 - [ ] **PWA install** — manifest + service worker (also needed for Web
   Push; tracked in `TODO.md` Phase 3)
 - [ ] **Tap-friendly hit targets** — current Trash2 hover-delete buttons
