@@ -158,6 +158,7 @@ export function App() {
         confirmLabel={confirmation?.confirmLabel}
         cancelLabel={confirmation?.cancelLabel}
         variant={confirmation?.variant}
+        typedConfirmation={confirmation?.typedConfirmation}
         onCancel={closeConfirmation}
         onConfirm={async () => {
           const cb = confirmation?.onConfirm;

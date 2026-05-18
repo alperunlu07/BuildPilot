@@ -164,6 +164,7 @@ export function ProjectDetailPage({ projectId }: Props) {
                   'Build history is kept.',
                 variant: 'destructive',
                 confirmLabel: 'Remove project',
+                typedConfirmation: 'delete',
                 onConfirm: () => removeProject(project.id),
               });
             }}

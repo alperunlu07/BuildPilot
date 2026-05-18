@@ -227,6 +227,7 @@ export function Sidebar({ onAddProject, onManageHosts }: Props) {
                           'Build history is kept.',
                         variant: 'destructive',
                         confirmLabel: 'Remove project',
+                        typedConfirmation: 'delete',
                         onConfirm: () => removeProject(p.id),
                       });
                     }}

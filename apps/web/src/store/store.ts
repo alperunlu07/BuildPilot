@@ -124,6 +124,9 @@ export interface ConfirmationRequest {
   confirmLabel?: string;
   cancelLabel?: string;
   variant?: 'default' | 'destructive';
+  // When set, the dialog requires the user to type this value before the
+  // confirm button enables. Used for irreversible actions.
+  typedConfirmation?: string;
   onConfirm(): void | Promise<void>;
 }
 

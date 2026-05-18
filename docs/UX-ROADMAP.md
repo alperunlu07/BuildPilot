@@ -144,8 +144,8 @@ landing experience.
   for irreversible actions like project removal
 - [ ] **Sidebar resize + collapse** — current 18rem fixed; allow drag-to-
   resize or click-to-collapse to icon rail
-- [ ] **Better date / time formatting** — relative ("3 min ago") with
-  absolute on hover, consistent across all views (currently mixed)
+- [x] **Better date / time formatting** — relative ("3 min ago") with
+  absolute on hover, consistent across all views (currently mixed) — `7ff514e`
 
 ### Cluster 10.F · Accessibility
 

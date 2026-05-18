@@ -64,6 +64,7 @@ export function DiskUsagePage() {
         'forgets about them.',
       variant: 'destructive',
       confirmLabel: 'Prune',
+      typedConfirmation: 'prune',
       onConfirm: async () => {
         setPruning(true);
         setPruneMsg(null);
