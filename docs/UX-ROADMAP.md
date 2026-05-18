@@ -30,8 +30,8 @@ landing experience.
   `g s` (settings), `n` (new pipeline in current project context), `/`
   (focus search in current view), `Esc` (close dialog / panel),
   `Enter` (confirm primary action). Help overlay on `?` — `6a7b811`
-- [ ] **Breadcrumb header** — `Projects › MyGame › iOS Release › Build #142`
-  with each segment clickable; replaces the "go back via sidebar" loop
+- [x] **Breadcrumb header** — `Projects › MyGame › iOS Release › Build #142`
+  with each segment clickable; replaces the "go back via sidebar" loop — `ac355eb`
 - [ ] **Per-view URL routing** — switch from Zustand-only `view` state to
   `react-router` (or wouter) so the address bar reflects the current view
   and the browser back/forward buttons work
