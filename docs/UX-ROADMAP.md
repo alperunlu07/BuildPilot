@@ -23,13 +23,13 @@ landing experience.
 
 ### Cluster 10.A · Navigation & information architecture
 
-- [ ] **Command palette** — `Cmd/Ctrl + K` opens a fuzzy-search palette
+- [x] **Command palette** — `Cmd/Ctrl + K` opens a fuzzy-search palette
   over projects, pipelines, builds + global actions (Add project, Open
-  settings, Run pipeline X, Open hosts, Toggle theme, …)
-- [ ] **Global keyboard shortcuts** — `g p` (projects), `g b` (builds),
+  settings, Run pipeline X, Open hosts, Toggle theme, …) — `6a7b811`
+- [x] **Global keyboard shortcuts** — `g p` (projects), `g b` (builds),
   `g s` (settings), `n` (new pipeline in current project context), `/`
   (focus search in current view), `Esc` (close dialog / panel),
-  `Enter` (confirm primary action). Help overlay on `?`
+  `Enter` (confirm primary action). Help overlay on `?` — `6a7b811`
 - [ ] **Breadcrumb header** — `Projects › MyGame › iOS Release › Build #142`
   with each segment clickable; replaces the "go back via sidebar" loop
 - [ ] **Per-view URL routing** — switch from Zustand-only `view` state to
