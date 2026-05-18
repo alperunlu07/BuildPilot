@@ -139,9 +139,9 @@ landing experience.
   each release (reads a server-shipped `CHANGELOG.md`)
 - [ ] **Per-build copy-link button** — shareable deep link to a build /
   step that auto-opens the right view
-- [ ] **Improved confirm dialog** — current dialog has Title + Body +
+- [x] **Improved confirm dialog** — current dialog has Title + Body +
   Confirm; add a typed-confirmation input (`type "delete" to confirm`)
-  for irreversible actions like project removal
+  for irreversible actions like project removal — `7354ed4`
 - [ ] **Sidebar resize + collapse** — current 18rem fixed; allow drag-to-
   resize or click-to-collapse to icon rail
 - [x] **Better date / time formatting** — relative ("3 min ago") with

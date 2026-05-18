@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ChevronLeft, Download, Filter, GitCompareArrows, RotateCcw, Square } from 'lucide-react';
+import { Check, ChevronLeft, Download, Filter, GitCompareArrows, Link2, RotateCcw, Square } from 'lucide-react';
 import type {
   Build,
   BuildArtifact,
@@ -80,6 +80,7 @@ export function BuildDetailPage({ buildId }: Props) {
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(() => new Set());
   const [diffOpen, setDiffOpen] = useState(false);
   const [diffCandidates, setDiffCandidates] = useState<Build[]>([]);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -332,6 +333,25 @@ export function BuildDetailPage({ buildId }: Props) {
               title="Compare with another build"
             >
               <GitCompareArrows size={11} /> Compare
+            </button>
+            <button
+              type="button"
+              onClick={async () => {
+                const url = `${window.location.origin}/builds/${build.id}`;
+                try {
+                  await navigator.clipboard.writeText(url);
+                } catch {
+                  // Older browsers / non-secure contexts — fall back to prompt.
+                  window.prompt('Copy this build link:', url);
+                }
+                setLinkCopied(true);
+                window.setTimeout(() => setLinkCopied(false), 1500);
+              }}
+              className="inline-flex items-center gap-1 rounded-md border border-slate-700 px-2 py-0.5 text-slate-300 hover:border-sky-500 hover:text-sky-400"
+              title="Copy a shareable link to this build"
+            >
+              {linkCopied ? <Check size={11} className="text-emerald-400" /> : <Link2 size={11} />}{' '}
+              {linkCopied ? 'Copied' : 'Copy link'}
             </button>
             <button
               type="button"
