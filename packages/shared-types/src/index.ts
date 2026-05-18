@@ -1722,10 +1722,76 @@ export interface ServerConfig {
   dbPath: string;
   webOrigin: string | null;
   telegram?: TelegramConfig;
+  // Phase 4 Cluster 11.I — inbound slash-command bots.
+  slack?: SlackConfig;
+  discord?: DiscordConfig;
   // Phase 4 Cluster D — build retention. When > 0, builds older than N days
   // (and their associated log entries + artifact rows) are pruned on a daily
   // cleanup pass. Set to 0 / omitted to keep everything forever.
   buildRetentionDays?: number;
+}
+
+// ── Slack (Cluster 11.I) ────────────────────────────────────────────────────
+// Inbound slash-command receiver only. `slackNotify` step type continues to
+// use raw webhook URLs (no token required), independent of this block.
+export interface SlackConfig {
+  enabled: boolean;
+  // Signing secret from the Slack app's Basic Information page; used to
+  // verify the X-Slack-Signature header on incoming requests.
+  signingSecret: string;
+  // Bot user OAuth token (xoxb-…). Optional — only used by the future
+  // outbound channel-post path; signature verification doesn't need it.
+  botToken: string;
+  // Default channel id (C…/G…) the bot posts to when a step omits its own.
+  defaultChannel: string;
+}
+
+export interface SlackConfigPublic {
+  enabled: boolean;
+  hasSigningSecret: boolean;
+  signingSecretPreview: string;
+  hasBotToken: boolean;
+  botTokenPreview: string;
+  defaultChannel: string;
+}
+
+export interface SlackConfigUpdate {
+  enabled?: boolean;
+  signingSecret?: string;
+  botToken?: string;
+  defaultChannel?: string;
+  clearSigningSecret?: boolean;
+  clearBotToken?: boolean;
+}
+
+// ── Discord (Cluster 11.I) ──────────────────────────────────────────────────
+// Inbound interactions endpoint. Like Slack, the outbound `discordNotify`
+// step uses raw webhook URLs and doesn't need this block.
+export interface DiscordConfig {
+  enabled: boolean;
+  // Ed25519 public key from the Discord developer portal; required to
+  // verify incoming X-Signature-Ed25519 headers.
+  publicKey: string;
+  // Application id — used by the slash-command registration script. Not
+  // a secret but bundled here so the dashboard can show it.
+  applicationId: string;
+  defaultChannelId: string;
+}
+
+export interface DiscordConfigPublic {
+  enabled: boolean;
+  hasPublicKey: boolean;
+  publicKeyPreview: string;
+  applicationId: string;
+  defaultChannelId: string;
+}
+
+export interface DiscordConfigUpdate {
+  enabled?: boolean;
+  publicKey?: string;
+  applicationId?: string;
+  defaultChannelId?: string;
+  clearPublicKey?: boolean;
 }
 
 // Shape returned by GET /api/config/telegram. Cleartext values never leave
