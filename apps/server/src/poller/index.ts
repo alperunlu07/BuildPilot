@@ -16,11 +16,11 @@ import {
 import { eventBus } from '../events/bus';
 import { logger } from '../logger';
 import { getTelegramConfig, isTelegramEnabled, sendApprovalRequest } from '../runner/telegramBot';
-import { createBuild, getBuild, updateBuildStatus } from '../store/builds';
+import { getBuild, updateBuildStatus } from '../store/builds';
 import {
   cancelBuild,
-  enqueueBuild,
   listInflightBuildsForPipeline,
+  startBuildForPipeline,
 } from '../runner/coordinator';
 import {
   matchesCron,
@@ -146,15 +146,12 @@ async function cronTick(): Promise<void> {
     );
     await maybeCancelInFlight(pipeline.id, pipeline.watch.cancelInProgressOnNewCommit ?? false);
     const head = (await getRemoteHeadSha(project.path, pipeline.watch.branch)) ?? '';
-    const build = createBuild({
-      pipelineId: pipeline.id,
-      projectId: project.id,
+    // startBuildForPipeline handles WP4 coalesce — a cron pipeline whose
+    // previous run is still pending in the queue will refresh that pending
+    // row with the new HEAD rather than insert a duplicate.
+    await startBuildForPipeline(pipeline.id, {
       triggerSha: head,
       triggerBranch: pipeline.watch.branch,
-      laneId: pipeline.laneId,
-    });
-    void enqueueBuild({ pipeline, project, build }).catch((err) => {
-      logger.error({ err, pipelineId: pipeline.id }, 'cron-triggered pipeline crashed');
     });
   }
 }
@@ -284,15 +281,11 @@ async function maybeFireTagTriggers(pipelineId: string, projectPath: string): Pr
     if (pipeline.watch.cancelInProgressOnNewCommit) {
       await maybeCancelInFlight(pipeline.id, true);
     }
-    const build = createBuild({
-      pipelineId,
-      projectId: project.id,
+    // Tag triggers go through startBuildForPipeline so back-to-back tag
+    // events (e.g. tag move then push) coalesce onto a single pending row.
+    await startBuildForPipeline(pipelineId, {
       triggerSha: sha,
       triggerBranch: `refs/tags/${tag}`,
-      laneId: pipeline.laneId,
-    });
-    void enqueueBuild({ pipeline, project, build }).catch((err) => {
-      logger.error({ err, pipelineId, tag }, 'tag-triggered pipeline crashed');
     });
   }
 }

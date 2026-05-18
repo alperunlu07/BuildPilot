@@ -7,12 +7,13 @@ import { getDb, initDb } from '../store/db';
 import { createLane } from '../store/lanes';
 import { createProject } from '../store/projects';
 import { createPipeline } from '../store/pipelines';
-import { createBuild, getBuild, updateBuildStatus } from '../store/builds';
+import { createBuild, getBuild, listBuilds, updateBuildStatus } from '../store/builds';
 import {
   __resetCoordinatorState,
   __setPipelineRunner,
   enqueueBuild,
   initScheduler,
+  startBuildForPipeline,
 } from './coordinator';
 
 // The runner under test is the coordinator's *scheduling* layer, not the
@@ -306,5 +307,145 @@ describe('coordinator — lane-aware scheduler (WP3)', () => {
 
     // Wrap up so afterEach doesn't leak a pending runner.
     harness.starts[0]!.finish();
+  });
+});
+
+describe('coordinator — pending build coalesce (WP4)', () => {
+  it('coalesces a second startBuildForPipeline onto the existing pending row', async () => {
+    const harness = makeHarness();
+    harness.install();
+
+    const project = makeProject();
+    // Use a custom lane with maxConcurrency=1 + a blocker pipeline of higher
+    // priority so the pipeline under test stays pending while we trigger it
+    // a second time. Without the blocker the synchronous tick() would start
+    // the first build immediately and the second trigger would create a
+    // brand-new pending row (not the scenario we want to cover).
+    const lane = createLane({ name: 'coalesce', maxConcurrency: 1 });
+    const blocker = makePipeline(project, { laneId: lane.id, priority: 1, name: 'blocker' });
+    const target = makePipeline(project, { laneId: lane.id, priority: 50, name: 'target' });
+
+    // Park the lane on the blocker.
+    const blockerRun = enqueue(blocker, project);
+    await flush();
+    expect(harness.running()).toEqual([blockerRun.build.id]);
+
+    // First trigger for `target` — startBuildForPipeline INSERTs a pending row.
+    const first = await startBuildForPipeline(target.id, { triggerSha: 'sha-A', triggerBranch: 'main' });
+    expect(first).not.toBeNull();
+    expect(first!.triggerSha).toBe('sha-A');
+    expect(first!.status).toBe('pending');
+
+    // Second trigger before the first runs — coalesce must update in place,
+    // not insert a second row. Result id stays the same; sha switches to B.
+    const second = await startBuildForPipeline(target.id, { triggerSha: 'sha-B', triggerBranch: 'main' });
+    expect(second).not.toBeNull();
+    expect(second!.id).toBe(first!.id);
+    expect(second!.triggerSha).toBe('sha-B');
+    expect(second!.status).toBe('pending');
+
+    // Only one pending row for the target pipeline should exist in the DB.
+    const targetBuilds = listBuilds({ pipelineId: target.id });
+    expect(targetBuilds.length).toBe(1);
+    expect(targetBuilds[0]!.triggerSha).toBe('sha-B');
+
+    // Drain the lane so afterEach doesn't leak.
+    harness.starts[0]!.finish();
+    await blockerRun.done;
+    await flush();
+    // The coalesced target build should now have started with the latest sha.
+    expect(harness.running()).toEqual([first!.id]);
+    expect(getBuild(first!.id)?.triggerSha).toBe('sha-B');
+    harness.starts[1]!.finish();
+  });
+
+  it('coalesce only affects the pending row — a concurrent running build is untouched', async () => {
+    const harness = makeHarness();
+    harness.install();
+
+    // maxConcurrency=1 + a blocker lets us hold exactly one running + one
+    // pending build for the same pipeline, so coalesce only has the pending
+    // row available to mutate. The running row's triggerSha must stay put.
+    const lane = createLane({ name: 'one-slot', maxConcurrency: 1 });
+    const project = makeProject();
+    const blocker = makePipeline(project, { laneId: lane.id, priority: 1, name: 'blocker' });
+    const target = makePipeline(project, { laneId: lane.id, priority: 50, name: 'target' });
+
+    // Park lane on blocker.
+    const blockerRun = enqueue(blocker, project);
+    await flush();
+    expect(harness.running()).toEqual([blockerRun.build.id]);
+
+    // First target trigger → pending (blocker holds the slot).
+    const pendingFirst = await startBuildForPipeline(target.id, {
+      triggerSha: 'sha-A',
+      triggerBranch: 'main',
+    });
+    expect(pendingFirst!.status).toBe('pending');
+
+    // Release blocker so target promotes to running with sha-A.
+    harness.starts[0]!.finish();
+    await blockerRun.done;
+    await flush();
+    expect(harness.running()).toEqual([pendingFirst!.id]);
+    const runningBuild = getBuild(pendingFirst!.id)!;
+    expect(runningBuild.status).toBe('running');
+    expect(runningBuild.triggerSha).toBe('sha-A');
+
+    // Second target trigger arrives while the first is RUNNING → no pending
+    // exists yet, so we INSERT a fresh pending row (not a coalesce).
+    const pendingSecond = await startBuildForPipeline(target.id, {
+      triggerSha: 'sha-B',
+      triggerBranch: 'main',
+    });
+    expect(pendingSecond!.id).not.toBe(runningBuild.id);
+    expect(pendingSecond!.status).toBe('pending');
+
+    // Third target trigger — pending row exists → coalesce onto sha-C.
+    // The running build's sha must remain sha-A.
+    const coalesced = await startBuildForPipeline(target.id, {
+      triggerSha: 'sha-C',
+      triggerBranch: 'main',
+    });
+    expect(coalesced!.id).toBe(pendingSecond!.id);
+    expect(coalesced!.triggerSha).toBe('sha-C');
+    expect(getBuild(runningBuild.id)?.triggerSha).toBe('sha-A');
+    // Total rows for this pipeline: 1 running + 1 coalesced pending = 2.
+    expect(listBuilds({ pipelineId: target.id }).length).toBe(2);
+
+    // Wrap up.
+    harness.starts[1]!.finish();
+    await flush();
+    if (harness.starts[2]) harness.starts[2].finish();
+  });
+
+  it('coalesce falls back to insert when no pending exists (running pipeline)', async () => {
+    const harness = makeHarness();
+    harness.install();
+
+    const project = makeProject();
+    const pipeline = makePipeline(project, { laneId: 'default', name: 'p' });
+
+    // First call — pipeline is idle, INSERT happens. Build immediately starts
+    // (default lane budget = 1).
+    const first = await startBuildForPipeline(pipeline.id, { triggerSha: 'sha-A', triggerBranch: 'main' });
+    expect(first).not.toBeNull();
+    await flush();
+    expect(harness.running()).toEqual([first!.id]);
+
+    // Finish it. No pending row exists between the finish and the next call.
+    harness.starts[0]!.finish();
+    await flush();
+    expect(getBuild(first!.id)?.status).toBe('success');
+
+    // Second call — should INSERT a fresh row, not silently update the
+    // completed one.
+    const second = await startBuildForPipeline(pipeline.id, { triggerSha: 'sha-B', triggerBranch: 'main' });
+    expect(second).not.toBeNull();
+    expect(second!.id).not.toBe(first!.id);
+    await flush();
+    expect(harness.running()).toEqual([second!.id]);
+
+    harness.starts[1]!.finish();
   });
 });

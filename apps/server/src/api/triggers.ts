@@ -1,11 +1,8 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import type { FastifyInstance } from 'fastify';
-import { logger } from '../logger';
 import { getPipeline } from '../store/pipelines';
 import { getProject } from '../store/projects';
-import { createBuild } from '../store/builds';
-import { enqueueBuild } from '../runner/coordinator';
-import { getCurrentBranch, getHeadSha } from '../git/operations';
+import { startBuildForPipeline } from '../runner/coordinator';
 
 // Phase 4 Cluster A — generic API trigger + VCS webhooks.
 //
@@ -47,22 +44,14 @@ async function fireTriggeredBuild(pipelineId: string, opts: TriggerOpts) {
   const project = getProject(pipeline.projectId);
   if (!project) return { ok: false as const, status: 404, error: 'project not found' };
 
-  const branch =
-    opts.triggerBranch ??
-    (await getCurrentBranch(project.path).catch(() => project.defaultBranch));
-  const sha = opts.triggerSha ?? (await getHeadSha(project.path, branch)) ?? '';
-
-  const build = createBuild({
-    pipelineId: pipeline.id,
-    projectId: project.id,
-    triggerSha: sha,
-    triggerBranch: branch,
-    laneId: pipeline.laneId,
+  // Funnel through startBuildForPipeline so webhooks / external triggers
+  // pick up WP4 coalesce — repeated webhook deliveries for the same pipeline
+  // collapse onto the freshest pending build instead of fanning out.
+  const build = await startBuildForPipeline(pipeline.id, {
+    triggerSha: opts.triggerSha,
+    triggerBranch: opts.triggerBranch,
   });
-
-  void enqueueBuild({ pipeline, project, build, fromNodeId: undefined }).catch((err) => {
-    logger.error({ err, pipelineId, branch, sha }, 'triggered pipeline crashed');
-  });
+  if (!build) return { ok: false as const, status: 500, error: 'could not start build' };
   return { ok: true as const, build };
 }
 

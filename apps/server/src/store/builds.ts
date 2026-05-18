@@ -163,3 +163,41 @@ export function updateBuildStatus(id: string, status: BuildStatus): void {
     .run(status, finishedAt, id);
 }
 
+// WP4 (queue): pending-build coalesce support. Returns the freshest pending
+// row for a pipeline (in practice there should be 0 or 1; ORDER BY is
+// defensive in case a legacy / racy code path ever inserted two). Used by
+// the coordinator to decide whether a new trigger should INSERT a fresh row
+// or UPDATE the in-flight pending one with the latest commit.
+export function findPendingBuildForPipeline(pipelineId: string): Build | null {
+  const row = getDb()
+    .prepare(
+      `SELECT * FROM builds WHERE pipeline_id = ? AND status = 'pending'
+       ORDER BY started_at DESC LIMIT 1`,
+    )
+    .get(pipelineId) as BuildRow | undefined;
+  return row ? rowToBuild(row) : null;
+}
+
+// WP4 (queue): atomically update an existing pending row with a newer
+// commit. The `AND status = 'pending'` guard is the race-protection: if the
+// scheduler tick has already flipped the row to 'running' between the
+// caller's lookup and this UPDATE, we return null and the caller falls back
+// to inserting a fresh build row. `started_at` is also refreshed — that
+// re-queues the coalesced build at the back of its FIFO slot (priority-tied
+// peers enqueued after the original now sort ahead of it), which matches
+// "the freshest commit's wall-clock arrival" semantics.
+export function updatePendingBuildTrigger(
+  buildId: string,
+  args: { triggerSha: string; triggerBranch: string },
+): Build | null {
+  const startedAt = Date.now();
+  const result = getDb()
+    .prepare(
+      `UPDATE builds SET trigger_sha = ?, trigger_branch = ?, started_at = ?
+       WHERE id = ? AND status = 'pending'`,
+    )
+    .run(args.triggerSha, args.triggerBranch, startedAt, buildId);
+  if (result.changes === 0) return null;
+  return getBuild(buildId);
+}
+

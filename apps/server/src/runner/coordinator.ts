@@ -4,7 +4,14 @@ import { runPipeline } from './engine';
 import { logger } from '../logger';
 import { getPipeline } from '../store/pipelines';
 import { getProject } from '../store/projects';
-import { createBuild, getBuild, listChildBuilds, updateBuildStatus } from '../store/builds';
+import {
+  createBuild,
+  findPendingBuildForPipeline,
+  getBuild,
+  listChildBuilds,
+  updateBuildStatus,
+  updatePendingBuildTrigger,
+} from '../store/builds';
 import { getCurrentBranch, getHeadSha } from '../git/operations';
 import { getLane, listLanes } from '../store/lanes';
 import { getDb } from '../store/db';
@@ -581,17 +588,63 @@ export function listInflightBuildsForPipeline(pipelineId: string): string[] {
 }
 
 // Reusable "trigger a build for this pipeline" helper used by the API route,
-// the Telegram bot's approval flow, and the upcoming auto-trigger paths.
+// the Telegram bot's approval flow, webhooks/triggers, the poller (cron +
+// tag triggers), and the rolling-build canceller.
+//
+// WP4 (queue): coalesce-aware. If a pending build already exists for this
+// pipeline, we update that row in place with the newer commit instead of
+// inserting a second pending row. This bounds the per-pipeline queue depth
+// at 1 pending + N running, so a fast commit burst doesn't fan out into N
+// redundant builds. The freshest SHA wins.
+//
+// `triggerSha` / `triggerBranch` overrides let webhook / cron / tag-trigger
+// callers pass authoritative values (e.g. the webhook payload's commit hash,
+// `refs/tags/<tag>` as the branch). When omitted we fall back to the
+// project's local checkout HEAD — the same behaviour the helper had before.
 export async function startBuildForPipeline(
   pipelineId: string,
-  opts: { fromNodeId?: string } = {},
+  opts: {
+    fromNodeId?: string;
+    triggerSha?: string;
+    triggerBranch?: string;
+  } = {},
 ): Promise<Build | null> {
   const pipeline = getPipeline(pipelineId);
   if (!pipeline) return null;
   const project = getProject(pipeline.projectId);
   if (!project) return null;
-  const branch = await getCurrentBranch(project.path).catch(() => project.defaultBranch);
-  const head = (await getHeadSha(project.path, branch)) ?? '';
+  const branch =
+    opts.triggerBranch ??
+    (await getCurrentBranch(project.path).catch(() => project.defaultBranch));
+  const head = opts.triggerSha ?? (await getHeadSha(project.path, branch)) ?? '';
+
+  // Coalesce check: if a pending build already exists for this pipeline,
+  // update it in place rather than INSERTing a second one. The update is
+  // status-guarded ('pending' only) so a build that the scheduler tick just
+  // promoted to 'running' between our lookup and our UPDATE will return
+  // null — in that race-loser case we fall through to the createBuild path
+  // and enqueue a fresh build, which is the safe outcome.
+  const existing = findPendingBuildForPipeline(pipeline.id);
+  if (existing) {
+    const oldSha = existing.triggerSha;
+    const updated = updatePendingBuildTrigger(existing.id, {
+      triggerSha: head,
+      triggerBranch: branch,
+    });
+    if (updated) {
+      logger.info(
+        { pipelineId: pipeline.id, buildId: updated.id, oldSha, newSha: head },
+        'coalesced pending build',
+      );
+      // No enqueueBuild() call here on purpose: the existing pending row is
+      // already in pipelineInflight + already discoverable by tick() via
+      // pickNextPendingForLane. Re-enqueuing would create a duplicate
+      // completion-resolver and a duplicate inflight entry.
+      return updated;
+    }
+    // Race-lost (existing went 'running' under us) — fall through to insert.
+  }
+
   const build = createBuild({
     pipelineId: pipeline.id,
     projectId: project.id,

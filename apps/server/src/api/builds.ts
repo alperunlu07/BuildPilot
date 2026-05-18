@@ -9,9 +9,13 @@ import { getBuildArtifact, listBuildArtifacts } from '../store/buildArtifacts';
 import { getPipeline } from '../store/pipelines';
 import { getProject } from '../store/projects';
 import { getCurrentBranch, getHeadSha } from '../git/operations';
-import { cancelBuild, enqueueBuild, rerunFailedMatrixChildren } from '../runner/coordinator';
+import {
+  cancelBuild,
+  enqueueBuild,
+  rerunFailedMatrixChildren,
+  startBuildForPipeline,
+} from '../runner/coordinator';
 import { eventBus } from '../events/bus';
-import { logger } from '../logger';
 
 const triggerSchema = z.object({
   pipelineId: z.string().min(1),
@@ -151,26 +155,12 @@ export async function buildsRoutes(app: FastifyInstance): Promise<void> {
       return reply.code(400).send({ error: 'fromNodeId not in pipeline' });
     }
 
-    const branch = await getCurrentBranch(project.path).catch(() => project.defaultBranch);
-    const head = (await getHeadSha(project.path, branch)) ?? '';
-
-    const build = createBuild({
-      pipelineId: pipeline.id,
-      projectId: project.id,
-      triggerSha: head,
-      triggerBranch: branch,
-      laneId: pipeline.laneId,
-    });
-
-    void enqueueBuild({
-      pipeline,
-      project,
-      build,
+    // Route through startBuildForPipeline so the WP4 pending-build coalesce
+    // applies here too (rapid double-clicks on "Run" shouldn't fan out).
+    const build = await startBuildForPipeline(pipeline.id, {
       fromNodeId: parsed.data.fromNodeId,
-    }).catch((err) => {
-      logger.error({ err }, 'pipeline crashed');
     });
-
+    if (!build) return reply.code(500).send({ error: 'could not start build' });
     return build;
   });
 
