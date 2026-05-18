@@ -22,6 +22,7 @@ import { SettingsPage } from './pages/SettingsPage';
 import { DiskUsagePage } from './pages/DiskUsagePage';
 import { TestReportPage } from './pages/TestReportPage';
 import { FlakyTestsPage } from './pages/FlakyTestsPage';
+import { BuildTrendsPage } from './pages/BuildTrendsPage';
 import { useStore } from './store/store';
 import { onConnected, subscribe } from './lib/events';
 import { ensurePermission } from './lib/notifications';
@@ -57,7 +58,9 @@ export function App() {
       ? `testReport:${view.buildId}`
       : view.type === 'flakyTests'
         ? `flakyTests:${view.pipelineId ?? ''}`
-        : `${view.type}:${'id' in view ? view.id : ''}`;
+        : view.type === 'trends'
+          ? `trends:${view.pipelineId ?? ''}`
+          : `${view.type}:${'id' in view ? view.id : ''}`;
   useEffect(() => {
     setMobileNavOpen(false);
   }, [viewKey]);
@@ -155,6 +158,7 @@ export function App() {
           {view.type === 'diskUsage' && <DiskUsagePage />}
           {view.type === 'testReport' && <TestReportPage buildId={view.buildId} />}
           {view.type === 'flakyTests' && <FlakyTestsPage />}
+          {view.type === 'trends' && <BuildTrendsPage />}
         </div>
         <BuildLogPanel />
       </main>

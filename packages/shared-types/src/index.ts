@@ -2003,3 +2003,35 @@ export interface FlakyQuarantineUpdate {
   testKey: string;
   quarantined: boolean;
 }
+
+// `GET /api/metrics/trends?pipelineId=...&buildCount=100` — extended trend
+// data for the BuildTrendsPage. Independent from PipelineMetrics so the
+// existing 30-build panel doesn't change shape.
+export interface BuildTrendsReport {
+  pipelineId: string;
+  pipelineName: string;
+  projectId: string;
+  projectName: string;
+  buildsAnalyzed: number;
+  durationP50Ms: number | null;
+  durationP95Ms: number | null;
+  // P95 over the FIRST half of the sample. Used as a "baseline" so the UI
+  // can show a 2× regression alert when the current P95 spikes.
+  baselineP95Ms: number | null;
+  // True when durationP95Ms > 2 × baselineP95Ms. UI uses it to render a
+  // red banner.
+  p95SpikeDetected: boolean;
+  // 0..1 — successful / (successful + failed) over the sample.
+  successRate: number | null;
+  // Oldest → newest. Used by both the duration sparkline and the
+  // success/failure dot grid.
+  builds: BuildTrendsBuild[];
+}
+
+export interface BuildTrendsBuild {
+  id: string;
+  status: BuildStatus;
+  startedAt: number;
+  finishedAt: number | null;
+  durationMs: number | null;
+}

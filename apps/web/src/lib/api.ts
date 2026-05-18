@@ -2,6 +2,7 @@ import type {
   Build,
   BuildArtifact,
   BuildLogEntry,
+  BuildTrendsReport,
   Commit,
   CoverageReport,
   DiskUsageReport,
@@ -235,4 +236,8 @@ export const api = {
         body: JSON.stringify({ testKey, quarantined }),
       },
     ),
+
+  // Build duration trend (Cluster 11.F item 5).
+  buildTrends: (pipelineId: string, buildCount = 100) =>
+    http<BuildTrendsReport>(`/metrics/trends?pipelineId=${pipelineId}&buildCount=${buildCount}`),
 };

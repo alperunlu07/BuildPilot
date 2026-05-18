@@ -6,6 +6,7 @@ import {
   GitBranch,
   History,
   Home,
+  LineChart,
   Monitor,
   Moon,
   Plus,
@@ -196,6 +197,12 @@ export function Sidebar({
             label={t('nav.hosts')}
           />
           <IconRail
+            icon={<LineChart size={16} className="text-emerald-400" />}
+            active={view.type === 'trends'}
+            onClick={() => setView({ type: 'trends' })}
+            label="Trends"
+          />
+          <IconRail
             icon={<AlertTriangle size={16} className="text-amber-400" />}
             active={view.type === 'flakyTests'}
             onClick={() => setView({ type: 'flakyTests' })}
@@ -319,6 +326,13 @@ export function Sidebar({
           label={t('nav.hosts')}
           onClick={onManageHosts}
           title="Manage saved SSH hosts (used by Remote SSH / SFTP / Mac steps)"
+        />
+        <NavItem
+          active={view.type === 'trends'}
+          icon={<LineChart size={14} className="text-emerald-400" />}
+          label="Trends"
+          onClick={() => setView({ type: 'trends' })}
+          title="Per-pipeline P50/P95 duration + success-rate trend"
         />
         <NavItem
           active={view.type === 'flakyTests'}

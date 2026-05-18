@@ -254,8 +254,8 @@ Cross-refs: `TODO.md` Phase 9.
   needs outbound PR integration) — `af0f89c`
 - [x] **Flaky test detection page** — `pass/fail` history per test across
   last N runs with quarantine flag (engine wiring to honor quarantine
-  is a follow-up)
-- [ ] **Build duration trend page** — per-pipeline P50/P95 sparkline +
+  is a follow-up) — `add331e`
+- [x] **Build duration trend page** — per-pipeline P50/P95 sparkline +
   regression alert when P95 spikes 2× baseline
 
 ### Cluster 11.G · Schedules & triggers UX

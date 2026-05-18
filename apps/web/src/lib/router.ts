@@ -24,6 +24,10 @@ export function viewToPath(view: View): string {
       return '/disk-usage';
     case 'testReport':
       return `/builds/${encodeURIComponent(view.buildId)}/tests`;
+    case 'trends':
+      return view.pipelineId
+        ? `/trends?pipelineId=${encodeURIComponent(view.pipelineId)}`
+        : '/trends';
     case 'flakyTests':
       return view.pipelineId
         ? `/flaky-tests?pipelineId=${encodeURIComponent(view.pipelineId)}`
@@ -43,6 +47,10 @@ export function pathToView(path: string): View {
   if (clean === '/flaky-tests') {
     const pid = qs.get('pipelineId');
     return pid ? { type: 'flakyTests', pipelineId: pid } : { type: 'flakyTests' };
+  }
+  if (clean === '/trends') {
+    const pid = qs.get('pipelineId');
+    return pid ? { type: 'trends', pipelineId: pid } : { type: 'trends' };
   }
 
   const projectMatch = clean.match(/^\/projects\/([^/]+)$/);
@@ -68,6 +76,7 @@ export function viewsEqual(a: View, b: View): boolean {
     return a.id === b.id;
   }
   if (a.type === 'testReport' && b.type === 'testReport') return a.buildId === b.buildId;
+  if (a.type === 'trends' && b.type === 'trends') return a.pipelineId === b.pipelineId;
   if (a.type === 'flakyTests' && b.type === 'flakyTests') return a.pipelineId === b.pipelineId;
   return true;
 }

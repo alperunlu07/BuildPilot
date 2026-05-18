@@ -37,9 +37,10 @@ export type View =
   | { type: 'settings' }
   | { type: 'diskUsage' }
   // Cluster 11.F — observability deep-dive pages. `pipelineId` on
-  // flakyTests is optional so the URL can carry an initial selection
-  // but the page also renders standalone (with a chooser).
+  // `trends` / `flakyTests` is optional so the URL can carry an initial
+  // selection but the page also renders standalone (with a chooser).
   | { type: 'testReport'; buildId: string }
+  | { type: 'trends'; pipelineId?: string }
   | { type: 'flakyTests'; pipelineId?: string };
 
 export interface CommitToast {
