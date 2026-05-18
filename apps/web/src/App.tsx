@@ -6,6 +6,7 @@ import { ConfirmDialog } from './components/ConfirmDialog';
 import { HostsDialog } from './components/HostsDialog';
 import { ToastContainer } from './components/ToastContainer';
 import { ActiveBuildsWidget } from './components/ActiveBuildsWidget';
+import { Breadcrumb } from './components/Breadcrumb';
 import { CommandPalette } from './components/CommandPalette';
 import { KeyboardShortcutsHelp } from './components/KeyboardShortcutsHelp';
 import { CreatePipelineDialog } from './components/CreatePipelineDialog';
@@ -89,6 +90,7 @@ export function App() {
         onManageHosts={() => setOpenHosts(true)}
       />
       <main className="flex min-w-0 flex-1 flex-col">
+        <Breadcrumb />
         <div className="min-h-0 flex-1 overflow-y-auto">
           {view.type === 'home' && <HomePage />}
           {view.type === 'projects' && <ProjectsPage onAdd={() => setOpenAdd(true)} />}
