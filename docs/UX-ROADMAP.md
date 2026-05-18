@@ -207,7 +207,7 @@ Cross-refs: `TODO.md` Phase 2.6.A (file vault, secret references).
 - [x] **"Where is this secret used?"** — back-reference panel listing
   every step / pipeline referencing a given secret — `70e921b`
 - [x] **Bulk secret import / export** — encrypted JSON bundle for moving
-  between machines or backing up alongside `master.key` — pending sha
+  between machines or backing up alongside `master.key` — `e482525`
 
 ### Cluster 11.C · Build matrix UX
 
