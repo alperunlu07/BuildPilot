@@ -54,6 +54,18 @@ export interface StepTiming {
 }
 
 const LANGUAGE_KEY = 'buildpilot.lang';
+const FAVORITES_KEY = 'buildpilot.favorites';
+const RECENTS_KEY = 'buildpilot.recents';
+
+export interface FavoritesState {
+  projectIds: string[];
+  pipelineIds: string[];
+}
+
+export type RecentItem =
+  | { kind: 'project'; id: string; label: string; at: number }
+  | { kind: 'pipeline'; id: string; label: string; at: number }
+  | { kind: 'build'; id: string; label: string; at: number };
 
 function readLanguage(): string {
   try {
@@ -63,6 +75,47 @@ function readLanguage(): string {
     // ignore
   }
   return 'en';
+}
+
+function readFavorites(): FavoritesState {
+  try {
+    const raw = localStorage.getItem(FAVORITES_KEY);
+    if (!raw) return { projectIds: [], pipelineIds: [] };
+    const parsed = JSON.parse(raw) as Partial<FavoritesState>;
+    return {
+      projectIds: Array.isArray(parsed.projectIds) ? parsed.projectIds : [],
+      pipelineIds: Array.isArray(parsed.pipelineIds) ? parsed.pipelineIds : [],
+    };
+  } catch {
+    return { projectIds: [], pipelineIds: [] };
+  }
+}
+
+function writeFavorites(f: FavoritesState): void {
+  try {
+    localStorage.setItem(FAVORITES_KEY, JSON.stringify(f));
+  } catch {
+    // ignore
+  }
+}
+
+function readRecents(): RecentItem[] {
+  try {
+    const raw = localStorage.getItem(RECENTS_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as RecentItem[];
+    return Array.isArray(parsed) ? parsed.slice(0, 5) : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeRecents(r: RecentItem[]): void {
+  try {
+    localStorage.setItem(RECENTS_KEY, JSON.stringify(r.slice(0, 5)));
+  } catch {
+    // ignore
+  }
 }
 
 export interface ConfirmationRequest {
@@ -99,6 +152,8 @@ interface State {
   theme: ThemeChoice;
   density: Density;
   language: string;
+  favorites: FavoritesState;
+  recents: RecentItem[];
 
   loadProjects(): Promise<void>;
   loadPipelines(projectId?: string): Promise<void>;
@@ -149,6 +204,9 @@ interface State {
   setTheme(theme: ThemeChoice): void;
   setDensity(d: Density): void;
   setLanguage(lang: string): void;
+  toggleFavoriteProject(id: string): void;
+  toggleFavoritePipeline(id: string): void;
+  pushRecent(item: Omit<RecentItem, 'at'>): void;
   handleEvent(event: ServerEvent): void;
 }
 
@@ -168,6 +226,8 @@ export const useStore = create<State>((set, get) => ({
   theme: readStoredTheme(),
   density: readStoredDensity(),
   language: readLanguage(),
+  favorites: readFavorites(),
+  recents: readRecents(),
 
   async loadProjects() {
     set({ projects: await api.listProjects() });
@@ -230,6 +290,28 @@ export const useStore = create<State>((set, get) => ({
   },
   setView(view) {
     set({ view });
+    // Mirror navigation into the recents list. We resolve a human-readable
+    // label lazily here so callers don't need to pass one through.
+    const state = get();
+    let recent: Omit<RecentItem, 'at'> | null = null;
+    if (view.type === 'project') {
+      const p = state.projects.find((x) => x.id === view.id);
+      if (p) recent = { kind: 'project', id: p.id, label: p.name };
+    } else if (view.type === 'pipeline') {
+      const pl = state.pipelines.find((x) => x.id === view.id);
+      if (pl) recent = { kind: 'pipeline', id: pl.id, label: pl.name };
+    } else if (view.type === 'build') {
+      const b = state.builds.find((x) => x.id === view.id);
+      if (b) {
+        const pl = state.pipelines.find((x) => x.id === b.pipelineId);
+        recent = {
+          kind: 'build',
+          id: b.id,
+          label: `${pl?.name ?? 'pipeline'} · #${b.id.slice(0, 7)}`,
+        };
+      }
+    }
+    if (recent) get().pushRecent(recent);
   },
   upsertPipeline(p) {
     const idx = get().pipelines.findIndex((x) => x.id === p.id);
@@ -314,6 +396,34 @@ export const useStore = create<State>((set, get) => ({
       // ignore
     }
     set({ language: lang });
+  },
+  toggleFavoriteProject(id) {
+    const cur = get().favorites;
+    const has = cur.projectIds.includes(id);
+    const next: FavoritesState = {
+      ...cur,
+      projectIds: has ? cur.projectIds.filter((x) => x !== id) : [...cur.projectIds, id],
+    };
+    writeFavorites(next);
+    set({ favorites: next });
+  },
+  toggleFavoritePipeline(id) {
+    const cur = get().favorites;
+    const has = cur.pipelineIds.includes(id);
+    const next: FavoritesState = {
+      ...cur,
+      pipelineIds: has ? cur.pipelineIds.filter((x) => x !== id) : [...cur.pipelineIds, id],
+    };
+    writeFavorites(next);
+    set({ favorites: next });
+  },
+  pushRecent(item) {
+    const filtered = get().recents.filter(
+      (r) => !(r.kind === item.kind && r.id === item.id),
+    );
+    const next: RecentItem[] = [{ ...item, at: Date.now() }, ...filtered].slice(0, 5);
+    writeRecents(next);
+    set({ recents: next });
   },
   handleEvent(event) {
     switch (event.type) {
