@@ -16,6 +16,7 @@ import { defaultActiveLevels } from '../components/LevelToggleBar';
 import { ArtifactPreviewModal } from '../components/ArtifactPreviewModal';
 import { FailureSummaryCard } from '../components/FailureSummaryCard';
 import { LogSearchBar, useCompiledFilter } from '../components/LogSearchBar';
+import { TimestampRangeSlider } from '../components/TimestampRangeSlider';
 
 const EMPTY: BuildLogEntry[] = [];
 
@@ -61,6 +62,8 @@ export function BuildDetailPage({ buildId }: Props) {
   const [query, setQuery] = useState('');
   const [regex, setRegex] = useState(false);
   const filter = useCompiledFilter(query, regex);
+  // Selected timestamp window — null = full build duration (no filter).
+  const [tsRange, setTsRange] = useState<[number, number] | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -150,10 +153,23 @@ export function BuildDetailPage({ buildId }: Props) {
           return false;
         }
       }
+      if (tsRange && (e.ts < tsRange[0] || e.ts > tsRange[1])) return false;
       if (!filter.match(e.message)) return false;
       return true;
     });
-  }, [entries, activeLevels, activeNodeId, filter]);
+  }, [entries, activeLevels, activeNodeId, filter, tsRange]);
+
+  // Bounds for the timestamp slider — earliest / latest log timestamp,
+  // falling back to the build start/finish if no entries yet.
+  const tsBounds = useMemo<[number, number] | null>(() => {
+    if (!build) return null;
+    const lo = entries.length > 0 ? entries[0]!.ts : build.startedAt;
+    const hi = entries.length > 0
+      ? entries[entries.length - 1]!.ts
+      : build.finishedAt ?? Date.now();
+    if (hi <= lo) return null;
+    return [lo, hi];
+  }, [entries, build]);
 
   const downloadLog = () => {
     if (!build) return;
@@ -412,6 +428,26 @@ export function BuildDetailPage({ buildId }: Props) {
           />
         </div>
       </div>
+
+      {tsBounds && (
+        <div className="flex items-center gap-3 border-b border-slate-800 bg-slate-900/20 px-6 py-2">
+          <span className="shrink-0 text-[10px] uppercase tracking-wider text-slate-500">
+            Time range
+          </span>
+          <div className="flex-1">
+            <TimestampRangeSlider
+              min={tsBounds[0]}
+              max={tsBounds[1]}
+              value={tsRange ?? tsBounds}
+              onChange={(next) => {
+                const same =
+                  next[0] === tsBounds[0] && next[1] === tsBounds[1];
+                setTsRange(same ? null : next);
+              }}
+            />
+          </div>
+        </div>
+      )}
 
       <div className="min-h-0 flex-1 px-2 pb-2">
         <LogTable
