@@ -417,6 +417,8 @@ pnpm test       # run vitest suites
 - [docs/TELEGRAM.md](docs/TELEGRAM.md) — bot setup, commands, approval
   flow, troubleshooting
 - [TODO.md](TODO.md) — living roadmap with commit-linked progress
+- [docs/UX-ROADMAP.md](docs/UX-ROADMAP.md) — UI/UX + platform polish
+  roadmap (companion to TODO.md)
 
 ## Roadmap highlights
 
