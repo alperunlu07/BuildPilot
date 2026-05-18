@@ -1,7 +1,11 @@
 import { useEffect, useState } from 'react';
-import { AlertCircle, CheckCircle2, Eye, EyeOff, Lock, Send } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Eye, EyeOff, Lock, Palette, Send } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import type { TelegramConfigPublic } from '@buildpilot/shared-types';
 import { api } from '../lib/api';
+import { useStore } from '../store/store';
+import type { Density, ThemeChoice } from '../lib/theme';
+import i18n from '../lib/i18n';
 
 // Banner state for the Telegram form. We use the local-only `idle` state to
 // suppress stale toasts when the user is mid-edit.
@@ -127,6 +131,8 @@ export function SettingsPage() {
           .
         </p>
       </div>
+
+      <AppearanceSection />
 
       <section className="rounded-lg border border-slate-800 bg-slate-900/40 p-5">
         <div className="mb-4 flex items-center justify-between">
@@ -254,6 +260,77 @@ export function SettingsPage() {
         </div>
       </section>
     </div>
+  );
+}
+
+function AppearanceSection() {
+  const theme = useStore((s) => s.theme);
+  const setTheme = useStore((s) => s.setTheme);
+  const density = useStore((s) => s.density);
+  const setDensity = useStore((s) => s.setDensity);
+  const language = useStore((s) => s.language);
+  const setLanguage = useStore((s) => s.setLanguage);
+  const { t } = useTranslation();
+
+  function changeLanguage(lang: string) {
+    setLanguage(lang);
+    void i18n.changeLanguage(lang);
+  }
+
+  return (
+    <section className="mb-6 rounded-lg border border-slate-800 bg-slate-900/40 p-5">
+      <div className="mb-4">
+        <h2 className="flex items-center gap-2 text-base font-semibold text-slate-100">
+          <Palette size={16} className="text-sky-400" /> Appearance
+        </h2>
+        <p className="mt-1 text-xs text-slate-400">
+          Theme, density, and language. Stored in this browser only.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <div>
+          <div className="mb-1 text-xs font-medium uppercase tracking-wider text-slate-400">
+            {t('theme.title')}
+          </div>
+          <select
+            value={theme}
+            onChange={(e) => setTheme(e.target.value as ThemeChoice)}
+            className="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-1.5 text-sm text-slate-100 focus:border-sky-500 focus:outline-none"
+          >
+            <option value="system">{t('theme.system')}</option>
+            <option value="dark">{t('theme.dark')}</option>
+            <option value="light">{t('theme.light')}</option>
+          </select>
+        </div>
+        <div>
+          <div className="mb-1 text-xs font-medium uppercase tracking-wider text-slate-400">
+            {t('density.title')}
+          </div>
+          <select
+            value={density}
+            onChange={(e) => setDensity(e.target.value as Density)}
+            className="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-1.5 text-sm text-slate-100 focus:border-sky-500 focus:outline-none"
+          >
+            <option value="comfortable">{t('density.comfortable')}</option>
+            <option value="compact">{t('density.compact')}</option>
+          </select>
+        </div>
+        <div>
+          <div className="mb-1 text-xs font-medium uppercase tracking-wider text-slate-400">
+            {t('language.title')}
+          </div>
+          <select
+            value={language}
+            onChange={(e) => changeLanguage(e.target.value)}
+            className="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-1.5 text-sm text-slate-100 focus:border-sky-500 focus:outline-none"
+          >
+            <option value="en">English</option>
+            <option value="tr">Türkçe</option>
+          </select>
+        </div>
+      </div>
+    </section>
   );
 }
 

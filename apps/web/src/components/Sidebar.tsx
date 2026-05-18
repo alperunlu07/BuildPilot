@@ -1,4 +1,5 @@
-import { Home, Plus, Folder, GitBranch, History, Server, Settings, Trash2 } from 'lucide-react';
+import { Home, Plus, Folder, GitBranch, History, Server, Settings, Trash2, Monitor, Moon, Sun } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useStore } from '../store/store';
 import { cn } from '../lib/cn';
 
@@ -15,9 +16,18 @@ export function Sidebar({ onAddProject, onManageHosts }: Props) {
   const removeProject = useStore((s) => s.removeProject);
   const deletePipelineAction = useStore((s) => s.deletePipeline);
   const requestConfirmation = useStore((s) => s.requestConfirmation);
+  const theme = useStore((s) => s.theme);
+  const setTheme = useStore((s) => s.setTheme);
+  const { t } = useTranslation();
+
+  function cycleTheme() {
+    const next = theme === 'dark' ? 'light' : theme === 'light' ? 'system' : 'dark';
+    setTheme(next);
+  }
+  const ThemeIcon = theme === 'dark' ? Moon : theme === 'light' ? Sun : Monitor;
 
   return (
-    <aside className="flex h-full w-72 shrink-0 flex-col border-r border-slate-800 bg-slate-950">
+    <aside className="density-card flex h-full w-72 shrink-0 flex-col border-r border-slate-800 bg-slate-950">
       <div className="flex items-center justify-between border-b border-slate-800 px-4 py-3">
         <button
           type="button"
@@ -27,14 +37,26 @@ export function Sidebar({ onAddProject, onManageHosts }: Props) {
           <div className="text-base font-semibold tracking-tight text-slate-100">BuildPilot</div>
           <div className="text-[11px] uppercase tracking-wider text-slate-500">Local CI/CD</div>
         </button>
-        <button
-          type="button"
-          onClick={onAddProject}
-          className="rounded-md border border-slate-700 p-1.5 text-slate-300 hover:border-sky-500 hover:text-sky-400"
-          title="Add project"
-        >
-          <Plus size={16} />
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={cycleTheme}
+            className="rounded-md border border-slate-700 p-1.5 text-slate-300 hover:border-sky-500 hover:text-sky-400"
+            title={`${t('actions.toggleTheme')} (${theme})`}
+            aria-label={t('actions.toggleTheme')}
+          >
+            <ThemeIcon size={14} />
+          </button>
+          <button
+            type="button"
+            onClick={onAddProject}
+            className="rounded-md border border-slate-700 p-1.5 text-slate-300 hover:border-sky-500 hover:text-sky-400"
+            title="Add project"
+            aria-label="Add project"
+          >
+            <Plus size={16} />
+          </button>
+        </div>
       </div>
 
       <div className="space-y-0.5 px-2 pt-3">

@@ -12,6 +12,16 @@ import type {
 } from '@buildpilot/shared-types';
 import { api } from '../lib/api';
 import { notify } from '../lib/notifications';
+import {
+  applyDensity,
+  applyTheme,
+  readStoredDensity,
+  readStoredTheme,
+  writeStoredDensity,
+  writeStoredTheme,
+  type Density,
+  type ThemeChoice,
+} from '../lib/theme';
 
 // Cap retained per-build log entries in-memory so a chatty Unity build doesn't
 // balloon the store. Older rows still live in SQLite and can be re-fetched.
@@ -41,6 +51,18 @@ export type StepRuntimeStatus = 'running' | 'success' | 'failed' | 'skipped';
 export interface StepTiming {
   startedAt: number;
   finishedAt?: number;
+}
+
+const LANGUAGE_KEY = 'buildpilot.lang';
+
+function readLanguage(): string {
+  try {
+    const raw = localStorage.getItem(LANGUAGE_KEY);
+    if (raw === 'en' || raw === 'tr') return raw;
+  } catch {
+    // ignore
+  }
+  return 'en';
 }
 
 export interface ConfirmationRequest {
@@ -73,6 +95,10 @@ interface State {
   // blockers / enterprise policies can't silently swallow destructive
   // actions.
   confirmation: ConfirmationRequest | null;
+  // Cluster 10.A — appearance + i18n preferences. Persisted in localStorage.
+  theme: ThemeChoice;
+  density: Density;
+  language: string;
 
   loadProjects(): Promise<void>;
   loadPipelines(projectId?: string): Promise<void>;
@@ -120,6 +146,9 @@ interface State {
   seedBuildEntries(buildId: string, entries: BuildLogEntry[]): void;
   requestConfirmation(req: ConfirmationRequest): void;
   closeConfirmation(): void;
+  setTheme(theme: ThemeChoice): void;
+  setDensity(d: Density): void;
+  setLanguage(lang: string): void;
   handleEvent(event: ServerEvent): void;
 }
 
@@ -136,6 +165,9 @@ export const useStore = create<State>((set, get) => ({
   stepTimings: {},
   entriesByBuild: {},
   confirmation: null,
+  theme: readStoredTheme(),
+  density: readStoredDensity(),
+  language: readLanguage(),
 
   async loadProjects() {
     set({ projects: await api.listProjects() });
@@ -264,6 +296,24 @@ export const useStore = create<State>((set, get) => ({
         ? merged.slice(merged.length - MAX_LIVE_ENTRIES_PER_BUILD)
         : merged;
     set({ entriesByBuild: { ...get().entriesByBuild, [buildId]: trimmed } });
+  },
+  setTheme(theme) {
+    writeStoredTheme(theme);
+    applyTheme(theme);
+    set({ theme });
+  },
+  setDensity(d) {
+    writeStoredDensity(d);
+    applyDensity(d);
+    set({ density: d });
+  },
+  setLanguage(lang) {
+    try {
+      localStorage.setItem(LANGUAGE_KEY, lang);
+    } catch {
+      // ignore
+    }
+    set({ language: lang });
   },
   handleEvent(event) {
     switch (event.type) {

@@ -15,12 +15,17 @@
     "@types/dagre": "^0.7.54",
     "@xyflow/react": "^12.3.5",
     "clsx": "^2.1.1",
+    "cmdk": "^1.1.1",
     "dagre": "^0.8.5",
     "date-fns": "^4.1.0",
+    "i18next": "^26.2.0",
     "lucide-react": "^0.460.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "react-i18next": "^17.0.8",
+    "react-resizable-panels": "^4.11.1",
     "react-window": "^1.8.11",
+    "wouter": "^3.9.0",
     "zustand": "^5.0.2"
   },
   "devDependencies": {
