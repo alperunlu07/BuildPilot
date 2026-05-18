@@ -82,9 +82,9 @@ landing experience.
 
 ### Cluster 10.C · Build & log experience
 
-- [ ] **Failure summary card** — banner at the top of `BuildDetailPage`
+- [x] **Failure summary card** — banner at the top of `BuildDetailPage`
   showing failed step name + last 5 lines of failure logs + AI auto-fix
-  suggestion summary if it ran
+  suggestion summary if it ran — `872e658`
 - [ ] **Log search regex toggle** — current LogTable filter is substring;
   add a regex toggle and remember last query per build
 - [ ] **Timestamp-range filter** — slider over the build duration to scope
