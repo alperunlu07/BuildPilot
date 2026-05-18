@@ -31,9 +31,22 @@ export function ProjectsPage({ onAdd }: Props) {
       </div>
 
       {projects.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-slate-800 bg-slate-900/40 p-10 text-center text-slate-400">
-          <Folder className="mx-auto mb-2 text-slate-600" size={28} />
-          No projects yet. Add a local git repository to start watching it.
+        <div className="rounded-lg border border-dashed border-slate-800 bg-slate-900/40 p-10 text-center">
+          <Folder className="mx-auto mb-3 text-slate-600" size={36} />
+          <div className="text-base font-medium text-slate-200">No projects yet</div>
+          <p className="mx-auto mt-1 max-w-md text-sm text-slate-400">
+            BuildPilot watches local git repositories and runs pipelines on every new
+            commit. Point it at a folder to start.
+          </p>
+          <div className="mt-5 flex justify-center">
+            <button
+              type="button"
+              onClick={onAdd}
+              className="inline-flex items-center gap-1.5 rounded-md bg-sky-600 px-3.5 py-2 text-sm font-medium text-white hover:bg-sky-500"
+            >
+              <Plus size={14} /> Add your first project
+            </button>
+          </div>
         </div>
       ) : (
         <ul className="space-y-2">

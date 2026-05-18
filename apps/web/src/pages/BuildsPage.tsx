@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Filter, RefreshCw } from 'lucide-react';
+import { Filter, Hammer, History, RefreshCw } from 'lucide-react';
 import type { Build, BuildStatus } from '@buildpilot/shared-types';
 import { useStore } from '../store/store';
 import { api } from '../lib/api';
@@ -131,9 +131,22 @@ export function BuildsPage() {
       </div>
 
       {builds.length === 0 ? (
-        <div className="rounded-md border border-dashed border-slate-800 bg-slate-900/40 p-10 text-center text-sm text-slate-500">
-          No builds match the current filters.
-        </div>
+        <BuildsEmptyState
+          hasFilters={projectId !== '' || pipelineId !== '' || status !== 'all'}
+          onClear={() => {
+            setProjectId('');
+            setPipelineId('');
+            setStatus('all');
+          }}
+          onTriggerFirst={() => {
+            // Hand the user off to their first pipeline so they can run it.
+            const firstPipeline = pipelines[0];
+            if (firstPipeline) setView({ type: 'pipeline', id: firstPipeline.id });
+            else if (projects[0]) setView({ type: 'project', id: projects[0].id });
+            else setView({ type: 'projects' });
+          }}
+          hasAnyPipeline={pipelines.length > 0}
+        />
       ) : (
         <div className="overflow-hidden rounded-md border border-slate-800">
           <table className="w-full text-left text-sm">
@@ -178,6 +191,54 @@ export function BuildsPage() {
           </table>
         </div>
       )}
+    </div>
+  );
+}
+
+function BuildsEmptyState({
+  hasFilters,
+  onClear,
+  onTriggerFirst,
+  hasAnyPipeline,
+}: {
+  hasFilters: boolean;
+  onClear(): void;
+  onTriggerFirst(): void;
+  hasAnyPipeline: boolean;
+}) {
+  if (hasFilters) {
+    return (
+      <div className="rounded-md border border-dashed border-slate-800 bg-slate-900/40 p-10 text-center">
+        <Filter className="mx-auto mb-3 text-slate-600" size={32} />
+        <div className="text-sm font-medium text-slate-200">No builds match these filters</div>
+        <p className="mt-1 text-xs text-slate-500">Try clearing them or widening the search.</p>
+        <button
+          type="button"
+          onClick={onClear}
+          className="mt-4 inline-flex items-center gap-1 rounded-md border border-slate-700 px-3 py-1.5 text-xs text-slate-200 hover:border-sky-500 hover:text-sky-300"
+        >
+          Clear filters
+        </button>
+      </div>
+    );
+  }
+  return (
+    <div className="rounded-md border border-dashed border-slate-800 bg-slate-900/40 p-10 text-center">
+      <History className="mx-auto mb-3 text-slate-600" size={36} />
+      <div className="text-base font-medium text-slate-200">No builds yet</div>
+      <p className="mx-auto mt-1 max-w-md text-sm text-slate-400">
+        Every build that has ever run on this machine will land here. Trigger your first
+        pipeline to get started.
+      </p>
+      <div className="mt-5 flex justify-center">
+        <button
+          type="button"
+          onClick={onTriggerFirst}
+          className="inline-flex items-center gap-1.5 rounded-md bg-sky-600 px-3.5 py-2 text-sm font-medium text-white hover:bg-sky-500"
+        >
+          <Hammer size={14} /> {hasAnyPipeline ? 'Open a pipeline' : 'Add a project'}
+        </button>
+      </div>
     </div>
   );
 }

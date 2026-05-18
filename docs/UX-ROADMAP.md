@@ -131,8 +131,8 @@ landing experience.
 - [x] **Toast-with-undo** for destructive actions — pipeline / project
   delete shows a 5s undo toast instead of relying solely on the confirm
   dialog — `88c88ad`
-- [ ] **Pipeline editor draft auto-save** — debounced save to
-  `localStorage` so a tab close / accidental refresh doesn't lose work
+- [x] **Pipeline editor draft auto-save** — debounced save to
+  `localStorage` so a tab close / accidental refresh doesn't lose work — `6d64489`
 - [x] **Optimistic UI** for run / cancel — the button flips state
   immediately and rolls back on server error — `4170c8f`
 - [ ] **In-app changelog drawer** — surfaces newly-shipped features after

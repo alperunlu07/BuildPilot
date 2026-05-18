@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Activity, Plus, Trash2, X } from 'lucide-react';
+import { Activity, Plus, Server, Trash2, X } from 'lucide-react';
 import type { HostCapabilities, SshHost } from '@buildpilot/shared-types';
 import { useStore } from '../store/store';
 
@@ -150,8 +150,13 @@ export function HostsDialog({ open, onClose }: Props) {
               <Plus size={12} /> New host
             </button>
             {sortedHosts.length === 0 && (
-              <div className="px-1 py-3 text-xs text-slate-500">
-                No saved hosts yet. Fill the form on the right.
+              <div className="rounded-md border border-dashed border-slate-700 bg-slate-900/40 p-4 text-center">
+                <Server className="mx-auto mb-2 text-slate-600" size={22} />
+                <div className="text-xs font-medium text-slate-200">No saved hosts</div>
+                <p className="mt-1 text-[11px] text-slate-500">
+                  Add a host on the right to use it from Remote SSH / SFTP / TestFlight / Mac
+                  steps.
+                </p>
               </div>
             )}
             <ul className="space-y-1">
