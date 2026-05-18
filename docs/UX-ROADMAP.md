@@ -169,8 +169,8 @@ landing experience.
   unusable below 640px (fixed column widths) — `f87a609`
 - [x] **PWA install** — manifest + service worker (also needed for Web
   Push; tracked in `TODO.md` Phase 3) — `464e81b`
-- [ ] **Tap-friendly hit targets** — current Trash2 hover-delete buttons
-  are 14px square; bump to 32px on touch devices
+- [x] **Tap-friendly hit targets** — current Trash2 hover-delete buttons
+  are 14px square; bump to 32px on touch devices — `e07bede`
 
 ---
 
