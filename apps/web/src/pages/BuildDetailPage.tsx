@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ChevronLeft, Download, Filter, RotateCcw, Square } from 'lucide-react';
+import { ChevronLeft, Download, Filter, GitCompareArrows, RotateCcw, Square } from 'lucide-react';
 import type {
   Build,
   BuildArtifact,
@@ -14,6 +14,20 @@ import { LogTable } from '../components/LogTable';
 import { StepGantt } from '../components/StepGantt';
 import { defaultActiveLevels } from '../components/LevelToggleBar';
 import { ArtifactPreviewModal } from '../components/ArtifactPreviewModal';
+import { FailureSummaryCard } from '../components/FailureSummaryCard';
+import {
+  LogSearchBar,
+  loadLogPresets,
+  saveLogPresets,
+  useCompiledFilter,
+  type SavedLogFilter,
+} from '../components/LogSearchBar';
+import { TimestampRangeSlider } from '../components/TimestampRangeSlider';
+import { LogGroupBar } from '../components/LogGroupBar';
+import { StepDurationCompare } from '../components/StepDurationCompare';
+import { BuildDiffView } from '../components/BuildDiffView';
+import { commandFromEntry } from '../lib/copyCommand';
+import { buildGroupFilter, detectLogGroups } from '../lib/logGroups';
 
 const EMPTY: BuildLogEntry[] = [];
 
@@ -56,6 +70,15 @@ export function BuildDetailPage({ buildId }: Props) {
     () => defaultActiveLevels(),
   );
   const [activeNodeId, setActiveNodeId] = useState<string | 'all'>('all');
+  const [query, setQuery] = useState('');
+  const [regex, setRegex] = useState(false);
+  const filter = useCompiledFilter(query, regex);
+  // Selected timestamp window — null = full build duration (no filter).
+  const [tsRange, setTsRange] = useState<[number, number] | null>(null);
+  const [presets, setPresets] = useState<SavedLogFilter[]>(() => loadLogPresets());
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(() => new Set());
+  const [diffOpen, setDiffOpen] = useState(false);
+  const [diffCandidates, setDiffCandidates] = useState<Build[]>([]);
 
   useEffect(() => {
     let alive = true;
@@ -135,6 +158,12 @@ export function BuildDetailPage({ buildId }: Props) {
     return [...seen.entries()];
   }, [entries]);
 
+  const logGroups = useMemo(() => detectLogGroups(entries), [entries]);
+  const groupFilter = useMemo(
+    () => buildGroupFilter(logGroups, collapsedGroups),
+    [logGroups, collapsedGroups],
+  );
+
   const filtered = useMemo(() => {
     return entries.filter((e) => {
       if (!activeLevels.has(e.level)) return false;
@@ -145,9 +174,24 @@ export function BuildDetailPage({ buildId }: Props) {
           return false;
         }
       }
+      if (tsRange && (e.ts < tsRange[0] || e.ts > tsRange[1])) return false;
+      if (!groupFilter(e)) return false;
+      if (!filter.match(e.message)) return false;
       return true;
     });
-  }, [entries, activeLevels, activeNodeId]);
+  }, [entries, activeLevels, activeNodeId, filter, tsRange, groupFilter]);
+
+  // Bounds for the timestamp slider — earliest / latest log timestamp,
+  // falling back to the build start/finish if no entries yet.
+  const tsBounds = useMemo<[number, number] | null>(() => {
+    if (!build) return null;
+    const lo = entries.length > 0 ? entries[0]!.ts : build.startedAt;
+    const hi = entries.length > 0
+      ? entries[entries.length - 1]!.ts
+      : build.finishedAt ?? Date.now();
+    if (hi <= lo) return null;
+    return [lo, hi];
+  }, [entries, build]);
 
   const downloadLog = () => {
     if (!build) return;
@@ -273,6 +317,23 @@ export function BuildDetailPage({ buildId }: Props) {
             )}
             <button
               type="button"
+              onClick={async () => {
+                if (diffCandidates.length === 0) {
+                  const list = await api.listBuilds({
+                    pipelineId: build.pipelineId,
+                    limit: 50,
+                  });
+                  setDiffCandidates(list);
+                }
+                setDiffOpen(true);
+              }}
+              className="inline-flex items-center gap-1 rounded-md border border-slate-700 px-2 py-0.5 text-slate-300 hover:border-sky-500 hover:text-sky-400"
+              title="Compare with another build"
+            >
+              <GitCompareArrows size={11} /> Compare
+            </button>
+            <button
+              type="button"
               onClick={downloadLog}
               className="inline-flex items-center gap-1 rounded-md border border-slate-700 px-2 py-0.5 text-slate-300 hover:border-sky-500 hover:text-sky-400"
               title="Download log as .txt"
@@ -282,6 +343,20 @@ export function BuildDetailPage({ buildId }: Props) {
           </div>
         </div>
       </header>
+
+      {build.status === 'failed' && (
+        <FailureSummaryCard
+          entries={entries}
+          nodeLabel={(id, type) =>
+            `${nodeLabelMap.get(id) ?? type ?? '?'} · ${id.slice(0, 8)}`
+          }
+          onRetry={async (nodeId) => {
+            const next = await triggerBuild(build.pipelineId, nodeId);
+            setView({ type: 'build', id: next.id });
+          }}
+          onJumpToNode={(nodeId) => setActiveNodeId(nodeId)}
+        />
+      )}
 
       {artifacts.length > 0 && (
         <div className="border-b border-slate-800 bg-slate-900/30 px-6 py-3">
@@ -341,6 +416,14 @@ export function BuildDetailPage({ buildId }: Props) {
         onSelect={(id) => setActiveNodeId(id === activeNodeId ? 'all' : id)}
       />
 
+      <StepDurationCompare
+        build={build}
+        entries={entries}
+        nodeLabel={(id, type) =>
+          `${nodeLabelMap.get(id) ?? type ?? '?'} · ${id.slice(0, 8)}`
+        }
+      />
+
       <div className="flex flex-wrap items-center gap-3 border-b border-t border-slate-800 bg-slate-900/30 px-6 py-2 text-xs">
         <Filter size={12} className="text-slate-500" />
         <span className="text-slate-400">Levels</span>
@@ -378,11 +461,77 @@ export function BuildDetailPage({ buildId }: Props) {
             </option>
           ))}
         </select>
-        <span className="ml-auto text-slate-500">
+        <span className="text-slate-500">
           {filtered.length} / {entries.length} rows
           {entries.length >= 5000 && ' (capped at 5000 in memory)'}
         </span>
+        <div className="ml-auto flex w-full max-w-md items-center">
+          <LogSearchBar
+            query={query}
+            onQueryChange={setQuery}
+            regex={regex}
+            onRegexChange={setRegex}
+            regexError={filter.error}
+            presets={presets}
+            onApplyPreset={(p) => {
+              setQuery(p.query);
+              setRegex(p.regex);
+            }}
+            onSavePreset={(name) => {
+              const next: SavedLogFilter = {
+                id: `p-${Date.now().toString(36)}`,
+                name,
+                query,
+                regex,
+              };
+              const list = [...presets, next];
+              setPresets(list);
+              saveLogPresets(list);
+            }}
+            onDeletePreset={(id) => {
+              const list = presets.filter((p) => p.id !== id);
+              setPresets(list);
+              saveLogPresets(list);
+            }}
+          />
+        </div>
       </div>
+
+      <LogGroupBar
+        groups={logGroups}
+        collapsed={collapsedGroups}
+        onToggle={(id) =>
+          setCollapsedGroups((prev) => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id);
+            else next.add(id);
+            return next;
+          })
+        }
+        onToggleAll={(allCollapsed) =>
+          setCollapsedGroups(allCollapsed ? new Set() : new Set(logGroups.map((g) => g.id)))
+        }
+      />
+
+      {tsBounds && (
+        <div className="flex items-center gap-3 border-b border-slate-800 bg-slate-900/20 px-6 py-2">
+          <span className="shrink-0 text-[10px] uppercase tracking-wider text-slate-500">
+            Time range
+          </span>
+          <div className="flex-1">
+            <TimestampRangeSlider
+              min={tsBounds[0]}
+              max={tsBounds[1]}
+              value={tsRange ?? tsBounds}
+              onChange={(next) => {
+                const same =
+                  next[0] === tsBounds[0] && next[1] === tsBounds[1];
+                setTsRange(same ? null : next);
+              }}
+            />
+          </div>
+        </div>
+      )}
 
       <div className="min-h-0 flex-1 px-2 pb-2">
         <LogTable
@@ -390,6 +539,7 @@ export function BuildDetailPage({ buildId }: Props) {
           nodeLabel={(id, type) =>
             `${nodeLabelMap.get(id) ?? type ?? '?'} · ${id.slice(0, 8)}`
           }
+          copyCommandFor={commandFromEntry}
           emptyMessage={entries.length === 0 ? 'Build queued / no output yet.' : 'No rows match these filters.'}
         />
       </div>
@@ -399,6 +549,17 @@ export function BuildDetailPage({ buildId }: Props) {
         artifact={previewArtifact}
         onClose={() => setPreviewArtifact(null)}
       />
+
+      {diffOpen && (
+        <BuildDiffView
+          current={build}
+          candidates={diffCandidates}
+          nodeLabel={(id, type) =>
+            `${nodeLabelMap.get(id) ?? type ?? '?'} · ${id.slice(0, 8)}`
+          }
+          onClose={() => setDiffOpen(false)}
+        />
+      )}
     </div>
   );
 }

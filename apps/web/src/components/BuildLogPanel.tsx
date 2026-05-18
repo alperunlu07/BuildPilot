@@ -5,6 +5,7 @@ import { useStore } from '../store/store';
 import { LogTable } from './LogTable';
 import { LevelToggleBar, defaultActiveLevels } from './LevelToggleBar';
 import { cn } from '../lib/cn';
+import { commandFromEntry } from '../lib/copyCommand';
 
 // Stable empty-array reference: returning a fresh `[]` from a Zustand
 // selector triggers an infinite re-render loop because every call produces
@@ -103,7 +104,7 @@ export function BuildLogPanel() {
         </div>
       </div>
       <div className="min-h-0 flex-1">
-        <LogTable entries={filtered} compact />
+        <LogTable entries={filtered} compact copyCommandFor={commandFromEntry} />
       </div>
     </div>
   );

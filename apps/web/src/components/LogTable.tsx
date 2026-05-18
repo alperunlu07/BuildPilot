@@ -1,7 +1,9 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { ArrowDownCircle } from 'lucide-react';
 import { FixedSizeList, type ListChildComponentProps } from 'react-window';
 import type { BuildLogEntry, BuildLogLevel, StepType } from '@buildpilot/shared-types';
 import { cn } from '../lib/cn';
+import { renderAnsi, type AnsiSegment } from '../lib/ansi';
 
 interface Props {
   entries: BuildLogEntry[];
@@ -12,6 +14,9 @@ interface Props {
   // Compact = tighter row height for the bottom panel; default = roomier.
   compact?: boolean;
   emptyMessage?: string;
+  // Optional "Copy as terminal command" hook. Returning a non-null string
+  // surfaces a hover "copy" button on the row that writes it to clipboard.
+  copyCommandFor?(entry: BuildLogEntry): string | null;
 }
 
 const LEVEL_STYLE: Record<BuildLogLevel, { dot: string; pill: string }> = {
@@ -40,12 +45,16 @@ export function LogTable({
   follow = true,
   compact = false,
   emptyMessage = 'Waiting for output…',
+  copyCommandFor,
 }: Props) {
   const rowH = compact ? ROW_H_COMPACT : ROW_H;
   const listRef = useRef<FixedSizeList>(null);
   const followRef = useRef(follow);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState<{ w: number; h: number }>({ w: 0, h: 0 });
+  // Mirrors followRef into render state so the "Jump to latest" button can
+  // appear/disappear when the user scrolls away from the bottom.
+  const [autoFollow, setAutoFollow] = useState(follow);
 
   // Measure the container so FixedSizeList knows how tall/wide to be. Using
   // ResizeObserver instead of forcing height: 100% on the list because the
@@ -72,9 +81,15 @@ export function LogTable({
     listRef.current?.scrollToItem(entries.length - 1, 'end');
   }, [entries.length]);
 
+  const jumpToLatest = useCallback(() => {
+    followRef.current = true;
+    setAutoFollow(true);
+    if (entries.length > 0) listRef.current?.scrollToItem(entries.length - 1, 'end');
+  }, [entries.length]);
+
   const itemData = useMemo(
-    () => ({ entries, nodeLabel, compact, rowH }),
-    [entries, nodeLabel, compact, rowH],
+    () => ({ entries, nodeLabel, compact, rowH, copyCommandFor }),
+    [entries, nodeLabel, compact, rowH, copyCommandFor],
   );
 
   if (entries.length === 0) {
@@ -86,7 +101,7 @@ export function LogTable({
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col font-mono text-[12px]">
+    <div className="relative flex h-full min-h-0 flex-col font-mono text-[12px]">
       <div
         className={cn(
           'sticky top-0 z-10 grid border-b border-slate-800 bg-slate-950/95 px-2 backdrop-blur',
@@ -112,7 +127,9 @@ export function LogTable({
             onScroll={({ scrollOffset, scrollUpdateWasRequested }) => {
               if (scrollUpdateWasRequested) return;
               const max = entries.length * rowH - size.h;
-              followRef.current = max - scrollOffset < rowH * 2;
+              const atBottom = max - scrollOffset < rowH * 2;
+              followRef.current = atBottom;
+              setAutoFollow((cur) => (cur === atBottom ? cur : atBottom));
             }}
             // Inline class for the inner container — react-window manages
             // its own scroll, we just style the scrollbar.
@@ -122,6 +139,16 @@ export function LogTable({
           </FixedSizeList>
         )}
       </div>
+      {!autoFollow && (
+        <button
+          type="button"
+          onClick={jumpToLatest}
+          className="absolute bottom-3 right-4 z-20 inline-flex items-center gap-1 rounded-full border border-sky-700 bg-slate-900/90 px-2.5 py-1 text-[11px] text-sky-300 shadow-lg backdrop-blur hover:border-sky-500 hover:text-sky-200"
+          title="Re-enable autoscroll"
+        >
+          <ArrowDownCircle size={12} /> Jump to latest
+        </button>
+      )}
     </div>
   );
 }
@@ -131,17 +158,19 @@ interface RowItemData {
   nodeLabel?(nodeId: string, stepType: StepType | null): string;
   compact: boolean;
   rowH: number;
+  copyCommandFor?(entry: BuildLogEntry): string | null;
 }
 
 function Row({ index, style, data }: ListChildComponentProps<RowItemData>) {
-  const { entries, nodeLabel, compact } = data;
+  const { entries, nodeLabel, compact, copyCommandFor } = data;
   const e = entries[index]!;
   const lvlStyle = LEVEL_STYLE[e.level];
+  const cmd = copyCommandFor?.(e) ?? null;
   return (
     <div
       style={style}
       className={cn(
-        'grid items-center border-t border-slate-900 px-2 hover:bg-slate-900/40',
+        'group grid items-center border-t border-slate-900 px-2 hover:bg-slate-900/40',
         compact ? 'py-0' : 'py-0',
       )}
     >
@@ -168,19 +197,53 @@ function Row({ index, style, data }: ListChildComponentProps<RowItemData>) {
         </span>
         <span
           // Single-line truncation; full text on hover so virtualization
-          // can keep a fixed row height.
-          title={e.message}
+          // can keep a fixed row height. ANSI sequences are stripped from
+          // the title attr so the tooltip stays readable.
+          title={e.message.replace(/\x1b\[[0-9;]*[A-Za-z]/g, '')}
           className={cn(
-            'truncate text-slate-200',
+            'relative flex items-center truncate text-slate-200',
             e.level === 'stderr' && 'text-amber-200',
             e.level === 'failure' && 'text-rose-300',
             e.level === 'success' && 'text-emerald-300',
           )}
         >
-          {e.message}
+          <span className="min-w-0 truncate">
+            <AnsiMessage text={e.message} />
+          </span>
+          {cmd && (
+            <button
+              type="button"
+              onClick={(ev) => {
+                ev.stopPropagation();
+                void navigator.clipboard?.writeText(cmd);
+              }}
+              className="ml-2 hidden shrink-0 rounded border border-slate-700 px-1.5 py-0 text-[10px] uppercase tracking-wider text-slate-400 hover:border-sky-500 hover:text-sky-300 group-hover:inline-flex"
+              title={`Copy: ${cmd}`}
+            >
+              copy
+            </button>
+          )}
         </span>
       </div>
     </div>
+  );
+}
+
+// Renders a log message with inline ANSI SGR colors. Falls back to plain
+// text when the message contains no escape sequences (no work, no dom).
+function AnsiMessage({ text }: { text: string }) {
+  const segments = useMemo<AnsiSegment[]>(() => renderAnsi(text), [text]);
+  if (segments.length === 1 && Object.keys(segments[0]!.style).length === 0) {
+    return <>{segments[0]!.text}</>;
+  }
+  return (
+    <>
+      {segments.map((seg, i) => (
+        <span key={i} style={seg.style}>
+          {seg.text}
+        </span>
+      ))}
+    </>
   );
 }
 

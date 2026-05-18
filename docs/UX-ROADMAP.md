@@ -82,29 +82,29 @@ landing experience.
 
 ### Cluster 10.C · Build & log experience
 
-- [ ] **Failure summary card** — banner at the top of `BuildDetailPage`
+- [x] **Failure summary card** — banner at the top of `BuildDetailPage`
   showing failed step name + last 5 lines of failure logs + AI auto-fix
-  suggestion summary if it ran
-- [ ] **Log search regex toggle** — current LogTable filter is substring;
-  add a regex toggle and remember last query per build
-- [ ] **Timestamp-range filter** — slider over the build duration to scope
-  log view to a window (handy for hour-long Unity builds)
-- [ ] **Saved log filters** — named filter presets ("errors only",
-  "Xcode warnings", "build commands") shared across builds
-- [ ] **"Copy as terminal command"** — every step that shells out should
+  suggestion summary if it ran — `872e658`
+- [x] **Log search regex toggle** — current LogTable filter is substring;
+  add a regex toggle and remember last query per build — `884e333`
+- [x] **Timestamp-range filter** — slider over the build duration to scope
+  log view to a window (handy for hour-long Unity builds) — `af12a84`
+- [x] **Saved log filters** — named filter presets ("errors only",
+  "Xcode warnings", "build commands") shared across builds — `94ca61f`
+- [x] **"Copy as terminal command"** — every step that shells out should
   expose a "Copy command" button on its log entry to paste into a
-  local terminal verbatim
-- [ ] **Live tail auto-scroll lock** — when the user scrolls up, stop
-  auto-scrolling; floating "Jump to latest" button on the right
-- [ ] **Step duration comparison** — on a finished build, show each step's
+  local terminal verbatim — `b974181`
+- [x] **Live tail auto-scroll lock** — when the user scrolls up, stop
+  auto-scrolling; floating "Jump to latest" button on the right — `ee4ba44`
+- [x] **Step duration comparison** — on a finished build, show each step's
   duration alongside the previous successful build's duration with
-  delta colored (+12% red, -8% green)
-- [ ] **Log section grouping** — collapsible groups via existing CI
-  conventions (`::group::name` / `--- name`), auto-detected in stdout
-- [ ] **Inline ANSI color support** in LogTable — many shell tools emit
-  color; LogTable currently strips
-- [ ] **Build diff view** — pick two builds; show step-by-step duration
-  diff + artifact size diff + first diverging log line
+  delta colored (+12% red, -8% green) — `00ca0ca`
+- [x] **Log section grouping** — collapsible groups via existing CI
+  conventions (`::group::name` / `--- name`), auto-detected in stdout — `a7ddef7`
+- [x] **Inline ANSI color support** in LogTable — many shell tools emit
+  color; LogTable currently strips — `4ac2c44`
+- [x] **Build diff view** — pick two builds; show step-by-step duration
+  diff + artifact size diff + first diverging log line — `4955ddf`
 
 ### Cluster 10.D · Metrics-led home dashboard
 
