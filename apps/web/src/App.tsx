@@ -20,6 +20,7 @@ import { BuildsPage } from './pages/BuildsPage';
 import { BuildDetailPage } from './pages/BuildDetailPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { DiskUsagePage } from './pages/DiskUsagePage';
+import { HostsPage } from './pages/HostsPage';
 import { useStore } from './store/store';
 import { onConnected, subscribe } from './lib/events';
 import { ensurePermission } from './lib/notifications';
@@ -126,7 +127,6 @@ export function App() {
     <div className="flex h-full bg-slate-950 text-slate-100">
       <Sidebar
         onAddProject={() => setOpenAdd(true)}
-        onManageHosts={() => setOpenHosts(true)}
         onShowChangelog={() => setOpenChangelog(true)}
         changelogHasUnread={hasUnread}
         mobileOpen={mobileNavOpen}
@@ -143,6 +143,7 @@ export function App() {
           {view.type === 'build' && <BuildDetailPage buildId={view.id} />}
           {view.type === 'settings' && <SettingsPage />}
           {view.type === 'diskUsage' && <DiskUsagePage />}
+          {view.type === 'hosts' && <HostsPage />}
         </div>
         <BuildLogPanel />
       </main>

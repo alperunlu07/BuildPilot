@@ -17,6 +17,9 @@ import { useStore } from '../store/store';
 
 interface Props {
   onAddProject(): void;
+  // Quick-add affordance: opens the legacy modal so an operator can add a
+  // host without leaving the current view. The full management UI lives at
+  // /hosts and is reachable via the "Go to SSH hosts" command.
   onManageHosts(): void;
 }
 
@@ -148,11 +151,18 @@ export function CommandPalette({ onAddProject, onManageHosts }: Props) {
                 <Plus size={14} className="text-emerald-400" /> {t('actions.addProject')}
               </Command.Item>
               <Command.Item
-                value="manage ssh hosts"
-                onSelect={() => run(onManageHosts)}
+                value="go ssh hosts page"
+                onSelect={() => run(() => setView({ type: 'hosts' }))}
                 className="cmdk-item"
               >
                 <Server size={14} className="text-slate-400" /> {t('nav.hosts')}
+              </Command.Item>
+              <Command.Item
+                value="quick add ssh host"
+                onSelect={() => run(onManageHosts)}
+                className="cmdk-item"
+              >
+                <Plus size={14} className="text-slate-400" /> Quick-add SSH host
               </Command.Item>
               <Command.Item
                 value="toggle theme"

@@ -22,6 +22,8 @@ export function viewToPath(view: View): string {
       return '/settings';
     case 'diskUsage':
       return '/disk-usage';
+    case 'hosts':
+      return '/hosts';
   }
 }
 
@@ -32,6 +34,7 @@ export function pathToView(path: string): View {
   if (clean === '/builds') return { type: 'builds' };
   if (clean === '/settings') return { type: 'settings' };
   if (clean === '/disk-usage') return { type: 'diskUsage' };
+  if (clean === '/hosts') return { type: 'hosts' };
 
   const projectMatch = clean.match(/^\/projects\/([^/]+)$/);
   if (projectMatch) return { type: 'project', id: decodeURIComponent(projectMatch[1]!) };
