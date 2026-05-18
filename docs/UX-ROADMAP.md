@@ -32,9 +32,9 @@ landing experience.
   `Enter` (confirm primary action). Help overlay on `?` — `6a7b811`
 - [x] **Breadcrumb header** — `Projects › MyGame › iOS Release › Build #142`
   with each segment clickable; replaces the "go back via sidebar" loop — `ac355eb`
-- [ ] **Per-view URL routing** — switch from Zustand-only `view` state to
+- [x] **Per-view URL routing** — switch from Zustand-only `view` state to
   `react-router` (or wouter) so the address bar reflects the current view
-  and the browser back/forward buttons work
+  and the browser back/forward buttons work — `2806e56`
 - [ ] **Multi-tab / split view** — keep the pipeline editor and live build
   log open side-by-side in a resizable split (current `BuildLogPanel`
   is fixed bottom)
