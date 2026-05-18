@@ -1,7 +1,7 @@
 import { Folder, Plus, Trash2 } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
 import { useStore } from '../store/store';
 import { BuildSparkline } from '../components/BuildSparkline';
+import { Time } from '../lib/formatDate';
 
 interface Props {
   onAdd(): void;
@@ -65,9 +65,11 @@ export function ProjectsPage({ onAdd }: Props) {
               </button>
               <div className="flex items-baseline justify-between pr-8">
                 <h3 className="text-base font-medium text-slate-100">{p.name}</h3>
-                <span className="text-[11px] text-slate-500">
-                  added {formatDistanceToNow(p.createdAt, { addSuffix: true })}
-                </span>
+                <Time
+                  ts={p.createdAt}
+                  prefix="added"
+                  className="text-[11px] text-slate-500"
+                />
               </div>
               <code className="mt-1 block truncate text-[11px] text-slate-500">{p.path}</code>
               <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-slate-400">

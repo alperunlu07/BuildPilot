@@ -8,7 +8,7 @@ import {
   Timer,
   TrendingUp,
 } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
+import { Time } from '../lib/formatDate';
 import type { HomeMetrics } from '@buildpilot/shared-types';
 import { api } from '../lib/api';
 import { useStore } from '../store/store';
@@ -167,9 +167,7 @@ export function HomePage() {
                             <span className="text-slate-300">{b.pipelineName}</span>
                           </span>
                           <span className="font-mono text-emerald-400">{b.triggerBranch}</span>
-                          <span className="text-slate-500">
-                            {formatDistanceToNow(b.startedAt, { addSuffix: true })}
-                          </span>
+                          <Time ts={b.startedAt} className="text-slate-500" />
                         </button>
                       </li>
                     ))}

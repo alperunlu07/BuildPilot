@@ -4,6 +4,7 @@ import type { Build, BuildStatus } from '@buildpilot/shared-types';
 import { useStore } from '../store/store';
 import { api } from '../lib/api';
 import { cn } from '../lib/cn';
+import { Time } from '../lib/formatDate';
 
 type StatusFilter = 'all' | BuildStatus;
 
@@ -167,7 +168,7 @@ export function BuildsPage() {
                       {b.triggerSha ? b.triggerSha.slice(0, 7) : '—'}
                     </td>
                     <td className="px-3 py-2 text-slate-400">
-                      {new Date(b.startedAt).toLocaleString()}
+                      <Time ts={b.startedAt} />
                     </td>
                     <td className="px-3 py-2 text-slate-400">{formatDuration(b)}</td>
                   </tr>

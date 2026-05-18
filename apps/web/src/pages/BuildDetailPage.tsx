@@ -28,6 +28,7 @@ import { StepDurationCompare } from '../components/StepDurationCompare';
 import { BuildDiffView } from '../components/BuildDiffView';
 import { commandFromEntry } from '../lib/copyCommand';
 import { buildGroupFilter, detectLogGroups } from '../lib/logGroups';
+import { Time } from '../lib/formatDate';
 
 const EMPTY: BuildLogEntry[] = [];
 
@@ -285,11 +286,11 @@ export function BuildDetailPage({ buildId }: Props) {
             </span>
           </span>
           <span>·</span>
-          <span>started {new Date(build.startedAt).toLocaleString()}</span>
+          <Time ts={build.startedAt} prefix="started" />
           {finished && build.finishedAt && (
             <>
               <span>·</span>
-              <span>finished {new Date(build.finishedAt).toLocaleString()}</span>
+              <Time ts={build.finishedAt} prefix="finished" />
             </>
           )}
           <div className="ml-auto flex items-center gap-2">
