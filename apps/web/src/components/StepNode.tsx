@@ -1,4 +1,5 @@
-import { Handle, Position, type NodeProps } from '@xyflow/react';
+import { Handle, Position, useReactFlow, type NodeProps } from '@xyflow/react';
+import { useCallback } from 'react';
 import {
   AlertCircle,
   Apple,
@@ -109,8 +110,32 @@ interface StepNodeData {
   [key: string]: unknown;
 }
 
-export function StepNode({ type, data, selected }: NodeProps) {
+export function StepNode({ id, type, data, selected }: NodeProps) {
   const def = STEP_DEFINITIONS[type as StepType];
+  const { setNodes } = useReactFlow();
+
+  // Cluster 10.F · keyboard navigation. tabIndex=0 makes the node a tab
+  // stop so screen-reader / keyboard users can iterate through the graph
+  // without touching the canvas pan/zoom shortcuts. Enter / Space toggles
+  // selection — once selected, the existing StepPropertyPanel pops out
+  // on the right.
+  //
+  // Tradeoff: react-flow installs its own keydown handlers on the canvas
+  // for Delete / Backspace / arrows. We don't preventDefault on those so
+  // they continue to bubble; we only swallow Enter / Space because those
+  // would otherwise scroll the surrounding container.
+  const onKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLDivElement>) => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      e.preventDefault();
+      e.stopPropagation();
+      setNodes((nds) =>
+        nds.map((n) => ({ ...n, selected: n.id === id ? true : false })),
+      );
+    },
+    [id, setNodes],
+  );
+
   if (!def) return null;
   const Icon = ICONS[def.icon] ?? Terminal;
 
@@ -137,6 +162,11 @@ export function StepNode({ type, data, selected }: NodeProps) {
         minWidth: 180,
         borderStyle: disabled ? 'dashed' : 'solid',
       }}
+      tabIndex={0}
+      role="button"
+      aria-label={`${d.templateLabel || def.label}${status ? `, ${status}` : ''}${disabled ? ', skipped' : ''}`}
+      aria-pressed={selected}
+      onKeyDown={onKeyDown}
     >
       <Handle type="target" position={Position.Top} />
       <div className="flex items-center gap-2">
