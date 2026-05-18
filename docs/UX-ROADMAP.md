@@ -85,8 +85,8 @@ landing experience.
 - [x] **Failure summary card** — banner at the top of `BuildDetailPage`
   showing failed step name + last 5 lines of failure logs + AI auto-fix
   suggestion summary if it ran — `872e658`
-- [ ] **Log search regex toggle** — current LogTable filter is substring;
-  add a regex toggle and remember last query per build
+- [x] **Log search regex toggle** — current LogTable filter is substring;
+  add a regex toggle and remember last query per build — `884e333`
 - [ ] **Timestamp-range filter** — slider over the build duration to scope
   log view to a window (handy for hour-long Unity builds)
 - [ ] **Saved log filters** — named filter presets ("errors only",
