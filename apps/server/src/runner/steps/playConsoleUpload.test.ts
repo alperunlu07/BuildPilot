@@ -1,3 +1,4 @@
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { resolvePlayInputs } from './playConsoleUpload';
 
@@ -8,7 +9,7 @@ describe('resolvePlayInputs', () => {
       '/proj',
     );
     expect(r1.binaryKind).toBe('aab');
-    expect(r1.binaryAbs).toBe('/proj/a.aab');
+    expect(r1.binaryAbs).toBe(join('/proj', 'a.aab'));
     const r2 = resolvePlayInputs(
       { packageName: 'com.example.app', binaryPath: '/abs/a.apk' },
       '/proj',

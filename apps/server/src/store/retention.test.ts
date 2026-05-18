@@ -16,6 +16,9 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  // Close DB before removing temp dir, otherwise Windows holds the WAL
+  // mmap'd file and rmSync fails with EPERM.
+  getDb().close();
   rmSync(tmp, { recursive: true, force: true });
 });
 
