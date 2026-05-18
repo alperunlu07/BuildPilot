@@ -24,8 +24,8 @@ satellite widgets.
 - [x] Disk usage page — bytes consumed by `~/.buildpilot/artifacts/` broken
       down by pipeline, with a "prune older than N days" action that reuses
       existing `pruneOldBuilds`. Endpoints `GET /api/metrics/disk-usage` +
-      `POST /api/builds/prune?olderThanDays=N`. *(commit TBD)*
-- [ ] Active builds widget — sticky element showing in-flight builds with
+      `POST /api/builds/prune?olderThanDays=N`. (44a047a)
+- [x] Active builds widget — sticky element showing in-flight builds with
       progress + cancel button. Build a self-contained widget; integrate
       into App.tsx if possible (one line of import + render), otherwise
-      return a "ready to integrate" component and note follow-up.
+      return a "ready to integrate" component and note follow-up. *(commit TBD)*

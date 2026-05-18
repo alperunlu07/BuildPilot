@@ -5,6 +5,7 @@ import { BuildLogPanel } from './components/BuildLogPanel';
 import { ConfirmDialog } from './components/ConfirmDialog';
 import { HostsDialog } from './components/HostsDialog';
 import { ToastContainer } from './components/ToastContainer';
+import { ActiveBuildsWidget } from './components/ActiveBuildsWidget';
 import { HomePage } from './pages/HomePage';
 import { ProjectsPage } from './pages/ProjectsPage';
 import { ProjectDetailPage } from './pages/ProjectDetailPage';
@@ -77,6 +78,7 @@ export function App() {
       </main>
 
       <ToastContainer />
+      <ActiveBuildsWidget />
       <AddProjectDialog open={openAdd} onClose={() => setOpenAdd(false)} />
       <HostsDialog open={openHosts} onClose={() => setOpenHosts(false)} />
       <ConfirmDialog
