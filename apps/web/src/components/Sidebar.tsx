@@ -11,6 +11,7 @@ import {
   Search,
   Server,
   Settings,
+  Sparkles,
   Star,
   Sun,
   Trash2,
@@ -50,9 +51,11 @@ function readStoredCollapsed(): boolean {
 interface Props {
   onAddProject(): void;
   onManageHosts(): void;
+  onShowChangelog(): void;
+  changelogHasUnread?: boolean;
 }
 
-export function Sidebar({ onAddProject, onManageHosts }: Props) {
+export function Sidebar({ onAddProject, onManageHosts, onShowChangelog, changelogHasUnread }: Props) {
   const projects = useStore((s) => s.projects);
   const pipelines = useStore((s) => s.pipelines);
   const view = useStore((s) => s.view);
@@ -470,6 +473,20 @@ export function Sidebar({ onAddProject, onManageHosts }: Props) {
           </ul>
         </div>
       )}
+
+      <div className="border-t border-slate-800 px-2 py-2">
+        <button
+          type="button"
+          onClick={onShowChangelog}
+          className="flex w-full items-center gap-2 rounded px-2 py-1 text-left text-[11px] text-slate-400 hover:bg-slate-800/60 hover:text-slate-200"
+        >
+          <Sparkles size={11} className="shrink-0 text-sky-400" />
+          <span className="flex-1">What's new</span>
+          {changelogHasUnread && (
+            <span className="inline-flex h-1.5 w-1.5 rounded-full bg-sky-400" />
+          )}
+        </button>
+      </div>
 
       {/* Drag-to-resize handle pinned to the right edge — Tailwind cursor-col-resize hits the gap. */}
       <div

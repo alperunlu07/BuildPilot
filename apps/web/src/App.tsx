@@ -9,6 +9,7 @@ import { UndoToast } from './components/UndoToast';
 import { ActiveBuildsWidget } from './components/ActiveBuildsWidget';
 import { Breadcrumb } from './components/Breadcrumb';
 import { CommandPalette } from './components/CommandPalette';
+import { ChangelogDrawer, useUnreadChangelog } from './components/ChangelogDrawer';
 import { KeyboardShortcutsHelp } from './components/KeyboardShortcutsHelp';
 import { CreatePipelineDialog } from './components/CreatePipelineDialog';
 import { HomePage } from './pages/HomePage';
@@ -41,7 +42,14 @@ export function App() {
 
   const [openAdd, setOpenAdd] = useState(false);
   const [openHosts, setOpenHosts] = useState(false);
+  const [openChangelog, setOpenChangelog] = useState(false);
   const [openCreatePipeline, setOpenCreatePipeline] = useState<string | null>(null);
+  const { hasUnread } = useUnreadChangelog();
+
+  // Auto-open the changelog drawer on first visit after a new release.
+  useEffect(() => {
+    if (hasUnread) setOpenChangelog(true);
+  }, [hasUnread]);
 
   useEffect(() => {
     void loadProjects();
@@ -112,6 +120,8 @@ export function App() {
       <Sidebar
         onAddProject={() => setOpenAdd(true)}
         onManageHosts={() => setOpenHosts(true)}
+        onShowChangelog={() => setOpenChangelog(true)}
+        changelogHasUnread={hasUnread}
       />
       <main className="flex min-w-0 flex-1 flex-col">
         <Breadcrumb />
@@ -138,6 +148,7 @@ export function App() {
       <KeyboardShortcutsHelp />
       <AddProjectDialog open={openAdd} onClose={() => setOpenAdd(false)} />
       <HostsDialog open={openHosts} onClose={() => setOpenHosts(false)} />
+      <ChangelogDrawer open={openChangelog} onClose={() => setOpenChangelog(false)} />
       {openCreatePipeline && (() => {
         const proj = useStore.getState().projects.find((p) => p.id === openCreatePipeline);
         return (

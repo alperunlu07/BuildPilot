@@ -142,8 +142,8 @@ landing experience.
 - [x] **Improved confirm dialog** — current dialog has Title + Body +
   Confirm; add a typed-confirmation input (`type "delete" to confirm`)
   for irreversible actions like project removal — `7354ed4`
-- [ ] **Sidebar resize + collapse** — current 18rem fixed; allow drag-to-
-  resize or click-to-collapse to icon rail
+- [x] **Sidebar resize + collapse** — current 18rem fixed; allow drag-to-
+  resize or click-to-collapse to icon rail — `39979ae`
 - [x] **Better date / time formatting** — relative ("3 min ago") with
   absolute on hover, consistent across all views (currently mixed) — `7ff514e`
 
