@@ -264,8 +264,8 @@ Cross-refs: `TODO.md` Phase 4.A.
   toggle form (every N hours, on day X, at time T) and back — `f725030`
 - [x] **Tag pattern preview** — paste `v*.*.*`, see which existing tags
   in the project would match — `dc4d365`
-- [ ] **Path-filter preview** — paste glob, see which paths in the last
-  N commits would have triggered
+- [x] **Path-filter preview** — paste glob, see which paths in the last
+  N commits would have triggered — `42790ad`
 
 ### Cluster 11.H · Multi-agent / fleet
 
