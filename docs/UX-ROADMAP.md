@@ -15,7 +15,7 @@ Power-user affordances for the React-Flow-based pipeline editor at
 - [x] Auto-layout button using `dagre` (add as dep) — tidies the graph — `67f48a7`
 - [x] Inline validation badges — red dot on nodes with missing required fields (use step-registry field schemas) — `0d0075c`
 - [x] Palette node preview on hover — card showing required + optional fields — `f7b38ab`
-- [ ] Edge condition icons + tooltip — render success/failure/always as colored icons on edges
+- [x] Edge condition icons + tooltip — render success/failure/always as colored icons on edges — `765c628`
 - [ ] Right-click context menu on a node — Run from here / Clone / Delete / Copy / Disable
 - [ ] Find / replace within a pipeline — `Cmd/Ctrl+F` searches node ids, types, field values
 - [ ] Copy / paste nodes across pipelines — clipboard-backed, re-ids on paste
