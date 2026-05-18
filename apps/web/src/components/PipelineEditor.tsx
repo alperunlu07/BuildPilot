@@ -41,6 +41,7 @@ import { formatRelative } from '../lib/formatDate';
 import { BranchSelect } from './BranchSelect';
 import { CronBuilder } from './CronBuilder';
 import { NodeContextMenu } from './NodeContextMenu';
+import { PathFilterPreview } from './PathFilterPreview';
 import { SaveTemplateDialog } from './SaveTemplateDialog';
 import { StepNode } from './StepNode';
 import { StepPropertyPanel, EMPTY_ENTRIES } from './StepPropertyPanel';
@@ -889,21 +890,20 @@ function Editor({ pipeline }: Props) {
                 }}
               />
             </div>
-            <label className="block text-xs text-slate-300 md:col-span-2">
+            <div className="block text-xs text-slate-300 md:col-span-2">
               <span className="mb-1 block text-[11px] uppercase tracking-wide text-slate-400">
                 Path filter globs (one per line — empty = build on every commit)
               </span>
-              <textarea
+              <PathFilterPreview
+                projectId={pipeline.projectId}
+                branch={watch.branch}
                 value={watch.pathFilter ?? ''}
-                onChange={(e) => {
-                  setWatch({ ...watch, pathFilter: e.target.value });
+                onChange={(spec) => {
+                  setWatch({ ...watch, pathFilter: spec });
                   setDirty(true);
                 }}
-                rows={3}
-                placeholder={'ios/**\nshared/**'}
-                className="w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1.5 font-mono text-xs text-slate-100"
               />
-            </label>
+            </div>
             <label className="inline-flex items-center gap-2 text-xs text-slate-300 md:col-span-2">
               <input
                 type="checkbox"

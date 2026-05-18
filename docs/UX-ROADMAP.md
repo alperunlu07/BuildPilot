@@ -262,8 +262,8 @@ Cross-refs: `TODO.md` Phase 4.A.
 
 - [x] **Visual cron builder** — convert `0 */4 * * *` etc. to friendly
   toggle form (every N hours, on day X, at time T) and back — `f725030`
-- [ ] **Tag pattern preview** — paste `v*.*.*`, see which existing tags
-  in the project would match
+- [x] **Tag pattern preview** — paste `v*.*.*`, see which existing tags
+  in the project would match — `dc4d365`
 - [ ] **Path-filter preview** — paste glob, see which paths in the last
   N commits would have triggered
 
