@@ -242,7 +242,9 @@ Cross-refs: `TODO.md` Phase 2.6.B, 4.A.
   to configure allowed slash commands
 - [ ] **PR summary card on BuildDetailPage** — head/base branch, PR
   title, linked issues fetched from the configured VCS provider
-- [ ] **GitHub / GitLab OAuth app** for the above outbound side
+- [x] **GitHub / GitLab OAuth app** for the above outbound side (GitHub
+  OAuth only — GitLab + Gitea remain token-based; see follow-ups) —
+  `3db6970`
 
 ### Cluster 11.F · Observability deep dive
 

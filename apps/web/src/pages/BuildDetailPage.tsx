@@ -16,6 +16,7 @@ import { StepGantt } from '../components/StepGantt';
 import { defaultActiveLevels } from '../components/LevelToggleBar';
 import { ArtifactPreviewModal } from '../components/ArtifactPreviewModal';
 import { FailureSummaryCard } from '../components/FailureSummaryCard';
+import { PrSummaryCard } from '../components/PrSummaryCard';
 import {
   LogSearchBar,
   loadLogPresets,
@@ -401,6 +402,8 @@ export function BuildDetailPage({ buildId }: Props) {
           </div>
         </div>
       </header>
+
+      <PrSummaryCard buildId={build.id} />
 
       {build.status === 'failed' && (
         <FailureSummaryCard
