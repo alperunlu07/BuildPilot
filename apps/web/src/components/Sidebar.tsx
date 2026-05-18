@@ -1,4 +1,5 @@
 import {
+  AlertTriangle,
   ChevronsLeft,
   ChevronsRight,
   Folder,
@@ -195,6 +196,12 @@ export function Sidebar({
             label={t('nav.hosts')}
           />
           <IconRail
+            icon={<AlertTriangle size={16} className="text-amber-400" />}
+            active={view.type === 'flakyTests'}
+            onClick={() => setView({ type: 'flakyTests' })}
+            label="Flaky tests"
+          />
+          <IconRail
             icon={<Settings size={16} className="text-slate-300" />}
             active={view.type === 'settings'}
             onClick={() => setView({ type: 'settings' })}
@@ -312,6 +319,13 @@ export function Sidebar({
           label={t('nav.hosts')}
           onClick={onManageHosts}
           title="Manage saved SSH hosts (used by Remote SSH / SFTP / Mac steps)"
+        />
+        <NavItem
+          active={view.type === 'flakyTests'}
+          icon={<AlertTriangle size={14} className="text-amber-400" />}
+          label="Flaky tests"
+          onClick={() => setView({ type: 'flakyTests' })}
+          title="Tests that pass sometimes and fail others over recent builds"
         />
         <NavItem
           active={view.type === 'settings'}

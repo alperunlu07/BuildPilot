@@ -5,6 +5,7 @@ import type {
   Commit,
   CoverageReport,
   DiskUsageReport,
+  FlakyTestsReport,
   HomeMetrics,
   NodeTemplate,
   Pipeline,
@@ -222,4 +223,16 @@ export const api = {
     return http<TestReportTree>(`/builds/${buildId}/test-report${q ? `?${q}` : ''}`);
   },
   buildCoverage: (buildId: string) => http<CoverageReport>(`/builds/${buildId}/coverage`),
+
+  // Flaky test detection (Cluster 11.F item 4).
+  flakyTests: (pipelineId: string, buildCount = 30) =>
+    http<FlakyTestsReport>(`/flaky-tests?pipelineId=${pipelineId}&buildCount=${buildCount}`),
+  quarantineFlakyTest: (pipelineId: string, testKey: string, quarantined: boolean) =>
+    http<{ pipelineId: string; quarantined: string[] }>(
+      `/flaky-tests/${pipelineId}/quarantine`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ testKey, quarantined }),
+      },
+    ),
 };

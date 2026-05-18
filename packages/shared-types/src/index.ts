@@ -1964,3 +1964,42 @@ export interface CoverageReport {
   lowestFiles: Array<{ filename: string; lineRate: number; lines: number }>;
   note?: string;
 }
+
+// `GET /api/flaky-tests?buildCount=30&pipelineId=...` — aggregates test
+// pass/fail across recent builds and flags tests whose failure rate is
+// strictly between 0 and 1 (i.e. they pass sometimes and fail others).
+export interface FlakyTestEntry {
+  // Stable key the UI uses to toggle quarantine: "<classname>::<name>" or
+  // just "<name>" when classname is missing.
+  testKey: string;
+  name: string;
+  classname?: string;
+  runs: number;
+  passes: number;
+  failures: number;
+  skips: number;
+  // failures / (passes + failures); 0..1. Null when (passes+failures) is 0.
+  failureRate: number | null;
+  // Most recent run we saw this test in, for the "last seen" column.
+  lastSeenAt: number;
+  // Whether the user marked it quarantined on the owning pipeline.
+  quarantined: boolean;
+}
+
+export interface FlakyTestsReport {
+  pipelineId: string;
+  pipelineName: string;
+  projectId: string;
+  projectName: string;
+  // Number of builds inspected (may be less than `buildCount` when the
+  // pipeline is young).
+  buildsAnalyzed: number;
+  // Returned sorted by failureRate descending, then runs descending.
+  flaky: FlakyTestEntry[];
+}
+
+// `POST /api/flaky-tests/:pipelineId/quarantine` body.
+export interface FlakyQuarantineUpdate {
+  testKey: string;
+  quarantined: boolean;
+}

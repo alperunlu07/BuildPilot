@@ -248,12 +248,13 @@ Cross-refs: `TODO.md` Phase 2.6.B, 4.A.
 
 Cross-refs: `TODO.md` Phase 9.
 
-- [x] **xcresult HTML viewer** linked from build detail
-- [x] **JUnit / xcresult per-test pass/fail tree** in dashboard
+- [x] **xcresult HTML viewer** linked from build detail — `af0f89c`
+- [x] **JUnit / xcresult per-test pass/fail tree** in dashboard — `af0f89c`
 - [x] **Coverage report rendering** + PR delta widget (PR delta deferred —
-  needs outbound PR integration)
-- [ ] **Flaky test detection page** — `pass/fail` history per test across
-  last N runs with quarantine flag
+  needs outbound PR integration) — `af0f89c`
+- [x] **Flaky test detection page** — `pass/fail` history per test across
+  last N runs with quarantine flag (engine wiring to honor quarantine
+  is a follow-up)
 - [ ] **Build duration trend page** — per-pipeline P50/P95 sparkline +
   regression alert when P95 spikes 2× baseline
 

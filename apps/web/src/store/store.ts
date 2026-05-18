@@ -36,10 +36,11 @@ export type View =
   | { type: 'build'; id: string }
   | { type: 'settings' }
   | { type: 'diskUsage' }
-  // Cluster 11.F — full-page test report viewer reachable from a build's
-  // "Tests" tab. Other deep-dive views (trends, flaky tests) are added
-  // in their respective commits.
-  | { type: 'testReport'; buildId: string };
+  // Cluster 11.F — observability deep-dive pages. `pipelineId` on
+  // flakyTests is optional so the URL can carry an initial selection
+  // but the page also renders standalone (with a chooser).
+  | { type: 'testReport'; buildId: string }
+  | { type: 'flakyTests'; pipelineId?: string };
 
 export interface CommitToast {
   id: string;

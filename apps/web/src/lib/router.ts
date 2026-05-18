@@ -24,16 +24,26 @@ export function viewToPath(view: View): string {
       return '/disk-usage';
     case 'testReport':
       return `/builds/${encodeURIComponent(view.buildId)}/tests`;
+    case 'flakyTests':
+      return view.pipelineId
+        ? `/flaky-tests?pipelineId=${encodeURIComponent(view.pipelineId)}`
+        : '/flaky-tests';
   }
 }
 
 export function pathToView(path: string): View {
-  const clean = path.split('?')[0]!.split('#')[0]!.replace(/\/+$/, '') || '/';
+  const [pathOnly, queryString = ''] = path.split('#')[0]!.split('?');
+  const clean = pathOnly!.replace(/\/+$/, '') || '/';
+  const qs = new URLSearchParams(queryString ?? '');
   if (clean === '/' || clean === '') return { type: 'home' };
   if (clean === '/projects') return { type: 'projects' };
   if (clean === '/builds') return { type: 'builds' };
   if (clean === '/settings') return { type: 'settings' };
   if (clean === '/disk-usage') return { type: 'diskUsage' };
+  if (clean === '/flaky-tests') {
+    const pid = qs.get('pipelineId');
+    return pid ? { type: 'flakyTests', pipelineId: pid } : { type: 'flakyTests' };
+  }
 
   const projectMatch = clean.match(/^\/projects\/([^/]+)$/);
   if (projectMatch) return { type: 'project', id: decodeURIComponent(projectMatch[1]!) };
@@ -58,5 +68,6 @@ export function viewsEqual(a: View, b: View): boolean {
     return a.id === b.id;
   }
   if (a.type === 'testReport' && b.type === 'testReport') return a.buildId === b.buildId;
+  if (a.type === 'flakyTests' && b.type === 'flakyTests') return a.pipelineId === b.pipelineId;
   return true;
 }
