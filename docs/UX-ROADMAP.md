@@ -135,8 +135,8 @@ landing experience.
   `localStorage` so a tab close / accidental refresh doesn't lose work — `6d64489`
 - [x] **Optimistic UI** for run / cancel — the button flips state
   immediately and rolls back on server error — `4170c8f`
-- [ ] **In-app changelog drawer** — surfaces newly-shipped features after
-  each release (reads a server-shipped `CHANGELOG.md`)
+- [x] **In-app changelog drawer** — surfaces newly-shipped features after
+  each release (reads a server-shipped `CHANGELOG.md`) — `c24c8dd`
 - [x] **Per-build copy-link button** — shareable deep link to a build /
   step that auto-opens the right view — `e0a15f7`
 - [x] **Improved confirm dialog** — current dialog has Title + Body +
