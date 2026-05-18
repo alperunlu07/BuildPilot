@@ -240,8 +240,9 @@ Cross-refs: `TODO.md` Phase 2.6.B, 4.A.
   branch protection can require BuildPilot — `bdd4bd5`
 - [ ] **PR comment-driven triggers** — `/run-ios`, `/run all` style; UI
   to configure allowed slash commands
-- [ ] **PR summary card on BuildDetailPage** — head/base branch, PR
-  title, linked issues fetched from the configured VCS provider
+- [x] **PR summary card on BuildDetailPage** — head/base branch, PR
+  title, linked issues fetched from the configured VCS provider —
+  `c224e8e`
 - [x] **GitHub / GitLab OAuth app** for the above outbound side (GitHub
   OAuth only — GitLab + Gitea remain token-based; see follow-ups) —
   `3db6970`
