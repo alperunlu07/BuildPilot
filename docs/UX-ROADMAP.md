@@ -38,10 +38,10 @@ landing experience.
 - [ ] **Multi-tab / split view** — keep the pipeline editor and live build
   log open side-by-side in a resizable split (current `BuildLogPanel`
   is fixed bottom)
-- [ ] **Favorite / pin projects + pipelines** — sticky list at the top of
-  the sidebar, persisted in `localStorage`
-- [ ] **Recent items menu** — last 5 builds / pipelines accessed, in
-  sidebar footer or palette
+- [x] **Favorite / pin projects + pipelines** — sticky list at the top of
+  the sidebar, persisted in `localStorage` — `dd3ff29`
+- [x] **Recent items menu** — last 5 builds / pipelines accessed, in
+  sidebar footer or palette — `dd3ff29`
 - [x] **Density toggle** — `comfortable` (current) vs `compact` setting,
   applied to LogTable, Sidebar, ProjectsPage cards — `9c5f223`
 - [x] **Light theme + system-default theme toggle** — currently only dark;
