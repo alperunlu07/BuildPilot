@@ -260,12 +260,12 @@ Cross-refs: `TODO.md` Phase 9.
 
 Cross-refs: `TODO.md` Phase 4.A.
 
-- [ ] **Visual cron builder** — convert `0 */4 * * *` etc. to friendly
-  toggle form (every N hours, on day X, at time T) and back
-- [ ] **Tag pattern preview** — paste `v*.*.*`, see which existing tags
-  in the project would match
-- [ ] **Path-filter preview** — paste glob, see which paths in the last
-  N commits would have triggered
+- [x] **Visual cron builder** — convert `0 */4 * * *` etc. to friendly
+  toggle form (every N hours, on day X, at time T) and back — `f725030`
+- [x] **Tag pattern preview** — paste `v*.*.*`, see which existing tags
+  in the project would match — `dc4d365`
+- [x] **Path-filter preview** — paste glob, see which paths in the last
+  N commits would have triggered — `42790ad`
 
 ### Cluster 11.H · Multi-agent / fleet
 

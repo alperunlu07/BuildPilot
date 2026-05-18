@@ -68,6 +68,15 @@ export const api = {
     http<{ ok: true }>(`/projects/${id}/fetch`, { method: 'POST' }),
   currentBranch: (id: string) =>
     http<{ branch: string; sha: string | null }>(`/projects/${id}/current-branch`),
+  // Cluster 11.G — tag-pattern preview. Returns each tag with the SHA it
+  // points at, sorted with a numeric-aware reverse compare (so v2.10 sorts
+  // after v2.9).
+  projectTags: (id: string, limit = 50) =>
+    http<Array<{ tag: string; sha: string }>>(`/projects/${id}/tags?limit=${limit}`),
+  // Cluster 11.G — list of changed files for a single commit. Used by the
+  // path-filter preview row drop-down.
+  commitChangedFiles: (id: string, sha: string) =>
+    http<{ sha: string; files: string[] }>(`/projects/${id}/commits/${sha}/changed-files`),
   projectSparkline: (id: string, limit = 30) =>
     http<Array<{
       id: string;
