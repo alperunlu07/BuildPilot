@@ -838,19 +838,7 @@ function Palette({
             </button>
             {isOpen &&
               items.map(({ type, def }) => (
-                <div
-                  key={type}
-                  draggable
-                  onDragStart={(e) => {
-                    e.dataTransfer.setData('application/buildpilot-step', type);
-                    e.dataTransfer.effectAllowed = 'move';
-                  }}
-                  className="cursor-grab rounded-md border bg-slate-900 px-2.5 py-1.5 text-[12px] text-slate-200 hover:border-slate-500"
-                  style={{ borderColor: def.color }}
-                  title={def.description}
-                >
-                  {def.label}
-                </div>
+                <PaletteItem key={type} type={type} def={def} />
               ))}
           </div>
         );
@@ -893,6 +881,84 @@ function Palette({
               </div>
             );
           })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PaletteItem({
+  type,
+  def,
+}: {
+  type: StepType;
+  def: (typeof STEP_DEFINITIONS)[StepType];
+}) {
+  const [hover, setHover] = useState(false);
+  const required = def.fields.filter((f) => f.required);
+  const optional = def.fields.filter((f) => !f.required);
+  return (
+    <div
+      className="relative"
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+    >
+      <div
+        draggable
+        onDragStart={(e) => {
+          e.dataTransfer.setData('application/buildpilot-step', type);
+          e.dataTransfer.effectAllowed = 'move';
+          setHover(false);
+        }}
+        className="cursor-grab rounded-md border bg-slate-900 px-2.5 py-1.5 text-[12px] text-slate-200 hover:border-slate-500"
+        style={{ borderColor: def.color }}
+      >
+        {def.label}
+      </div>
+      {hover && (
+        <div className="pointer-events-none absolute left-full top-0 z-50 ml-2 w-72 rounded-md border border-slate-700 bg-slate-900 p-3 text-[11px] text-slate-200 shadow-xl">
+          <div className="flex items-center gap-2">
+            <span
+              className="inline-block h-2 w-2 rounded-full"
+              style={{ backgroundColor: def.color }}
+            />
+            <span className="font-semibold text-slate-100">{def.label}</span>
+          </div>
+          <p className="mt-1 text-[10.5px] text-slate-400">{def.description}</p>
+          {required.length > 0 && (
+            <div className="mt-2">
+              <div className="text-[9px] font-semibold uppercase tracking-wider text-rose-400">
+                Required ({required.length})
+              </div>
+              <ul className="mt-0.5 space-y-0.5">
+                {required.slice(0, 8).map((f) => (
+                  <li key={f.name} className="truncate">
+                    · {f.label}
+                  </li>
+                ))}
+                {required.length > 8 && (
+                  <li className="text-slate-500">+{required.length - 8} more…</li>
+                )}
+              </ul>
+            </div>
+          )}
+          {optional.length > 0 && (
+            <div className="mt-2">
+              <div className="text-[9px] font-semibold uppercase tracking-wider text-slate-500">
+                Optional ({optional.length})
+              </div>
+              <ul className="mt-0.5 space-y-0.5 text-slate-400">
+                {optional.slice(0, 6).map((f) => (
+                  <li key={f.name} className="truncate">
+                    · {f.label}
+                  </li>
+                ))}
+                {optional.length > 6 && (
+                  <li className="text-slate-500">+{optional.length - 6} more…</li>
+                )}
+              </ul>
+            </div>
+          )}
         </div>
       )}
     </div>
