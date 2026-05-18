@@ -238,8 +238,8 @@ Cross-refs: `TODO.md` Phase 2.6.B, 4.A.
 
 - [x] **Outbound check-run state POST** — green/red status on the PR so
   branch protection can require BuildPilot — `bdd4bd5`
-- [ ] **PR comment-driven triggers** — `/run-ios`, `/run all` style; UI
-  to configure allowed slash commands
+- [x] **PR comment-driven triggers** — `/run-ios`, `/run all` style; UI
+  to configure allowed slash commands — `2f13995`
 - [x] **PR summary card on BuildDetailPage** — head/base branch, PR
   title, linked issues fetched from the configured VCS provider —
   `c224e8e`
