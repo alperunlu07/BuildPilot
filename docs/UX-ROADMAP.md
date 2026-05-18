@@ -13,7 +13,7 @@ Power-user affordances for the React-Flow-based pipeline editor at
 - [x] Undo / redo stack — keyboard `Cmd/Ctrl+Z` / `Cmd/Ctrl+Shift+Z`; snapshot nodes+edges after each mutation — `fb69f68`
 - [ ] Multi-select + bulk edit — Shift+click or drag-rectangle; side panel applies common fields (host, continueOnError, retry policy) to all
 - [x] Auto-layout button using `dagre` (add as dep) — tidies the graph — `67f48a7`
-- [ ] Inline validation badges — red dot on nodes with missing required fields (use step-registry field schemas)
+- [x] Inline validation badges — red dot on nodes with missing required fields (use step-registry field schemas) — `0d0075c`
 - [ ] Palette node preview on hover — card showing required + optional fields
 - [ ] Edge condition icons + tooltip — render success/failure/always as colored icons on edges
 - [ ] Right-click context menu on a node — Run from here / Clone / Delete / Copy / Disable
