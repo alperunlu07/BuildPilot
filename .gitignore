@@ -34,3 +34,6 @@ Thumbs.db
 
 # TS build info
 *.tsbuildinfo
+
+# Claude Code subagent worktrees (temporary isolated copies)
+.claude/worktrees/
