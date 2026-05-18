@@ -284,9 +284,9 @@ Cross-refs: `TODO.md` Phase 3.
 
 - [x] **Slack slash commands** — `/build pipeline-name` parity with the
   existing Telegram bot _(ac40f70)_
-- [x] **Discord slash commands** ditto _(SHA2)_
-- [ ] **Per-step `notifyOn` policy** — `always | failure | recovered`;
-  reduces "build green again" notification noise
+- [x] **Discord slash commands** ditto _(fb84f6f)_
+- [x] **Per-step `notifyOn` policy** — `always | failure | recovered`;
+  reduces "build green again" notification noise _(SHA3)_
 - [ ] **Test the channel** button on each notify step — sends a sample
   payload from the property panel without running the whole pipeline
 

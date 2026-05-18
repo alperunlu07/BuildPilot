@@ -10,6 +10,33 @@ import { cn } from '../lib/cn';
 
 const EMPTY: BuildLogEntry[] = [];
 
+// Cluster 11.I — step types that participate in the per-step notifyOn
+// policy. Mirrored on the server side by the test-notify allow-list and
+// (eventually) the engine-side filter that consults node.data.notifyOn.
+const NOTIFY_STEP_TYPES = new Set<StepType>([
+  'slackNotify',
+  'discordNotify',
+  'telegramNotify',
+  'teamsNotify',
+  'emailNotify',
+  'httpRequest',
+]);
+
+type NotifyOn = 'always' | 'failure' | 'recovered';
+const NOTIFY_OPTIONS: { value: NotifyOn; label: string; help: string }[] = [
+  { value: 'always', label: 'Always', help: 'Fire on every build outcome.' },
+  {
+    value: 'failure',
+    label: 'On failure only',
+    help: 'Skip when the build succeeds.',
+  },
+  {
+    value: 'recovered',
+    label: 'On recovery',
+    help: 'Only when this build succeeded and the previous build had failed.',
+  },
+];
+
 interface Props {
   node: Node | null;
   // Full set of selected nodes; when > 1 the panel shows bulk-edit UI.
@@ -159,6 +186,14 @@ export function StepPropertyPanel({
               onChange(node.id, { ...(node.data as Record<string, unknown>), ...patch })
             }
           />
+          {NOTIFY_STEP_TYPES.has(stepType) && (
+            <NotifyPolicySection
+              data={node.data as Record<string, unknown>}
+              onChange={(patch) =>
+                onChange(node.id, { ...(node.data as Record<string, unknown>), ...patch })
+              }
+            />
+          )}
           <AiAutoFixSection
             value={(node.data as Record<string, unknown>).aiAutoFix as Record<string, unknown> | undefined}
             onChange={(next) =>
@@ -462,6 +497,47 @@ function CommonControlsSection({
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+function NotifyPolicySection({
+  data,
+  onChange,
+}: {
+  data: Record<string, unknown>;
+  onChange(patch: Record<string, unknown>): void;
+}) {
+  // Default to "always" so existing pipelines preserve current behaviour
+  // (the engine treats absent notifyOn the same way).
+  const current = (data.notifyOn as NotifyOn | undefined) ?? 'always';
+  const selected = NOTIFY_OPTIONS.find((o) => o.value === current) ?? NOTIFY_OPTIONS[0];
+  return (
+    <div className="mt-2 rounded-md border border-slate-800 bg-slate-900/40 p-3 space-y-2">
+      <div className="text-[10px] uppercase tracking-wider text-slate-400">
+        Notification policy
+      </div>
+      <label className="block">
+        <span className="sr-only">When to send</span>
+        <select
+          value={current}
+          onChange={(e) => onChange({ notifyOn: e.target.value as NotifyOn })}
+          className="focusable w-full rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-[12px] text-slate-100 focus:border-sky-500 focus:outline-none"
+        >
+          {NOTIFY_OPTIONS.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+      </label>
+      <p className="text-[10px] text-slate-400">
+        {selected?.help}{' '}
+        <span className="text-slate-500">
+          {/* The runner does not yet filter on this field — UI only. */}
+          (TODO engine: filter on this at run time)
+        </span>
+      </p>
     </div>
   );
 }
