@@ -1,5 +1,6 @@
 import { Handle, Position, type NodeProps } from '@xyflow/react';
 import {
+  AlertCircle,
   Apple,
   ArrowDownToLine,
   BadgeCheck,
@@ -109,6 +110,7 @@ export function StepNode({ type, data, selected }: NodeProps) {
   const status = d.runtimeStatus;
   const runtime = runtimeAppearance(status);
   const duration = formatDuration(d.runtimeStartedAt, d.runtimeFinishedAt, status);
+  const missing = collectMissingRequired(type as StepType, data as Record<string, unknown>);
 
   // Try to surface a one-line summary of the configured data.
   const summary = summariseData(type as StepType, data as Record<string, unknown>);
@@ -150,6 +152,14 @@ export function StepNode({ type, data, selected }: NodeProps) {
             {status}
           </span>
         )}
+        {missing.length > 0 && !status && (
+          <span
+            className="ml-auto inline-flex h-4 w-4 items-center justify-center rounded-full bg-rose-500/20 text-rose-300"
+            title={`Missing required fields: ${missing.join(', ')}`}
+          >
+            <AlertCircle size={11} />
+          </span>
+        )}
       </div>
       {summary && (
         <div className="mt-1 truncate text-[11px] text-slate-400" title={summary}>
@@ -162,6 +172,22 @@ export function StepNode({ type, data, selected }: NodeProps) {
       <Handle type="source" position={Position.Bottom} />
     </div>
   );
+}
+
+function collectMissingRequired(type: StepType, data: Record<string, unknown>): string[] {
+  const def = STEP_DEFINITIONS[type];
+  if (!def) return [];
+  const out: string[] = [];
+  for (const field of def.fields) {
+    if (!field.required) continue;
+    const v = data[field.name];
+    const empty =
+      v === undefined ||
+      v === null ||
+      (typeof v === 'string' && v.trim().length === 0);
+    if (empty) out.push(field.label);
+  }
+  return out;
 }
 
 function formatDuration(
