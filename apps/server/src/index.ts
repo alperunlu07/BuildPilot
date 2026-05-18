@@ -23,6 +23,12 @@ import { testNotifyRoutes } from './api/test-notify';
 import { migratePlaintextSecrets } from './crypto/migrateSecrets';
 import { migrateHostsFile } from './store/hosts';
 import { pruneOldBuilds } from './store/retention';
+import { authRoutes } from './api/auth';
+import { usersRoutes } from './api/users';
+import { auditLogRoutes } from './api/audit-log';
+import { apiTokensRoutes } from './api/api-tokens';
+import { registerSessionMiddleware, pruneExpiredSessions } from './auth/sessions';
+import { registerAuditHook } from './audit';
 
 async function main(): Promise<void> {
   const config = loadConfig();
@@ -55,7 +61,11 @@ async function main(): Promise<void> {
       if (!origin) return cb(null, true);
       cb(null, allowedOrigins.has(origin));
     },
-    credentials: false,
+    // Cluster 11.A — credentials must be true so the session cookie
+    // round-trips between the Vite dev server (51732) and the API
+    // (51731). When auth is disabled the cookie isn't set, so this is
+    // a no-op for default installs.
+    credentials: true,
   });
 
   app.get('/api/health', async () => ({ ok: true, version: '0.1.0' }));
@@ -63,6 +73,17 @@ async function main(): Promise<void> {
   // Slack delivers x-www-form-urlencoded; register the raw-preserving
   // parser before the routes so signature verification can read the body.
   registerSlackParser(app);
+
+  // Cluster 11.A — session/bearer auth + audit hooks. Both hooks are
+  // registered unconditionally so flipping `auth.enabled` at runtime
+  // (between server restarts) doesn't need a code change.
+  await registerSessionMiddleware(app);
+  await registerAuditHook(app);
+
+  await authRoutes(app);
+  await usersRoutes(app);
+  await auditLogRoutes(app);
+  await apiTokensRoutes(app);
 
   await projectsRoutes(app);
   await pipelinesRoutes(app);
@@ -97,6 +118,12 @@ async function main(): Promise<void> {
 
   startPoller();
   if (config.telegram) startTelegramBot(config.telegram);
+
+  // Cluster 11.A — daily sweep to delete expired session rows. The
+  // middleware deletes them lazily on touch too; this just keeps the
+  // table tidy on long-running installs.
+  pruneExpiredSessions();
+  setInterval(() => pruneExpiredSessions(), 24 * 60 * 60 * 1000);
 
   // Phase 4 Cluster D — daily build retention sweep. Opt-in via
   // `buildRetentionDays` in config.json. The sweep runs immediately on boot

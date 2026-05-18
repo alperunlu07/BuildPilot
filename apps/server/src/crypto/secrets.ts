@@ -130,6 +130,12 @@ export const SENSITIVE_FIELDS = new Set([
   // here as a reminder that Slack uses the same field name.)
   'signingSecret',
   'publicKey',
+  // Cluster 11.A — auth session signing secret (kept encrypted on disk; in
+  // memory it stays plaintext) and API-token bcrypt hashes (already
+  // non-reversible, but pinning the field name here protects against any
+  // future helper that recurses through user records).
+  'sessionSecret',
+  'apiTokenHash',
 ]);
 
 export function encryptSecretsInObject<T extends Record<string, unknown>>(obj: T): T {

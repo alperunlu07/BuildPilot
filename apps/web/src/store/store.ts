@@ -5,10 +5,12 @@ import type {
   Commit,
   HostCapabilities,
   NodeTemplate,
+  NotificationPrefs,
   Pipeline,
   ProjectSummary,
   ServerEvent,
   SshHost,
+  User,
 } from '@buildpilot/shared-types';
 import { api } from '../lib/api';
 import { notify } from '../lib/notifications';
@@ -39,7 +41,13 @@ export type View =
   | { type: 'hosts' }
   | { type: 'testReport'; buildId: string }
   | { type: 'trends'; pipelineId?: string }
-  | { type: 'flakyTests'; pipelineId?: string };
+  | { type: 'flakyTests'; pipelineId?: string }
+  // Cluster 11.A — auth, identity, audit.
+  | { type: 'login' }
+  | { type: 'users' }
+  | { type: 'account' }
+  | { type: 'audit' }
+  | { type: 'apiTokens' };
 
 export interface CommitToast {
   id: string;
@@ -186,6 +194,15 @@ interface State {
   pendingDeletions: PendingDeletion[];
   // Transient error banners surfaced when optimistic actions roll back.
   errorToasts: { id: string; message: string }[];
+  // Cluster 11.A — auth state. `authEnabled === false` keeps the dashboard
+  // wide open like today; `currentUser === null` while authEnabled is true
+  // is the "please log in" state.
+  authEnabled: boolean;
+  currentUser: User | null;
+  // True once the initial /api/auth/me call has resolved. Used to defer
+  // first-paint of routed pages until we know whether to redirect to
+  // /login.
+  authChecked: boolean;
 
   loadProjects(): Promise<void>;
   loadPipelines(projectId?: string): Promise<void>;
@@ -252,6 +269,11 @@ interface State {
   pushError(message: string): void;
   dismissError(id: string): void;
   handleEvent(event: ServerEvent): void;
+  // Cluster 11.A — auth.
+  refreshAuth(): Promise<void>;
+  login(username: string, password: string): Promise<void>;
+  logout(): Promise<void>;
+  updateNotificationPrefs(prefs: NotificationPrefs): Promise<void>;
 }
 
 const UNDO_GRACE_MS = 5000;
@@ -278,6 +300,9 @@ export const useStore = create<State>((set, get) => ({
   shortcutsHelpOpen: false,
   pendingDeletions: [],
   errorToasts: [],
+  authEnabled: false,
+  currentUser: null,
+  authChecked: false,
 
   async loadProjects() {
     const list = await api.listProjects();
@@ -653,6 +678,49 @@ export const useStore = create<State>((set, get) => ({
   },
   dismissError(id) {
     set({ errorToasts: get().errorToasts.filter((e) => e.id !== id) });
+  },
+  async refreshAuth() {
+    try {
+      const res = await api.me();
+      set({
+        authEnabled: res.authEnabled,
+        currentUser: res.user,
+        authChecked: true,
+      });
+      // If the server says auth is on and there's no user, but we're not
+      // currently on the login screen, route there. We don't auto-flip
+      // away from /login when the user is null — that page handles its
+      // own redirect after a successful login.
+      const v = get().view;
+      if (
+        res.authEnabled &&
+        !res.user &&
+        v.type !== 'login' &&
+        v.type !== 'settings'
+      ) {
+        set({ view: { type: 'login' } });
+      }
+    } catch {
+      // Likely a 401 surfaced as a fetch error; surface the login screen.
+      set({ authChecked: true, currentUser: null });
+    }
+  },
+  async login(username, password) {
+    const res = await api.login({ username, password });
+    set({ currentUser: res.user, authEnabled: true, authChecked: true });
+  },
+  async logout() {
+    try {
+      await api.logout();
+    } catch {
+      // ignore — we still clear locally.
+    }
+    set({ currentUser: null, view: { type: 'login' } });
+  },
+  async updateNotificationPrefs(prefs) {
+    if (!get().currentUser) return;
+    const updated = await api.updateNotificationPrefs(prefs);
+    set({ currentUser: updated });
   },
   undoDeletion(deletionId) {
     const state = get();

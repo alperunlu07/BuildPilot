@@ -105,6 +105,63 @@ export function initDb(path: string): DB {
       value TEXT NOT NULL,
       updated_at INTEGER NOT NULL
     );
+
+    -- Cluster 11.A — Auth, identity, audit. Tables exist on every install
+    -- regardless of the auth.enabled flag so flipping the flag at runtime
+    -- doesn't require a schema migration. Default config.auth.enabled is
+    -- false, in which case the middleware skips enforcement entirely.
+    CREATE TABLE IF NOT EXISTS users (
+      id TEXT PRIMARY KEY,
+      username TEXT NOT NULL UNIQUE,
+      display_name TEXT NOT NULL,
+      password_hash TEXT NOT NULL,
+      role TEXT NOT NULL DEFAULT 'viewer',
+      notification_prefs_json TEXT NOT NULL DEFAULT '{}',
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
+      last_login_at INTEGER
+    );
+
+    CREATE TABLE IF NOT EXISTS sessions (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      created_at INTEGER NOT NULL,
+      last_seen_at INTEGER NOT NULL,
+      expires_at INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
+    CREATE INDEX IF NOT EXISTS idx_sessions_expires_at ON sessions(expires_at);
+
+    CREATE TABLE IF NOT EXISTS audit_log (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      ts INTEGER NOT NULL,
+      actor TEXT NOT NULL,
+      actor_user_id TEXT,
+      action TEXT NOT NULL,
+      resource TEXT NOT NULL,
+      resource_id TEXT,
+      method TEXT NOT NULL,
+      path TEXT NOT NULL,
+      status_code INTEGER NOT NULL,
+      request_id TEXT
+    );
+    CREATE INDEX IF NOT EXISTS idx_audit_log_ts ON audit_log(ts DESC);
+    CREATE INDEX IF NOT EXISTS idx_audit_log_actor ON audit_log(actor);
+    CREATE INDEX IF NOT EXISTS idx_audit_log_resource ON audit_log(resource);
+
+    CREATE TABLE IF NOT EXISTS api_tokens (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      name TEXT NOT NULL,
+      token_hash TEXT NOT NULL,
+      -- First 8 chars of the plaintext token, stored to help users
+      -- identify which token is which without exposing the full secret.
+      token_prefix TEXT NOT NULL DEFAULT '',
+      created_at INTEGER NOT NULL,
+      last_used_at INTEGER
+    );
+    CREATE INDEX IF NOT EXISTS idx_api_tokens_user_id ON api_tokens(user_id);
+    CREATE INDEX IF NOT EXISTS idx_api_tokens_prefix ON api_tokens(token_prefix);
   `);
 
   // Lightweight migration for existing installs: SQLite's CREATE TABLE IF

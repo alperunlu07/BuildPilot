@@ -1,14 +1,22 @@
 import type {
+  ApiToken,
+  AuditEventsResponse,
+  AuditAction,
+  AuditResource,
   Build,
   BuildArtifact,
   BuildLogEntry,
   BuildTrendsReport,
   Commit,
   CoverageReport,
+  CreatedApiToken,
+  CreateUserInput,
   DiskUsageReport,
   FlakyTestsReport,
   HomeMetrics,
+  MeResponse,
   NodeTemplate,
+  NotificationPrefs,
   Pipeline,
   PipelineMetrics,
   Project,
@@ -20,6 +28,8 @@ import type {
   TelegramConfigUpdate,
   TestReportKind,
   TestReportTree,
+  UpdateUserInput,
+  User,
 } from '@buildpilot/shared-types';
 
 const API = '/api';
@@ -35,7 +45,10 @@ async function http<T>(path: string, init?: RequestInit): Promise<T> {
   }
   if (init?.headers) Object.assign(headers, init.headers);
 
-  const res = await fetch(`${API}${path}`, { ...init, headers });
+  // Always include credentials so the session cookie (Cluster 11.A) makes
+  // it back and forth in dev mode where the API + web run on different
+  // ports. When auth is disabled the cookie isn't set, so this is a no-op.
+  const res = await fetch(`${API}${path}`, { credentials: 'include', ...init, headers });
   if (!res.ok) {
     const text = await res.text().catch(() => '');
     throw new Error(`${res.status} ${res.statusText}${text ? `: ${text}` : ''}`);
@@ -273,4 +286,63 @@ export const api = {
   // Build duration trend (Cluster 11.F item 5).
   buildTrends: (pipelineId: string, buildCount = 100) =>
     http<BuildTrendsReport>(`/metrics/trends?pipelineId=${pipelineId}&buildCount=${buildCount}`),
+
+  // ── Auth (Cluster 11.A) ──────────────────────────────────
+  me: () => http<MeResponse>('/auth/me'),
+  login: (input: { username: string; password: string }) =>
+    http<{ user: User; expiresAt: number }>('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
+  logout: () => http<{ ok: true }>('/auth/logout', { method: 'POST' }),
+
+  // ── Users (Cluster 11.A) ─────────────────────────────────
+  listUsers: () => http<User[]>('/users'),
+  getCurrentUser: () => http<User>('/users/me'),
+  createUser: (input: CreateUserInput) =>
+    http<User>('/users', { method: 'POST', body: JSON.stringify(input) }),
+  updateUser: (id: string, patch: UpdateUserInput) =>
+    http<User>(`/users/${id}`, { method: 'PATCH', body: JSON.stringify(patch) }),
+  updateCurrentUser: (patch: UpdateUserInput) =>
+    http<User>('/users/me', { method: 'PATCH', body: JSON.stringify(patch) }),
+  updateNotificationPrefs: (prefs: NotificationPrefs) =>
+    http<User>('/users/me', {
+      method: 'PATCH',
+      body: JSON.stringify({ notificationPrefs: prefs }),
+    }),
+  deleteUser: (id: string) =>
+    http<{ ok: true }>(`/users/${id}`, { method: 'DELETE' }),
+
+  // ── Audit log (Cluster 11.A) ─────────────────────────────
+  listAuditEvents: (
+    filter: {
+      actor?: string;
+      action?: AuditAction;
+      resource?: AuditResource;
+      since?: number;
+      until?: number;
+      limit?: number;
+    } = {},
+  ) => {
+    const qs = new URLSearchParams();
+    if (filter.actor) qs.set('actor', filter.actor);
+    if (filter.action) qs.set('action', filter.action);
+    if (filter.resource) qs.set('resource', filter.resource);
+    if (filter.since !== undefined) qs.set('since', String(filter.since));
+    if (filter.until !== undefined) qs.set('until', String(filter.until));
+    if (filter.limit !== undefined) qs.set('limit', String(filter.limit));
+    const q = qs.toString();
+    return http<AuditEventsResponse>(`/audit-log${q ? `?${q}` : ''}`);
+  },
+  listAuditActors: () => http<string[]>('/audit-log/actors'),
+
+  // ── API tokens (Cluster 11.A) ────────────────────────────
+  listApiTokens: () => http<ApiToken[]>('/api-tokens'),
+  createApiToken: (input: { name: string; userId?: string }) =>
+    http<CreatedApiToken>('/api-tokens', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
+  deleteApiToken: (id: string) =>
+    http<{ ok: true }>(`/api-tokens/${id}`, { method: 'DELETE' }),
 };

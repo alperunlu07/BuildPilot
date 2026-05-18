@@ -185,16 +185,26 @@ docs) in coordinated batches.
 
 Cross-refs: `TODO.md` Phase 2.6.A.
 
-- [ ] **Login screen + session cookie** — depends on RBAC work in 2.6.A;
-  ships behind the same `auth.enabled` flag
-- [ ] **User profile dropdown** in sidebar header — avatar, name, role,
-  "sign out"
-- [ ] **Audit log viewer page** — searchable table of `who / when / what`
-  events with filters by user, action, resource
-- [ ] **Per-user notification preferences** — desktop / push / telegram
-  routing decided per-user, not server-wide
-- [ ] **API token management UI** — create / revoke long-lived tokens
-  scoped to a role for CI scripts
+- [x] **Login screen + session cookie** — opt-in via
+  `auth: { enabled: true }` in `config.json`. Session cookies are
+  httpOnly + signed with a generated `sessionSecret`; the table +
+  middleware ship on every install but enforcement is gated by the
+  flag so default open behavior is preserved.
+- [x] **User profile dropdown** in sidebar header — avatar (color +
+  initial), name, role, "Sign out", "Account settings". Renders a
+  "Sign in" link when auth is enabled and no session exists.
+- [x] **Audit log viewer page** at `/audit` — `actor / action /
+  resource / status` filters with date range. Backed by a Fastify
+  `onResponse` hook that logs every mutating request (POST/PATCH/PUT/DELETE);
+  read-only GETs are not logged.
+- [x] **Per-user notification preferences** — `desktop / telegram /
+  slack / discord / email` toggles on `/account`. `lib/notifications.ts`
+  consults the signed-in user's `desktop` pref when auth is enabled and
+  falls back to the legacy behavior when it isn't.
+- [x] **API token management UI** at `/api-tokens` — random 32-byte
+  hex tokens, bcrypt-hashed at rest, plaintext shown once on create.
+  Token middleware runs alongside session middleware so CI scripts can
+  call any route with `Authorization: Bearer <token>`.
 
 ### Cluster 11.B · Secrets & file vault UI
 
