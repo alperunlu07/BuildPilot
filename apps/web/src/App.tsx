@@ -29,6 +29,8 @@ import { UsersPage } from './pages/UsersPage';
 import { AccountPage } from './pages/AccountPage';
 import { AuditLogPage } from './pages/AuditLogPage';
 import { ApiTokensPage } from './pages/ApiTokensPage';
+import { SecretsPage } from './pages/SecretsPage';
+import { VaultFilesPage } from './pages/VaultFilesPage';
 import { useStore } from './store/store';
 import { onConnected, subscribe } from './lib/events';
 import { ensurePermission, setDesktopNotificationsAllowedByUserPref } from './lib/notifications';
@@ -70,7 +72,9 @@ export function App() {
         ? `flakyTests:${view.pipelineId ?? ''}`
         : view.type === 'trends'
           ? `trends:${view.pipelineId ?? ''}`
-          : `${view.type}:${'id' in view ? view.id : ''}`;
+          : view.type === 'secrets'
+            ? `secrets:${view.name ?? ''}`
+            : `${view.type}:${'id' in view ? view.id : ''}`;
   useEffect(() => {
     setMobileNavOpen(false);
   }, [viewKey]);
@@ -205,6 +209,8 @@ export function App() {
           {view.type === 'account' && <AccountPage />}
           {view.type === 'audit' && <AuditLogPage />}
           {view.type === 'apiTokens' && <ApiTokensPage />}
+          {view.type === 'secrets' && <SecretsPage />}
+          {view.type === 'vaultFiles' && <VaultFilesPage />}
         </div>
         <BuildLogPanel />
       </main>

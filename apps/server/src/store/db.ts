@@ -162,6 +162,63 @@ export function initDb(path: string): DB {
     );
     CREATE INDEX IF NOT EXISTS idx_api_tokens_user_id ON api_tokens(user_id);
     CREATE INDEX IF NOT EXISTS idx_api_tokens_prefix ON api_tokens(token_prefix);
+
+    -- Cluster 11.B — named secrets. The value column stores the AES-256-GCM
+    -- envelope produced by crypto/secrets.encryptSecret. Names are unique
+    -- and case-sensitive — the engine substitutes the secrets.NAME marker
+    -- exactly. last_used_at tracks engine resolution so the UI can warn
+    -- about stale entries.
+    CREATE TABLE IF NOT EXISTS secrets (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL UNIQUE,
+      encrypted_value TEXT NOT NULL,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
+      last_used_at INTEGER
+    );
+
+    -- Cluster 11.B — encrypted file vault. encrypted_content stores the same
+    -- AES-256-GCM envelope as secrets but base64-decoded into a BLOB cell
+    -- (cheaper than re-base64-ing for every read). Hard-capped at 10 MiB
+    -- per file via API validation.
+    CREATE TABLE IF NOT EXISTS vault_files (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL UNIQUE,
+      filename TEXT NOT NULL,
+      mime TEXT NOT NULL,
+      size_bytes INTEGER NOT NULL,
+      encrypted_content BLOB NOT NULL,
+      created_at INTEGER NOT NULL,
+      last_used_at INTEGER
+    );
+
+    -- Cluster 11.D — manual approval steps. One row per `manualApproval`
+    -- node encountered by a running build. Persisted (not in-memory only)
+    -- so a server restart while a build is awaiting approval recovers the
+    -- pending state on next boot. `decision` is NULL until an approver
+    -- decides or the timeout fires.
+    CREATE TABLE IF NOT EXISTS build_approvals (
+      id TEXT PRIMARY KEY,
+      build_id TEXT NOT NULL,
+      pipeline_id TEXT NOT NULL,
+      project_id TEXT NOT NULL,
+      node_id TEXT NOT NULL,
+      message TEXT NOT NULL,
+      inputs_spec_json TEXT NOT NULL,
+      required_approvers INTEGER NOT NULL DEFAULT 1,
+      required_roles_json TEXT NOT NULL DEFAULT '[]',
+      timeout_minutes INTEGER NOT NULL DEFAULT 1440,
+      requested_at INTEGER NOT NULL,
+      decision TEXT,
+      decided_by TEXT,
+      decided_at INTEGER,
+      inputs_values_json TEXT,
+      approvers_json TEXT NOT NULL DEFAULT '[]'
+    );
+    CREATE INDEX IF NOT EXISTS idx_build_approvals_build_id
+      ON build_approvals(build_id);
+    CREATE INDEX IF NOT EXISTS idx_build_approvals_pending
+      ON build_approvals(decision, requested_at);
   `);
 
   // Lightweight migration for existing installs: SQLite's CREATE TABLE IF

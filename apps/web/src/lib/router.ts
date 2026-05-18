@@ -44,6 +44,12 @@ export function viewToPath(view: View): string {
       return '/audit';
     case 'apiTokens':
       return '/api-tokens';
+    case 'secrets':
+      return view.name
+        ? `/secrets?name=${encodeURIComponent(view.name)}`
+        : '/secrets';
+    case 'vaultFiles':
+      return '/vault-files';
   }
 }
 
@@ -70,6 +76,11 @@ export function pathToView(path: string): View {
   if (clean === '/account') return { type: 'account' };
   if (clean === '/audit') return { type: 'audit' };
   if (clean === '/api-tokens') return { type: 'apiTokens' };
+  if (clean === '/secrets') {
+    const name = qs.get('name');
+    return name ? { type: 'secrets', name } : { type: 'secrets' };
+  }
+  if (clean === '/vault-files') return { type: 'vaultFiles' };
 
   const projectMatch = clean.match(/^\/projects\/([^/]+)$/);
   if (projectMatch) return { type: 'project', id: decodeURIComponent(projectMatch[1]!) };
@@ -96,5 +107,6 @@ export function viewsEqual(a: View, b: View): boolean {
   if (a.type === 'testReport' && b.type === 'testReport') return a.buildId === b.buildId;
   if (a.type === 'trends' && b.type === 'trends') return a.pipelineId === b.pipelineId;
   if (a.type === 'flakyTests' && b.type === 'flakyTests') return a.pipelineId === b.pipelineId;
+  if (a.type === 'secrets' && b.type === 'secrets') return a.name === b.name;
   return true;
 }

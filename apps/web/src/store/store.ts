@@ -42,12 +42,13 @@ export type View =
   | { type: 'testReport'; buildId: string }
   | { type: 'trends'; pipelineId?: string }
   | { type: 'flakyTests'; pipelineId?: string }
-  // Cluster 11.A — auth, identity, audit.
   | { type: 'login' }
   | { type: 'users' }
   | { type: 'account' }
   | { type: 'audit' }
-  | { type: 'apiTokens' };
+  | { type: 'apiTokens' }
+  | { type: 'secrets'; name?: string }
+  | { type: 'vaultFiles' };
 
 export interface CommitToast {
   id: string;

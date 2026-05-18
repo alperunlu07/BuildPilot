@@ -8,6 +8,7 @@ import { LevelToggleBar, defaultActiveLevels } from './LevelToggleBar';
 import { useStore } from '../store/store';
 import { api } from '../lib/api';
 import { cn } from '../lib/cn';
+import { SecretReferenceAutocomplete } from './SecretReferenceAutocomplete';
 
 const EMPTY: BuildLogEntry[] = [];
 
@@ -948,6 +949,15 @@ function Field({
   onChange(v: string | number): void;
 }) {
   const stringValue = value === undefined || value === null ? '' : String(value);
+  // Cluster 11.B — every free-text field on a step participates in the
+  // `${{ secrets.X }}` / `${{ files.X }}` autocomplete. Suggestions only
+  // surface when the user actually types the trigger sequence, so this
+  // is opt-in from the user's perspective. The "where is this used?"
+  // affordance also fires when the value contains a recognised marker.
+  const referencedSecret = stringValue.match(/\$\{\{\s*secrets\.([A-Za-z_][A-Za-z0-9_]*)\s*\}\}/);
+  const isFreeText =
+    field.type === 'text' || field.type === 'textarea' || field.type === 'number';
+  const renderSecretAffordance = isFreeText && referencedSecret !== null && referencedSecret[1];
   return (
     <label className="block">
       <span className="mb-1 flex items-baseline justify-between">
@@ -955,9 +965,10 @@ function Field({
         {field.required && <span className="text-[10px] text-rose-400">required</span>}
       </span>
       {field.type === 'textarea' ? (
-        <textarea
+        <SecretReferenceAutocomplete
+          as="textarea"
           value={stringValue}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={onChange}
           placeholder={field.placeholder}
           rows={4}
           spellCheck={false}
@@ -999,19 +1010,49 @@ function Field({
             </option>
           ))}
         </select>
-      ) : (
+      ) : field.type === 'number' ? (
         <input
-          type={field.type === 'number' ? 'number' : 'text'}
+          type="number"
           value={stringValue}
-          onChange={(e) =>
-            onChange(field.type === 'number' ? Number(e.target.value) : e.target.value)
-          }
+          onChange={(e) => onChange(Number(e.target.value))}
+          placeholder={field.placeholder}
+          spellCheck={false}
+          className="focusable w-full rounded-md border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-[13px] text-slate-100 placeholder:text-slate-400 focus:border-sky-500 focus:outline-none"
+        />
+      ) : (
+        <SecretReferenceAutocomplete
+          as="input"
+          value={stringValue}
+          onChange={(v) => onChange(v)}
           placeholder={field.placeholder}
           spellCheck={false}
           className="focusable w-full rounded-md border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-[13px] text-slate-100 placeholder:text-slate-400 focus:border-sky-500 focus:outline-none"
         />
       )}
+      {renderSecretAffordance && (
+        <SecretUsageHint name={referencedSecret![1]!} />
+      )}
       {field.help && <p className="mt-1 text-[11px] text-slate-400">{field.help}</p>}
     </label>
+  );
+}
+
+// "Where is this secret used?" jump-link. Visible whenever a free-text
+// field's value contains a `${{ secrets.NAME }}` reference — clicking
+// navigates to the secret detail page on /secrets.
+function SecretUsageHint({ name }: { name: string }) {
+  const setView = useStore((s) => s.setView);
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.preventDefault();
+        setView({ type: 'secrets', name });
+      }}
+      className="focusable mt-1 text-[11px] text-sky-400 hover:text-sky-300 hover:underline"
+      title={`See every pipeline node that references secrets.${name}`}
+    >
+      ↳ where is <code className="font-mono">{name}</code> used?
+    </button>
   );
 }

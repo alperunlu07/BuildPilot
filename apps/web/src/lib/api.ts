@@ -22,6 +22,8 @@ import type {
   Project,
   ProjectSummary,
   PruneBuildsResponse,
+  Secret,
+  SecretUsage,
   SshHost,
   StepType,
   TelegramConfigPublic,
@@ -30,6 +32,7 @@ import type {
   TestReportTree,
   UpdateUserInput,
   User,
+  VaultFile,
 } from '@buildpilot/shared-types';
 
 const API = '/api';
@@ -345,4 +348,38 @@ export const api = {
     }),
   deleteApiToken: (id: string) =>
     http<{ ok: true }>(`/api-tokens/${id}`, { method: 'DELETE' }),
+
+  // ── Cluster 11.B — secrets & file vault ───────────────────
+  listSecrets: () => http<Secret[]>('/secrets'),
+  getSecret: (name: string) =>
+    http<Secret>(`/secrets/${encodeURIComponent(name)}`),
+  createSecret: (input: { name: string; value: string }) =>
+    http<Secret>('/secrets', { method: 'POST', body: JSON.stringify(input) }),
+  rotateSecret: (name: string, value: string) =>
+    http<Secret>(`/secrets/${encodeURIComponent(name)}`, {
+      method: 'PUT',
+      body: JSON.stringify({ value }),
+    }),
+  deleteSecret: (name: string) =>
+    http<{ ok: true }>(`/secrets/${encodeURIComponent(name)}`, { method: 'DELETE' }),
+  secretUsages: (name: string) =>
+    http<SecretUsage[]>(`/secrets/${encodeURIComponent(name)}/usages`),
+
+  listVaultFiles: () => http<VaultFile[]>('/vault-files'),
+  getVaultFile: (name: string) =>
+    http<VaultFile>(`/vault-files/${encodeURIComponent(name)}`),
+  uploadVaultFile: (input: {
+    name: string;
+    filename: string;
+    mime: string;
+    contentBase64: string;
+  }) =>
+    http<VaultFile>('/vault-files', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
+  deleteVaultFile: (name: string) =>
+    http<{ ok: true }>(`/vault-files/${encodeURIComponent(name)}`, { method: 'DELETE' }),
+  vaultFileDownloadUrl: (name: string) =>
+    `${API}/vault-files/${encodeURIComponent(name)}/download`,
 };

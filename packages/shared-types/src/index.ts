@@ -1662,6 +1662,48 @@ export interface NodeTemplate {
   updatedAt: number;
 }
 
+// ── Cluster 11.B · Secrets & file vault ─────────────────────────────────────
+// A named secret stored encrypted-at-rest. The plaintext value is never
+// returned over the wire; the only way to roll it forward is rotate +
+// supply a new value. Step data references a secret with `${{ secrets.NAME }}`
+// markers that the engine interpolates immediately before step execution.
+export interface Secret {
+  id: string;
+  name: string; // unique; conventional uppercase snake (e.g. ASC_API_KEY)
+  createdAt: number;
+  updatedAt: number;
+  // Last time the engine resolved this secret during a build run. Null
+  // when the secret was created but never referenced yet.
+  lastUsedAt: number | null;
+}
+
+export interface SecretUsage {
+  pipelineId: string;
+  pipelineName: string;
+  nodeId: string;
+  nodeType: StepType;
+  fieldName: string;
+}
+
+// A binary file in the vault. Stored encrypted in SQLite (BLOB). Files
+// larger than VAULT_FILE_MAX_BYTES are rejected. Step data references a
+// vault file with `${{ files.NAME }}` — the engine extracts a fresh copy
+// to disk per run and substitutes the temp path before step execution.
+export interface VaultFile {
+  id: string;
+  name: string; // unique; conventional uppercase (e.g. APPLE_DIST_P12)
+  filename: string; // original filename (used to preserve extension on extract)
+  mime: string;
+  sizeBytes: number;
+  createdAt: number;
+  lastUsedAt: number | null;
+}
+
+// Hard cap so a misplaced .ipa doesn't try to land in the vault. Keeps
+// the BLOB cell small enough to round-trip through Fastify's default
+// JSON parser when needed and the SQLite page cache friendly.
+export const VAULT_FILE_MAX_BYTES = 10 * 1024 * 1024; // 10 MiB
+
 // ── Structured build logs ───────────────────────────────────────────────────
 // Each entry is one logical line, tagged with the originating pipeline node
 // and a coarse log level. The dashboard renders these as a logcat-style table.
@@ -2250,4 +2292,85 @@ export interface CreatedApiToken extends ApiToken {
 export interface AuthConfig {
   enabled: boolean;
   sessionSecret: string;
+}
+
+// ── Cluster 11.D — manual approval steps ────────────────────────────────────
+// The `manualApproval` step pauses a build mid-run and waits for an in-app
+// decision. While paused the build sits in status `awaiting_approval` and the
+// pending request is persisted in `build_approvals` so a server restart
+// doesn't lose it.
+
+export type ApprovalInputType = 'text' | 'select' | 'checkbox';
+
+export interface ApprovalInputSpec {
+  // Machine name used as the key in `inputValues` on decide. Required.
+  name: string;
+  // Human-friendly label shown next to the input.
+  label: string;
+  type: ApprovalInputType;
+  // Only meaningful when `type === 'select'`.
+  options?: string[];
+  required?: boolean;
+}
+
+// Per-step data for the `manualApproval` node.
+export interface ManualApprovalStepData {
+  // Markdown rendered above the input form. Required.
+  message: string;
+  // Form fields collected from the approver alongside their decision.
+  inputs?: ApprovalInputSpec[];
+  // How many distinct approvers must say "approve" before the step
+  // completes. Defaults to 1.
+  requiredApprovers?: number;
+  // Soft role hint — once Cluster A (auth) lands we filter the inbox by
+  // these. Until then we record a log line when the actor's role (if any)
+  // doesn't match but still let the decision through.
+  requiredRoles?: string[];
+  // Minutes to wait before auto-rejecting via `decision='timeout'`. 0 =
+  // no timeout. Defaults to 1440 (24h).
+  timeoutMinutes?: number;
+}
+
+export type ApprovalDecision = 'approve' | 'reject' | 'timeout';
+
+export interface BuildApproval {
+  id: string;
+  buildId: string;
+  pipelineId: string;
+  projectId: string;
+  nodeId: string;
+  message: string;
+  inputsSpec: ApprovalInputSpec[];
+  requiredApprovers: number;
+  requiredRoles: string[];
+  timeoutMinutes: number;
+  requestedAt: number;
+  decision: ApprovalDecision | null;
+  // Userspace identifier(s) of the deciders. Comma-separated list once
+  // multi-approver requirements are in play. `null` until first decision.
+  decidedBy: string | null;
+  decidedAt: number | null;
+  // The aggregated inputValues last submitted by an approver (the most
+  // recent submission wins). Stored as JSON on the row.
+  inputsValues: Record<string, string | boolean> | null;
+  // Individual decisions accumulated so far (when requiredApprovers > 1).
+  // Each entry records who said what; the final `decision` is set when
+  // either threshold is reached, anyone rejects, or the timer fires.
+  approvers: Array<{
+    actor: string;
+    decision: 'approve' | 'reject';
+    at: number;
+  }>;
+}
+
+// `POST /api/builds/:buildId/approvals/:approvalId/decide` body.
+export interface ApprovalDecideRequest {
+  decision: 'approve' | 'reject';
+  // Keyed by ApprovalInputSpec.name. Captured on every approve/reject so
+  // the audit trail records what the approver saw.
+  inputValues?: Record<string, string | boolean>;
+  // Optional explicit actor id; in dev / when no auth middleware is wired
+  // we fall back to "anonymous" so multi-approver requirements still
+  // require N distinct identifiers.
+  actor?: string;
 }

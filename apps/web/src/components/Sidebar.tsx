@@ -2,10 +2,12 @@ import {
   AlertTriangle,
   ChevronsLeft,
   ChevronsRight,
+  FileLock,
   Folder,
   GitBranch,
   History,
   Home,
+  KeyRound,
   LineChart,
   Monitor,
   Moon,
@@ -209,6 +211,18 @@ export function Sidebar({
             label="Flaky tests"
           />
           <IconRail
+            icon={<KeyRound size={16} className="text-amber-400" />}
+            active={view.type === 'secrets'}
+            onClick={() => setView({ type: 'secrets' })}
+            label="Secrets"
+          />
+          <IconRail
+            icon={<FileLock size={16} className="text-emerald-400" />}
+            active={view.type === 'vaultFiles'}
+            onClick={() => setView({ type: 'vaultFiles' })}
+            label="File vault"
+          />
+          <IconRail
             icon={<Settings size={16} className="text-slate-300" />}
             active={view.type === 'settings'}
             onClick={() => setView({ type: 'settings' })}
@@ -342,6 +356,20 @@ export function Sidebar({
           label="Flaky tests"
           onClick={() => setView({ type: 'flakyTests' })}
           title="Tests that pass sometimes and fail others over recent builds"
+        />
+        <NavItem
+          active={view.type === 'secrets'}
+          icon={<KeyRound size={14} className="text-amber-400" />}
+          label="Secrets"
+          onClick={() => setView({ type: 'secrets' })}
+          title="Named secrets referenced from pipeline steps via ${{ secrets.NAME }}"
+        />
+        <NavItem
+          active={view.type === 'vaultFiles'}
+          icon={<FileLock size={14} className="text-emerald-400" />}
+          label="File vault"
+          onClick={() => setView({ type: 'vaultFiles' })}
+          title="Encrypted file storage referenced via ${{ files.NAME }}"
         />
         <NavItem
           active={view.type === 'settings'}
