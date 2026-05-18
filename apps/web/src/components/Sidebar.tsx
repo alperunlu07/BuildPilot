@@ -15,11 +15,13 @@ import {
   Star,
   Sun,
   Trash2,
+  X,
 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useStore } from '../store/store';
 import { cn } from '../lib/cn';
+import { useMinWidth } from '../lib/breakpoint';
 
 const WIDTH_KEY = 'buildpilot.sidebar.width';
 const COLLAPSED_KEY = 'buildpilot.sidebar.collapsed';
@@ -53,9 +55,20 @@ interface Props {
   onManageHosts(): void;
   onShowChangelog(): void;
   changelogHasUnread?: boolean;
+  // Mobile-drawer controls. Above md the drawer flags are ignored and the
+  // sidebar renders inline using the existing resize/collapse behavior.
+  mobileOpen?: boolean;
+  onMobileClose?(): void;
 }
 
-export function Sidebar({ onAddProject, onManageHosts, onShowChangelog, changelogHasUnread }: Props) {
+export function Sidebar({
+  onAddProject,
+  onManageHosts,
+  onShowChangelog,
+  changelogHasUnread,
+  mobileOpen = false,
+  onMobileClose,
+}: Props) {
   const projects = useStore((s) => s.projects);
   const pipelines = useStore((s) => s.pipelines);
   const view = useStore((s) => s.view);
@@ -74,6 +87,19 @@ export function Sidebar({ onAddProject, onManageHosts, onShowChangelog, changelo
   const [width, setWidth] = useState<number>(() => readStoredWidth());
   const [collapsed, setCollapsed] = useState<boolean>(() => readStoredCollapsed());
   const dragStartRef = useRef<{ x: number; w: number } | null>(null);
+  // Below md (768px) we switch to a slide-out drawer driven by `mobileOpen`.
+  // Above md we keep the existing in-flow resize/collapse behavior unchanged.
+  const isDesktop = useMinWidth('md');
+
+  // Close the drawer on Escape so keyboard users aren't trapped.
+  useEffect(() => {
+    if (isDesktop || !mobileOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onMobileClose?.();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isDesktop, mobileOpen, onMobileClose]);
 
   // Drag-to-resize handle. We move width on every mousemove so the layout
   // tracks the cursor, then persist on mouseup. Clamped to MIN/MAX so the
@@ -118,7 +144,10 @@ export function Sidebar({ onAddProject, onManageHosts, onShowChangelog, changelo
     }
   }, [collapsed]);
 
-  const effectiveWidth = collapsed ? COLLAPSED_WIDTH : width;
+  // On mobile, ignore the saved collapsed state — the drawer is either fully
+  // visible (with a real width) or fully off-screen via the parent's
+  // mobileOpen flag. This keeps tap targets readable on small viewports.
+  const effectiveWidth = !isDesktop ? Math.min(width, 320) : collapsed ? COLLAPSED_WIDTH : width;
 
   const favProjects = projects.filter((p) => favorites.projectIds.includes(p.id));
   const favPipelines = pipelines.filter((p) => favorites.pipelineIds.includes(p.id));
@@ -129,7 +158,10 @@ export function Sidebar({ onAddProject, onManageHosts, onShowChangelog, changelo
   }
   const ThemeIcon = theme === 'dark' ? Moon : theme === 'light' ? Sun : Monitor;
 
-  if (collapsed) {
+  // Below md, mobile drawer always renders the full sidebar (collapsed-rail
+  // mode doesn't make sense on a 320px-wide drawer). Skip the collapsed
+  // branch on small screens.
+  if (collapsed && isDesktop) {
     return (
       <aside
         style={{ width: COLLAPSED_WIDTH }}
@@ -183,10 +215,34 @@ export function Sidebar({ onAddProject, onManageHosts, onShowChangelog, changelo
     );
   }
 
+  // On mobile, the sidebar becomes a fixed overlay drawer with a backdrop.
+  // We always render it (so transitions can run) but hide it off-screen via
+  // translate when closed. Desktop rendering is unchanged: a normal flex
+  // child with `shrink-0`.
+  const mobileClasses = !isDesktop
+    ? cn(
+        'fixed inset-y-0 left-0 z-50 transition-transform duration-200',
+        mobileOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full',
+      )
+    : 'shrink-0';
+
   return (
+    <>
+      {!isDesktop && mobileOpen && (
+        <div
+          role="presentation"
+          aria-hidden="true"
+          onClick={onMobileClose}
+          className="fixed inset-0 z-40 bg-slate-950/70 backdrop-blur-sm md:hidden"
+        />
+      )}
     <aside
       style={{ width: effectiveWidth }}
-      className="density-card relative flex h-full shrink-0 flex-col border-r border-slate-800 bg-slate-950"
+      className={cn(
+        'density-card relative flex h-full flex-col border-r border-slate-800 bg-slate-950',
+        mobileClasses,
+      )}
+      aria-hidden={!isDesktop && !mobileOpen ? true : undefined}
     >
       <div className="flex items-center justify-between border-b border-slate-800 px-4 py-3">
         <button
@@ -229,7 +285,7 @@ export function Sidebar({ onAddProject, onManageHosts, onShowChangelog, changelo
           <button
             type="button"
             onClick={() => setCollapsed(true)}
-            className="focusable rounded-md border border-slate-700 p-1.5 text-slate-300 hover:border-sky-500 hover:text-sky-400"
+            className="focusable touch-target hidden rounded-md border border-slate-700 p-1.5 text-slate-300 hover:border-sky-500 hover:text-sky-400 md:inline-flex"
             title="Collapse sidebar"
             aria-label="Collapse sidebar"
           >
@@ -496,13 +552,25 @@ export function Sidebar({ onAddProject, onManageHosts, onShowChangelog, changelo
           drive sidebar width via the collapse button. */}
       <div
         onMouseDown={onResizeMouseDown}
-        className="group absolute right-0 top-0 z-10 h-full w-1 cursor-col-resize bg-transparent hover:bg-sky-500/30"
+        className="group absolute right-0 top-0 z-10 hidden h-full w-1 cursor-col-resize bg-transparent hover:bg-sky-500/30 md:block"
         title="Drag to resize"
         role="separator"
         aria-orientation="vertical"
         aria-label="Resize sidebar"
       />
+      {!isDesktop && (
+        <button
+          type="button"
+          onClick={onMobileClose}
+          className="focusable touch-target absolute right-2 top-2 rounded-md p-1 text-slate-300 hover:bg-slate-800 hover:text-slate-100 md:hidden"
+          aria-label="Close navigation"
+          title="Close navigation"
+        >
+          <X size={16} />
+        </button>
+      )}
     </aside>
+    </>
   );
 }
 

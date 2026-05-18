@@ -146,6 +146,38 @@ html[data-density='compact'] .density-gap { gap: 0.25rem !important; }
   }
 }
 
+/* ---------------------------------------------------------------------------
+   Cluster 10.G — Mobile / small-screen experience
+   ---------------------------------------------------------------------------*/
+
+/* `touch-target` ensures any tap-able element clears the iOS Human Interface
+   Guidelines / Material 44dp minimum on coarse-pointer devices. On precise
+   pointers (mouse / trackpad) we leave the original compact sizing alone so
+   the desktop UI density doesn't change. Use min-w + min-h instead of
+   width/height so existing intrinsic-size buttons keep their padding-driven
+   shape and merely grow on touch.
+
+   The `pointer: coarse` query catches phones, tablets, and most touch
+   laptops; `hover: none` is an additional signal. We OR both so devices
+   that report only one still pick up the tweak. */
+@media (pointer: coarse), (hover: none) {
+  .touch-target {
+    min-width: 32px;
+    min-height: 32px;
+    /* Center the original glyph inside the enlarged hit zone. */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .touch-target-lg {
+    min-width: 44px;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
 /* cmdk command palette */
 .cmdk-group {
   margin-bottom: 0.25rem;

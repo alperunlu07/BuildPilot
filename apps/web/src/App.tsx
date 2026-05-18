@@ -44,6 +44,13 @@ export function App() {
   const [openHosts, setOpenHosts] = useState(false);
   const [openChangelog, setOpenChangelog] = useState(false);
   const [openCreatePipeline, setOpenCreatePipeline] = useState<string | null>(null);
+  // Mobile drawer open state — only consumed below md. Auto-close whenever
+  // the route changes so tapping a nav item dismisses the drawer.
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const viewKey = `${view.type}:${'id' in view ? view.id : ''}`;
+  useEffect(() => {
+    setMobileNavOpen(false);
+  }, [viewKey]);
   const { hasUnread } = useUnreadChangelog();
 
   // Auto-open the changelog drawer on first visit after a new release.
@@ -122,9 +129,11 @@ export function App() {
         onManageHosts={() => setOpenHosts(true)}
         onShowChangelog={() => setOpenChangelog(true)}
         changelogHasUnread={hasUnread}
+        mobileOpen={mobileNavOpen}
+        onMobileClose={() => setMobileNavOpen(false)}
       />
       <main className="flex min-w-0 flex-1 flex-col">
-        <Breadcrumb />
+        <Breadcrumb onOpenMobileNav={() => setMobileNavOpen(true)} />
         <div className="min-h-0 flex-1 overflow-y-auto">
           {view.type === 'home' && <HomePage />}
           {view.type === 'projects' && <ProjectsPage onAdd={() => setOpenAdd(true)} />}
