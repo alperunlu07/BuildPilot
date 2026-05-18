@@ -24,6 +24,8 @@ import { HostsPage } from './pages/HostsPage';
 import { TestReportPage } from './pages/TestReportPage';
 import { FlakyTestsPage } from './pages/FlakyTestsPage';
 import { BuildTrendsPage } from './pages/BuildTrendsPage';
+import { SecretsPage } from './pages/SecretsPage';
+import { VaultFilesPage } from './pages/VaultFilesPage';
 import { useStore } from './store/store';
 import { onConnected, subscribe } from './lib/events';
 import { ensurePermission } from './lib/notifications';
@@ -61,7 +63,9 @@ export function App() {
         ? `flakyTests:${view.pipelineId ?? ''}`
         : view.type === 'trends'
           ? `trends:${view.pipelineId ?? ''}`
-          : `${view.type}:${'id' in view ? view.id : ''}`;
+          : view.type === 'secrets'
+            ? `secrets:${view.name ?? ''}`
+            : `${view.type}:${'id' in view ? view.id : ''}`;
   useEffect(() => {
     setMobileNavOpen(false);
   }, [viewKey]);
@@ -160,6 +164,8 @@ export function App() {
           {view.type === 'testReport' && <TestReportPage buildId={view.buildId} />}
           {view.type === 'flakyTests' && <FlakyTestsPage />}
           {view.type === 'trends' && <BuildTrendsPage />}
+          {view.type === 'secrets' && <SecretsPage />}
+          {view.type === 'vaultFiles' && <VaultFilesPage />}
         </div>
         <BuildLogPanel />
       </main>

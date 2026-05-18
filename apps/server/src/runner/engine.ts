@@ -12,6 +12,7 @@ import { appendBuildLogEntry } from '../store/buildLogs';
 import { setPipelineLastBuiltSha } from '../store/pipelines';
 import { eventBus } from '../events/bus';
 import { cancelBuild, isCancelled, trackChild } from './coordinator';
+import { interpolateStepData } from '../secrets/interpolation';
 import { runCheckout } from './steps/checkout';
 import { runPull } from './steps/pull';
 import { runShell } from './steps/shell';
@@ -279,15 +280,49 @@ async function executeStep(
         )
       : null;
     const ctx = makeStepContext(build, project, node, persist, watchdogState);
+    // Cluster 11.B — resolve `${{ secrets.X }}` / `${{ files.X }}` markers
+    // immediately before invoking the runner. Missing references are
+    // surfaced as a log warning but don't abort the step: the runner will
+    // typically fail at the next sub-process call with a clearer error.
+    // Cleanup deletes any extracted temp files when the attempt finishes.
+    let interp: ReturnType<typeof interpolateStepData> | null = null;
     try {
-      await runner(ctx, node.data);
+      interp = interpolateStepData(node.data, { buildId: build.id, nodeId: node.id });
+      if (interp.missingSecrets.length > 0) {
+        persist(
+          'failure',
+          `⚠ missing secrets referenced by this step: ${interp.missingSecrets.join(', ')}`,
+          node.id,
+          node.type,
+        );
+      }
+      if (interp.missingFiles.length > 0) {
+        persist(
+          'failure',
+          `⚠ missing vault files referenced by this step: ${interp.missingFiles.join(', ')}`,
+          node.id,
+          node.type,
+        );
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      persist('failure', `✖ secret interpolation failed: ${msg}`, node.id, node.type);
       watchdogState?.cancel();
+      lastErr = err;
+      if (attempt < maxAttempts && retryPolicy?.enabled) continue;
+      return { ok: false, cancelled: false, attempts: attempt, error: lastErr };
+    }
+    try {
+      await runner(ctx, interp.data);
+      watchdogState?.cancel();
+      interp.cleanup();
       if (isCancelled(build.id)) {
         return { ok: false, cancelled: true, attempts: attempt, error: lastErr };
       }
       return { ok: true, cancelled: false, attempts: attempt, error: null };
     } catch (err) {
       watchdogState?.cancel();
+      interp.cleanup();
       lastErr = err;
       if (isCancelled(build.id)) {
         return { ok: false, cancelled: true, attempts: attempt, error: lastErr };

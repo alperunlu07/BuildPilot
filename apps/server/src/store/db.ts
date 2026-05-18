@@ -105,6 +105,35 @@ export function initDb(path: string): DB {
       value TEXT NOT NULL,
       updated_at INTEGER NOT NULL
     );
+
+    -- Cluster 11.B — named secrets. The value column stores the AES-256-GCM
+    -- envelope produced by crypto/secrets.encryptSecret. Names are unique
+    -- and case-sensitive — the engine substitutes the secrets.NAME marker
+    -- exactly. last_used_at tracks engine resolution so the UI can warn
+    -- about stale entries.
+    CREATE TABLE IF NOT EXISTS secrets (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL UNIQUE,
+      encrypted_value TEXT NOT NULL,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
+      last_used_at INTEGER
+    );
+
+    -- Cluster 11.B — encrypted file vault. encrypted_content stores the same
+    -- AES-256-GCM envelope as secrets but base64-decoded into a BLOB cell
+    -- (cheaper than re-base64-ing for every read). Hard-capped at 10 MiB
+    -- per file via API validation.
+    CREATE TABLE IF NOT EXISTS vault_files (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL UNIQUE,
+      filename TEXT NOT NULL,
+      mime TEXT NOT NULL,
+      size_bytes INTEGER NOT NULL,
+      encrypted_content BLOB NOT NULL,
+      created_at INTEGER NOT NULL,
+      last_used_at INTEGER
+    );
   `);
 
   // Lightweight migration for existing installs: SQLite's CREATE TABLE IF

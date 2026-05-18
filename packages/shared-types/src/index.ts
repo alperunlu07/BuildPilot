@@ -1662,6 +1662,48 @@ export interface NodeTemplate {
   updatedAt: number;
 }
 
+// ── Cluster 11.B · Secrets & file vault ─────────────────────────────────────
+// A named secret stored encrypted-at-rest. The plaintext value is never
+// returned over the wire; the only way to roll it forward is rotate +
+// supply a new value. Step data references a secret with `${{ secrets.NAME }}`
+// markers that the engine interpolates immediately before step execution.
+export interface Secret {
+  id: string;
+  name: string; // unique; conventional uppercase snake (e.g. ASC_API_KEY)
+  createdAt: number;
+  updatedAt: number;
+  // Last time the engine resolved this secret during a build run. Null
+  // when the secret was created but never referenced yet.
+  lastUsedAt: number | null;
+}
+
+export interface SecretUsage {
+  pipelineId: string;
+  pipelineName: string;
+  nodeId: string;
+  nodeType: StepType;
+  fieldName: string;
+}
+
+// A binary file in the vault. Stored encrypted in SQLite (BLOB). Files
+// larger than VAULT_FILE_MAX_BYTES are rejected. Step data references a
+// vault file with `${{ files.NAME }}` — the engine extracts a fresh copy
+// to disk per run and substitutes the temp path before step execution.
+export interface VaultFile {
+  id: string;
+  name: string; // unique; conventional uppercase (e.g. APPLE_DIST_P12)
+  filename: string; // original filename (used to preserve extension on extract)
+  mime: string;
+  sizeBytes: number;
+  createdAt: number;
+  lastUsedAt: number | null;
+}
+
+// Hard cap so a misplaced .ipa doesn't try to land in the vault. Keeps
+// the BLOB cell small enough to round-trip through Fastify's default
+// JSON parser when needed and the SQLite page cache friendly.
+export const VAULT_FILE_MAX_BYTES = 10 * 1024 * 1024; // 10 MiB
+
 // ── Structured build logs ───────────────────────────────────────────────────
 // Each entry is one logical line, tagged with the originating pipeline node
 // and a coarse log level. The dashboard renders these as a logcat-style table.

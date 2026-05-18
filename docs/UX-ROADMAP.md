@@ -200,12 +200,12 @@ Cross-refs: `TODO.md` Phase 2.6.A.
 
 Cross-refs: `TODO.md` Phase 2.6.A (file vault, secret references).
 
-- [ ] **Secrets page** — list/create/rotate named secrets;
-  `${{ secrets.NAME }}` autocomplete in step property fields
-- [ ] **File vault page** — upload `.p12` / `.mobileprovision` / `.p8` /
-  `GoogleService-Info.plist` once; reference by id in steps
-- [ ] **"Where is this secret used?"** — back-reference panel listing
-  every step / pipeline referencing a given secret
+- [x] **Secrets page** — list/create/rotate named secrets;
+  `${{ secrets.NAME }}` autocomplete in step property fields — pending sha
+- [x] **File vault page** — upload `.p12` / `.mobileprovision` / `.p8` /
+  `GoogleService-Info.plist` once; reference by id in steps — pending sha
+- [x] **"Where is this secret used?"** — back-reference panel listing
+  every step / pipeline referencing a given secret — pending sha
 - [ ] **Bulk secret import / export** — encrypted JSON bundle for moving
   between machines or backing up alongside `master.key`
 

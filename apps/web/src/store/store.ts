@@ -39,7 +39,12 @@ export type View =
   | { type: 'hosts' }
   | { type: 'testReport'; buildId: string }
   | { type: 'trends'; pipelineId?: string }
-  | { type: 'flakyTests'; pipelineId?: string };
+  | { type: 'flakyTests'; pipelineId?: string }
+  // Cluster 11.B — secrets vault + file vault. Each has a dedicated page
+  // for managing entries; the secret detail page (with the "where is this
+  // used?" panel) is reachable via /secrets?name=NAME.
+  | { type: 'secrets'; name?: string }
+  | { type: 'vaultFiles' };
 
 export interface CommitToast {
   id: string;
