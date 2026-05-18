@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ChevronLeft, Download, Filter, RotateCcw, Square } from 'lucide-react';
+import { ChevronLeft, Download, Filter, GitCompareArrows, RotateCcw, Square } from 'lucide-react';
 import type {
   Build,
   BuildArtifact,
@@ -25,6 +25,7 @@ import {
 import { TimestampRangeSlider } from '../components/TimestampRangeSlider';
 import { LogGroupBar } from '../components/LogGroupBar';
 import { StepDurationCompare } from '../components/StepDurationCompare';
+import { BuildDiffView } from '../components/BuildDiffView';
 import { commandFromEntry } from '../lib/copyCommand';
 import { buildGroupFilter, detectLogGroups } from '../lib/logGroups';
 
@@ -76,6 +77,8 @@ export function BuildDetailPage({ buildId }: Props) {
   const [tsRange, setTsRange] = useState<[number, number] | null>(null);
   const [presets, setPresets] = useState<SavedLogFilter[]>(() => loadLogPresets());
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(() => new Set());
+  const [diffOpen, setDiffOpen] = useState(false);
+  const [diffCandidates, setDiffCandidates] = useState<Build[]>([]);
 
   useEffect(() => {
     let alive = true;
@@ -314,6 +317,23 @@ export function BuildDetailPage({ buildId }: Props) {
             )}
             <button
               type="button"
+              onClick={async () => {
+                if (diffCandidates.length === 0) {
+                  const list = await api.listBuilds({
+                    pipelineId: build.pipelineId,
+                    limit: 50,
+                  });
+                  setDiffCandidates(list);
+                }
+                setDiffOpen(true);
+              }}
+              className="inline-flex items-center gap-1 rounded-md border border-slate-700 px-2 py-0.5 text-slate-300 hover:border-sky-500 hover:text-sky-400"
+              title="Compare with another build"
+            >
+              <GitCompareArrows size={11} /> Compare
+            </button>
+            <button
+              type="button"
               onClick={downloadLog}
               className="inline-flex items-center gap-1 rounded-md border border-slate-700 px-2 py-0.5 text-slate-300 hover:border-sky-500 hover:text-sky-400"
               title="Download log as .txt"
@@ -529,6 +549,17 @@ export function BuildDetailPage({ buildId }: Props) {
         artifact={previewArtifact}
         onClose={() => setPreviewArtifact(null)}
       />
+
+      {diffOpen && (
+        <BuildDiffView
+          current={build}
+          candidates={diffCandidates}
+          nodeLabel={(id, type) =>
+            `${nodeLabelMap.get(id) ?? type ?? '?'} · ${id.slice(0, 8)}`
+          }
+          onClose={() => setDiffOpen(false)}
+        />
+      )}
     </div>
   );
 }
