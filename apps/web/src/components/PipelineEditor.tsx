@@ -27,6 +27,7 @@ import type {
 } from '@buildpilot/shared-types';
 import { STEP_CATEGORIES, STEP_DEFINITIONS } from '@buildpilot/step-registry';
 import { api } from '../lib/api';
+import { usePipelineClipboard } from '../lib/usePipelineClipboard';
 import { usePipelineHistory } from '../lib/usePipelineHistory';
 import { useStore } from '../store/store';
 import { BranchSelect } from './BranchSelect';
@@ -168,6 +169,7 @@ function Editor({ pipeline }: Props) {
   const [nodes, setNodes] = useState<Node[]>(() => pipelineNodesToReactFlow(pipeline.nodes));
   const [edges, setEdges] = useState<Edge[]>(() => pipelineEdgesToReactFlow(pipeline.edges));
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([]);
   const [name, setName] = useState(pipeline.name);
   const [watch, setWatch] = useState<PipelineWatch>(pipeline.watch);
   const [saving, setSaving] = useState(false);
@@ -185,6 +187,7 @@ function Editor({ pipeline }: Props) {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const { screenToFlowPosition } = useReactFlow();
   const history = usePipelineHistory();
+  const clipboard = usePipelineClipboard();
   const nodesRef = useRef<Node[]>(nodes);
   const edgesRef = useRef<Edge[]>(edges);
   nodesRef.current = nodes;
@@ -201,6 +204,7 @@ function Editor({ pipeline }: Props) {
     setWatch(pipeline.watch);
     setDirty(false);
     setSelectedNodeId(null);
+    setSelectedNodeIds([]);
     history.reset();
   }, [pipeline.id]);
 
@@ -236,6 +240,27 @@ function Editor({ pipeline }: Props) {
       }),
     );
   }, [stepStatus, stepTimings]);
+
+  const doCopy = useCallback(() => {
+    const ids = new Set(selectedNodeIds);
+    const picked = nodesRef.current.filter((n) => ids.has(n.id));
+    if (picked.length === 0) return;
+    clipboard.copy(picked, edgesRef.current);
+  }, [clipboard, selectedNodeIds]);
+
+  const doPaste = useCallback(() => {
+    const payload = clipboard.paste();
+    if (!payload) return;
+    recordHistory();
+    setNodes((nds) => [
+      ...nds.map((n) => ({ ...n, selected: false })),
+      ...payload.nodes.map((n) => ({ ...n, selected: true })),
+    ]);
+    setEdges((eds) => [...eds, ...payload.edges]);
+    setSelectedNodeIds(payload.nodes.map((n) => n.id));
+    setSelectedNodeId(payload.nodes[0]?.id ?? null);
+    setDirty(true);
+  }, [clipboard, recordHistory]);
 
   const autoLayout = useCallback(() => {
     recordHistory();
@@ -277,11 +302,20 @@ function Editor({ pipeline }: Props) {
       } else if ((e.key.toLowerCase() === 'z' && e.shiftKey) || e.key.toLowerCase() === 'y') {
         e.preventDefault();
         doRedo();
+      } else if (e.key.toLowerCase() === 'c') {
+        // Don't preempt the browser when nothing is selected; let native
+        // text-copy work in case the user has a selection elsewhere.
+        if (selectedNodeIds.length === 0) return;
+        e.preventDefault();
+        doCopy();
+      } else if (e.key.toLowerCase() === 'v') {
+        e.preventDefault();
+        doPaste();
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [doUndo, doRedo]);
+  }, [doUndo, doRedo, doCopy, doPaste, selectedNodeIds.length]);
 
   // Load branches for the project so the watch + checkout combobox have data.
   useEffect(() => {
@@ -341,6 +375,7 @@ function Editor({ pipeline }: Props) {
   const handleSelectionChange = useCallback(
     ({ nodes: selected }: { nodes: Node[]; edges: Edge[] }) => {
       setSelectedNodeId(selected[0]?.id ?? null);
+      setSelectedNodeIds(selected.map((n) => n.id));
     },
     [],
   );
