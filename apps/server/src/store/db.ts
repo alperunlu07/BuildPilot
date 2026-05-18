@@ -192,10 +192,10 @@ export function initDb(path: string): DB {
       last_used_at INTEGER
     );
 
-    -- Cluster 11.D — manual approval steps. One row per `manualApproval`
+    -- Cluster 11.D - manual approval steps. One row per manualApproval
     -- node encountered by a running build. Persisted (not in-memory only)
     -- so a server restart while a build is awaiting approval recovers the
-    -- pending state on next boot. `decision` is NULL until an approver
+    -- pending state on next boot. decision is NULL until an approver
     -- decides or the timeout fires.
     CREATE TABLE IF NOT EXISTS build_approvals (
       id TEXT PRIMARY KEY,
