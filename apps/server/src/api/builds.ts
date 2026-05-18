@@ -154,7 +154,11 @@ export async function buildsRoutes(app: FastifyInstance): Promise<void> {
     const { id } = req.params as { id: string };
     const build = getBuild(id);
     if (!build) return reply.code(404).send({ error: 'not found' });
-    if (build.status !== 'running' && build.status !== 'pending') {
+    if (
+      build.status !== 'running' &&
+      build.status !== 'pending' &&
+      build.status !== 'awaiting_approval'
+    ) {
       return reply.code(409).send({ error: `build is ${build.status}, cannot cancel` });
     }
     const { wasRunning } = cancelBuild(id);

@@ -15,6 +15,7 @@ const STATUS_LABELS: Record<BuildStatus, string> = {
   success: 'Success',
   failed: 'Failed',
   cancelled: 'Cancelled',
+  awaiting_approval: 'Awaiting approval',
 };
 
 export function BuildsPage() {

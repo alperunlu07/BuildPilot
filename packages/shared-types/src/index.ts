@@ -114,7 +114,8 @@ export type StepType =
   | 'steamUpload'
   | 'steamSetLive'
   | 'steamWorkshopUpload'
-  | 'iosDeviceLog';
+  | 'iosDeviceLog'
+  | 'manualApproval';
 
 export type AiTool = 'claude' | 'codex' | 'aider' | 'gemini' | 'custom';
 
@@ -176,7 +177,16 @@ export interface Pipeline {
 }
 
 // ── Build ───────────────────────────────────────────────────────────────────
-export type BuildStatus = 'pending' | 'running' | 'success' | 'failed' | 'cancelled';
+export type BuildStatus =
+  | 'pending'
+  | 'running'
+  | 'success'
+  | 'failed'
+  | 'cancelled'
+  // Cluster 11.D — set while a `manualApproval` step is waiting on an
+  // in-app decision. The runner remains alive but parks until the
+  // approval is resolved (approve / reject / timeout).
+  | 'awaiting_approval';
 
 export interface Build {
   id: string;
@@ -1704,7 +1714,15 @@ export type ServerEvent =
   | { type: 'projectRemoved'; projectId: string }
   | { type: 'pipelineChanged'; pipelineId: string; action: 'created' | 'updated' | 'deleted' }
   | { type: 'nodeTemplateChanged'; templateId: string; action: 'created' | 'updated' | 'deleted' }
-  | { type: 'hostChanged'; hostId: string; action: 'created' | 'updated' | 'deleted' };
+  | { type: 'hostChanged'; hostId: string; action: 'created' | 'updated' | 'deleted' }
+  // Cluster 11.D — manual approval lifecycle.
+  | { type: 'buildAwaitingApproval'; buildId: string; approval: BuildApproval }
+  | {
+      type: 'buildApprovalDecided';
+      buildId: string;
+      approvalId: string;
+      decision: ApprovalDecision;
+    };
 
 // ── Server config ───────────────────────────────────────────────────────────
 export interface TelegramConfig {
@@ -2100,4 +2118,59 @@ export interface BuildTrendsBuild {
   startedAt: number;
   finishedAt: number | null;
   durationMs: number | null;
+}
+
+// ── Cluster 11.D — manual approval steps ────────────────────────────────────
+// The `manualApproval` step pauses a build mid-run and waits for an in-app
+// decision. While paused the build sits in status `awaiting_approval` and the
+// pending request is persisted in `build_approvals` so a server restart
+// doesn't lose it.
+
+export type ApprovalInputType = 'text' | 'select' | 'checkbox';
+
+export interface ApprovalInputSpec {
+  name: string;
+  label: string;
+  type: ApprovalInputType;
+  options?: string[];
+  required?: boolean;
+}
+
+export interface ManualApprovalStepData {
+  message: string;
+  inputs?: ApprovalInputSpec[];
+  requiredApprovers?: number;
+  requiredRoles?: string[];
+  timeoutMinutes?: number;
+}
+
+export type ApprovalDecision = 'approve' | 'reject' | 'timeout';
+
+export interface BuildApproval {
+  id: string;
+  buildId: string;
+  pipelineId: string;
+  projectId: string;
+  nodeId: string;
+  message: string;
+  inputsSpec: ApprovalInputSpec[];
+  requiredApprovers: number;
+  requiredRoles: string[];
+  timeoutMinutes: number;
+  requestedAt: number;
+  decision: ApprovalDecision | null;
+  decidedBy: string | null;
+  decidedAt: number | null;
+  inputsValues: Record<string, string | boolean> | null;
+  approvers: Array<{
+    actor: string;
+    decision: 'approve' | 'reject';
+    at: number;
+  }>;
+}
+
+export interface ApprovalDecideRequest {
+  decision: 'approve' | 'reject';
+  inputValues?: Record<string, string | boolean>;
+  actor?: string;
 }

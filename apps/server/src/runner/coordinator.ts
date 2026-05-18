@@ -6,6 +6,7 @@ import { getPipeline } from '../store/pipelines';
 import { getProject } from '../store/projects';
 import { createBuild } from '../store/builds';
 import { getCurrentBranch, getHeadSha } from '../git/operations';
+import { cancelPendingApprovalsForBuild } from './approvalBus';
 
 interface RunArgs {
   pipeline: Pipeline;
@@ -75,8 +76,26 @@ export function trackChild(buildId: string, child: ChildProcess): void {
 
 export function cancelBuild(buildId: string): { wasRunning: boolean } {
   cancelledBuilds.add(buildId);
+  // Cluster 11.D — a build parked on a manual approval has no active
+  // child_process to SIGTERM; instead we resolve the pending approval(s)
+  // so the runner unblocks, sees `isCancelled`, and finalises the build
+  // as `cancelled`. We treat the released-approval case as "wasRunning"
+  // so the caller does NOT overwrite the build status — the engine's
+  // finalize() will own that transition once the step throws.
+  let releasedApprovals = 0;
+  try {
+    const released = cancelPendingApprovalsForBuild(buildId);
+    releasedApprovals = released.length;
+    if (released.length > 0) {
+      logger.info({ buildId, released }, 'cancelled build released pending approvals');
+    }
+  } catch {
+    /* approval bus not initialised yet — nothing to do */
+  }
   const set = activeChildren.get(buildId);
-  if (!set || set.size === 0) return { wasRunning: false };
+  if (!set || set.size === 0) {
+    return { wasRunning: releasedApprovals > 0 };
+  }
   for (const c of set) {
     try {
       c.kill('SIGTERM');

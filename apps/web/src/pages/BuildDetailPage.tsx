@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Check, ChevronLeft, Download, FileBarChart, Filter, GitCompareArrows, Link2, RotateCcw, Square } from 'lucide-react';
 import type {
   Build,
+  BuildApproval,
   BuildArtifact,
   BuildLogEntry,
   BuildLogLevel,
@@ -16,6 +17,8 @@ import { StepGantt } from '../components/StepGantt';
 import { defaultActiveLevels } from '../components/LevelToggleBar';
 import { ArtifactPreviewModal } from '../components/ArtifactPreviewModal';
 import { FailureSummaryCard } from '../components/FailureSummaryCard';
+import { ApprovalCard } from '../components/ApprovalCard';
+import { subscribe } from '../lib/events';
 import {
   LogSearchBar,
   loadLogPresets,
@@ -65,6 +68,7 @@ export function BuildDetailPage({ buildId }: Props) {
   const [build, setBuild] = useState<Build | null>(null);
   const [loading, setLoading] = useState(true);
   const [artifacts, setArtifacts] = useState<BuildArtifact[]>([]);
+  const [approvals, setApprovals] = useState<BuildApproval[]>([]);
   // Selected artifact for the inline log viewer modal. null = closed.
   const [previewArtifact, setPreviewArtifact] = useState<BuildArtifact | null>(null);
 
@@ -92,11 +96,13 @@ export function BuildDetailPage({ buildId }: Props) {
       api.getBuild(buildId),
       api.getBuildEntries(buildId),
       api.getBuildArtifacts(buildId).catch(() => []),
+      api.buildApprovals(buildId).catch(() => [] as BuildApproval[]),
     ])
-      .then(([b, ents, arts]) => {
+      .then(([b, ents, arts, apps]) => {
         if (!alive) return;
         setBuild(b);
         setArtifacts(arts);
+        setApprovals(apps);
         // Legacy builds (created before the structured-log table) only have
         // the flat `build.log` text. Synthesize one stdout-level entry per
         // line so the table view still shows them.
@@ -127,6 +133,28 @@ export function BuildDetailPage({ buildId }: Props) {
       alive = false;
     };
   }, [buildId, seedBuildEntries]);
+
+  // Cluster 11.D — react to live approval events for this build so the
+  // ApprovalCard appears the moment the step parks, and updates when
+  // another approver decides.
+  useEffect(() => {
+    return subscribe((event) => {
+      if (event.type === 'buildAwaitingApproval' && event.buildId === buildId) {
+        setApprovals((cur) => {
+          const without = cur.filter((a) => a.id !== event.approval.id);
+          return [...without, event.approval];
+        });
+        setBuild((b) => (b ? { ...b, status: 'awaiting_approval' } : b));
+      } else if (event.type === 'buildApprovalDecided' && event.buildId === buildId) {
+        void api.buildApprovals(buildId).then((apps) => setApprovals(apps));
+        void api.getBuild(buildId).then((b) => setBuild(b));
+      } else if (event.type === 'buildStarted' && event.build.id === buildId) {
+        setBuild(event.build);
+      } else if (event.type === 'buildFinished' && event.build.id === buildId) {
+        setBuild(event.build);
+      }
+    });
+  }, [buildId]);
 
   const proj = build ? projects.find((p) => p.id === build.projectId) : null;
   const pipe = build ? pipelines.find((p) => p.id === build.pipelineId) : null;
@@ -401,6 +429,30 @@ export function BuildDetailPage({ buildId }: Props) {
           </div>
         </div>
       </header>
+
+      {/* Cluster 11.D — show the live approval card while the build is
+          parked on a manualApproval step. We also surface settled approvals
+          so the audit trail is visible after the fact. */}
+      {(() => {
+        const pending = approvals.find((a) => a.decision === null);
+        if (pending) {
+          return (
+            <ApprovalCard
+              approval={pending}
+              onDecided={(updated) => {
+                setApprovals((cur) =>
+                  cur.map((a) => (a.id === updated.id ? updated : a)),
+                );
+              }}
+            />
+          );
+        }
+        const last = approvals[approvals.length - 1];
+        if (last && last.decision) {
+          return <ApprovalCard approval={last} readOnly />;
+        }
+        return null;
+      })()}
 
       {build.status === 'failed' && (
         <FailureSummaryCard

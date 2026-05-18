@@ -1,4 +1,4 @@
-import { Ban, Check, Loader2, X, Circle } from 'lucide-react';
+import { Ban, Check, Loader2, ShieldCheck, X, Circle } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { BuildStatus } from '@buildpilot/shared-types';
 
@@ -17,6 +17,7 @@ const BUILD_ICON: Record<AccessibleStatus, LucideIcon> = {
   success: Check,
   failed: X,
   cancelled: Ban,
+  awaiting_approval: ShieldCheck,
 };
 
 const STEP_ICON: Record<StepRuntimeStatus, LucideIcon> = {
@@ -46,6 +47,8 @@ export function statusLabel(status: AccessibleStatus): string {
       return 'Failed';
     case 'cancelled':
       return 'Cancelled';
+    case 'awaiting_approval':
+      return 'Awaiting approval';
   }
 }
 

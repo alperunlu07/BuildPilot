@@ -105,6 +105,34 @@ export function initDb(path: string): DB {
       value TEXT NOT NULL,
       updated_at INTEGER NOT NULL
     );
+
+    -- Cluster 11.D - manual approval steps. One row per manualApproval
+    -- node encountered by a running build. Persisted (not in-memory only)
+    -- so a server restart while a build is awaiting approval recovers the
+    -- pending state on next boot. decision is NULL until an approver
+    -- decides or the timeout fires.
+    CREATE TABLE IF NOT EXISTS build_approvals (
+      id TEXT PRIMARY KEY,
+      build_id TEXT NOT NULL,
+      pipeline_id TEXT NOT NULL,
+      project_id TEXT NOT NULL,
+      node_id TEXT NOT NULL,
+      message TEXT NOT NULL,
+      inputs_spec_json TEXT NOT NULL,
+      required_approvers INTEGER NOT NULL DEFAULT 1,
+      required_roles_json TEXT NOT NULL DEFAULT '[]',
+      timeout_minutes INTEGER NOT NULL DEFAULT 1440,
+      requested_at INTEGER NOT NULL,
+      decision TEXT,
+      decided_by TEXT,
+      decided_at INTEGER,
+      inputs_values_json TEXT,
+      approvers_json TEXT NOT NULL DEFAULT '[]'
+    );
+    CREATE INDEX IF NOT EXISTS idx_build_approvals_build_id
+      ON build_approvals(build_id);
+    CREATE INDEX IF NOT EXISTS idx_build_approvals_pending
+      ON build_approvals(decision, requested_at);
   `);
 
   // Lightweight migration for existing installs: SQLite's CREATE TABLE IF

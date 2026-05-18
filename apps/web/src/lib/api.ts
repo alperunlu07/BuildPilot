@@ -1,5 +1,7 @@
 import type {
+  ApprovalDecideRequest,
   Build,
+  BuildApproval,
   BuildArtifact,
   BuildLogEntry,
   BuildTrendsReport,
@@ -273,4 +275,20 @@ export const api = {
   // Build duration trend (Cluster 11.F item 5).
   buildTrends: (pipelineId: string, buildCount = 100) =>
     http<BuildTrendsReport>(`/metrics/trends?pipelineId=${pipelineId}&buildCount=${buildCount}`),
+
+  // ── Manual approval steps (Cluster 11.D) ─────────────────
+  // Inbox feed. `role` filter is soft until Cluster A (auth) lands.
+  listApprovals: (role?: string) =>
+    http<BuildApproval[]>(`/approvals${role ? `?role=${encodeURIComponent(role)}` : ''}`),
+  buildApprovals: (buildId: string) =>
+    http<BuildApproval[]>(`/builds/${buildId}/approvals`),
+  decideApproval: (
+    buildId: string,
+    approvalId: string,
+    body: ApprovalDecideRequest,
+  ) =>
+    http<BuildApproval>(`/builds/${buildId}/approvals/${approvalId}/decide`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
 };

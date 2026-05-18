@@ -14,6 +14,7 @@ import { configRoutes } from './api/config';
 import { metricsRoutes } from './api/metrics';
 import { testReportsRoutes } from './api/test-reports';
 import { flakyTestsRoutes } from './api/flaky-tests';
+import { approvalsRoutes } from './api/approvals';
 import { reloadSchedules, startPoller } from './poller';
 import { eventBus } from './events/bus';
 import { startTelegramBot } from './runner/telegramBot';
@@ -78,6 +79,7 @@ async function main(): Promise<void> {
   await testNotifyRoutes(app);
   await testReportsRoutes(app);
   await flakyTestsRoutes(app);
+  await approvalsRoutes(app);
 
   // Re-sync poller whenever projects change. Pipeline mutations also trigger sync;
   // for now we just sync on any project event and rely on listPipelines() returning
