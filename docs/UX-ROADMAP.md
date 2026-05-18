@@ -101,8 +101,8 @@ landing experience.
   delta colored (+12% red, -8% green)
 - [ ] **Log section grouping** — collapsible groups via existing CI
   conventions (`::group::name` / `--- name`), auto-detected in stdout
-- [ ] **Inline ANSI color support** in LogTable — many shell tools emit
-  color; LogTable currently strips
+- [x] **Inline ANSI color support** in LogTable — many shell tools emit
+  color; LogTable currently strips — `4ac2c44`
 - [ ] **Build diff view** — pick two builds; show step-by-step duration
   diff + artifact size diff + first diverging log line
 
