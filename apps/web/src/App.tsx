@@ -24,6 +24,7 @@ import { HostsPage } from './pages/HostsPage';
 import { TestReportPage } from './pages/TestReportPage';
 import { FlakyTestsPage } from './pages/FlakyTestsPage';
 import { BuildTrendsPage } from './pages/BuildTrendsPage';
+import { VcsCredentialsPage } from './pages/VcsCredentialsPage';
 import { useStore } from './store/store';
 import { onConnected, subscribe } from './lib/events';
 import { ensurePermission } from './lib/notifications';
@@ -160,6 +161,7 @@ export function App() {
           {view.type === 'testReport' && <TestReportPage buildId={view.buildId} />}
           {view.type === 'flakyTests' && <FlakyTestsPage />}
           {view.type === 'trends' && <BuildTrendsPage />}
+          {view.type === 'vcsCredentials' && <VcsCredentialsPage />}
         </div>
         <BuildLogPanel />
       </main>

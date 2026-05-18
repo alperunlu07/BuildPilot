@@ -11,8 +11,11 @@ import type {
   NodeTemplate,
   Pipeline,
   PipelineMetrics,
+  PrContext,
   Project,
   ProjectSummary,
+  ProjectVcsConfig,
+  ProjectVcsUpdate,
   PruneBuildsResponse,
   SshHost,
   StepType,
@@ -20,6 +23,8 @@ import type {
   TelegramConfigUpdate,
   TestReportKind,
   TestReportTree,
+  VcsCredential,
+  VcsCredentialCreate,
 } from '@buildpilot/shared-types';
 
 const API = '/api';
@@ -273,4 +278,26 @@ export const api = {
   // Build duration trend (Cluster 11.F item 5).
   buildTrends: (pipelineId: string, buildCount = 100) =>
     http<BuildTrendsReport>(`/metrics/trends?pipelineId=${pipelineId}&buildCount=${buildCount}`),
+
+  // ── VCS credentials + per-project link (Cluster 11.E) ────────────────────
+  listVcsCredentials: () => http<VcsCredential[]>('/vcs/credentials'),
+  createVcsCredential: (input: VcsCredentialCreate) =>
+    http<VcsCredential>('/vcs/credentials', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
+  deleteVcsCredential: (id: string) =>
+    http<{ ok: true }>(`/vcs/credentials/${id}`, { method: 'DELETE' }),
+  getProjectVcs: (id: string) => http<ProjectVcsConfig>(`/projects/${id}/vcs`),
+  setProjectVcs: (id: string, input: ProjectVcsUpdate) =>
+    http<ProjectVcsConfig>(`/projects/${id}/vcs`, {
+      method: 'PUT',
+      body: JSON.stringify(input),
+    }),
+
+  // PR context for a build (Cluster 11.E item 3).
+  buildPrContext: (buildId: string) =>
+    http<PrContext & { provider: VcsCredential['provider'] | null; repo: string | null }>(
+      `/builds/${buildId}/pr-context`,
+    ),
 };

@@ -236,8 +236,8 @@ Cross-refs: `TODO.md` Phase 2.6.C, 4.B.
 
 Cross-refs: `TODO.md` Phase 2.6.B, 4.A.
 
-- [ ] **Outbound check-run state POST** — green/red status on the PR so
-  branch protection can require BuildPilot
+- [x] **Outbound check-run state POST** — green/red status on the PR so
+  branch protection can require BuildPilot — `bdd4bd5`
 - [ ] **PR comment-driven triggers** — `/run-ios`, `/run all` style; UI
   to configure allowed slash commands
 - [ ] **PR summary card on BuildDetailPage** — head/base branch, PR

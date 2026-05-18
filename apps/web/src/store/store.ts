@@ -39,7 +39,8 @@ export type View =
   | { type: 'hosts' }
   | { type: 'testReport'; buildId: string }
   | { type: 'trends'; pipelineId?: string }
-  | { type: 'flakyTests'; pipelineId?: string };
+  | { type: 'flakyTests'; pipelineId?: string }
+  | { type: 'vcsCredentials' };
 
 export interface CommitToast {
   id: string;
