@@ -24,6 +24,7 @@ import {
 } from '../components/LogSearchBar';
 import { TimestampRangeSlider } from '../components/TimestampRangeSlider';
 import { LogGroupBar } from '../components/LogGroupBar';
+import { StepDurationCompare } from '../components/StepDurationCompare';
 import { commandFromEntry } from '../lib/copyCommand';
 import { buildGroupFilter, detectLogGroups } from '../lib/logGroups';
 
@@ -393,6 +394,14 @@ export function BuildDetailPage({ buildId }: Props) {
         }
         selectedNodeId={activeNodeId === 'all' || activeNodeId === '__pipeline__' ? null : activeNodeId}
         onSelect={(id) => setActiveNodeId(id === activeNodeId ? 'all' : id)}
+      />
+
+      <StepDurationCompare
+        build={build}
+        entries={entries}
+        nodeLabel={(id, type) =>
+          `${nodeLabelMap.get(id) ?? type ?? '?'} · ${id.slice(0, 8)}`
+        }
       />
 
       <div className="flex flex-wrap items-center gap-3 border-b border-t border-slate-800 bg-slate-900/30 px-6 py-2 text-xs">
