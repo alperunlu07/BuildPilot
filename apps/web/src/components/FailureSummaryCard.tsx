@@ -87,7 +87,7 @@ export function FailureSummaryCard({ entries, nodeLabel, onRetry, onJumpToNode }
           <div className="mt-2 rounded-md border border-rose-900/40 bg-slate-950/60 p-2 font-mono text-[11px] leading-relaxed text-slate-300">
             {summary.tailLines.map((e) => (
               <div key={e.seq} className="flex gap-2">
-                <span className="shrink-0 text-slate-600">
+                <span className="shrink-0 text-slate-400">
                   {new Date(e.ts).toLocaleTimeString()}
                 </span>
                 <span

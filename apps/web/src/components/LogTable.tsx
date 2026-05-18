@@ -94,7 +94,7 @@ export function LogTable({
 
   if (entries.length === 0) {
     return (
-      <div className="flex h-full items-center justify-center text-xs text-slate-500">
+      <div className="flex h-full items-center justify-center text-xs text-slate-400">
         {emptyMessage}
       </div>
     );
@@ -178,7 +178,7 @@ function Row({ index, style, data }: ListChildComponentProps<RowItemData>) {
         className="grid w-full items-center"
         style={{ gridTemplateColumns: GRID_COLS, height: '100%' }}
       >
-        <span className="truncate text-slate-500">{fmtTime(e.ts)}</span>
+        <span className="truncate text-slate-400">{fmtTime(e.ts)}</span>
         <span
           className={cn(
             'inline-flex w-fit items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider',
@@ -193,7 +193,7 @@ function Row({ index, style, data }: ListChildComponentProps<RowItemData>) {
             ? nodeLabel
               ? nodeLabel(e.nodeId, e.stepType)
               : `${e.stepType ?? '?'}:${e.nodeId.slice(0, 8)}`
-            : <span className="text-slate-600">—</span>}
+            : <span className="text-slate-400">—</span>}
         </span>
         <span
           // Single-line truncation; full text on hover so virtualization
@@ -249,7 +249,7 @@ function AnsiMessage({ text }: { text: string }) {
 
 function Th({ children }: { children: React.ReactNode }) {
   return (
-    <span className="truncate text-left text-[10px] font-medium uppercase tracking-wider text-slate-500">
+    <span className="truncate text-left text-[10px] font-medium uppercase tracking-wider text-slate-400">
       {children}
     </span>
   );

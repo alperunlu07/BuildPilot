@@ -71,7 +71,7 @@ export function TimestampRangeSlider({ min, max, value, onChange, compact = fals
 
   return (
     <div className="flex items-center gap-2 text-[10px] text-slate-400">
-      <span className="font-mono text-slate-500">{fmtClock(value[0])}</span>
+      <span className="font-mono text-slate-400">{fmtClock(value[0])}</span>
       <div className="relative flex-1">
         <div
           ref={trackRef}
@@ -109,7 +109,7 @@ export function TimestampRangeSlider({ min, max, value, onChange, compact = fals
           />
         </div>
       </div>
-      <span className="font-mono text-slate-500">{fmtClock(value[1])}</span>
+      <span className="font-mono text-slate-400">{fmtClock(value[1])}</span>
       <button
         type="button"
         onClick={reset}

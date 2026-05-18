@@ -60,19 +60,19 @@ export function LogSearchBar({
           regexError ? 'border-rose-700' : 'border-slate-700 focus-within:border-sky-500',
         )}
       >
-        <Search size={12} className="text-slate-500" />
+        <Search size={12} className="text-slate-400" />
         <input
           type="text"
           value={query}
           onChange={(e) => onQueryChange(e.target.value)}
           placeholder={regex ? 'Regex (e.g. ^error|warning)' : 'Filter messages…'}
-          className="min-w-0 flex-1 bg-transparent text-slate-100 placeholder-slate-600 focus:outline-none"
+          className="min-w-0 flex-1 bg-transparent text-slate-100 placeholder-slate-400 focus:outline-none"
         />
         {query && (
           <button
             type="button"
             onClick={() => onQueryChange('')}
-            className="text-slate-500 hover:text-slate-300"
+            className="text-slate-400 hover:text-slate-300"
             title="Clear"
           >
             <X size={12} />
@@ -85,7 +85,7 @@ export function LogSearchBar({
             'rounded px-1 py-0.5',
             regex
               ? 'bg-sky-900/60 text-sky-300'
-              : 'text-slate-500 hover:bg-slate-800 hover:text-slate-300',
+              : 'text-slate-400 hover:bg-slate-800 hover:text-slate-300',
           )}
           title={regex ? 'Disable regex' : 'Enable regex mode'}
         >
@@ -114,11 +114,11 @@ export function LogSearchBar({
           </button>
           {presetsOpen && (
             <div className="absolute right-0 top-full z-30 mt-1 w-72 rounded-md border border-slate-700 bg-slate-900 p-2 text-xs shadow-lg">
-              <div className="mb-1 text-[10px] uppercase tracking-wider text-slate-500">
+              <div className="mb-1 text-[10px] uppercase tracking-wider text-slate-400">
                 Saved filters
               </div>
               {presets.length === 0 ? (
-                <div className="px-1 py-1 text-slate-500">No saved filters yet.</div>
+                <div className="px-1 py-1 text-slate-400">No saved filters yet.</div>
               ) : (
                 <ul className="max-h-48 space-y-0.5 overflow-y-auto">
                   {presets.map((p) => (
@@ -136,7 +136,7 @@ export function LogSearchBar({
                         title={`${p.regex ? 'regex: ' : ''}${p.query}`}
                       >
                         <div className="truncate font-medium">{p.name}</div>
-                        <div className="truncate font-mono text-[10px] text-slate-500">
+                        <div className="truncate font-mono text-[10px] text-slate-400">
                           {p.regex ? '/' : ''}
                           {p.query}
                           {p.regex ? '/' : ''}
@@ -145,7 +145,7 @@ export function LogSearchBar({
                       <button
                         type="button"
                         onClick={() => onDeletePreset(p.id)}
-                        className="shrink-0 text-slate-600 opacity-0 hover:text-rose-400 group-hover:opacity-100"
+                        className="shrink-0 text-slate-400 opacity-0 hover:text-rose-400 group-hover:opacity-100"
                         title="Delete preset"
                       >
                         <Trash2 size={11} />
@@ -160,7 +160,7 @@ export function LogSearchBar({
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
                   placeholder="Save current as…"
-                  className="min-w-0 flex-1 rounded border border-slate-700 bg-slate-950 px-1.5 py-1 text-slate-200 placeholder-slate-600 focus:border-sky-500 focus:outline-none"
+                  className="min-w-0 flex-1 rounded border border-slate-700 bg-slate-950 px-1.5 py-1 text-slate-200 placeholder-slate-400 focus:border-sky-500 focus:outline-none"
                 />
                 <button
                   type="button"

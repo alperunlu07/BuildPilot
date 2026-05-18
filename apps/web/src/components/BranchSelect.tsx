@@ -29,7 +29,7 @@ export function BranchSelect({
 
   return (
     <span className={cn('inline-flex items-center gap-1.5', className)}>
-      {withIcon && <GitBranch size={12} className="text-slate-500" />}
+      {withIcon && <GitBranch size={12} className="text-slate-400" />}
       <select
         value={value}
         required={required}

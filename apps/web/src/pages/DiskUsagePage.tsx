@@ -119,24 +119,24 @@ export function DiskUsagePage() {
         <>
           <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
             <div className="rounded-md border border-slate-800 bg-slate-900/40 px-4 py-3">
-              <div className="text-[11px] uppercase tracking-wider text-slate-500">Total</div>
+              <div className="text-[11px] uppercase tracking-wider text-slate-400">Total</div>
               <div className="mt-1 text-2xl font-semibold text-slate-100">
                 {formatBytes(data.totalBytes)}
               </div>
-              <div className="mt-0.5 text-[11px] text-slate-500">
+              <div className="mt-0.5 text-[11px] text-slate-400">
                 {data.artifactCount} artifact{data.artifactCount === 1 ? '' : 's'}
               </div>
             </div>
             <div className="rounded-md border border-slate-800 bg-slate-900/40 px-4 py-3">
-              <div className="text-[11px] uppercase tracking-wider text-slate-500">Builds with artifacts</div>
+              <div className="text-[11px] uppercase tracking-wider text-slate-400">Builds with artifacts</div>
               <div className="mt-1 text-2xl font-semibold text-slate-100">{data.buildCount}</div>
             </div>
             <div className="rounded-md border border-slate-800 bg-slate-900/40 px-4 py-3">
-              <div className="text-[11px] uppercase tracking-wider text-slate-500">Orphans</div>
+              <div className="text-[11px] uppercase tracking-wider text-slate-400">Orphans</div>
               <div className="mt-1 text-2xl font-semibold text-slate-100">
                 {formatBytes(data.orphanBytes)}
               </div>
-              <div className="mt-0.5 text-[11px] text-slate-500">
+              <div className="mt-0.5 text-[11px] text-slate-400">
                 {data.orphanArtifactCount} artifact row
                 {data.orphanArtifactCount === 1 ? '' : 's'} without a parent build
               </div>
@@ -177,7 +177,7 @@ export function DiskUsagePage() {
 
           <div className="overflow-hidden rounded-md border border-slate-800">
             <table className="w-full text-left text-sm">
-              <thead className="bg-slate-900/60 text-[11px] uppercase tracking-wider text-slate-500">
+              <thead className="bg-slate-900/60 text-[11px] uppercase tracking-wider text-slate-400">
                 <tr>
                   <th className="px-3 py-2">Project</th>
                   <th className="px-3 py-2">Pipeline</th>
@@ -190,7 +190,7 @@ export function DiskUsagePage() {
               <tbody>
                 {data.pipelines.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-3 py-6 text-center text-sm text-slate-500">
+                    <td colSpan={6} className="px-3 py-6 text-center text-sm text-slate-400">
                       No artifacts recorded yet.
                     </td>
                   </tr>

@@ -149,7 +149,7 @@ export function ProjectDetailPage({ projectId }: Props) {
         <button
           type="button"
           onClick={() => setView({ type: 'projects' })}
-          className="text-[11px] uppercase tracking-wider text-slate-500 hover:text-slate-300"
+          className="text-[11px] uppercase tracking-wider text-slate-400 hover:text-slate-300"
         >
           ← Projects
         </button>
@@ -164,7 +164,7 @@ export function ProjectDetailPage({ projectId }: Props) {
             <Trash2 size={13} />
           </button>
         </div>
-        <code className="mt-0.5 block text-[11px] text-slate-500">{project.path}</code>
+        <code className="mt-0.5 block text-[11px] text-slate-400">{project.path}</code>
       </header>
 
       {/* BRANCH STRIP */}
@@ -176,14 +176,14 @@ export function ProjectDetailPage({ projectId }: Props) {
             <code className="font-mono font-semibold text-emerald-200">{currentBranch}</code>
           </span>
         ) : (
-          <span className="inline-flex items-center gap-1.5 rounded-md border border-slate-700 bg-slate-900 px-2.5 py-1 text-xs text-slate-500">
+          <span className="inline-flex items-center gap-1.5 rounded-md border border-slate-700 bg-slate-900 px-2.5 py-1 text-xs text-slate-400">
             <span className="h-1.5 w-1.5 rounded-full bg-slate-600" />
             checking…
           </span>
         )}
 
         <span className="flex items-center gap-1.5 text-xs text-slate-400">
-          <GitBranch size={12} className="text-slate-500" />
+          <GitBranch size={12} className="text-slate-400" />
           browse
           <select
             value={browseBranch}
@@ -239,7 +239,7 @@ export function ProjectDetailPage({ projectId }: Props) {
         {/* Commits — scrollable */}
         <div className="scrollbar-thin min-h-0 overflow-y-auto border-r border-slate-800 px-2 py-2">
           {commits.length === 0 ? (
-            <div className="py-10 text-center text-sm text-slate-500">No commits found.</div>
+            <div className="py-10 text-center text-sm text-slate-400">No commits found.</div>
           ) : (
             <ol className="relative">
               {layout.rows.map((r, idx) => (
@@ -274,9 +274,9 @@ export function ProjectDetailPage({ projectId }: Props) {
 
           {pipelines.length === 0 ? (
             <div className="rounded-md border border-dashed border-slate-700 bg-slate-900/40 p-5 text-center">
-              <GitBranch className="mx-auto mb-2 text-slate-600" size={24} />
+              <GitBranch className="mx-auto mb-2 text-slate-400" size={24} />
               <div className="text-sm font-medium text-slate-200">No pipelines yet</div>
-              <p className="mx-auto mt-1 max-w-[260px] text-[11px] text-slate-500">
+              <p className="mx-auto mt-1 max-w-[260px] text-[11px] text-slate-400">
                 A pipeline watches a branch and runs steps on every new commit.
                 Start blank or drop in the sample pipeline.
               </p>
@@ -372,7 +372,7 @@ function PipelineRow({
         <button type="button" onClick={onOpen} className="min-w-0 flex-1 text-left">
           <div className="flex items-center gap-2 text-sm font-medium text-slate-100">
             <span className="truncate">{pipeline.name}</span>
-            <ChevronRight size={12} className="shrink-0 text-slate-500" />
+            <ChevronRight size={12} className="shrink-0 text-slate-400" />
           </div>
           <div className="mt-1 flex flex-wrap gap-1">
             <span

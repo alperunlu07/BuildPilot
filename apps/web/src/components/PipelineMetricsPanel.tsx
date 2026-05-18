@@ -81,12 +81,12 @@ export function PipelineMetricsPanel({ pipelineId, compact }: Props) {
       </div>
 
       <div className="mb-3">
-        <div className="mb-1 flex items-center gap-1.5 text-[11px] uppercase tracking-wider text-slate-500">
+        <div className="mb-1 flex items-center gap-1.5 text-[11px] uppercase tracking-wider text-slate-400">
           <BarChart3 size={12} />
           Duration · last {data.recentBuilds.length} builds
         </div>
         {data.recentBuilds.length === 0 ? (
-          <div className="rounded-md border border-dashed border-slate-800 px-3 py-4 text-center text-[11px] text-slate-500">
+          <div className="rounded-md border border-dashed border-slate-800 px-3 py-4 text-center text-[11px] text-slate-400">
             No build history yet.
           </div>
         ) : (
@@ -109,12 +109,12 @@ export function PipelineMetricsPanel({ pipelineId, compact }: Props) {
       </div>
 
       <div>
-        <div className="mb-1 flex items-center gap-1.5 text-[11px] uppercase tracking-wider text-slate-500">
+        <div className="mb-1 flex items-center gap-1.5 text-[11px] uppercase tracking-wider text-slate-400">
           <Timer size={12} />
           Slowest steps
         </div>
         {data.slowestSteps.length === 0 ? (
-          <div className="rounded-md border border-dashed border-slate-800 px-3 py-4 text-center text-[11px] text-slate-500">
+          <div className="rounded-md border border-dashed border-slate-800 px-3 py-4 text-center text-[11px] text-slate-400">
             Step durations appear after the first finished build.
           </div>
         ) : (
@@ -140,7 +140,7 @@ export function PipelineMetricsPanel({ pipelineId, compact }: Props) {
                   <span className="text-right text-amber-300">
                     {formatDurationMs(s.avgDurationMs)}
                   </span>
-                  <span className="text-right text-[10px] text-slate-500">
+                  <span className="text-right text-[10px] text-slate-400">
                     n={s.sampleCount}
                   </span>
                 </li>
@@ -156,7 +156,7 @@ export function PipelineMetricsPanel({ pipelineId, compact }: Props) {
 function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-md border border-slate-800 bg-slate-900/40 px-2 py-1.5">
-      <div className="text-[10px] uppercase tracking-wider text-slate-500">{label}</div>
+      <div className="text-[10px] uppercase tracking-wider text-slate-400">{label}</div>
       <div className="text-sm font-semibold text-slate-100">{value}</div>
     </div>
   );

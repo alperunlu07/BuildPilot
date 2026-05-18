@@ -49,7 +49,7 @@ export function StepGantt({
 
   return (
     <div className="space-y-1 px-6 py-3">
-      <div className="flex items-baseline justify-between text-[10px] uppercase tracking-wider text-slate-500">
+      <div className="flex items-baseline justify-between text-[10px] uppercase tracking-wider text-slate-400">
         <span>Step timeline</span>
         <span className="font-mono">{formatDuration(totalMs)} total</span>
       </div>

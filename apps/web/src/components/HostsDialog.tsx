@@ -130,7 +130,7 @@ export function HostsDialog({ open, onClose }: Props) {
         <div className="flex items-center justify-between border-b border-slate-800 px-5 py-3">
           <div>
             <h2 className="text-base font-semibold text-slate-100">Saved SSH hosts</h2>
-            <p className="text-[11px] text-slate-500">
+            <p className="text-[11px] text-slate-400">
               Lives at <code className="text-slate-400">~/.buildpilot/hosts.json</code>. Used by
               Remote SSH, SFTP Upload, TestFlight, Keychain Unlock, and Profile Install steps.
             </p>
@@ -156,9 +156,9 @@ export function HostsDialog({ open, onClose }: Props) {
             </button>
             {sortedHosts.length === 0 && (
               <div className="rounded-md border border-dashed border-slate-700 bg-slate-900/40 p-4 text-center">
-                <Server className="mx-auto mb-2 text-slate-600" size={22} />
+                <Server className="mx-auto mb-2 text-slate-400" size={22} />
                 <div className="text-xs font-medium text-slate-200">No saved hosts</div>
-                <p className="mt-1 text-[11px] text-slate-500">
+                <p className="mt-1 text-[11px] text-slate-400">
                   Add a host on the right to use it from Remote SSH / SFTP / TestFlight / Mac
                   steps.
                 </p>
@@ -188,7 +188,7 @@ export function HostsDialog({ open, onClose }: Props) {
                           <span className="truncate text-xs font-semibold text-slate-100">
                             {h.name}
                           </span>
-                          <span className="truncate text-[11px] text-slate-500">{h.host}</span>
+                          <span className="truncate text-[11px] text-slate-400">{h.host}</span>
                         </button>
                         <button
                           type="button"
@@ -197,7 +197,7 @@ export function HostsDialog({ open, onClose }: Props) {
                             void probeOne(h.id);
                           }}
                           disabled={isProbing}
-                          className="focusable rounded p-0.5 text-slate-500 hover:text-sky-300 disabled:opacity-50"
+                          className="focusable rounded p-0.5 text-slate-400 hover:text-sky-300 disabled:opacity-50"
                           title="Test SSH connection + read host capabilities"
                           aria-label={`Test connection to ${h.name}`}
                         >
@@ -215,7 +215,7 @@ export function HostsDialog({ open, onClose }: Props) {
                               onConfirm: () => deleteHost(h.id),
                             });
                           }}
-                          className="focusable rounded p-0.5 text-slate-500 opacity-0 transition-opacity hover:text-rose-400 group-hover:opacity-100"
+                          className="focusable rounded p-0.5 text-slate-400 opacity-0 transition-opacity hover:text-rose-400 group-hover:opacity-100"
                           title="Delete this host"
                           aria-label={`Delete host ${h.name}`}
                         >
@@ -239,7 +239,7 @@ export function HostsDialog({ open, onClose }: Props) {
           </div>
 
           <form onSubmit={submit} className="flex min-w-0 flex-1 flex-col gap-3 overflow-y-auto p-5">
-            <div className="text-[11px] uppercase tracking-wider text-slate-500">
+            <div className="text-[11px] uppercase tracking-wider text-slate-400">
               {editing ? 'Edit host' : 'New host'}
             </div>
             <Field label="Name">
@@ -331,7 +331,7 @@ export function HostsDialog({ open, onClose }: Props) {
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="block">
-      <span className="mb-1 block text-[11px] uppercase tracking-wider text-slate-500">{label}</span>
+      <span className="mb-1 block text-[11px] uppercase tracking-wider text-slate-400">{label}</span>
       {children}
     </label>
   );
@@ -346,7 +346,7 @@ function CapabilityRow({ caps }: { caps?: HostCapabilities }) {
       {caps.xcodeVersion && <Badge color="cyan">{caps.xcodeVersion}</Badge>}
       {caps.macosVersion && <Badge color="violet">macOS {caps.macosVersion}</Badge>}
       {caps.arch && <Badge color="slate">{caps.arch}</Badge>}
-      <span className="ml-auto text-[9px] uppercase tracking-wider text-slate-600" title={new Date(caps.lastCheckedAt).toLocaleString()}>
+      <span className="ml-auto text-[9px] uppercase tracking-wider text-slate-400" title={new Date(caps.lastCheckedAt).toLocaleString()}>
         {ageLabel}
       </span>
     </div>

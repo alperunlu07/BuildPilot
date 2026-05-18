@@ -33,14 +33,14 @@ export function ToastContainer() {
                 </div>
                 <div className="text-xs text-slate-400">
                   <span className="text-slate-200">{project?.name ?? 'project'}</span>
-                  <span className="mx-1 text-slate-600">·</span>
+                  <span className="mx-1 text-slate-400">·</span>
                   <span className="font-mono text-emerald-400">{t.branch}</span>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => dismissToast(t.id)}
-                className="focusable rounded text-slate-500 hover:text-slate-300"
+                className="focusable rounded text-slate-400 hover:text-slate-300"
                 aria-label="Dismiss new-commit toast"
               >
                 <X size={14} />
@@ -55,7 +55,7 @@ export function ToastContainer() {
                 </li>
               ))}
               {t.commits.length > 8 && (
-                <li className="py-1 text-[11px] text-slate-500">
+                <li className="py-1 text-[11px] text-slate-400">
                   +{t.commits.length - 8} more…
                 </li>
               )}

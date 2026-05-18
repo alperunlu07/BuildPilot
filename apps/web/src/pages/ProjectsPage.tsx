@@ -32,7 +32,7 @@ export function ProjectsPage({ onAdd }: Props) {
 
       {projects.length === 0 ? (
         <div className="rounded-lg border border-dashed border-slate-800 bg-slate-900/40 p-10 text-center">
-          <Folder className="mx-auto mb-3 text-slate-600" size={36} />
+          <Folder className="mx-auto mb-3 text-slate-400" size={36} />
           <div className="text-base font-medium text-slate-200">No projects yet</div>
           <p className="mx-auto mt-1 max-w-md text-sm text-slate-400">
             BuildPilot watches local git repositories and runs pipelines on every new
@@ -62,7 +62,7 @@ export function ProjectsPage({ onAdd }: Props) {
                   e.stopPropagation();
                   softDeleteProject(p.id);
                 }}
-                className="focusable absolute right-3 top-3 rounded-md border border-transparent p-1 text-slate-500 opacity-0 transition-opacity hover:border-rose-700 hover:text-rose-400 group-hover:opacity-100"
+                className="focusable absolute right-3 top-3 rounded-md border border-transparent p-1 text-slate-400 opacity-0 transition-opacity hover:border-rose-700 hover:text-rose-400 group-hover:opacity-100"
                 title="Remove this project"
                 aria-label={`Remove project ${p.name}`}
               >
@@ -73,10 +73,10 @@ export function ProjectsPage({ onAdd }: Props) {
                 <Time
                   ts={p.createdAt}
                   prefix="added"
-                  className="text-[11px] text-slate-500"
+                  className="text-[11px] text-slate-400"
                 />
               </div>
-              <code className="mt-1 block truncate text-[11px] text-slate-500">{p.path}</code>
+              <code className="mt-1 block truncate text-[11px] text-slate-400">{p.path}</code>
               <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-slate-400">
                 <span className="rounded-md bg-slate-800 px-2 py-0.5">
                   default:{' '}

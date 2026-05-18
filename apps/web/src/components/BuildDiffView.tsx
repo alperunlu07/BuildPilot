@@ -115,28 +115,28 @@ export function BuildDiffView({ current, candidates, nodeLabel, onClose }: Props
                 </option>
               ))}
           </select>
-          <ArrowRight size={12} className="text-slate-500" />
+          <ArrowRight size={12} className="text-slate-400" />
           <span className="font-mono text-slate-300">
             {current.id.slice(0, 8)} · {current.status}
           </span>
-          {loading && <span className="text-slate-500">loading…</span>}
+          {loading && <span className="text-slate-400">loading…</span>}
           {error && <span className="text-rose-400">{error}</span>}
         </div>
 
         <div className="grid min-h-0 flex-1 grid-rows-[1fr_auto] gap-0 overflow-hidden">
           <div className="min-h-0 overflow-y-auto p-4">
-            <h3 className="mb-2 text-[10px] uppercase tracking-wider text-slate-500">
+            <h3 className="mb-2 text-[10px] uppercase tracking-wider text-slate-400">
               Step duration delta
             </h3>
             {deltas.length === 0 ? (
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-slate-400">
                 {baseId
                   ? 'Pick a baseline build to compare.'
                   : 'No previous builds available for this pipeline.'}
               </p>
             ) : (
               <table className="w-full text-left text-xs">
-                <thead className="text-[10px] uppercase tracking-wider text-slate-500">
+                <thead className="text-[10px] uppercase tracking-wider text-slate-400">
                   <tr>
                     <th className="py-1">Step</th>
                     <th className="py-1 text-right">Current</th>
@@ -155,16 +155,16 @@ export function BuildDiffView({ current, candidates, nodeLabel, onClose }: Props
                       <td className="py-1 text-right text-slate-300">
                         {formatDur(d.current)}
                       </td>
-                      <td className="py-1 text-right text-slate-500">
+                      <td className="py-1 text-right text-slate-400">
                         {d.previous === null ? '—' : formatDur(d.previous)}
                       </td>
                       <td
                         className={cn(
                           'py-1 text-right',
-                          d.deltaMs === null && 'text-slate-500',
+                          d.deltaMs === null && 'text-slate-400',
                           d.deltaMs !== null && d.deltaMs > 0 && 'text-rose-400',
                           d.deltaMs !== null && d.deltaMs < 0 && 'text-emerald-400',
-                          d.deltaMs === 0 && 'text-slate-500',
+                          d.deltaMs === 0 && 'text-slate-400',
                         )}
                       >
                         {d.deltaMs === null
@@ -181,13 +181,13 @@ export function BuildDiffView({ current, candidates, nodeLabel, onClose }: Props
           </div>
 
           <div className="border-t border-slate-800 bg-slate-950/60 p-4">
-            <h3 className="mb-2 text-[10px] uppercase tracking-wider text-slate-500">
+            <h3 className="mb-2 text-[10px] uppercase tracking-wider text-slate-400">
               First diverging log line
             </h3>
             {!curSide || !baseSide ? (
-              <p className="text-xs text-slate-500">—</p>
+              <p className="text-xs text-slate-400">—</p>
             ) : !divergence ? (
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-slate-400">
                 Log streams match through the shorter run; nothing diverged.
               </p>
             ) : (
@@ -212,16 +212,16 @@ function DiffLine({
 }) {
   return (
     <div className="flex items-baseline gap-2">
-      <span className="w-16 shrink-0 text-[10px] uppercase tracking-wider text-slate-500">
+      <span className="w-16 shrink-0 text-[10px] uppercase tracking-wider text-slate-400">
         {label}
       </span>
       {entry ? (
         <>
-          <span className="shrink-0 text-slate-500">[{entry.level}]</span>
+          <span className="shrink-0 text-slate-400">[{entry.level}]</span>
           <span className="break-words text-slate-200">{stripAnsi(entry.message)}</span>
         </>
       ) : (
-        <span className="text-slate-500">(end of stream)</span>
+        <span className="text-slate-400">(end of stream)</span>
       )}
     </div>
   );

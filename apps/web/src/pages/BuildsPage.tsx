@@ -80,7 +80,7 @@ export function BuildsPage() {
       </div>
 
       <div className="mb-4 flex flex-wrap items-center gap-3 rounded-md border border-slate-800 bg-slate-900/40 px-3 py-2 text-xs">
-        <Filter size={12} className="text-slate-500" />
+        <Filter size={12} className="text-slate-400" />
         <label className="flex items-center gap-1.5 text-slate-400">
           Project
           <select
@@ -151,7 +151,7 @@ export function BuildsPage() {
       ) : (
         <div className="overflow-hidden rounded-md border border-slate-800">
           <table className="w-full text-left text-sm">
-            <thead className="bg-slate-900/60 text-[11px] uppercase tracking-wider text-slate-500">
+            <thead className="bg-slate-900/60 text-[11px] uppercase tracking-wider text-slate-400">
               <tr>
                 <th className="px-3 py-2">Status</th>
                 <th className="px-3 py-2">Project</th>
@@ -219,9 +219,9 @@ function BuildsEmptyState({
   if (hasFilters) {
     return (
       <div className="rounded-md border border-dashed border-slate-800 bg-slate-900/40 p-10 text-center">
-        <Filter className="mx-auto mb-3 text-slate-600" size={32} />
+        <Filter className="mx-auto mb-3 text-slate-400" size={32} />
         <div className="text-sm font-medium text-slate-200">No builds match these filters</div>
-        <p className="mt-1 text-xs text-slate-500">Try clearing them or widening the search.</p>
+        <p className="mt-1 text-xs text-slate-400">Try clearing them or widening the search.</p>
         <button
           type="button"
           onClick={onClear}
@@ -234,7 +234,7 @@ function BuildsEmptyState({
   }
   return (
     <div className="rounded-md border border-dashed border-slate-800 bg-slate-900/40 p-10 text-center">
-      <History className="mx-auto mb-3 text-slate-600" size={36} />
+      <History className="mx-auto mb-3 text-slate-400" size={36} />
       <div className="text-base font-medium text-slate-200">No builds yet</div>
       <p className="mx-auto mt-1 max-w-md text-sm text-slate-400">
         Every build that has ever run on this machine will land here. Trigger your first
@@ -263,7 +263,7 @@ function StatusBadge({ status }: { status: BuildStatus }) {
         status === 'success' && 'bg-emerald-950/50 text-emerald-300',
         status === 'failed' && 'bg-rose-950/50 text-rose-300',
         status === 'pending' && 'bg-slate-800 text-slate-400',
-        status === 'cancelled' && 'bg-slate-800 text-slate-500',
+        status === 'cancelled' && 'bg-slate-800 text-slate-400',
       )}
       role="status"
       aria-label={statusLabel(status)}

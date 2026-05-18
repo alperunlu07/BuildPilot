@@ -67,11 +67,11 @@ export function CommandPalette({ onAddProject, onManageHosts }: Props) {
               value={query}
               onValueChange={setQuery}
               placeholder={t('palette.placeholder')}
-              className="w-full bg-transparent py-3 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none"
+              className="w-full bg-transparent py-3 text-sm text-slate-100 placeholder:text-slate-400 focus:outline-none"
             />
           </div>
           <Command.List className="max-h-[60vh] overflow-y-auto p-2 text-sm">
-            <Command.Empty className="px-3 py-6 text-center text-slate-500">
+            <Command.Empty className="px-3 py-6 text-center text-slate-400">
               {t('palette.empty')}
             </Command.Empty>
 
@@ -183,7 +183,7 @@ export function CommandPalette({ onAddProject, onManageHosts }: Props) {
                   >
                     <Folder size={14} className="text-sky-400" />
                     <span className="truncate">{p.name}</span>
-                    <span className="ml-auto truncate text-[10px] text-slate-500">{p.path}</span>
+                    <span className="ml-auto truncate text-[10px] text-slate-400">{p.path}</span>
                   </Command.Item>
                 ))}
               </Command.Group>
@@ -202,7 +202,7 @@ export function CommandPalette({ onAddProject, onManageHosts }: Props) {
                     >
                       <GitBranch size={14} className="text-emerald-400" />
                       <span className="truncate">{pl.name}</span>
-                      <span className="ml-auto truncate text-[10px] text-slate-500">
+                      <span className="ml-auto truncate text-[10px] text-slate-400">
                         {proj?.name ?? ''}
                       </span>
                     </Command.Item>
@@ -244,7 +244,7 @@ export function CommandPalette({ onAddProject, onManageHosts }: Props) {
                     >
                       <History size={14} className="text-amber-400" />
                       <span className="truncate">#{b.id.slice(0, 7)}</span>
-                      <span className="ml-auto truncate text-[10px] text-slate-500">
+                      <span className="ml-auto truncate text-[10px] text-slate-400">
                         {pl?.name ?? ''} · {b.status}
                       </span>
                     </Command.Item>

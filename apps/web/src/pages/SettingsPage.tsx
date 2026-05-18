@@ -170,7 +170,7 @@ export function SettingsPage() {
               <div className="relative flex-1">
                 <Lock
                   size={13}
-                  className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-slate-500"
+                  className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-slate-400"
                 />
                 <input
                   type={showToken ? 'text' : 'password'}
@@ -181,12 +181,12 @@ export function SettingsPage() {
                   }
                   autoComplete="off"
                   spellCheck={false}
-                  className="w-full rounded-md border border-slate-700 bg-slate-950 px-7 py-1.5 font-mono text-xs text-slate-100 placeholder:text-slate-600 focus:border-sky-500 focus:outline-none"
+                  className="w-full rounded-md border border-slate-700 bg-slate-950 px-7 py-1.5 font-mono text-xs text-slate-100 placeholder:text-slate-400 focus:border-sky-500 focus:outline-none"
                 />
                 <button
                   type="button"
                   onClick={() => setShowToken((v) => !v)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-300"
                   title={showToken ? 'Hide' : 'Show'}
                 >
                   {showToken ? <EyeOff size={13} /> : <Eye size={13} />}
@@ -221,7 +221,7 @@ export function SettingsPage() {
                 placeholder={loaded?.hasChatId ? '(unchanged)' : '-1001234567890 or @my_channel'}
                 autoComplete="off"
                 spellCheck={false}
-                className="flex-1 rounded-md border border-slate-700 bg-slate-950 px-3 py-1.5 font-mono text-xs text-slate-100 placeholder:text-slate-600 focus:border-sky-500 focus:outline-none"
+                className="flex-1 rounded-md border border-slate-700 bg-slate-950 px-3 py-1.5 font-mono text-xs text-slate-100 placeholder:text-slate-400 focus:border-sky-500 focus:outline-none"
               />
               {loaded?.hasChatId && (
                 <button
@@ -349,14 +349,14 @@ function Field({
         {label}
       </div>
       {children}
-      {hint && <div className="mt-1 text-[11px] text-slate-500">{hint}</div>}
+      {hint && <div className="mt-1 text-[11px] text-slate-400">{hint}</div>}
     </div>
   );
 }
 
 function BannerView({ state }: { state: Banner }) {
   if (state.kind === 'idle' || state.kind === 'saving' || state.kind === 'testing') {
-    return <div className="text-xs text-slate-500">&nbsp;</div>;
+    return <div className="text-xs text-slate-400">&nbsp;</div>;
   }
   if (state.kind === 'saved') {
     return (

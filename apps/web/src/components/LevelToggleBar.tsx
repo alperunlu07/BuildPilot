@@ -48,7 +48,7 @@ export function LevelToggleBar({ active, onToggle, compact = false }: Props) {
               'inline-flex items-center gap-1 rounded border px-1.5 py-0.5 uppercase tracking-wider transition-colors',
               on
                 ? 'border-slate-700 bg-slate-800 text-slate-100'
-                : 'border-slate-800 bg-slate-900/60 text-slate-500 hover:text-slate-300',
+                : 'border-slate-800 bg-slate-900/60 text-slate-400 hover:text-slate-300',
             )}
             title={on ? `Hide ${lvl} entries` : `Show ${lvl} entries`}
           >

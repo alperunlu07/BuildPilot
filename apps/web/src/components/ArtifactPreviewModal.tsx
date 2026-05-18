@@ -24,7 +24,7 @@ function lineClass(line: string): string {
     return 'text-rose-300';
   if (/(\bwarn(ing)?\b|<Warning>|\bWARN\b)/i.test(l)) return 'text-amber-300';
   if (/(<Notice>|\bINFO\b|✓|✔)/.test(l)) return 'text-sky-300';
-  if (/(<Debug>|\bDEBUG\b)/.test(l)) return 'text-slate-500';
+  if (/(<Debug>|\bDEBUG\b)/.test(l)) return 'text-slate-400';
   return 'text-slate-200';
 }
 
@@ -152,11 +152,11 @@ export function ArtifactPreviewModal({ artifact, onClose }: Props) {
             <div className="truncate font-mono text-sm text-slate-200" title={artifact.path}>
               {fileName}
             </div>
-            <div className="text-[11px] text-slate-500">
+            <div className="text-[11px] text-slate-400">
               {formatBytes(size)} total
               {truncated && (
                 <>
-                  <span className="mx-1 text-slate-600">·</span>
+                  <span className="mx-1 text-slate-400">·</span>
                   <span className="text-amber-400">
                     showing first {formatBytes(bytesRead)} (truncated)
                   </span>
@@ -164,7 +164,7 @@ export function ArtifactPreviewModal({ artifact, onClose }: Props) {
               )}
               {lines.length > 0 && (
                 <>
-                  <span className="mx-1 text-slate-600">·</span>
+                  <span className="mx-1 text-slate-400">·</span>
                   {lines.length.toLocaleString()} lines
                 </>
               )}
@@ -201,17 +201,17 @@ export function ArtifactPreviewModal({ artifact, onClose }: Props) {
         {/* ── Search bar ────────────────────────────────────────── */}
         <div className="flex shrink-0 items-center gap-2 border-b border-slate-800 bg-slate-900/30 px-4 py-2">
           <div className="relative flex-1">
-            <Search className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-500" />
+            <Search className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
             <input
               id="artifact-preview-search"
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="Search (⌘/Ctrl-F)…"
-              className="w-full rounded border border-slate-800 bg-slate-950 py-1 pl-7 pr-2 font-mono text-[12px] text-slate-100 placeholder:text-slate-600 focus:border-sky-700 focus:outline-none"
+              className="w-full rounded border border-slate-800 bg-slate-950 py-1 pl-7 pr-2 font-mono text-[12px] text-slate-100 placeholder:text-slate-400 focus:border-sky-700 focus:outline-none"
             />
           </div>
           {q && (
-            <span className="text-[11px] tabular-nums text-slate-500">
+            <span className="text-[11px] tabular-nums text-slate-400">
               {matchCount.toLocaleString()} match{matchCount === 1 ? '' : 'es'}
             </span>
           )}
@@ -260,7 +260,7 @@ export function ArtifactPreviewModal({ artifact, onClose }: Props) {
         {/* ── Body ──────────────────────────────────────────────── */}
         <div ref={bodyRef} className="min-h-0 flex-1 overflow-auto bg-slate-950">
           {loading && (
-            <div className="flex h-full items-center justify-center text-sm text-slate-500">
+            <div className="flex h-full items-center justify-center text-sm text-slate-400">
               Loading…
             </div>
           )}
@@ -272,7 +272,7 @@ export function ArtifactPreviewModal({ artifact, onClose }: Props) {
           {!loading && !error && (
             <div className="font-mono text-[12px] leading-[1.45]">
               {visible.length === 0 && (
-                <div className="px-4 py-8 text-center text-slate-500">
+                <div className="px-4 py-8 text-center text-slate-400">
                   {q ? 'No matches.' : '(empty file)'}
                 </div>
               )}
@@ -281,7 +281,7 @@ export function ArtifactPreviewModal({ artifact, onClose }: Props) {
                   key={l.n}
                   className="flex border-l-2 border-transparent hover:border-sky-600 hover:bg-slate-900/60"
                 >
-                  <span className="sticky left-0 inline-block shrink-0 select-none border-r border-slate-800/80 bg-slate-950/80 px-2 py-px text-right text-slate-600 tabular-nums" style={{ minWidth: '4.5rem' }}>
+                  <span className="sticky left-0 inline-block shrink-0 select-none border-r border-slate-800/80 bg-slate-950/80 px-2 py-px text-right text-slate-400 tabular-nums" style={{ minWidth: '4.5rem' }}>
                     {l.n}
                   </span>
                   <span

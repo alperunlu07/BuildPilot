@@ -95,7 +95,7 @@ export function HomePage() {
       )}
 
       {!metrics && !error && (
-        <div className="rounded-md border border-slate-800 bg-slate-900/40 p-10 text-center text-sm text-slate-500">
+        <div className="rounded-md border border-slate-800 bg-slate-900/40 p-10 text-center text-sm text-slate-400">
           Loading…
         </div>
       )}
@@ -148,7 +148,7 @@ export function HomePage() {
               </header>
               <div className="p-2">
                 {metrics.recentFailures.length === 0 ? (
-                  <div className="px-3 py-6 text-center text-sm text-slate-500">
+                  <div className="px-3 py-6 text-center text-sm text-slate-400">
                     No failed builds. Nice.
                   </div>
                 ) : (
@@ -163,11 +163,11 @@ export function HomePage() {
                           <span className="min-w-0 flex-1 truncate">
                             <span className="text-rose-400">●</span>{' '}
                             <span className="text-slate-200">{b.projectName}</span>{' '}
-                            <span className="text-slate-500">/</span>{' '}
+                            <span className="text-slate-400">/</span>{' '}
                             <span className="text-slate-300">{b.pipelineName}</span>
                           </span>
                           <span className="font-mono text-emerald-400">{b.triggerBranch}</span>
-                          <Time ts={b.startedAt} className="text-slate-500" />
+                          <Time ts={b.startedAt} className="text-slate-400" />
                         </button>
                       </li>
                     ))}
@@ -183,7 +183,7 @@ export function HomePage() {
               </header>
               <div className="p-2">
                 {metrics.slowestPipelines.length === 0 ? (
-                  <div className="px-3 py-6 text-center text-sm text-slate-500">
+                  <div className="px-3 py-6 text-center text-sm text-slate-400">
                     No successful builds yet — run a pipeline to see metrics.
                   </div>
                 ) : (
@@ -197,11 +197,11 @@ export function HomePage() {
                         >
                           <span className="min-w-0 flex-1 truncate">
                             <span className="text-slate-200">{p.projectName}</span>{' '}
-                            <span className="text-slate-500">/</span>{' '}
+                            <span className="text-slate-400">/</span>{' '}
                             <span className="text-slate-300">{p.pipelineName}</span>
                           </span>
                           <span className="text-amber-300">{formatDurationMs(p.avgDurationMs)}</span>
-                          <span className="text-slate-500">avg · n={p.sampleCount}</span>
+                          <span className="text-slate-400">avg · n={p.sampleCount}</span>
                         </button>
                       </li>
                     ))}
@@ -216,7 +216,7 @@ export function HomePage() {
               <header className="mb-2 flex items-center gap-2 text-sm text-slate-300">
                 <Timer size={14} className="text-amber-400" />
                 <span>Per-pipeline detail</span>
-                <span className="text-[11px] text-slate-500">
+                <span className="text-[11px] text-slate-400">
                   · top {Math.min(3, metrics.slowestPipelines.length)} by avg duration
                 </span>
               </header>
@@ -232,7 +232,7 @@ export function HomePage() {
                       className="mb-2 block w-full truncate text-left text-sm text-slate-200 hover:text-sky-400"
                       title="Open pipeline editor"
                     >
-                      {p.projectName} <span className="text-slate-500">/</span>{' '}
+                      {p.projectName} <span className="text-slate-400">/</span>{' '}
                       <span className="text-slate-300">{p.pipelineName}</span>
                     </button>
                     <PipelineMetricsPanel pipelineId={p.pipelineId} compact />
@@ -267,12 +267,12 @@ function StatCard({
         (clickable ? ' transition-colors hover:border-sky-700' : '')
       }
     >
-      <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-wider text-slate-500">
+      <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-wider text-slate-400">
         {icon}
         <span>{label}</span>
       </div>
       <div className="mt-1 text-2xl font-semibold text-slate-100">{value}</div>
-      {hint && <div className="mt-0.5 text-[11px] text-slate-500">{hint}</div>}
+      {hint && <div className="mt-0.5 text-[11px] text-slate-400">{hint}</div>}
     </div>
   );
 }

@@ -71,10 +71,10 @@ export function StepDurationCompare({ build, entries, nodeLabel }: Props) {
   return (
     <div className="border-b border-slate-800 bg-slate-900/30 px-6 py-3">
       <div className="mb-2 flex items-baseline justify-between">
-        <span className="text-[10px] uppercase tracking-wider text-slate-500">
+        <span className="text-[10px] uppercase tracking-wider text-slate-400">
           Step durations vs last green build
         </span>
-        <span className="text-[10px] text-slate-500">
+        <span className="text-[10px] text-slate-400">
           baseline: <span className="font-mono text-slate-300">
             {baseline!.build.id.slice(0, 8)}
           </span>
@@ -90,8 +90,8 @@ export function StepDurationCompare({ build, entries, nodeLabel }: Props) {
               {nodeLabel ? nodeLabel(d.nodeId, d.stepType) : `${d.stepType ?? '?'} · ${d.nodeId.slice(0, 8)}`}
             </span>
             <span className="shrink-0 font-mono text-slate-300">{formatDur(d.current)}</span>
-            <span className="shrink-0 text-slate-600">vs</span>
-            <span className="shrink-0 font-mono text-slate-500">
+            <span className="shrink-0 text-slate-400">vs</span>
+            <span className="shrink-0 font-mono text-slate-400">
               {d.previous === null ? '—' : formatDur(d.previous)}
             </span>
             <DeltaPill delta={d} />
@@ -104,10 +104,10 @@ export function StepDurationCompare({ build, entries, nodeLabel }: Props) {
 
 function DeltaPill({ delta }: { delta: StepDurationDelta }) {
   if (delta.previous === null) {
-    return <span className="shrink-0 text-[10px] uppercase tracking-wider text-slate-500">new</span>;
+    return <span className="shrink-0 text-[10px] uppercase tracking-wider text-slate-400">new</span>;
   }
   if (delta.deltaMs === null || delta.deltaMs === 0) {
-    return <span className="shrink-0 text-[10px] text-slate-500">±0</span>;
+    return <span className="shrink-0 text-[10px] text-slate-400">±0</span>;
   }
   const isSlower = delta.deltaMs > 0;
   return (

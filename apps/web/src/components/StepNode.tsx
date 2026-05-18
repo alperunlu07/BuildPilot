@@ -185,7 +185,7 @@ export function StepNode({ id, type, data, selected }: NodeProps) {
             {d.templateLabel || def.label}
           </span>
           {d.templateLabel && (
-            <span className="truncate text-[9px] uppercase tracking-wider text-slate-500">
+            <span className="truncate text-[9px] uppercase tracking-wider text-slate-400">
               {def.label}
             </span>
           )}
@@ -229,7 +229,7 @@ export function StepNode({ id, type, data, selected }: NodeProps) {
         </div>
       )}
       {duration && (
-        <div className="mt-0.5 text-right font-mono text-[10px] text-slate-500">{duration}</div>
+        <div className="mt-0.5 text-right font-mono text-[10px] text-slate-400">{duration}</div>
       )}
       <Handle type="source" position={Position.Bottom} />
     </div>

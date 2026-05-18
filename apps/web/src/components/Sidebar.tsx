@@ -196,7 +196,7 @@ export function Sidebar({ onAddProject, onManageHosts, onShowChangelog, changelo
           aria-label="Go to projects"
         >
           <div className="text-base font-semibold tracking-tight text-slate-100">BuildPilot</div>
-          <div className="text-[11px] uppercase tracking-wider text-slate-500">Local CI/CD</div>
+          <div className="text-[11px] uppercase tracking-wider text-slate-400">Local CI/CD</div>
         </button>
         <div className="flex items-center gap-1">
           <button
@@ -267,7 +267,7 @@ export function Sidebar({ onAddProject, onManageHosts, onShowChangelog, changelo
 
       {(favProjects.length > 0 || favPipelines.length > 0) && (
         <>
-          <div className="px-3 pt-3 text-[11px] uppercase tracking-wider text-slate-500">
+          <div className="px-3 pt-3 text-[11px] uppercase tracking-wider text-slate-400">
             {t('nav.favorites')}
           </div>
           <ul className="space-y-0.5 px-2 pb-1">
@@ -315,12 +315,12 @@ export function Sidebar({ onAddProject, onManageHosts, onShowChangelog, changelo
         </>
       )}
 
-      <div className="px-3 pt-3 text-[11px] uppercase tracking-wider text-slate-500">
+      <div className="px-3 pt-3 text-[11px] uppercase tracking-wider text-slate-400">
         {t('nav.projects')}
       </div>
       <nav className="flex-1 overflow-y-auto px-2 py-2">
         {projects.length === 0 && (
-          <div className="px-3 py-6 text-sm text-slate-500">
+          <div className="px-3 py-6 text-sm text-slate-400">
             No projects. Click <span className="text-slate-300">+</span> to add one.
           </div>
         )}
@@ -357,7 +357,7 @@ export function Sidebar({ onAddProject, onManageHosts, onShowChangelog, changelo
                       'focusable rounded p-0.5 transition-opacity',
                       isFav
                         ? 'text-amber-400 opacity-100'
-                        : 'text-slate-500 opacity-0 hover:text-amber-400 group-hover:opacity-100',
+                        : 'text-slate-400 opacity-0 hover:text-amber-400 group-hover:opacity-100',
                     )}
                     aria-label={isFav ? 'Unpin project' : 'Pin project'}
                     title={isFav ? 'Unpin project' : 'Pin project'}
@@ -370,7 +370,7 @@ export function Sidebar({ onAddProject, onManageHosts, onShowChangelog, changelo
                       e.stopPropagation();
                       softDeleteProject(p.id);
                     }}
-                    className="focusable rounded p-0.5 text-slate-500 opacity-0 transition-opacity hover:text-rose-400 group-hover:opacity-100"
+                    className="focusable rounded p-0.5 text-slate-400 opacity-0 transition-opacity hover:text-rose-400 group-hover:opacity-100"
                     title="Remove this project"
                     aria-label="Remove project"
                   >
@@ -410,7 +410,7 @@ export function Sidebar({ onAddProject, onManageHosts, onShowChangelog, changelo
                                 'focusable rounded p-0.5 transition-opacity',
                                 plFav
                                   ? 'text-amber-400 opacity-100'
-                                  : 'text-slate-500 opacity-0 hover:text-amber-400 group-hover:opacity-100',
+                                  : 'text-slate-400 opacity-0 hover:text-amber-400 group-hover:opacity-100',
                               )}
                               aria-label={plFav ? 'Unpin pipeline' : 'Pin pipeline'}
                               title={plFav ? 'Unpin pipeline' : 'Pin pipeline'}
@@ -423,7 +423,7 @@ export function Sidebar({ onAddProject, onManageHosts, onShowChangelog, changelo
                                 e.stopPropagation();
                                 softDeletePipeline(pl.id);
                               }}
-                              className="focusable rounded p-0.5 text-slate-500 opacity-0 transition-opacity hover:text-rose-400 group-hover:opacity-100"
+                              className="focusable rounded p-0.5 text-slate-400 opacity-0 transition-opacity hover:text-rose-400 group-hover:opacity-100"
                               title="Delete this pipeline"
                               aria-label="Delete pipeline"
                             >
@@ -443,7 +443,7 @@ export function Sidebar({ onAddProject, onManageHosts, onShowChangelog, changelo
 
       {recents.length > 0 && (
         <div className="border-t border-slate-800 px-2 py-2">
-          <div className="px-1 pb-1 text-[10px] uppercase tracking-wider text-slate-500">
+          <div className="px-1 pb-1 text-[10px] uppercase tracking-wider text-slate-400">
             {t('nav.recent')}
           </div>
           <ul className="space-y-0.5">
@@ -465,7 +465,7 @@ export function Sidebar({ onAddProject, onManageHosts, onShowChangelog, changelo
                     className="focusable density-row flex w-full items-center gap-2 truncate rounded px-2 py-0.5 text-left text-[11px] text-slate-400 hover:bg-slate-800/60 hover:text-slate-200"
                     title={r.label}
                   >
-                    <Icon size={11} className="shrink-0 text-slate-500" />
+                    <Icon size={11} className="shrink-0 text-slate-400" />
                     <span className="truncate">{r.label}</span>
                   </button>
                 </li>

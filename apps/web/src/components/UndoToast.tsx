@@ -35,7 +35,7 @@ export function UndoToast() {
           <button
             type="button"
             onClick={() => dismissError(e.id)}
-            className="focusable rounded text-slate-500 hover:text-slate-300"
+            className="focusable rounded text-slate-400 hover:text-slate-300"
             aria-label="Dismiss error toast"
           >
             <X size={13} />
@@ -62,7 +62,7 @@ export function UndoToast() {
                 </div>
                 <div className="truncate text-xs text-slate-400">
                   <span className="text-slate-200">{d.label}</span>
-                  <span className="mx-1 text-slate-600">·</span>
+                  <span className="mx-1 text-slate-400">·</span>
                   <span>removing in {seconds}s</span>
                 </div>
               </div>

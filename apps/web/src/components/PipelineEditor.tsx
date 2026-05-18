@@ -863,7 +863,7 @@ function Editor({ pipeline }: Props) {
         <div className="border-b border-slate-800 bg-slate-900/60 px-4 py-3">
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             <label className="block text-xs text-slate-300">
-              <span className="mb-1 block text-[11px] uppercase tracking-wide text-slate-500">
+              <span className="mb-1 block text-[11px] uppercase tracking-wide text-slate-400">
                 Tag pattern (glob — e.g. v*.*.*)
               </span>
               <input
@@ -878,7 +878,7 @@ function Editor({ pipeline }: Props) {
               />
             </label>
             <label className="block text-xs text-slate-300">
-              <span className="mb-1 block text-[11px] uppercase tracking-wide text-slate-500">
+              <span className="mb-1 block text-[11px] uppercase tracking-wide text-slate-400">
                 Cron (5-field, UTC — e.g. "0 9 * * *")
               </span>
               <input
@@ -893,7 +893,7 @@ function Editor({ pipeline }: Props) {
               />
             </label>
             <label className="block text-xs text-slate-300 md:col-span-2">
-              <span className="mb-1 block text-[11px] uppercase tracking-wide text-slate-500">
+              <span className="mb-1 block text-[11px] uppercase tracking-wide text-slate-400">
                 Path filter globs (one per line — empty = build on every commit)
               </span>
               <textarea
@@ -1005,7 +1005,7 @@ function Editor({ pipeline }: Props) {
                   placeholder="Find in node ids, types, field values…"
                   className="flex-1 rounded border border-slate-700 bg-slate-950 px-2 py-1 text-[12px] text-slate-100 focus:border-sky-500 focus:outline-none"
                 />
-                <span className="font-mono text-[10px] text-slate-500">
+                <span className="font-mono text-[10px] text-slate-400">
                   {findMatches.length === 0
                     ? '0/0'
                     : `${(findIndex % findMatches.length) + 1}/${findMatches.length}`}
@@ -1013,7 +1013,7 @@ function Editor({ pipeline }: Props) {
                 <button
                   type="button"
                   onClick={() => setFindOpen(false)}
-                  className="focusable rounded p-0.5 text-slate-500 hover:text-slate-300"
+                  className="focusable rounded p-0.5 text-slate-400 hover:text-slate-300"
                   title="Close"
                   aria-label="Close find/replace"
                 >
@@ -1099,7 +1099,7 @@ function Editor({ pipeline }: Props) {
                 style={{ left: edgeTooltip.x + 12, top: edgeTooltip.y + 12 }}
               >
                 {edgeTooltip.text}
-                <div className="text-[9px] text-slate-500">click to cycle</div>
+                <div className="text-[9px] text-slate-400">click to cycle</div>
               </div>
             )}
             {showMinimap && (
@@ -1200,9 +1200,9 @@ function Palette({
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         placeholder="Search nodes…"
-        className="w-full rounded-md border border-slate-800 bg-slate-900 px-2 py-1 text-[12px] text-slate-200 placeholder:text-slate-500 focus:border-sky-500 focus:outline-none"
+        className="w-full rounded-md border border-slate-800 bg-slate-900 px-2 py-1 text-[12px] text-slate-200 placeholder:text-slate-400 focus:border-sky-500 focus:outline-none"
       />
-      <div className="text-[11px] uppercase tracking-wider text-slate-500">Drag to canvas</div>
+      <div className="text-[11px] uppercase tracking-wider text-slate-400">Drag to canvas</div>
 
       {STEP_CATEGORIES.map((group) => {
         const items = group.types
@@ -1220,7 +1220,7 @@ function Palette({
             >
               {isOpen ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
               <span className="flex-1 truncate">{group.label}</span>
-              <span className="text-slate-600">{items.length}</span>
+              <span className="text-slate-400">{items.length}</span>
             </button>
             {isOpen &&
               items.map(({ type, def }) => (
@@ -1250,7 +1250,7 @@ function Palette({
                 title={t.description ?? `${def.label} preset`}
               >
                 <div className="truncate">{t.name}</div>
-                <div className="text-[9px] uppercase tracking-wider text-slate-500">
+                <div className="text-[9px] uppercase tracking-wider text-slate-400">
                   {def.label}
                 </div>
                 <button
@@ -1259,7 +1259,7 @@ function Palette({
                     e.stopPropagation();
                     onDeleteTemplate(t);
                   }}
-                  className="absolute right-1 top-1 rounded p-0.5 text-slate-500 opacity-0 hover:text-rose-400 group-hover:opacity-100"
+                  className="absolute right-1 top-1 rounded p-0.5 text-slate-400 opacity-0 hover:text-rose-400 group-hover:opacity-100"
                   title="Delete this template"
                 >
                   ×
@@ -1323,14 +1323,14 @@ function PaletteItem({
                   </li>
                 ))}
                 {required.length > 8 && (
-                  <li className="text-slate-500">+{required.length - 8} more…</li>
+                  <li className="text-slate-400">+{required.length - 8} more…</li>
                 )}
               </ul>
             </div>
           )}
           {optional.length > 0 && (
             <div className="mt-2">
-              <div className="text-[9px] font-semibold uppercase tracking-wider text-slate-500">
+              <div className="text-[9px] font-semibold uppercase tracking-wider text-slate-400">
                 Optional ({optional.length})
               </div>
               <ul className="mt-0.5 space-y-0.5 text-slate-400">
@@ -1340,7 +1340,7 @@ function PaletteItem({
                   </li>
                 ))}
                 {optional.length > 6 && (
-                  <li className="text-slate-500">+{optional.length - 6} more…</li>
+                  <li className="text-slate-400">+{optional.length - 6} more…</li>
                 )}
               </ul>
             </div>

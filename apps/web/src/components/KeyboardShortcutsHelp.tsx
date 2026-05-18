@@ -45,7 +45,7 @@ export function KeyboardShortcutsHelp() {
           <button
             type="button"
             onClick={close}
-            className="focusable rounded p-1 text-slate-500 hover:bg-slate-800 hover:text-slate-200"
+            className="focusable rounded p-1 text-slate-400 hover:bg-slate-800 hover:text-slate-200"
             aria-label="Close"
           >
             <X size={14} />
@@ -58,7 +58,7 @@ export function KeyboardShortcutsHelp() {
               <span className="flex items-center gap-1">
                 {r.keys.map((k, i) => (
                   <span key={i} className="flex items-center gap-1">
-                    {i > 0 && <span className="text-slate-600">then</span>}
+                    {i > 0 && <span className="text-slate-400">then</span>}
                     <Kbd>{k}</Kbd>
                   </span>
                 ))}

@@ -62,7 +62,7 @@ export function StepPropertyPanel({
 
   if (!node) {
     return (
-      <aside className="flex h-full w-80 shrink-0 flex-col border-l border-slate-800 bg-slate-950 p-4 text-sm text-slate-500">
+      <aside className="flex h-full w-80 shrink-0 flex-col border-l border-slate-800 bg-slate-950 p-4 text-sm text-slate-400">
         Select a node to edit its properties.
       </aside>
     );
@@ -89,7 +89,7 @@ export function StepPropertyPanel({
   return (
     <aside className="flex h-full w-80 shrink-0 flex-col border-l border-slate-800 bg-slate-950">
       <div className="border-b border-slate-800 px-4 py-3">
-        <div className="text-[11px] uppercase tracking-wider text-slate-500">
+        <div className="text-[11px] uppercase tracking-wider text-slate-400">
           Step properties
         </div>
         <div className="mt-1 flex items-center justify-between gap-2">
@@ -173,7 +173,7 @@ export function StepPropertyPanel({
           </div>
           <div className="min-h-0 flex-1">
             {nodeEntries.length === 0 ? (
-              <div className="px-4 py-6 text-xs text-slate-500">
+              <div className="px-4 py-6 text-xs text-slate-400">
                 No log entries for this node yet. Run the pipeline to see step output here.
               </div>
             ) : (
@@ -204,7 +204,7 @@ function TabButton({
         'focusable rounded-md px-2 py-0.5 font-semibold transition-colors',
         active
           ? 'bg-slate-800 text-slate-100'
-          : 'text-slate-500 hover:bg-slate-900 hover:text-slate-300',
+          : 'text-slate-400 hover:bg-slate-900 hover:text-slate-300',
       )}
     >
       {children}
@@ -241,7 +241,7 @@ function AiAutoFixSection({
       {enabled && (
         <div className="mt-3 space-y-2">
           <label className="block">
-            <span className="mb-1 block text-[10px] uppercase tracking-wider text-slate-500">
+            <span className="mb-1 block text-[10px] uppercase tracking-wider text-slate-400">
               Tool
             </span>
             <select
@@ -257,7 +257,7 @@ function AiAutoFixSection({
             </select>
           </label>
           <label className="block">
-            <span className="mb-1 block text-[10px] uppercase tracking-wider text-slate-500">
+            <span className="mb-1 block text-[10px] uppercase tracking-wider text-slate-400">
               Max retries
             </span>
             <input
@@ -270,7 +270,7 @@ function AiAutoFixSection({
             />
           </label>
           <label className="block">
-            <span className="mb-1 block text-[10px] uppercase tracking-wider text-slate-500">
+            <span className="mb-1 block text-[10px] uppercase tracking-wider text-slate-400">
               Prompt template ({"{{"}step{"}}"}, {"{{"}error{"}}"}, {"{{"}nodeId{"}}"})
             </span>
             <textarea
@@ -279,10 +279,10 @@ function AiAutoFixSection({
               placeholder={`The pipeline step "{{step}}" failed with:\n{{error}}\nFix the issue minimally and exit.`}
               rows={5}
               spellCheck={false}
-              className="w-full rounded-md border border-slate-700 bg-slate-900 px-2 py-1 font-mono text-[11px] text-slate-100 placeholder:text-slate-600"
+              className="w-full rounded-md border border-slate-700 bg-slate-900 px-2 py-1 font-mono text-[11px] text-slate-100 placeholder:text-slate-400"
             />
           </label>
-          <p className="text-[10px] text-slate-500">
+          <p className="text-[10px] text-slate-400">
             On failure the pipeline runs the chosen CLI with this prompt, then re-runs
             the step. Loops up to maxRetries times before bailing out.
           </p>
@@ -311,7 +311,7 @@ function CommonControlsSection({
   const watchdogIdle = typeof watchdog.idleSec === 'number' ? watchdog.idleSec : 600;
   return (
     <div className="mt-2 rounded-md border border-slate-800 bg-slate-900/40 p-3 space-y-3">
-      <div className="text-[10px] uppercase tracking-wider text-slate-500">Step controls</div>
+      <div className="text-[10px] uppercase tracking-wider text-slate-400">Step controls</div>
       <label className="flex items-center gap-2 text-[12px] text-slate-300">
         <input
           type="checkbox"
@@ -321,7 +321,7 @@ function CommonControlsSection({
         />
         Disable / skip this step
       </label>
-      <p className="-mt-1 text-[10px] text-slate-500">
+      <p className="-mt-1 text-[10px] text-slate-400">
         Visually grayed out. TODO(engine): treat as a no-op at run time.
       </p>
       <label className="flex items-center gap-2 text-[12px] text-slate-300">
@@ -333,7 +333,7 @@ function CommonControlsSection({
         />
         Continue on error (soft-fail; downstream success-edges still fire)
       </label>
-      <p className="-mt-1 text-[10px] text-slate-500">
+      <p className="-mt-1 text-[10px] text-slate-400">
         Mirrors GH <code>continue-on-error</code>, Buildkite <code>soft_fail</code>,
         GitLab <code>allow_failure</code>. The failure is logged but the pipeline keeps going.
       </p>
@@ -360,7 +360,7 @@ function CommonControlsSection({
         </label>
         {retryEnabled && (
           <div className="ml-5 mt-2 grid grid-cols-3 gap-2">
-            <label className="text-[10px] uppercase tracking-wider text-slate-500">
+            <label className="text-[10px] uppercase tracking-wider text-slate-400">
               Max retries
               <input
                 type="number"
@@ -381,7 +381,7 @@ function CommonControlsSection({
                 className="mt-0.5 w-full rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-[12px] text-slate-100"
               />
             </label>
-            <label className="text-[10px] uppercase tracking-wider text-slate-500">
+            <label className="text-[10px] uppercase tracking-wider text-slate-400">
               Backoff (ms)
               <input
                 type="number"
@@ -401,7 +401,7 @@ function CommonControlsSection({
                 className="mt-0.5 w-full rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-[12px] text-slate-100"
               />
             </label>
-            <label className="text-[10px] uppercase tracking-wider text-slate-500">
+            <label className="text-[10px] uppercase tracking-wider text-slate-400">
               Cap (ms)
               <input
                 type="number"
@@ -441,7 +441,7 @@ function CommonControlsSection({
         </label>
         {watchdogEnabled && (
           <div className="ml-5 mt-2">
-            <label className="text-[10px] uppercase tracking-wider text-slate-500">
+            <label className="text-[10px] uppercase tracking-wider text-slate-400">
               Idle threshold (sec)
               <input
                 type="number"
@@ -506,7 +506,7 @@ function BulkEditPanel({
   return (
     <aside className="flex h-full w-80 shrink-0 flex-col border-l border-slate-800 bg-slate-950">
       <div className="border-b border-slate-800 px-4 py-3">
-        <div className="text-[11px] uppercase tracking-wider text-slate-500">Bulk edit</div>
+        <div className="text-[11px] uppercase tracking-wider text-slate-400">Bulk edit</div>
         <h3 className="mt-1 text-sm font-semibold text-slate-100">
           {nodes.length} steps selected
         </h3>
@@ -617,7 +617,7 @@ function BulkEditPanel({
                 />
                 enabled
               </label>
-              <label className="block text-[10px] uppercase tracking-wider text-slate-500">
+              <label className="block text-[10px] uppercase tracking-wider text-slate-400">
                 Max retries
                 <input
                   type="number"
@@ -628,7 +628,7 @@ function BulkEditPanel({
                   className="mt-0.5 w-full rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-[12px] text-slate-100"
                 />
               </label>
-              <label className="block text-[10px] uppercase tracking-wider text-slate-500">
+              <label className="block text-[10px] uppercase tracking-wider text-slate-400">
                 Backoff (ms)
                 <input
                   type="number"
@@ -684,7 +684,7 @@ function Field({
           placeholder={field.placeholder}
           rows={4}
           spellCheck={false}
-          className="focusable w-full rounded-md border border-slate-700 bg-slate-900 px-2.5 py-1.5 font-mono text-[12px] text-slate-100 placeholder:text-slate-600 focus:border-sky-500 focus:outline-none"
+          className="focusable w-full rounded-md border border-slate-700 bg-slate-900 px-2.5 py-1.5 font-mono text-[12px] text-slate-100 placeholder:text-slate-400 focus:border-sky-500 focus:outline-none"
         />
       ) : field.type === 'select' ? (
         <select
@@ -731,10 +731,10 @@ function Field({
           }
           placeholder={field.placeholder}
           spellCheck={false}
-          className="focusable w-full rounded-md border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-[13px] text-slate-100 placeholder:text-slate-600 focus:border-sky-500 focus:outline-none"
+          className="focusable w-full rounded-md border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-[13px] text-slate-100 placeholder:text-slate-400 focus:border-sky-500 focus:outline-none"
         />
       )}
-      {field.help && <p className="mt-1 text-[11px] text-slate-500">{field.help}</p>}
+      {field.help && <p className="mt-1 text-[11px] text-slate-400">{field.help}</p>}
     </label>
   );
 }

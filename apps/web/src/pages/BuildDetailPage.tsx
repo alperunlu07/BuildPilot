@@ -221,11 +221,11 @@ export function BuildDetailPage({ buildId }: Props) {
   };
 
   if (loading && !build) {
-    return <div className="p-8 text-sm text-slate-500">Loading build…</div>;
+    return <div className="p-8 text-sm text-slate-400">Loading build…</div>;
   }
   if (!build) {
     return (
-      <div className="p-8 text-sm text-slate-500">
+      <div className="p-8 text-sm text-slate-400">
         Build not found.{' '}
         <button
           type="button"
@@ -249,7 +249,7 @@ export function BuildDetailPage({ buildId }: Props) {
         <button
           type="button"
           onClick={() => setView({ type: 'builds' })}
-          className="focusable inline-flex items-center gap-1 rounded text-[11px] uppercase tracking-wider text-slate-500 hover:text-slate-300"
+          className="focusable inline-flex items-center gap-1 rounded text-[11px] uppercase tracking-wider text-slate-400 hover:text-slate-300"
           aria-label="Back to builds list"
         >
           <ChevronLeft size={12} /> Builds
@@ -268,7 +268,7 @@ export function BuildDetailPage({ buildId }: Props) {
                   build.status === 'success' && 'bg-emerald-950/50 text-emerald-300',
                   build.status === 'failed' && 'bg-rose-950/50 text-rose-300',
                   build.status === 'pending' && 'bg-slate-800 text-slate-400',
-                  build.status === 'cancelled' && 'bg-slate-800 text-slate-500',
+                  build.status === 'cancelled' && 'bg-slate-800 text-slate-400',
                 )}
                 role="status"
                 aria-label={statusLabel(build.status)}
@@ -282,11 +282,11 @@ export function BuildDetailPage({ buildId }: Props) {
               </span>
             );
           })()}
-          <span className="text-xs text-slate-500">
+          <span className="text-xs text-slate-400">
             in <span className="text-slate-300">{proj?.name ?? '—'}</span>
           </span>
         </div>
-        <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
+        <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[11px] text-slate-400">
           <span className="font-mono">{build.id}</span>
           <span>·</span>
           <span>
@@ -396,10 +396,10 @@ export function BuildDetailPage({ buildId }: Props) {
       {artifacts.length > 0 && (
         <div className="border-b border-slate-800 bg-slate-900/30 px-6 py-3">
           <div className="mb-2 flex items-baseline justify-between">
-            <span className="text-[10px] uppercase tracking-wider text-slate-500">
+            <span className="text-[10px] uppercase tracking-wider text-slate-400">
               Artifacts ({artifacts.length})
             </span>
-            <span className="text-[10px] text-slate-500">
+            <span className="text-[10px] text-slate-400">
               {formatBytes(artifacts.reduce((acc, a) => acc + a.size, 0))} total
             </span>
           </div>
@@ -418,7 +418,7 @@ export function BuildDetailPage({ buildId }: Props) {
                   {a.path}
                 </button>
                 <span className="flex shrink-0 items-center gap-2">
-                  <span className="text-slate-500">{formatBytes(a.size)}</span>
+                  <span className="text-slate-400">{formatBytes(a.size)}</span>
                   <button
                     type="button"
                     onClick={() => setPreviewArtifact(a)}
@@ -460,7 +460,7 @@ export function BuildDetailPage({ buildId }: Props) {
       />
 
       <div className="flex flex-wrap items-center gap-3 border-b border-t border-slate-800 bg-slate-900/30 px-6 py-2 text-xs">
-        <Filter size={12} className="text-slate-500" />
+        <Filter size={12} className="text-slate-400" />
         <span className="text-slate-400">Levels</span>
         <div className="flex flex-wrap gap-1">
           {ALL_LEVELS.map((lvl) => {
@@ -474,7 +474,7 @@ export function BuildDetailPage({ buildId }: Props) {
                   'rounded-md border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider transition-colors',
                   on
                     ? 'border-slate-600 bg-slate-800 text-slate-100'
-                    : 'border-slate-800 bg-slate-950 text-slate-600 hover:text-slate-400',
+                    : 'border-slate-800 bg-slate-950 text-slate-400 hover:text-slate-400',
                 )}
               >
                 {lvl}
@@ -496,7 +496,7 @@ export function BuildDetailPage({ buildId }: Props) {
             </option>
           ))}
         </select>
-        <span className="text-slate-500">
+        <span className="text-slate-400">
           {filtered.length} / {entries.length} rows
           {entries.length >= 5000 && ' (capped at 5000 in memory)'}
         </span>
@@ -550,7 +550,7 @@ export function BuildDetailPage({ buildId }: Props) {
 
       {tsBounds && (
         <div className="flex items-center gap-3 border-b border-slate-800 bg-slate-900/20 px-6 py-2">
-          <span className="shrink-0 text-[10px] uppercase tracking-wider text-slate-500">
+          <span className="shrink-0 text-[10px] uppercase tracking-wider text-slate-400">
             Time range
           </span>
           <div className="flex-1">

@@ -64,7 +64,7 @@ export function Breadcrumb() {
     >
       {crumbs.map((c, i) => (
         <span key={i} className="flex items-center gap-1">
-          {i > 0 && <ChevronRight size={11} className="text-slate-600" />}
+          {i > 0 && <ChevronRight size={11} className="text-slate-400" />}
           {c.onClick ? (
             <button
               type="button"

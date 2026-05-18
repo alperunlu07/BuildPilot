@@ -17,7 +17,7 @@ export function LogGroupBar({ groups, collapsed, onToggle, onToggleAll }: Props)
   const allCollapsed = groups.every((g) => collapsed.has(g.id));
   return (
     <div className="flex flex-wrap items-center gap-1.5 border-b border-slate-800 bg-slate-900/30 px-6 py-2 text-xs">
-      <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider text-slate-500">
+      <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider text-slate-400">
         <FolderOpen size={11} /> Sections ({groups.length})
       </span>
       {groups.map((g) => {
@@ -37,7 +37,7 @@ export function LogGroupBar({ groups, collapsed, onToggle, onToggleAll }: Props)
           >
             {isCollapsed ? <ChevronRight size={11} /> : <ChevronDown size={11} />}
             <span className="min-w-0 truncate">{g.name}</span>
-            <span className="shrink-0 text-[10px] text-slate-500">{g.count}</span>
+            <span className="shrink-0 text-[10px] text-slate-400">{g.count}</span>
             {g.failureCount > 0 && (
               <span className="shrink-0 text-[10px] text-rose-400">
                 ✕{g.failureCount}

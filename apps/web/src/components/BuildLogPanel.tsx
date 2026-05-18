@@ -73,23 +73,23 @@ export function BuildLogPanel() {
           <span className="font-medium uppercase tracking-wider text-slate-300">
             Build {activeBuild.status}
           </span>
-          <span className="text-slate-500">·</span>
+          <span className="text-slate-400">·</span>
           <button
             type="button"
             onClick={() => setView({ type: 'build', id: activeBuild.id })}
-            className="font-mono text-slate-500 hover:text-sky-400"
+            className="font-mono text-slate-400 hover:text-sky-400"
             title="Open full log"
           >
             {activeBuild.id.slice(0, 8)}
           </button>
           {activeBuild.triggerSha && (
             <>
-              <span className="text-slate-500">·</span>
+              <span className="text-slate-400">·</span>
               <span className="font-mono text-sky-400">{activeBuild.triggerSha.slice(0, 7)}</span>
             </>
           )}
-          <span className="text-slate-500">·</span>
-          <span className="text-slate-500">
+          <span className="text-slate-400">·</span>
+          <span className="text-slate-400">
             {filtered.length === entries.length
               ? `${entries.length} entries`
               : `${filtered.length} / ${entries.length} entries`}
@@ -108,7 +108,7 @@ export function BuildLogPanel() {
             </button>
           )}
           {finished && (
-            <span className="text-slate-500">
+            <span className="text-slate-400">
               Finished{' '}
               {activeBuild.finishedAt
                 ? new Date(activeBuild.finishedAt).toLocaleTimeString()

@@ -11,7 +11,7 @@ export function PipelinePage({ pipelineId }: Props) {
 
   if (!pipeline) {
     return (
-      <div className="p-8 text-sm text-slate-500">
+      <div className="p-8 text-sm text-slate-400">
         Pipeline not found.{' '}
         <button
           type="button"
@@ -30,7 +30,7 @@ export function PipelinePage({ pipelineId }: Props) {
         <button
           type="button"
           onClick={() => setView({ type: 'project', id: pipeline.projectId })}
-          className="text-[11px] uppercase tracking-wider text-slate-500 hover:text-slate-300"
+          className="text-[11px] uppercase tracking-wider text-slate-400 hover:text-slate-300"
         >
           ← Project
         </button>

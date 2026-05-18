@@ -81,7 +81,7 @@ export function ActiveBuildsWidget() {
                     >
                       <div className="truncate text-xs text-slate-200">
                         {projectNameFor(b.projectId)}{' '}
-                        <span className="text-slate-500">/</span>{' '}
+                        <span className="text-slate-400">/</span>{' '}
                         <span className="text-slate-300">{pipelineNameFor(b.pipelineId)}</span>
                       </div>
                       <div className="mt-0.5 flex items-center gap-2 text-[11px]">
@@ -106,7 +106,7 @@ export function ActiveBuildsWidget() {
                           {b.status}
                         </span>
                         <span className="font-mono text-emerald-400">{b.triggerBranch}</span>
-                        <span className="text-slate-500">{formatElapsed(elapsed)}</span>
+                        <span className="text-slate-400">{formatElapsed(elapsed)}</span>
                       </div>
                     </button>
                     <button

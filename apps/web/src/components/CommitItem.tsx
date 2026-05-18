@@ -168,9 +168,9 @@ export function CommitItem({ row, width, isFirst, isLast, highlight, isHead }: P
         >
           {hasBody ? (
             open ? (
-              <ChevronDown size={13} className="mt-1 shrink-0 text-slate-500" />
+              <ChevronDown size={13} className="mt-1 shrink-0 text-slate-400" />
             ) : (
-              <ChevronRight size={13} className="mt-1 shrink-0 text-slate-500" />
+              <ChevronRight size={13} className="mt-1 shrink-0 text-slate-400" />
             )
           ) : (
             <span className="w-3 shrink-0" />
@@ -186,7 +186,7 @@ export function CommitItem({ row, width, isFirst, isLast, highlight, isHead }: P
               {isMerge && <GitMerge size={11} className="text-amber-400" />}
               <span className="truncate text-sm text-slate-100">{row.subject}</span>
             </div>
-            <div className="mt-0.5 flex items-baseline gap-2 whitespace-nowrap text-[11px] text-slate-500">
+            <div className="mt-0.5 flex items-baseline gap-2 whitespace-nowrap text-[11px] text-slate-400">
               <span className="truncate">{row.author}</span>
               <span>·</span>
               <span>{formatDistanceToNow(row.date, { addSuffix: true })}</span>

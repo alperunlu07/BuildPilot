@@ -84,7 +84,7 @@ export function CreatePipelineDialog({ open, projectId, defaultBranch, onClose, 
         </div>
 
         <label className="mb-3 block">
-          <span className="mb-1 block text-xs uppercase tracking-wide text-slate-500">Name</span>
+          <span className="mb-1 block text-xs uppercase tracking-wide text-slate-400">Name</span>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -95,7 +95,7 @@ export function CreatePipelineDialog({ open, projectId, defaultBranch, onClose, 
 
         <div className="mb-3 grid grid-cols-2 gap-3">
           <label className="block">
-            <span className="mb-1 block text-xs uppercase tracking-wide text-slate-500">
+            <span className="mb-1 block text-xs uppercase tracking-wide text-slate-400">
               Watch branch
             </span>
             <BranchSelect
@@ -107,7 +107,7 @@ export function CreatePipelineDialog({ open, projectId, defaultBranch, onClose, 
             />
           </label>
           <label className="block">
-            <span className="mb-1 block text-xs uppercase tracking-wide text-slate-500">
+            <span className="mb-1 block text-xs uppercase tracking-wide text-slate-400">
               Poll interval (s)
             </span>
             <input
