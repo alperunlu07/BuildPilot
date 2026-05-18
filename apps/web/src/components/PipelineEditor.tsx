@@ -15,7 +15,8 @@ import {
   type Node,
   type NodeChange,
 } from '@xyflow/react';
-import { ChevronDown, ChevronRight, Hammer, Map as MapIcon, Redo2, Save, Square, Trash2, Undo2 } from 'lucide-react';
+import dagre from 'dagre';
+import { ChevronDown, ChevronRight, Hammer, LayoutGrid, Map as MapIcon, Redo2, Save, Square, Trash2, Undo2 } from 'lucide-react';
 import type {
   NodeTemplate,
   Pipeline,
@@ -234,6 +235,15 @@ function Editor({ pipeline }: Props) {
       }),
     );
   }, [stepStatus, stepTimings]);
+
+  const autoLayout = useCallback(() => {
+    recordHistory();
+    setNodes((nds) => {
+      const next = layoutWithDagre(nds, edgesRef.current);
+      return next;
+    });
+    setDirty(true);
+  }, [recordHistory]);
 
   const doUndo = useCallback(() => {
     const prev = history.undo({ nodes: nodesRef.current, edges: edgesRef.current });
@@ -502,6 +512,14 @@ function Editor({ pipeline }: Props) {
             title="Redo (Cmd/Ctrl+Shift+Z)"
           >
             <Redo2 size={12} />
+          </button>
+          <button
+            type="button"
+            onClick={autoLayout}
+            className="inline-flex items-center gap-1 rounded-md border border-slate-700 px-2 py-1 text-xs text-slate-300 hover:border-sky-500 hover:text-sky-400"
+            title="Auto-layout graph"
+          >
+            <LayoutGrid size={12} />
           </button>
           <button
             type="button"
@@ -1331,6 +1349,30 @@ function defaultData(type: StepType): Record<string, unknown> {
       };
   }
   return {};
+}
+
+function layoutWithDagre(nodes: Node[], edges: Edge[]): Node[] {
+  if (nodes.length === 0) return nodes;
+  const g = new dagre.graphlib.Graph();
+  g.setGraph({ rankdir: 'TB', nodesep: 60, ranksep: 90, marginx: 20, marginy: 20 });
+  g.setDefaultEdgeLabel(() => ({}));
+  const NODE_W = 200;
+  const NODE_H = 80;
+  for (const n of nodes) {
+    const width = n.width ?? NODE_W;
+    const height = n.height ?? NODE_H;
+    g.setNode(n.id, { width, height });
+  }
+  for (const e of edges) g.setEdge(e.source, e.target);
+  dagre.layout(g);
+  return nodes.map((n) => {
+    const laid = g.node(n.id);
+    if (!laid) return n;
+    return {
+      ...n,
+      position: { x: laid.x - (laid.width ?? NODE_W) / 2, y: laid.y - (laid.height ?? NODE_H) / 2 },
+    };
+  });
 }
 
 function pipelineNodesToReactFlow(nodes: PipelineNode[]): Node[] {
