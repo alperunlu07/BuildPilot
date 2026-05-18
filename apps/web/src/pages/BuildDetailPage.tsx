@@ -15,7 +15,13 @@ import { StepGantt } from '../components/StepGantt';
 import { defaultActiveLevels } from '../components/LevelToggleBar';
 import { ArtifactPreviewModal } from '../components/ArtifactPreviewModal';
 import { FailureSummaryCard } from '../components/FailureSummaryCard';
-import { LogSearchBar, useCompiledFilter } from '../components/LogSearchBar';
+import {
+  LogSearchBar,
+  loadLogPresets,
+  saveLogPresets,
+  useCompiledFilter,
+  type SavedLogFilter,
+} from '../components/LogSearchBar';
 import { TimestampRangeSlider } from '../components/TimestampRangeSlider';
 
 const EMPTY: BuildLogEntry[] = [];
@@ -64,6 +70,7 @@ export function BuildDetailPage({ buildId }: Props) {
   const filter = useCompiledFilter(query, regex);
   // Selected timestamp window — null = full build duration (no filter).
   const [tsRange, setTsRange] = useState<[number, number] | null>(null);
+  const [presets, setPresets] = useState<SavedLogFilter[]>(() => loadLogPresets());
 
   useEffect(() => {
     let alive = true;
@@ -425,6 +432,27 @@ export function BuildDetailPage({ buildId }: Props) {
             regex={regex}
             onRegexChange={setRegex}
             regexError={filter.error}
+            presets={presets}
+            onApplyPreset={(p) => {
+              setQuery(p.query);
+              setRegex(p.regex);
+            }}
+            onSavePreset={(name) => {
+              const next: SavedLogFilter = {
+                id: `p-${Date.now().toString(36)}`,
+                name,
+                query,
+                regex,
+              };
+              const list = [...presets, next];
+              setPresets(list);
+              saveLogPresets(list);
+            }}
+            onDeletePreset={(id) => {
+              const list = presets.filter((p) => p.id !== id);
+              setPresets(list);
+              saveLogPresets(list);
+            }}
           />
         </div>
       </div>
