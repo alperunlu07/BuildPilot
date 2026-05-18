@@ -51,6 +51,7 @@ export function App() {
   const loadNodeTemplates = useStore((s) => s.loadNodeTemplates);
   const loadHosts = useStore((s) => s.loadHosts);
   const loadQueue = useStore((s) => s.loadQueue);
+  const loadLanes = useStore((s) => s.loadLanes);
   const handleEvent = useStore((s) => s.handleEvent);
   const confirmation = useStore((s) => s.confirmation);
   const closeConfirmation = useStore((s) => s.closeConfirmation);
@@ -107,6 +108,7 @@ export function App() {
     void loadNodeTemplates();
     void loadHosts();
     void loadQueue();
+    void loadLanes();
     void ensurePermission();
   }, [
     authChecked,
@@ -118,6 +120,7 @@ export function App() {
     loadNodeTemplates,
     loadHosts,
     loadQueue,
+    loadLanes,
   ]);
 
   useEffect(() => subscribe(handleEvent), [handleEvent]);
@@ -144,8 +147,9 @@ export function App() {
         void loadNodeTemplates();
         void loadHosts();
         void loadQueue();
+        void loadLanes();
       }),
-    [loadProjects, loadPipelines, loadBuilds, loadNodeTemplates, loadHosts, loadQueue],
+    [loadProjects, loadPipelines, loadBuilds, loadNodeTemplates, loadHosts, loadQueue, loadLanes],
   );
 
   // System theme listener — only reacts when the user picked `system`.

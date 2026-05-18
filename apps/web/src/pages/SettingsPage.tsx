@@ -1,8 +1,19 @@
-import { useEffect, useState } from 'react';
-import { AlertCircle, CheckCircle2, Eye, EyeOff, Lock, Palette, Send } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import {
+  AlertCircle,
+  CheckCircle2,
+  Eye,
+  EyeOff,
+  Layers,
+  Lock,
+  Palette,
+  Plus,
+  Send,
+  Trash2,
+} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import type { TelegramConfigPublic } from '@buildpilot/shared-types';
-import { api } from '../lib/api';
+import type { Lane, TelegramConfigPublic } from '@buildpilot/shared-types';
+import { api, LaneInUseError } from '../lib/api';
 import { useStore } from '../store/store';
 import type { Density, ThemeChoice } from '../lib/theme';
 import i18n from '../lib/i18n';
@@ -134,7 +145,9 @@ export function SettingsPage() {
 
       <AppearanceSection />
 
-      <section className="rounded-lg border border-slate-800 bg-slate-900/40 p-5">
+      <LanesSection />
+
+      <section className="mt-6 rounded-lg border border-slate-800 bg-slate-900/40 p-5">
         <div className="mb-4 flex items-center justify-between">
           <div>
             <h2 className="flex items-center gap-2 text-base font-semibold text-slate-100">
@@ -382,6 +395,277 @@ function BannerView({ state }: { state: Banner }) {
   return (
     <div className="flex items-center gap-1.5 text-xs text-rose-400">
       <AlertCircle size={13} /> {state.message}
+    </div>
+  );
+}
+
+// ── Execution Lanes (WP6) ────────────────────────────────────────────────────
+// Lanes serialize pipeline runs that share hardware. This section lets the
+// operator rename, retune (max concurrency), add, or delete lanes. Pipeline
+// usage is computed client-side from the already-loaded pipelines list so we
+// don't need a dedicated /api/lanes/usage endpoint.
+type LaneBanner =
+  | { kind: 'idle' }
+  | { kind: 'error'; message: string }
+  | { kind: 'in-use'; laneName: string; pipelineCount: number };
+
+function LanesSection() {
+  const lanes = useStore((s) => s.lanes);
+  const pipelines = useStore((s) => s.pipelines);
+  const loadLanes = useStore((s) => s.loadLanes);
+  const [banner, setBanner] = useState<LaneBanner>({ kind: 'idle' });
+  const [adding, setAdding] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [newMax, setNewMax] = useState('1');
+
+  // Count pipelines per lane once so each row doesn't re-scan the list.
+  const usageByLane = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const p of pipelines) {
+      map.set(p.laneId, (map.get(p.laneId) ?? 0) + 1);
+    }
+    return map;
+  }, [pipelines]);
+
+  async function onCreate() {
+    const name = newName.trim();
+    const max = Number.parseInt(newMax, 10);
+    if (!name) {
+      setBanner({ kind: 'error', message: 'Lane name cannot be empty' });
+      return;
+    }
+    if (!Number.isFinite(max) || max < 1) {
+      setBanner({ kind: 'error', message: 'Max concurrency must be at least 1' });
+      return;
+    }
+    setAdding(true);
+    try {
+      await api.createLane({ name, maxConcurrency: max });
+      await loadLanes();
+      setNewName('');
+      setNewMax('1');
+      setBanner({ kind: 'idle' });
+    } catch (err) {
+      setBanner({
+        kind: 'error',
+        message: err instanceof Error ? err.message : String(err),
+      });
+    } finally {
+      setAdding(false);
+    }
+  }
+
+  async function onDelete(lane: Lane) {
+    if (lane.id === 'default') return; // server enforces 403 too
+    if (!window.confirm(`Delete lane "${lane.name}"?`)) return;
+    try {
+      await api.deleteLane(lane.id);
+      await loadLanes();
+      setBanner({ kind: 'idle' });
+    } catch (err) {
+      if (err instanceof LaneInUseError) {
+        setBanner({
+          kind: 'in-use',
+          laneName: lane.name,
+          pipelineCount: err.pipelineCount,
+        });
+        // Still refresh: the user may want to see updated usage.
+        await loadLanes();
+        return;
+      }
+      setBanner({
+        kind: 'error',
+        message: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
+
+  return (
+    <section className="rounded-lg border border-slate-800 bg-slate-900/40 p-5">
+      <div className="mb-4">
+        <h2 className="flex items-center gap-2 text-base font-semibold text-slate-100">
+          <Layers size={16} className="text-sky-400" /> Execution Lanes
+        </h2>
+        <p className="mt-1 text-xs text-slate-400">
+          Lanes serialize pipeline runs that share hardware. Each lane has its own
+          concurrency budget.
+        </p>
+      </div>
+
+      {banner.kind === 'in-use' && (
+        <div className="mb-3 flex items-start gap-2 rounded-md border border-amber-700/60 bg-amber-900/20 px-3 py-2 text-xs text-amber-200">
+          <AlertCircle size={13} className="mt-0.5 shrink-0" />
+          <span>
+            Cannot delete lane <strong>{banner.laneName}</strong> — still used by{' '}
+            {banner.pipelineCount} pipeline{banner.pipelineCount === 1 ? '' : 's'}.
+            Reassign them first.
+          </span>
+        </div>
+      )}
+      {banner.kind === 'error' && (
+        <div className="mb-3 flex items-start gap-2 rounded-md border border-rose-700/60 bg-rose-900/20 px-3 py-2 text-xs text-rose-200">
+          <AlertCircle size={13} className="mt-0.5 shrink-0" />
+          <span>{banner.message}</span>
+        </div>
+      )}
+
+      <div className="divide-y divide-slate-800 rounded-md border border-slate-800 bg-slate-950/40">
+        {lanes.length === 0 ? (
+          <div className="px-3 py-4 text-center text-xs text-slate-500">
+            No lanes yet. Add one below.
+          </div>
+        ) : (
+          lanes.map((lane) => (
+            <LaneRow
+              key={lane.id}
+              lane={lane}
+              usageCount={usageByLane.get(lane.id) ?? 0}
+              onError={(message) => setBanner({ kind: 'error', message })}
+              onDelete={() => void onDelete(lane)}
+            />
+          ))
+        )}
+      </div>
+
+      <div className="mt-4 flex items-end gap-2">
+        <div className="flex-1">
+          <div className="mb-1 text-xs font-medium uppercase tracking-wider text-slate-400">
+            Lane name
+          </div>
+          <input
+            type="text"
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            placeholder="e.g. mac-builder-1"
+            spellCheck={false}
+            className="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-1.5 text-xs text-slate-100 placeholder:text-slate-600 focus:border-sky-500 focus:outline-none"
+          />
+        </div>
+        <div className="w-32">
+          <div className="mb-1 text-xs font-medium uppercase tracking-wider text-slate-400">
+            Max concurrency
+          </div>
+          <input
+            type="number"
+            min={1}
+            max={64}
+            value={newMax}
+            onChange={(e) => setNewMax(e.target.value)}
+            className="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-1.5 text-xs text-slate-100 focus:border-sky-500 focus:outline-none"
+          />
+        </div>
+        <button
+          type="button"
+          onClick={() => void onCreate()}
+          disabled={adding}
+          className="inline-flex items-center gap-1.5 rounded-md bg-sky-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-sky-500 disabled:opacity-50"
+        >
+          <Plus size={13} /> {adding ? 'Adding…' : 'Add lane'}
+        </button>
+      </div>
+    </section>
+  );
+}
+
+function LaneRow({
+  lane,
+  usageCount,
+  onError,
+  onDelete,
+}: {
+  lane: Lane;
+  usageCount: number;
+  onError: (message: string) => void;
+  onDelete: () => void;
+}) {
+  const loadLanes = useStore((s) => s.loadLanes);
+  const [name, setName] = useState(lane.name);
+  const [max, setMax] = useState(String(lane.maxConcurrency));
+  const [saving, setSaving] = useState(false);
+
+  // Re-sync local edit state when the parent re-fetches (e.g. after another
+  // mutation). Without this, a successful PATCH elsewhere would leave stale
+  // values in the input.
+  useEffect(() => {
+    setName(lane.name);
+    setMax(String(lane.maxConcurrency));
+  }, [lane.name, lane.maxConcurrency]);
+
+  const trimmedName = name.trim();
+  const parsedMax = Number.parseInt(max, 10);
+  const maxIsValid = Number.isFinite(parsedMax) && parsedMax >= 1 && parsedMax <= 64;
+  const dirty =
+    trimmedName.length > 0 &&
+    maxIsValid &&
+    (trimmedName !== lane.name || parsedMax !== lane.maxConcurrency);
+
+  const isDefault = lane.id === 'default';
+
+  async function onSave() {
+    if (!dirty) return;
+    setSaving(true);
+    try {
+      const patch: { name?: string; maxConcurrency?: number } = {};
+      if (trimmedName !== lane.name) patch.name = trimmedName;
+      if (parsedMax !== lane.maxConcurrency) patch.maxConcurrency = parsedMax;
+      await api.updateLane(lane.id, patch);
+      await loadLanes();
+    } catch (err) {
+      onError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="flex items-center gap-3 px-3 py-2.5">
+      <div className="flex-1 min-w-0">
+        <input
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && dirty) void onSave();
+          }}
+          spellCheck={false}
+          className="w-full rounded-md border border-transparent bg-transparent px-1.5 py-1 text-sm text-slate-100 hover:border-slate-700 focus:border-sky-500 focus:bg-slate-950 focus:outline-none"
+        />
+        <div className="px-1.5 text-[11px] text-slate-500">
+          Used by {usageCount} pipeline{usageCount === 1 ? '' : 's'}
+          {isDefault && ' · default lane'}
+        </div>
+      </div>
+      <div className="flex items-center gap-1.5">
+        <span className="text-[11px] uppercase tracking-wider text-slate-500">Max</span>
+        <input
+          type="number"
+          min={1}
+          max={64}
+          value={max}
+          onChange={(e) => setMax(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && dirty) void onSave();
+          }}
+          className="w-16 rounded-md border border-slate-700 bg-slate-950 px-2 py-1 text-center text-xs text-slate-100 focus:border-sky-500 focus:outline-none"
+        />
+      </div>
+      <button
+        type="button"
+        onClick={() => void onSave()}
+        disabled={!dirty || saving}
+        className="rounded-md bg-sky-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-sky-500 disabled:cursor-not-allowed disabled:bg-slate-800 disabled:text-slate-500"
+      >
+        {saving ? 'Saving…' : 'Save'}
+      </button>
+      <button
+        type="button"
+        onClick={onDelete}
+        disabled={isDefault}
+        title={isDefault ? 'Default lane cannot be deleted' : `Delete ${lane.name}`}
+        className="rounded-md border border-slate-700 p-1.5 text-slate-400 hover:border-rose-500 hover:text-rose-400 disabled:cursor-not-allowed disabled:border-slate-800 disabled:text-slate-700 disabled:hover:border-slate-800 disabled:hover:text-slate-700"
+      >
+        <Trash2 size={13} />
+      </button>
     </div>
   );
 }

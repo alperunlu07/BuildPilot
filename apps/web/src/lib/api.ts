@@ -18,6 +18,7 @@ import type {
   HomeMetrics,
   Matrix,
   MeResponse,
+  Lane,
   NodeTemplate,
   NotificationPrefs,
   Pipeline,
@@ -67,6 +68,20 @@ async function http<T>(path: string, init?: RequestInit): Promise<T> {
   }
   if (res.status === 204) return undefined as T;
   return (await res.json()) as T;
+}
+
+// Thrown by `api.deleteLane` when the server replies 409 because pipelines
+// still reference the lane. `pipelineCount` is the server-reported count so
+// the UI can show "still used by N pipeline(s)".
+export class LaneInUseError extends Error {
+  readonly pipelineCount: number;
+  constructor(pipelineCount: number) {
+    super(
+      `Cannot delete lane: still used by ${pipelineCount} pipeline${pipelineCount === 1 ? '' : 's'}`,
+    );
+    this.name = 'LaneInUseError';
+    this.pipelineCount = pipelineCount;
+  }
 }
 
 export const api = {
@@ -196,6 +211,37 @@ export const api = {
   // WP5 (queue): polled snapshot of running + pending builds, grouped by
   // lane. Server returns generatedAt so the UI can show "last refreshed".
   getQueue: () => http<QueueSnapshot>('/queue'),
+
+  // ── Lanes (WP6) ──────────────────────────────────────────
+  listLanes: () => http<Lane[]>('/lanes'),
+  createLane: (input: { name: string; maxConcurrency: number }) =>
+    http<Lane>('/lanes', { method: 'POST', body: JSON.stringify(input) }),
+  updateLane: (
+    id: string,
+    patch: { name?: string; maxConcurrency?: number },
+  ) =>
+    http<Lane>(`/lanes/${id}`, { method: 'PATCH', body: JSON.stringify(patch) }),
+  // Wraps DELETE so the 409 "in use" case becomes a typed error the caller
+  // can match on (`LaneInUseError`) — the default `http` helper would stuff
+  // the JSON body into a plain Error message and lose the pipelineCount.
+  deleteLane: async (id: string): Promise<{ ok: true }> => {
+    const res = await fetch(`${API}/lanes/${id}`, { method: 'DELETE' });
+    if (res.status === 409) {
+      let pipelineCount = 0;
+      try {
+        const body = (await res.json()) as { pipelineCount?: number };
+        if (typeof body.pipelineCount === 'number') pipelineCount = body.pipelineCount;
+      } catch {
+        /* ignore — fall back to a generic count of 0 */
+      }
+      throw new LaneInUseError(pipelineCount);
+    }
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      throw new Error(`${res.status} ${res.statusText}${text ? `: ${text}` : ''}`);
+    }
+    return { ok: true };
+  },
 
   // ── Node templates ───────────────────────────────────────
   listNodeTemplates: () => http<NodeTemplate[]>('/node-templates'),

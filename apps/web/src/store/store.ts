@@ -4,6 +4,7 @@ import type {
   BuildLogEntry,
   Commit,
   HostCapabilities,
+  Lane,
   NodeTemplate,
   NotificationPrefs,
   Pipeline,
@@ -173,6 +174,9 @@ interface State {
   builds: Build[];
   nodeTemplates: NodeTemplate[];
   hosts: SshHost[];
+  // WP6: Execution lanes (configured via Settings). Pipelines reference these
+  // by id; the Settings page edits them and the Queue page joins by id.
+  lanes: Lane[];
   // WP5 (queue): most recent QueueSnapshot fetched from /api/queue. The
   // Queue page seeds + polls this; null until the first load completes.
   queue: QueueSnapshot | null;
@@ -216,6 +220,7 @@ interface State {
   loadPipelines(projectId?: string): Promise<void>;
   loadBuilds(filter?: { projectId?: string; pipelineId?: string }): Promise<void>;
   loadQueue(): Promise<void>;
+  loadLanes(): Promise<void>;
   loadNodeTemplates(): Promise<void>;
   saveNodeTemplate(input: {
     name: string;
@@ -293,6 +298,7 @@ export const useStore = create<State>((set, get) => ({
   builds: [],
   nodeTemplates: [],
   hosts: [],
+  lanes: [],
   queue: null,
   activeBuild: null,
   view: { type: 'home' },
@@ -339,6 +345,9 @@ export const useStore = create<State>((set, get) => ({
   },
   async loadQueue() {
     set({ queue: await api.getQueue() });
+  },
+  async loadLanes() {
+    set({ lanes: await api.listLanes() });
   },
   async loadNodeTemplates() {
     set({ nodeTemplates: await api.listNodeTemplates() });
