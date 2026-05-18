@@ -220,6 +220,7 @@ export function HostsPage() {
                     <th className="px-3 py-2">Capabilities</th>
                     <th className="px-3 py-2">Last seen</th>
                     <th className="px-3 py-2">Inflight</th>
+                    <th className="px-3 py-2" title="Concurrent build count, last 24h">Load (24h)</th>
                     <th className="px-3 py-2"></th>
                   </tr>
                 </thead>
@@ -435,6 +436,9 @@ function HostRow({
           )}
         </td>
         <td className="px-3 py-2">
+          <HostLoadSpark hostId={host.id} />
+        </td>
+        <td className="px-3 py-2">
           <div className="flex items-center justify-end gap-1">
             <button
               type="button"
@@ -469,7 +473,7 @@ function HostRow({
       </tr>
       {selected && (
         <tr>
-          <td colSpan={7} className="bg-slate-900/40 px-3 py-3">
+          <td colSpan={8} className="bg-slate-900/40 px-3 py-3">
             <HostDetail hostId={host.id} />
           </td>
         </tr>
@@ -744,5 +748,48 @@ function StatusDot({ status }: { status: string }) {
       title={status}
       aria-label={status}
     />
+  );
+}
+
+// Inline 80×20 sparkline of concurrent build count over 24h. Sits in the
+// hosts table; the larger LoadChart in the expanded detail view shows the
+// same data with axes and a "peak N" annotation.
+function HostLoadSpark({ hostId }: { hostId: string }) {
+  const [data, setData] = useState<Array<{ t: number; concurrent: number }> | null>(null);
+  useEffect(() => {
+    let alive = true;
+    void api
+      .hostLoad(hostId, 24)
+      .then((r) => {
+        if (alive) setData(r);
+      })
+      .catch(() => {
+        if (alive) setData([]);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [hostId]);
+  if (data === null) return <div className="h-5 w-20 animate-pulse rounded bg-slate-900" />;
+  const hasAny = data.some((d) => d.concurrent > 0);
+  if (data.length === 0 || !hasAny) {
+    return <span className="text-[10px] text-slate-500">no data</span>;
+  }
+  const W = 80;
+  const H = 20;
+  const maxY = Math.max(1, ...data.map((d) => d.concurrent));
+  const xStep = W / Math.max(1, data.length - 1);
+  const yScale = (v: number) => H - 1 - (v / maxY) * (H - 2);
+  const points = data.map((d, i) => `${i * xStep},${yScale(d.concurrent)}`);
+  const linePath = `M${points.join(' L')}`;
+  return (
+    <svg
+      viewBox={`0 0 ${W} ${H}`}
+      className="h-5 w-20"
+      role="img"
+      aria-label={`Host load sparkline, peak ${maxY} concurrent`}
+    >
+      <path d={linePath} fill="none" stroke="#0ea5e9" strokeWidth={1.2} />
+    </svg>
   );
 }
