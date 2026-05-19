@@ -137,23 +137,42 @@ export function SettingsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl p-8">
-      <div className="mb-6">
-        <h1 className="text-xl font-semibold text-text-primary">Settings</h1>
-        <p className="mt-1 text-sm text-text-muted">
-          Server-wide configuration. Secrets are stored encrypted at rest in{' '}
-          <code className="rounded bg-bg-elevated px-1 py-0.5 text-text-secondary">
-            ~/.buildpilot/config.json
-          </code>
-          .
-        </p>
-      </div>
+    // UI v2 Faz 10.1 — 2-column settings layout. Sticky nav on the left
+    // scrolls to each section via anchor links. The right column keeps
+    // the legacy card-stack rendering; only the chrome around it
+    // changes.
+    <div className="grid h-full min-h-0" style={{ gridTemplateColumns: '220px minmax(0, 1fr)' }}>
+      <aside className="border-r border-border-subtle bg-bg-panel/50 overflow-y-auto">
+        <div className="sticky top-0 px-4 py-5">
+          <h1 className="text-base font-semibold text-text-primary tracking-tight">
+            Settings
+          </h1>
+          <p className="mt-1 text-[11px] text-text-muted leading-relaxed">
+            Server-wide configuration. Secrets encrypted in{' '}
+            <code className="font-mono text-text-secondary">~/.buildpilot/config.json</code>
+            .
+          </p>
+          <nav className="mt-4 flex flex-col gap-px" aria-label="Settings sections">
+            <SettingsNavLink href="#appearance" label="Appearance" />
+            <SettingsNavLink href="#lanes" label="Lanes & Concurrency" />
+            <SettingsNavLink href="#telegram" label="Telegram" />
+            <SettingsNavLink href="#about" label="About" />
+          </nav>
+        </div>
+      </aside>
+      <div className="overflow-y-auto px-6 py-6 max-w-3xl">
+      <section id="appearance" className="scroll-mt-4">
+        <AppearanceSection />
+      </section>
 
-      <AppearanceSection />
+      <section id="lanes" className="scroll-mt-4">
+        <LanesSection />
+      </section>
 
-      <LanesSection />
-
-      <section className="mt-6 rounded-lg border border-border-subtle bg-bg-panel/60 p-5">
+      <section
+        id="telegram"
+        className="scroll-mt-4 mt-6 rounded-lg border border-border-subtle bg-bg-panel/60 p-5"
+      >
         <div className="mb-4 flex items-center justify-between">
           <div>
             <h2 className="flex items-center gap-2 text-base font-semibold text-text-primary">
@@ -278,7 +297,49 @@ export function SettingsPage() {
           </div>
         </div>
       </section>
+
+      <section
+        id="about"
+        className="scroll-mt-4 mt-6 rounded-lg border border-border-subtle bg-bg-panel/60 p-5"
+      >
+        <div className="mb-2">
+          <h2 className="text-base font-semibold text-text-primary">About</h2>
+          <p className="mt-1 text-xs text-text-muted">
+            BuildPilot is a local-first CI/CD runner. No external connections
+            unless you wire one in (Slack / Discord / Telegram / VCS check-runs).
+          </p>
+        </div>
+        <ul className="text-[12.5px] text-text-secondary space-y-1 mt-3">
+          <li>
+            <span className="text-text-muted">Config file:</span>{' '}
+            <code className="font-mono text-text-primary">~/.buildpilot/config.json</code>
+          </li>
+          <li>
+            <span className="text-text-muted">Database:</span>{' '}
+            <code className="font-mono text-text-primary">~/.buildpilot/buildpilot.db</code>
+          </li>
+          <li>
+            <span className="text-text-muted">Artifacts:</span>{' '}
+            <code className="font-mono text-text-primary">~/.buildpilot/artifacts/</code>
+          </li>
+        </ul>
+      </section>
+      </div>
     </div>
+  );
+}
+
+// UI v2 Faz 10.1 — sticky nav link helper. Plain anchor link so the
+// browser's hash navigation drives the section scroll; the scroll-mt-4
+// utility on each <section> keeps the heading clear of the top edge.
+function SettingsNavLink({ href, label }: { href: string; label: string }) {
+  return (
+    <a
+      href={href}
+      className="rounded-btn px-2 py-1 text-[12px] text-text-secondary hover:bg-bg-hover hover:text-text-primary transition-colors"
+    >
+      {label}
+    </a>
   );
 }
 
