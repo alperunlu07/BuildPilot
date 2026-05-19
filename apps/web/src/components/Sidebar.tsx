@@ -1,5 +1,6 @@
 import {
   AlertTriangle,
+  CheckCircle2,
   ChevronsLeft,
   ChevronsRight,
   FileLock,
@@ -230,6 +231,12 @@ export function Sidebar({
             label="VCS credentials"
           />
           <IconRail
+            icon={<CheckCircle2 size={16} className="text-amber-400" />}
+            active={view.type === 'approvals'}
+            onClick={() => setView({ type: 'approvals' })}
+            label="Approvals"
+          />
+          <IconRail
             icon={<Settings size={16} className="text-slate-300" />}
             active={view.type === 'settings'}
             onClick={() => setView({ type: 'settings' })}
@@ -384,6 +391,13 @@ export function Sidebar({
           label="VCS credentials"
           onClick={() => setView({ type: 'vcsCredentials' })}
           title="Manage tokens used to post check-runs back to GitHub / GitLab / Gitea"
+        />
+        <NavItem
+          active={view.type === 'approvals'}
+          icon={<CheckCircle2 size={14} className="text-amber-400" />}
+          label="Approvals"
+          onClick={() => setView({ type: 'approvals' })}
+          title="Builds currently waiting on a manual approval decision"
         />
         <NavItem
           active={view.type === 'settings'}

@@ -52,6 +52,8 @@ export function viewToPath(view: View): string {
       return '/vault-files';
     case 'vcsCredentials':
       return '/vcs-credentials';
+    case 'approvals':
+      return '/approvals';
   }
 }
 
@@ -84,6 +86,7 @@ export function pathToView(path: string): View {
     return name ? { type: 'secrets', name } : { type: 'secrets' };
   }
   if (clean === '/vault-files') return { type: 'vaultFiles' };
+  if (clean === '/approvals') return { type: 'approvals' };
 
   const projectMatch = clean.match(/^\/projects\/([^/]+)$/);
   if (projectMatch) return { type: 'project', id: decodeURIComponent(projectMatch[1]!) };

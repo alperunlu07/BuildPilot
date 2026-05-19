@@ -49,7 +49,8 @@ export type View =
   | { type: 'apiTokens' }
   | { type: 'secrets'; name?: string }
   | { type: 'vaultFiles' }
-  | { type: 'vcsCredentials' };
+  | { type: 'vcsCredentials' }
+  | { type: 'approvals' };
 
 export interface CommitToast {
   id: string;

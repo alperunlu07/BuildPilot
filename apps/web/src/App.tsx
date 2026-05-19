@@ -32,6 +32,7 @@ import { ApiTokensPage } from './pages/ApiTokensPage';
 import { SecretsPage } from './pages/SecretsPage';
 import { VaultFilesPage } from './pages/VaultFilesPage';
 import { VcsCredentialsPage } from './pages/VcsCredentialsPage';
+import { ApprovalsInboxPage } from './pages/ApprovalsInboxPage';
 import { useStore } from './store/store';
 import { onConnected, subscribe } from './lib/events';
 import { ensurePermission, setDesktopNotificationsAllowedByUserPref } from './lib/notifications';
@@ -213,6 +214,7 @@ export function App() {
           {view.type === 'secrets' && <SecretsPage />}
           {view.type === 'vaultFiles' && <VaultFilesPage />}
           {view.type === 'vcsCredentials' && <VcsCredentialsPage />}
+          {view.type === 'approvals' && <ApprovalsInboxPage />}
         </div>
         <BuildLogPanel />
       </main>
