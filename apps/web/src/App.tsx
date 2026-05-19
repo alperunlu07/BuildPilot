@@ -218,7 +218,12 @@ export function App() {
       <div style={{ gridArea: 'topbar' }} className="min-w-0">
         <Topbar onOpenMobileNav={() => setMobileNavOpen(true)} />
       </div>
-      <div style={{ gridArea: 'main' }} className="min-h-0 min-w-0 overflow-y-auto bg-bg-base">
+      <main
+        role="main"
+        aria-label="Main content"
+        style={{ gridArea: 'main' }}
+        className="min-h-0 min-w-0 overflow-y-auto bg-bg-base"
+      >
         {view.type === 'home' && <HomePage />}
         {view.type === 'projects' && <ProjectsPage onAdd={() => setOpenAdd(true)} />}
         {view.type === 'pipeline' && <PipelinePage pipelineId={view.id} />}
@@ -241,7 +246,7 @@ export function App() {
         {view.type === 'vaultFiles' && <VaultFilesPage />}
         {view.type === 'vcsCredentials' && <VcsCredentialsPage />}
         {view.type === 'approvals' && <ApprovalsInboxPage />}
-      </div>
+      </main>
       <div style={{ gridArea: 'logpanel' }} className="min-w-0">
         <BuildLogPanel />
       </div>

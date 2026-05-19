@@ -78,6 +78,21 @@
   --font-mono: "JetBrains Mono", "JetBrains Mono Variable", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 
+/* UI v2 Faz 12.8 — smooth theme + accent transitions for the surfaces
+   most users notice when they flip dark↔light. Capped at 150ms so the
+   theme switch still feels instant. */
+html {
+  transition: background-color 150ms ease, color 150ms ease;
+}
+body {
+  transition: background-color 150ms ease, color 150ms ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  html, body {
+    transition: none;
+  }
+}
+
 [data-theme="light"] {
   --bg-base: #fbfbfc;
   --bg-canvas: #f4f5f8;

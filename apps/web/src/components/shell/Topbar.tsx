@@ -49,7 +49,10 @@ export function Topbar({ onOpenMobileNav }: TopbarProps): JSX.Element | null {
   const runningCount = builds.filter((b) => b.status === 'running').length;
 
   return (
-    <header className="topbar-row flex items-center gap-3 px-3 h-11 bg-bg-base border-b border-border-subtle">
+    <header
+      role="banner"
+      className="topbar-row flex items-center gap-3 px-3 h-11 bg-bg-base border-b border-border-subtle"
+    >
       {/* Left: hamburger (mobile) + breadcrumb */}
       <div className="flex items-center gap-2 min-w-0 shrink-0">
         {onOpenMobileNav && (

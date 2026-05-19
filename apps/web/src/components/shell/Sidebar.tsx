@@ -225,6 +225,8 @@ export function Sidebar({
   if (collapsed && isDesktop) {
     return (
       <aside
+        role="navigation"
+        aria-label="Primary navigation (collapsed)"
         style={{ width: COLLAPSED_WIDTH }}
         className="density-card relative flex h-full shrink-0 flex-col items-center border-r border-border-subtle bg-bg-panel py-2"
       >
@@ -274,6 +276,8 @@ export function Sidebar({
         />
       )}
       <aside
+        role="navigation"
+        aria-label="Primary navigation"
         style={{ width: effectiveWidth }}
         className={cn(
           'density-card relative flex h-full flex-col border-r border-border-subtle bg-bg-panel overflow-hidden',

@@ -44,7 +44,13 @@ export function BuildLogPanel() {
     activeBuild.status === 'cancelled';
 
   return (
-    <div className="flex h-72 shrink-0 flex-col border-t border-border-subtle bg-bg-base">
+    <section
+      role="region"
+      aria-label="Build log panel"
+      aria-live="polite"
+      aria-atomic="false"
+      className="flex h-72 shrink-0 flex-col border-t border-border-subtle bg-bg-base"
+    >
       <div className="flex items-center justify-between border-b border-border-subtle px-4 py-2 text-xs">
         <div className="flex items-center gap-2">
           {(() => {
@@ -120,6 +126,6 @@ export function BuildLogPanel() {
       <div className="min-h-0 flex-1">
         <LogTable entries={filtered} compact copyCommandFor={commandFromEntry} />
       </div>
-    </div>
+    </section>
   );
 }
