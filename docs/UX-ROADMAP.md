@@ -357,5 +357,5 @@ theme.
 | Phase                              | Done | Pending | Status |
 | ---------------------------------- | ---: | ------: | ------ |
 | 10. UI/UX overhaul (A–G)           |  54  |    2    | ✅ 96% (split view + swimlanes deferred as stretch) |
-| 11. Platform expansion             |   3  |   27    | 🟡 10% (cluster 11.H · multi-agent / fleet complete) |
+| 11. Platform expansion (A–I)       |  34  |    0    | ✅ 100% (all 9 clusters shipped) |
 | 12. Developer ergonomics           |   0  |    7    | ⏸ 0%   |
