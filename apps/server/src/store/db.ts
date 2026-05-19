@@ -53,7 +53,9 @@ export function initDb(path: string): DB {
     CREATE INDEX IF NOT EXISTS idx_builds_project_id ON builds(project_id);
     CREATE INDEX IF NOT EXISTS idx_builds_pipeline_id ON builds(pipeline_id);
     CREATE INDEX IF NOT EXISTS idx_builds_started_at ON builds(started_at DESC);
-    CREATE INDEX IF NOT EXISTS idx_builds_parent_build_id ON builds(parent_build_id);
+    -- idx_builds_parent_build_id is created in the additive-migration block
+    -- below so that pre-matrix installs (where parent_build_id is added via
+    -- ALTER TABLE) don't fail this DDL statement before the column exists.
 
     CREATE TABLE IF NOT EXISTS poller_state (
       project_id TEXT NOT NULL,

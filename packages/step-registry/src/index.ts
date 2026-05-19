@@ -4692,7 +4692,6 @@ export const STEP_CATEGORIES: readonly StepCategoryGroup[] = [
       'privacyManifestAggregate',
       'appThinningReportParse',
       'linkMapAnalyze',
-      'iosDeviceLog',
     ],
   },
   {
