@@ -1,6 +1,7 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './App';
+import { PrimitivesPage } from './pages/__primitives';
 import './index.css';
 import './lib/i18n';
 import {
@@ -15,6 +16,13 @@ import {
 applyTheme(readStoredTheme());
 applyDensity(readStoredDensity());
 applyAccent(readStoredAccent());
+
+// Dev-only primitive catalog (Faz 2). Mounted at /__primitives — bypasses
+// the App router entirely so the page can be inspected without store
+// boot or auth. Vite tree-shakes import.meta.env.DEV so prod builds
+// drop the PrimitivesPage import.
+const showPrimitives =
+  import.meta.env.DEV && window.location.pathname === '/__primitives';
 
 // PWA service worker (Cluster 10.G). Register after the first paint so the
 // SW registration never competes with React hydration for main-thread time.
@@ -35,6 +43,12 @@ if (!root) throw new Error('#root not found in index.html');
 
 createRoot(root).render(
   <StrictMode>
-    <App />
+    {showPrimitives ? (
+      <div className="h-full overflow-y-auto bg-bg-base text-text-primary">
+        <PrimitivesPage />
+      </div>
+    ) : (
+      <App />
+    )}
   </StrictMode>,
 );

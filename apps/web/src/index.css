@@ -7,6 +7,21 @@
 @tailwind components;
 @tailwind utilities;
 
+/* UI v2 Faz 2 — StatusDot running-state pulse. Defined globally so the
+   primitive can hook into it via animate-pulse-dot regardless of where
+   it's rendered. The ring colour matches --st-running so light theme
+   automatically gets a softer pulse without a separate keyframe. */
+@keyframes pulse-dot {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.4); }
+  50% { box-shadow: 0 0 0 5px rgba(251, 191, 36, 0); }
+}
+.animate-pulse-dot {
+  animation: pulse-dot 1.4s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-pulse-dot { animation: none; }
+}
+
 html,
 body,
 #root {
