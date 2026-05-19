@@ -153,7 +153,10 @@ export function ProjectsPage({ onAdd }: Props) {
     if (first) {
       setView({ type: 'pipeline', id: first.id });
     } else {
-      setView({ type: 'project', id: p.id });
+      // Faz 4 — `project` view type removed. Pipelineless projects
+      // route back to the projects list, where the user can pick
+      // another or trigger the "Add pipeline" flow.
+      setView({ type: 'projects' });
     }
   }
 

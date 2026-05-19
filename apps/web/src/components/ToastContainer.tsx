@@ -65,7 +65,7 @@ export function ToastContainer() {
               <button
                 type="button"
                 onClick={() => {
-                  setView({ type: 'project', id: t.projectId });
+                  useStore.getState().setProjectView(t.projectId);
                   dismissToast(t.id);
                 }}
                 className="focusable rounded text-[11px] uppercase tracking-wider text-text-muted hover:text-text-primary"

@@ -221,7 +221,7 @@ export function BuildsPage() {
           onTriggerFirst={() => {
             const firstPipeline = pipelines[0];
             if (firstPipeline) setView({ type: 'pipeline', id: firstPipeline.id });
-            else if (projects[0]) setView({ type: 'project', id: projects[0].id });
+            else if (projects[0]) useStore.getState().setProjectView(projects[0].id);
             else setView({ type: 'projects' });
           }}
           hasAnyPipeline={pipelines.length > 0}

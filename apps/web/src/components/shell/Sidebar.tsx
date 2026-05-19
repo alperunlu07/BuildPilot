@@ -116,6 +116,7 @@ export function Sidebar({
   const queue = useStore((s) => s.queue);
   const view = useStore((s) => s.view);
   const setView = useStore((s) => s.setView);
+  const setProjectView = useStore((s) => s.setProjectView);
   const softDeleteProject = useStore((s) => s.softDeleteProject);
   const softDeletePipeline = useStore((s) => s.softDeletePipeline);
   const favorites = useStore((s) => s.favorites);
@@ -428,8 +429,14 @@ export function Sidebar({
                   <TreeRow
                     icon={<Folder size={12} className="text-accent" />}
                     label={p.name}
-                    active={view.type === 'project' && view.id === p.id}
-                    onClick={() => setView({ type: 'project', id: p.id })}
+                    // Faz 4 — `project` view removed; we surface the project's
+                    // first pipeline instead. `active` highlights when the
+                    // current pipeline belongs to this project.
+                    active={
+                      view.type === 'pipeline' &&
+                      pipelines.find((pl) => pl.id === view.id)?.projectId === p.id
+                    }
+                    onClick={() => setProjectView(p.id)}
                     indent={0}
                   />
                 </li>
@@ -473,11 +480,13 @@ export function Sidebar({
           ) : (
             <ul className="flex flex-col gap-px">
               {projects.map((p) => {
-                const projectActive = view.type === 'project' && view.id === p.id;
                 const projectPipelines = pipelines.filter((pl) => pl.projectId === p.id);
+                // Faz 4 — `project` view removed; "active" now means the
+                // currently-open pipeline belongs to this project.
+                const projectActive =
+                  view.type === 'pipeline' && projectPipelines.some((pl) => pl.id === view.id);
                 const isFav = favorites.projectIds.includes(p.id);
-                const isOpen = openProjects.has(p.id) || projectActive ||
-                  (view.type === 'pipeline' && projectPipelines.some((pl) => pl.id === view.id));
+                const isOpen = openProjects.has(p.id) || projectActive;
                 return (
                   <li key={p.id}>
                     <div
@@ -498,7 +507,7 @@ export function Sidebar({
                       </button>
                       <button
                         type="button"
-                        onClick={() => setView({ type: 'project', id: p.id })}
+                        onClick={() => setProjectView(p.id)}
                         className="flex min-w-0 flex-1 items-center gap-1.5 text-left"
                       >
                         <Folder size={12} className="text-accent shrink-0" />
@@ -610,15 +619,13 @@ export function Sidebar({
                   <li key={`${r.kind}-${r.id}`}>
                     <button
                       type="button"
-                      onClick={() =>
-                        setView(
-                          r.kind === 'project'
-                            ? { type: 'project', id: r.id }
-                            : r.kind === 'pipeline'
-                              ? { type: 'pipeline', id: r.id }
-                              : { type: 'build', id: r.id },
-                        )
-                      }
+                      onClick={() => {
+                        // Faz 4 — project recents resolve to their first
+                        // pipeline since the `project` view type is gone.
+                        if (r.kind === 'project') setProjectView(r.id);
+                        else if (r.kind === 'pipeline') setView({ type: 'pipeline', id: r.id });
+                        else setView({ type: 'build', id: r.id });
+                      }}
                       className="flex w-full items-center gap-2 truncate rounded-btn px-2 h-5 text-left text-[11px] text-text-muted hover:bg-bg-hover hover:text-text-secondary transition-colors"
                       title={r.label}
                     >

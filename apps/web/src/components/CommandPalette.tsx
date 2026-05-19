@@ -27,6 +27,7 @@ export function CommandPalette({ onAddProject, onManageHosts }: Props) {
   const open = useStore((s) => s.paletteOpen);
   const close = useStore((s) => s.closePalette);
   const setView = useStore((s) => s.setView);
+  const setProjectView = useStore((s) => s.setProjectView);
   const projects = useStore((s) => s.projects);
   const pipelines = useStore((s) => s.pipelines);
   const builds = useStore((s) => s.builds);
@@ -87,15 +88,11 @@ export function CommandPalette({ onAddProject, onManageHosts }: Props) {
                       key={`recent-${r.kind}-${r.id}`}
                       value={`recent ${r.label}`}
                       onSelect={() => {
-                        run(() =>
-                          setView(
-                            r.kind === 'project'
-                              ? { type: 'project', id: r.id }
-                              : r.kind === 'pipeline'
-                                ? { type: 'pipeline', id: r.id }
-                                : { type: 'build', id: r.id },
-                          ),
-                        );
+                        run(() => {
+                          if (r.kind === 'project') setProjectView(r.id);
+                          else if (r.kind === 'pipeline') setView({ type: 'pipeline', id: r.id });
+                          else setView({ type: 'build', id: r.id });
+                        });
                       }}
                       className="cmdk-item"
                     >
@@ -188,7 +185,7 @@ export function CommandPalette({ onAddProject, onManageHosts }: Props) {
                   <Command.Item
                     key={`p-${p.id}`}
                     value={`project ${p.name} ${p.path}`}
-                    onSelect={() => run(() => setView({ type: 'project', id: p.id }))}
+                    onSelect={() => run(() => setProjectView(p.id))}
                     className="cmdk-item"
                   >
                     <Folder size={14} className="text-accent" />

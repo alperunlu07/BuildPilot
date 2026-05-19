@@ -14,7 +14,6 @@ import { KeyboardShortcutsHelp } from './components/KeyboardShortcutsHelp';
 import { CreatePipelineDialog } from './components/CreatePipelineDialog';
 import { HomePage } from './pages/HomePage';
 import { ProjectsPage } from './pages/ProjectsPage';
-import { ProjectDetailPage } from './pages/ProjectDetailPage';
 import { PipelinePage } from './pages/PipelinePage';
 import { BuildsPage } from './pages/BuildsPage';
 import { BuildDetailPage } from './pages/BuildDetailPage';
@@ -184,8 +183,10 @@ export function App() {
   useGlobalShortcuts({
     onNewPipeline: () => {
       const current = useStore.getState().view;
-      if (current.type === 'project') setOpenCreatePipeline(current.id);
-      else if (current.type === 'pipeline') {
+      // Faz 4 — `project` view removed; "new pipeline" only triggers
+      // from inside an existing pipeline (its projectId tells us where
+      // the new pipeline should live).
+      if (current.type === 'pipeline') {
         const pl = useStore.getState().pipelines.find((p) => p.id === current.id);
         if (pl) setOpenCreatePipeline(pl.projectId);
       }
@@ -220,7 +221,6 @@ export function App() {
       <div style={{ gridArea: 'main' }} className="min-h-0 min-w-0 overflow-y-auto bg-bg-base">
         {view.type === 'home' && <HomePage />}
         {view.type === 'projects' && <ProjectsPage onAdd={() => setOpenAdd(true)} />}
-        {view.type === 'project' && <ProjectDetailPage projectId={view.id} />}
         {view.type === 'pipeline' && <PipelinePage pipelineId={view.id} />}
         {view.type === 'builds' && <BuildsPage />}
         {view.type === 'build' && <BuildDetailPage buildId={view.id} />}

@@ -70,7 +70,6 @@ export function Topbar({ onOpenMobileNav }: TopbarProps): JSX.Element | null {
           setView={setView}
           tHome={t('breadcrumbs.home')}
           tProjects={t('breadcrumbs.projects')}
-          tProject={t('breadcrumbs.project')}
           tPipeline={t('breadcrumbs.pipeline')}
           tBuilds={t('breadcrumbs.builds')}
           tSettings={t('breadcrumbs.settings')}
@@ -123,7 +122,6 @@ interface BreadcrumbProps {
   setView: ReturnType<typeof useStore.getState>['setView'];
   tHome: string;
   tProjects: string;
-  tProject: string;
   tPipeline: string;
   tBuilds: string;
   tSettings: string;
@@ -139,7 +137,6 @@ function Breadcrumb({
   setView,
   tHome,
   tProjects,
-  tProject,
   tPipeline,
   tBuilds,
   tSettings,
@@ -155,17 +152,21 @@ function Breadcrumb({
     case 'projects':
       crumbs.push({ label: tProjects });
       break;
-    case 'project': {
-      const p = projects.find((x) => x.id === view.id);
-      crumbs.push({ label: tProjects, onClick: () => setView({ type: 'projects' }) });
-      crumbs.push({ label: p ? p.name : `${tProject} ${view.id.slice(0, 7)}` });
-      break;
-    }
     case 'pipeline': {
       const pl = pipelines.find((x) => x.id === view.id);
       const proj = pl ? projects.find((p) => p.id === pl.projectId) : undefined;
       if (proj) {
-        crumbs.push({ label: proj.name, onClick: () => setView({ type: 'project', id: proj.id }) });
+        // Faz 4 — project crumb resolves back to the pipeline editor of
+        // the first pipeline under the same project (loops back to here
+        // when only one pipeline exists, which is fine).
+        crumbs.push({
+          label: proj.name,
+          onClick: () => {
+            const first = pipelines.find((x) => x.projectId === proj.id);
+            if (first) setView({ type: 'pipeline', id: first.id });
+            else setView({ type: 'projects' });
+          },
+        });
       }
       crumbs.push({ label: pl ? pl.name : `${tPipeline} ${view.id.slice(0, 7)}` });
       break;
@@ -178,7 +179,16 @@ function Breadcrumb({
       const pl = b ? pipelines.find((x) => x.id === b.pipelineId) : undefined;
       const proj = pl ? projects.find((p) => p.id === pl.projectId) : undefined;
       crumbs.push({ label: tBuilds, onClick: () => setView({ type: 'builds' }) });
-      if (proj) crumbs.push({ label: proj.name, onClick: () => setView({ type: 'project', id: proj.id }) });
+      if (proj) {
+        crumbs.push({
+          label: proj.name,
+          onClick: () => {
+            const first = pipelines.find((x) => x.projectId === proj.id);
+            if (first) setView({ type: 'pipeline', id: first.id });
+            else setView({ type: 'projects' });
+          },
+        });
+      }
       if (pl) crumbs.push({ label: pl.name, onClick: () => setView({ type: 'pipeline', id: pl.id }) });
       crumbs.push({ label: `#${view.id.slice(0, 7)}` });
       break;
