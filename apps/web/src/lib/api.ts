@@ -186,6 +186,11 @@ export const api = {
       bytesRead: number;
       content: string;
     }>(`/artifacts/${id}/text${maxBytes ? `?maxBytes=${maxBytes}` : ''}`),
+  // Reveal an artifact in the host OS file manager. Fire-and-forget: server
+  // spawns explorer / open / xdg-open detached, we just need to know whether
+  // the request itself was accepted.
+  revealArtifact: (id: number) =>
+    http<{ ok: true; platform: string }>(`/artifacts/${id}/reveal`, { method: 'POST' }),
   triggerBuild: (pipelineId: string, fromNodeId?: string) =>
     http<Build>('/builds', {
       method: 'POST',

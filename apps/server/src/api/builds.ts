@@ -1,7 +1,8 @@
 import type { FastifyInstance } from 'fastify';
+import { spawn } from 'node:child_process';
 import { createReadStream, statSync } from 'node:fs';
 import { open } from 'node:fs/promises';
-import { basename } from 'node:path';
+import { basename, dirname } from 'node:path';
 import { z } from 'zod';
 import { createBuild, getBuild, listBuilds, listChildBuilds, updateBuildStatus } from '../store/builds';
 import { listBuildLogEntries } from '../store/buildLogs';
@@ -141,6 +142,57 @@ export async function buildsRoutes(app: FastifyInstance): Promise<void> {
       bytesRead: bytesToRead,
       content: buf.toString('utf-8'),
     };
+  });
+
+  // Reveal an artifact in the host OS file manager. Used for binary outputs
+  // (APK, AAB, ZIP) where an inline text preview is meaningless. The artifact
+  // path comes from the DB (not user input), so injection risk is low, but
+  // we still spawn with shell:false + explicit args so a hypothetical path
+  // containing shell metacharacters can't be interpreted. Fire-and-forget:
+  // explorer.exe on Windows returns exit code 1 even on success when
+  // `/select,` is used, so we ignore the child's stdio + unref it.
+  app.post('/api/artifacts/:id/reveal', async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const artifact = getBuildArtifact(Number(id));
+    if (!artifact) return reply.code(404).send({ error: 'not found' });
+    const stat = (() => {
+      try { return statSync(artifact.path); } catch { return null; }
+    })();
+    if (!stat) {
+      return reply.code(410).send({ error: 'artifact file no longer exists at recorded path' });
+    }
+
+    try {
+      if (process.platform === 'win32') {
+        // explorer.exe /select,"<absolute>" highlights the file in its
+        // containing folder. Single combined arg per Microsoft docs.
+        const child = spawn('explorer.exe', [`/select,${artifact.path}`], {
+          detached: true,
+          stdio: 'ignore',
+        });
+        child.unref();
+      } else if (process.platform === 'darwin') {
+        // `open -R` reveals the file in Finder.
+        const child = spawn('open', ['-R', artifact.path], {
+          detached: true,
+          stdio: 'ignore',
+        });
+        child.unref();
+      } else {
+        // Linux has no portable "select-this-file" command across DEs.
+        // Falling back to xdg-open on the parent directory is the lowest
+        // common denominator — the user still gets a window pointed at
+        // the right folder.
+        const child = spawn('xdg-open', [dirname(artifact.path)], {
+          detached: true,
+          stdio: 'ignore',
+        });
+        child.unref();
+      }
+      return { ok: true, platform: process.platform };
+    } catch (err) {
+      return reply.code(500).send({ error: String(err) });
+    }
   });
 
   app.post('/api/builds', async (req, reply) => {

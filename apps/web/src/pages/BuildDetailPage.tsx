@@ -45,6 +45,32 @@ function formatBytes(n: number): string {
   return `${(n / 1024 / 1024 / 1024).toFixed(2)} GiB`;
 }
 
+// Extensions whose contents the inline text preview modal can't render
+// usefully — clicking "preview" on these just shows U+FFFD garbage. The UI
+// hides the preview action and falls back to a "reveal in folder" affordance
+// for these. Conservative whitelist of binary types we actually produce or
+// the user is likely to drop into a pipeline.
+const BINARY_EXT = new Set([
+  // Android / iOS / desktop installers
+  '.apk', '.aab', '.ipa', '.dmg', '.pkg', '.deb', '.rpm', '.msi', '.exe',
+  // Native libs
+  '.dll', '.so', '.dylib', '.bin',
+  // Archives
+  '.zip', '.tar', '.gz', '.tgz', '.7z', '.rar', '.bz2', '.xz', '.iso', '.img',
+  // Images
+  '.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp', '.tiff', '.ico',
+  // Video / audio
+  '.mp4', '.mov', '.webm', '.avi', '.mkv', '.mp3', '.wav', '.ogg', '.flac',
+  // Misc
+  '.pdf',
+]);
+
+function isBinaryArtifact(path: string): boolean {
+  const dot = path.lastIndexOf('.');
+  if (dot < 0) return false;
+  return BINARY_EXT.has(path.slice(dot).toLowerCase());
+}
+
 interface Props {
   buildId: string;
 }
@@ -570,38 +596,58 @@ export function BuildDetailPage({ buildId }: Props) {
             </span>
           </div>
           <ul className="grid grid-cols-1 gap-1 md:grid-cols-2">
-            {artifacts.map((a) => (
-              <li
-                key={a.id}
-                className="group flex items-center justify-between gap-2 rounded-md border border-slate-800 bg-slate-950 px-2 py-1 text-[11px] hover:border-slate-700"
-              >
-                <button
-                  type="button"
-                  onClick={() => setPreviewArtifact(a)}
-                  className="min-w-0 flex-1 truncate text-left font-mono text-slate-200 hover:text-sky-300"
-                  title={`Preview ${a.path}`}
+            {artifacts.map((a) => {
+              const binary = isBinaryArtifact(a.path);
+              // For binary artifacts the inline text preview is useless
+              // (U+FFFD soup), so the path-as-link points at "reveal in
+              // folder" instead. Text-y artifacts (logs, json, xml…) keep
+              // the original "click row to preview" behaviour.
+              const onPathClick = binary
+                ? () => api.revealArtifact(a.id).catch(() => undefined)
+                : () => setPreviewArtifact(a);
+              return (
+                <li
+                  key={a.id}
+                  className="group flex items-center justify-between gap-2 rounded-md border border-slate-800 bg-slate-950 px-2 py-1 text-[11px] hover:border-slate-700"
                 >
-                  {a.path}
-                </button>
-                <span className="flex shrink-0 items-center gap-2">
-                  <span className="text-slate-400">{formatBytes(a.size)}</span>
                   <button
                     type="button"
-                    onClick={() => setPreviewArtifact(a)}
-                    className="text-sky-400 hover:text-sky-300"
+                    onClick={onPathClick}
+                    className="min-w-0 flex-1 truncate text-left font-mono text-slate-200 hover:text-sky-300"
+                    title={binary ? `Reveal ${a.path} in file manager` : `Preview ${a.path}`}
                   >
-                    preview
+                    {a.path}
                   </button>
-                  <a
-                    href={api.artifactDownloadUrl(a.id)}
-                    className="text-sky-400 hover:text-sky-300"
-                    download
-                  >
-                    download
-                  </a>
-                </span>
-              </li>
-            ))}
+                  <span className="flex shrink-0 items-center gap-2">
+                    <span className="text-slate-400">{formatBytes(a.size)}</span>
+                    {!binary && (
+                      <button
+                        type="button"
+                        onClick={() => setPreviewArtifact(a)}
+                        className="text-sky-400 hover:text-sky-300"
+                      >
+                        preview
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => api.revealArtifact(a.id).catch(() => undefined)}
+                      className="text-sky-400 hover:text-sky-300"
+                      title="Open the containing folder in the OS file manager"
+                    >
+                      open location
+                    </button>
+                    <a
+                      href={api.artifactDownloadUrl(a.id)}
+                      className="text-sky-400 hover:text-sky-300"
+                      download
+                    >
+                      download
+                    </a>
+                  </span>
+                </li>
+              );
+            })}
           </ul>
         </div>
       )}
