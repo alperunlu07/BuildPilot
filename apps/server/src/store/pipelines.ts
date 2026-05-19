@@ -219,7 +219,7 @@ export function updatePipeline(
          nodes_json = ?, edges_json = ?, updated_at = ?, telegram_approvals = ?,
          tag_pattern = ?, cron_expr = ?, path_filter = ?,
          cancel_in_progress_on_new_commit = ?,
-         matrix_json = ?, matrix_summary = ?
+         matrix_json = ?, matrix_summary = ?,
          pr_commands = ?, pr_command_authors = ?
        WHERE id = ?`,
     )
