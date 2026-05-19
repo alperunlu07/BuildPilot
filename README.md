@@ -424,6 +424,14 @@ pnpm typecheck  # tsc --noEmit across the workspace
 pnpm test       # run vitest suites
 ```
 
+### Storybook
+
+The web app ships a Storybook 8 component library so reviewers can browse
+UI variants in isolation (no API / SSE required). Run
+`pnpm --filter @buildpilot/web storybook` to launch the dev server on
+`localhost:6006`, or `pnpm --filter @buildpilot/web build-storybook` to
+emit a static bundle under `apps/web/storybook-static/`.
+
 ## Docs
 
 - [docs/API.md](docs/API.md) — full HTTP + SSE reference

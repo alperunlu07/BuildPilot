@@ -312,8 +312,10 @@ Cross-refs: `TODO.md` Phase 3.
 
 Quality-of-life for the people building BuildPilot itself.
 
-- [ ] **Storybook** for the component library — Sidebar, StepNode,
-  LogTable, Toast, all dialogs
+- [x] **Storybook** for the component library — Sidebar, StepNode,
+  LogTable, Toast, all dialogs (setup 558a280, stories 801ff74; 14
+  components, ~50 variants; run `pnpm --filter @buildpilot/web
+  storybook`)
 - [ ] **Visual regression tests** — Playwright + Chromatic or Percy
 - [ ] **Component-level unit tests** — currently only the server has
   vitest coverage
