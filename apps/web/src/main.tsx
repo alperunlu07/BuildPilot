@@ -3,10 +3,18 @@ import { createRoot } from 'react-dom/client';
 import { App } from './App';
 import './index.css';
 import './lib/i18n';
-import { applyDensity, applyTheme, readStoredDensity, readStoredTheme } from './lib/theme';
+import {
+  applyAccent,
+  applyDensity,
+  applyTheme,
+  readStoredAccent,
+  readStoredDensity,
+  readStoredTheme,
+} from './lib/theme';
 
 applyTheme(readStoredTheme());
 applyDensity(readStoredDensity());
+applyAccent(readStoredAccent());
 
 // PWA service worker (Cluster 10.G). Register after the first paint so the
 // SW registration never competes with React hydration for main-thread time.

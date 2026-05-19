@@ -1,4 +1,7 @@
 @import '@xyflow/react/dist/style.css';
+/* UI v2 Faz 1 — design tokens. Loaded before Tailwind so theme.extend
+   colors that reference var(--bg-base) etc. resolve at first paint. */
+@import './styles/tokens.css';
 
 @tailwind base;
 @tailwind components;
@@ -11,7 +14,7 @@ body,
 }
 
 body {
-  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: var(--font-sans);
 }
 
 /* React Flow tweaks for our dark theme */
