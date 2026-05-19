@@ -29,6 +29,7 @@ import { useTranslation } from 'react-i18next';
 import { useStore } from '../store/store';
 import { cn } from '../lib/cn';
 import { useMinWidth } from '../lib/breakpoint';
+import { Logo } from './Logo';
 import { UserMenu } from './UserMenu';
 
 const WIDTH_KEY = 'buildpilot.sidebar.width';
@@ -291,11 +292,14 @@ export function Sidebar({
         <button
           type="button"
           onClick={() => setView({ type: 'projects' })}
-          className="focusable text-left"
+          className="focusable flex items-center gap-2 text-left"
           aria-label="Go to projects"
         >
-          <div className="text-base font-semibold tracking-tight text-bp-text-primary">BuildPilot</div>
-          <div className="text-[11px] uppercase tracking-wider text-bp-text-muted">Local CI/CD</div>
+          <Logo size={24} className="text-sky-400" />
+          <div className="leading-tight">
+            <div className="text-base font-semibold tracking-tight text-bp-text-primary">BuildPilot</div>
+            <div className="text-[11px] uppercase tracking-wider text-bp-text-muted">Local CI/CD</div>
+          </div>
         </button>
         <div className="flex items-center gap-1">
           <UserMenu />
