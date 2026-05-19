@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none" aria-hidden="true">
+  <!-- BuildPilot Compass mark. currentColor lets callers theme the glyph
+       through CSS or the parent's color (e.g. text-sky-400 in Tailwind). -->
+  <circle cx="12" cy="12" r="9.5" stroke="currentColor" stroke-width="1.5"/>
+  <circle cx="12" cy="12" r="1.6" fill="currentColor"/>
+  <path d="M12 4 L14 11 L12 13 L10 11 Z" fill="currentColor" opacity="0.95"/>
+  <path d="M12 20 L10 13 L12 11 L14 13 Z" fill="currentColor" opacity="0.35"/>
+  <line x1="12" y1="2" x2="12" y2="3.6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="12" y1="20.4" x2="12" y2="22" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="2" y1="12" x2="3.6" y2="12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="20.4" y1="12" x2="22" y2="12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+</svg>
