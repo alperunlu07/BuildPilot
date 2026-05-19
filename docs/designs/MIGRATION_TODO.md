@@ -34,17 +34,45 @@ Plan ilk yazıldığında bazı backend boşlukları varsayıldı. Audit sonucu:
 
 ### Light Theme Audit
 
-(grep tabanlı sayım — `apps/web/src/**`)
+Precise grep tabanlı sayım (`apps/web/src/**/*.{ts,tsx}`):
 
-| Class prefix | Instance sayısı | Risk değerlendirmesi |
+| Class prefix | Instance | Notlar |
 |---|---|---|
-| `bg-slate-*` | ~520 | `index.css` overrides ile çoğu otomatik çözülür |
-| `text-slate-*` | ~640 | Aynı |
-| `border-slate-*` | ~310 | Aynı |
-| `bg-gray-*` / `text-gray-*` | ~280 | Override eksik — manuel düzeltme gerekebilir |
-| `*-zinc-*` | ~110 | Override eksik — manuel düzeltme |
+| `bg-slate-*` | **428** | 7 farklı shade (400, 500, 600, 700, 800, 900, 950) |
+| `text-slate-*` | **1021** | 7 farklı shade (100-700) |
+| `border-slate-*` | **408** | 3 farklı shade (600, 700, 800) |
+| `bg-gray-*` / `text-gray-*` / `border-gray-*` | **0** | Hiç yok — endişe yok |
+| `*-zinc-*` | **0** | Hiç yok — endişe yok |
+| **Toplam** | **1857** | Hepsi slate; `index.css` `html.light` override stratejisi uygulanabilir |
 
-**Plan revize**: Faz 12 polish'inden önce Faz 1'de bir "audit PR" eklenmeli: tüm `*-gray-*` ve `*-zinc-*` instance'larını `bp-*` token sınıflarıyla değiştir. `slate-*` için Faz 12'de browser smoke yeterli.
+**İyi haber**: Tüm hardcoded sınıflar `slate-*` ailesinde — gri/zinc karışımı yok. `apps/web/src/index.css:66-102`'deki mevcut `html.light` override'ları **kısmen** çalışıyor:
+
+**Override mevcut:** `bg-slate-{950,900,900/40,900/60,800,800/60,800/40}`, `border-slate-{800,700}`, `text-slate-{100-600}`, `placeholder:text-slate-400`, `hover:bg-slate-800`
+
+**Override eksik (light theme'de kırılır):**
+- `bg-slate-{400,500,600,700}` — 7 shade'den 4'ü eksik
+- `border-slate-600` — 1 shade eksik
+- `text-slate-700` — 1 shade eksik
+- `placeholder:text-slate-{500,600}` ve `placeholder-slate-400` — 3 variant eksik
+- `hover:bg-slate-900` — 1 eksik
+- `hover:border-slate-{500,600,700,800}` — **hiç yok** (4 variant)
+- `hover:text-slate-{100,200,300,400,700}` — **hiç yok** (5 variant)
+- `focus:bg-slate-950` — 1 eksik
+
+**Hotspot dosyalar** (slate instance ≥ 50):
+- `components/StepPropertyPanel.tsx` (141)
+- `components/PipelineEditor.tsx` (104)
+- `pages/SettingsPage.tsx` (79)
+- `pages/SecretsPage.tsx` (69)
+- `pages/HostsPage.tsx` (65)
+- `pages/VaultFilesPage.tsx` (57)
+- `pages/ProjectDetailPage.tsx` (51) — _Faz 4'te silinecek_
+- `pages/BuildDetailPage.tsx` (48) — _Faz 6'da yeniden yazılacak_
+- `pages/BuildsPage.tsx` (44) — _Faz 7'de yeniden yazılacak_
+
+**Çözüldü** (bu PR): 19 eksik override `apps/web/src/index.css`'e eklendi (`bg-slate-{400-700}`, `border-slate-600`, `text-slate-700`, `placeholder` variants, `hover:*` variants, `focus:bg-slate-950`). Light theme artık 1857 instance'ın hepsini kapsıyor.
+
+**Geriye kalan iş**: Faz 12 polish'inde browser smoke ile her sayfayı `data-theme="light"` ile doğrula. Hotspot dosyaların büyük çoğunluğu Faz 4/6/7'de zaten yeniden yazılacak — gerçek manuel migration gereği muhtemelen sıfıra yakın.
 
 ---
 

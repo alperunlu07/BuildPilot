@@ -77,17 +77,37 @@ html.light .bg-slate-900\/60 { background-color: rgba(255,255,255,0.8) !importan
 html.light .bg-slate-800 { background-color: #e2e8f0 !important; }
 html.light .bg-slate-800\/60 { background-color: rgba(226,232,240,0.7) !important; }
 html.light .bg-slate-800\/40 { background-color: rgba(226,232,240,0.5) !important; }
+html.light .bg-slate-700 { background-color: #cbd5e1 !important; }
+html.light .bg-slate-600 { background-color: #94a3b8 !important; }
+html.light .bg-slate-500 { background-color: #64748b !important; }
+html.light .bg-slate-400 { background-color: #475569 !important; }
+html.light .focus\:bg-slate-950:focus { background-color: #f8fafc !important; }
 html.light .border-slate-800 { border-color: #cbd5e1 !important; }
 html.light .border-slate-700 { border-color: #94a3b8 !important; }
+html.light .border-slate-600 { border-color: #64748b !important; }
+html.light .hover\:border-slate-800:hover { border-color: #cbd5e1 !important; }
+html.light .hover\:border-slate-700:hover { border-color: #94a3b8 !important; }
+html.light .hover\:border-slate-600:hover { border-color: #64748b !important; }
+html.light .hover\:border-slate-500:hover { border-color: #475569 !important; }
 html.light .text-slate-100 { color: #0f172a !important; }
 html.light .text-slate-200 { color: #1e293b !important; }
 html.light .text-slate-300 { color: #334155 !important; }
 html.light .text-slate-400 { color: #475569 !important; }
 html.light .text-slate-500 { color: #64748b !important; }
 html.light .text-slate-600 { color: #94a3b8 !important; }
+html.light .text-slate-700 { color: #cbd5e1 !important; }
+html.light .hover\:text-slate-100:hover { color: #0f172a !important; }
+html.light .hover\:text-slate-200:hover { color: #1e293b !important; }
+html.light .hover\:text-slate-300:hover { color: #334155 !important; }
+html.light .hover\:text-slate-400:hover { color: #475569 !important; }
+html.light .hover\:text-slate-700:hover { color: #cbd5e1 !important; }
 html.light .placeholder\:text-slate-400::placeholder { color: #64748b !important; }
+html.light .placeholder\:text-slate-500::placeholder { color: #94a3b8 !important; }
+html.light .placeholder\:text-slate-600::placeholder { color: #cbd5e1 !important; }
+html.light .placeholder-slate-400::placeholder { color: #64748b !important; }
 html.light .hover\:bg-slate-800:hover { background-color: #cbd5e1 !important; }
 html.light .hover\:bg-slate-800\/60:hover { background-color: rgba(203,213,225,0.7) !important; }
+html.light .hover\:bg-slate-900:hover { background-color: #f1f5f9 !important; }
 
 html.light .react-flow__background { background-color: #f1f5f9; }
 html.light .react-flow__controls,
