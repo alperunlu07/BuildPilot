@@ -1285,6 +1285,35 @@ function Editor({ pipeline }: Props) {
   );
 }
 
+// UI v2 Faz 5.A — palette "Recently used" tracking. Stored as a string[]
+// of step types, MRU at index 0, capped at 6 entries.
+const RECENTLY_USED_KEY = 'buildpilot.pipeline.palette.recentlyUsed';
+const RECENTLY_USED_LIMIT = 6;
+function readRecentlyUsed(): StepType[] {
+  try {
+    const raw = localStorage.getItem(RECENTLY_USED_KEY);
+    if (!raw) return [];
+    const arr = JSON.parse(raw);
+    if (!Array.isArray(arr)) return [];
+    return arr
+      .filter((v): v is string => typeof v === 'string')
+      .filter((v): v is StepType => v in STEP_DEFINITIONS)
+      .slice(0, RECENTLY_USED_LIMIT);
+  } catch {
+    return [];
+  }
+}
+export function trackPaletteUse(type: StepType): void {
+  try {
+    const current = readRecentlyUsed().filter((t) => t !== type);
+    const next = [type, ...current].slice(0, RECENTLY_USED_LIMIT);
+    localStorage.setItem(RECENTLY_USED_KEY, JSON.stringify(next));
+    window.dispatchEvent(new CustomEvent('buildpilot:palette-recently-used'));
+  } catch {
+    /* ignore */
+  }
+}
+
 function Palette({
   templates,
   onDeleteTemplate,
@@ -1296,6 +1325,14 @@ function Palette({
   // Track which groups are collapsed. Empty Set = all open. Persists for the
   // editor's lifetime; resets on page reload.
   const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set());
+  // Recently used types — refreshed on a custom event fired by
+  // PaletteItem.onDragStart so multi-palette views stay in sync.
+  const [recentlyUsed, setRecentlyUsed] = useState<StepType[]>(() => readRecentlyUsed());
+  useEffect(() => {
+    const onChange = () => setRecentlyUsed(readRecentlyUsed());
+    window.addEventListener('buildpilot:palette-recently-used', onChange);
+    return () => window.removeEventListener('buildpilot:palette-recently-used', onChange);
+  }, []);
 
   const q = query.trim().toLowerCase();
   const matches = (label: string, description: string) =>
@@ -1319,15 +1356,29 @@ function Palette({
         });
 
   return (
-    <div className="scrollbar-thin flex w-52 shrink-0 flex-col gap-2 overflow-y-auto border-r border-slate-800 bg-slate-950 p-3">
+    <div className="scrollbar-thin flex w-56 shrink-0 flex-col gap-2 overflow-y-auto border-r border-border-subtle bg-bg-panel p-2.5">
       <input
         type="text"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         placeholder="Search nodes…"
-        className="w-full rounded-md border border-slate-800 bg-slate-900 px-2 py-1 text-[12px] text-slate-200 placeholder:text-slate-400 focus:border-sky-500 focus:outline-none"
+        className="w-full rounded-btn border border-border-subtle bg-bg-base px-2 py-1.5 text-[12px] text-text-primary placeholder:text-text-faint focus:border-accent focus:ring-2 focus:ring-accent-soft focus:outline-none transition-colors"
       />
-      <div className="text-[11px] uppercase tracking-wider text-slate-400">Drag to canvas</div>
+
+      {/* Recently used — last 6 dragged types, persisted to localStorage.
+          Hidden while searching since the search hit-list is more useful. */}
+      {q === '' && recentlyUsed.length > 0 && (
+        <div className="flex flex-col gap-1 pt-1">
+          <div className="px-1 text-[9px] font-semibold uppercase tracking-wider text-text-muted">
+            Recently used
+          </div>
+          {recentlyUsed.map((type) => {
+            const def = STEP_DEFINITIONS[type];
+            if (!def) return null;
+            return <PaletteItem key={`recent-${type}`} type={type} def={def} />;
+          })}
+        </div>
+      )}
 
       {STEP_CATEGORIES.map((group) => {
         const items = group.types
@@ -1337,15 +1388,15 @@ function Palette({
         // While searching, force-expand groups so matches are always visible.
         const isOpen = q !== '' || !collapsed.has(group.key);
         return (
-          <div key={group.key} className="flex flex-col gap-1">
+          <div key={group.key} className="flex flex-col gap-1 pt-1">
             <button
               type="button"
               onClick={() => toggleGroup(group.key)}
-              className="flex items-center gap-1 rounded px-1 py-0.5 text-left text-[10px] font-semibold uppercase tracking-wider text-slate-400 hover:text-slate-200"
+              className="flex items-center gap-1 rounded px-1 py-0.5 text-left text-[9px] font-semibold uppercase tracking-wider text-text-muted hover:text-text-primary"
             >
               {isOpen ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
               <span className="flex-1 truncate">{group.label}</span>
-              <span className="text-slate-400">{items.length}</span>
+              <span className="font-mono text-text-faint">{items.length}</span>
             </button>
             {isOpen &&
               items.map(({ type, def }) => (
@@ -1356,8 +1407,8 @@ function Palette({
       })}
 
       {filteredTemplates.length > 0 && (
-        <div className="flex flex-col gap-1">
-          <div className="mt-2 px-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+        <div className="flex flex-col gap-1 pt-2 mt-1 border-t border-border-subtle">
+          <div className="px-1 text-[9px] font-semibold uppercase tracking-wider text-text-muted">
             Custom templates
           </div>
           {filteredTemplates.map((t) => {
@@ -1370,12 +1421,12 @@ function Palette({
                   e.dataTransfer.setData('application/buildpilot-template', t.id);
                   e.dataTransfer.effectAllowed = 'move';
                 }}
-                className="group relative touch-target cursor-grab rounded-md border bg-slate-900 px-2.5 py-1.5 text-[12px] text-slate-200 hover:border-slate-500"
-                style={{ borderColor: def.color, borderStyle: 'dashed' }}
+                className="group relative touch-target cursor-grab rounded-btn border border-dashed bg-bg-elevated px-2.5 py-1.5 text-[12px] text-text-primary hover:border-border transition-colors"
+                style={{ borderColor: def.color }}
                 title={t.description ?? `${def.label} preset`}
               >
                 <div className="truncate">{t.name}</div>
-                <div className="text-[9px] uppercase tracking-wider text-slate-400">
+                <div className="text-[9px] uppercase tracking-wider text-text-muted">
                   {def.label}
                 </div>
                 <button
@@ -1384,7 +1435,7 @@ function Palette({
                     e.stopPropagation();
                     onDeleteTemplate(t);
                   }}
-                  className="focusable touch-target absolute right-1 top-1 rounded p-0.5 text-slate-400 opacity-0 hover:text-rose-400 group-hover:opacity-100 [@media(pointer:coarse)]:opacity-100"
+                  className="touch-target absolute right-1 top-1 rounded p-0.5 text-text-muted opacity-0 hover:text-rose-300 group-hover:opacity-100 [@media(pointer:coarse)]:opacity-100"
                   title="Delete this template"
                   aria-label={`Delete template ${t.name}`}
                 >
@@ -1421,17 +1472,21 @@ function PaletteItem({
           e.dataTransfer.setData('application/buildpilot-step', type);
           e.dataTransfer.effectAllowed = 'move';
           setHover(false);
+          // UI v2 Faz 5.A — feed the "Recently used" rail when the user
+          // actually grabs a tile (not on hover) so the list reflects real
+          // intent.
+          trackPaletteUse(type);
         }}
         // touch-target so palette tiles stay comfortably tappable on touch
         // devices — drag-from-palette still works because we listen for
         // dragstart, not pointerdown.
-        className="touch-target cursor-grab rounded-md border bg-slate-900 px-2.5 py-1.5 text-[12px] text-slate-200 hover:border-slate-500"
+        className="touch-target cursor-grab rounded-btn border bg-bg-elevated px-2.5 py-1.5 text-[12px] text-text-primary hover:border-border transition-colors"
         style={{ borderColor: def.color }}
       >
         {def.label}
       </div>
       {hover && (
-        <div className="pointer-events-none absolute left-full top-0 z-50 ml-2 w-72 rounded-md border border-slate-700 bg-slate-900 p-3 text-[11px] text-slate-200 shadow-xl">
+        <div className="pointer-events-none absolute left-full top-0 z-50 ml-2 w-72 rounded-card border border-border bg-bg-panel p-3 text-[11px] text-text-primary shadow-xl">
           <div className="flex items-center gap-2">
             <span
               className="inline-block h-2 w-2 rounded-full"

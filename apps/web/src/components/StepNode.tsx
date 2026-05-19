@@ -142,96 +142,145 @@ export function StepNode({ id, type, data, selected }: NodeProps) {
   const d = data as StepNodeData;
   const disabled = d.disabled === true || d.disabled === 'true';
   const status = d.runtimeStatus;
-  const runtime = runtimeAppearance(status);
   const duration = formatDuration(d.runtimeStartedAt, d.runtimeFinishedAt, status);
   const missing = collectMissingRequired(type as StepType, data as Record<string, unknown>);
-
-  // Try to surface a one-line summary of the configured data.
   const summary = summariseData(type as StepType, data as Record<string, unknown>);
 
-  const borderColor = selected ? '#38bdf8' : runtime.borderColor ?? def.color;
-  const baseRing = selected ? '0 0 0 2px rgba(56,189,248,0.25)' : undefined;
-  const boxShadow = runtime.boxShadow ?? baseRing;
+  // UI v2 Faz 5.A — `.pn-node` layout from docs/designs/screens.css:
+  //   ┌─────────────────────────────┐
+  //   │ ▌ ◆ Step label              │  ← .pn-header (cat dot + icon + label)
+  //   │   summary line (optional)   │
+  //   ├─────────────────────────────┤
+  //   │ • status        12.3s       │  ← .pn-footer (status pill + duration)
+  //   └─────────────────────────────┘
+  // Plus an animated 2px gradient bar pinned to top while running, and a
+  // running glow via the parent rcVar.
+
+  const nodeStateClass = disabled
+    ? 'opacity-50'
+    : status === 'running'
+      ? 'border-status-running shadow-[0_0_24px_rgba(251,191,36,0.18)] motion-safe:animate-pulse-soft'
+      : status === 'success'
+        ? 'border-status-success/40'
+        : status === 'failed'
+          ? 'border-status-failed shadow-[0_0_24px_rgba(251,113,133,0.18)]'
+          : '';
+  const selectedClass = selected
+    ? 'border-accent shadow-[0_0_0_3px_var(--accent-soft),0_8px_20px_rgba(0,0,0,0.30)]'
+    : 'hover:border-border';
 
   return (
     <div
-      className={`rounded-md border bg-slate-900 px-3 py-2 shadow-md transition-shadow ${runtime.className} ${disabled ? 'opacity-50 [filter:grayscale(0.7)]' : ''}`}
-      style={{
-        borderColor,
-        boxShadow,
-        minWidth: 180,
-        borderStyle: disabled ? 'dashed' : 'solid',
-      }}
+      className={`relative overflow-hidden rounded-card border border-border-subtle bg-bg-elevated transition-[border-color,box-shadow,transform] duration-150 ${selectedClass} ${nodeStateClass} ${disabled ? 'border-dashed' : ''}`}
+      style={{ minWidth: 180 }}
       tabIndex={0}
       role="button"
       aria-label={`${d.templateLabel || def.label}${status ? `, ${status}` : ''}${disabled ? ', skipped' : ''}`}
       aria-pressed={selected}
       onKeyDown={onKeyDown}
     >
-      <Handle type="target" position={Position.Top} />
-      <div className="flex items-center gap-2">
+      {/* Running gradient bar pinned to the top edge */}
+      {status === 'running' && (
         <span
-          className="relative inline-flex h-6 w-6 items-center justify-center rounded-md"
-          style={{ backgroundColor: `${def.color}20`, color: def.color }}
+          aria-hidden
+          className="absolute inset-x-0 top-0 h-0.5 motion-safe:animate-progress-slide"
+          style={{
+            background:
+              'linear-gradient(90deg, transparent, var(--st-running), transparent)',
+          }}
+        />
+      )}
+
+      <Handle
+        type="target"
+        position={Position.Top}
+        className="!h-2 !w-2 !border-1.5 !border-border-emphasis !bg-bg-panel"
+      />
+
+      {/* Header */}
+      <div className="flex items-center gap-1.5 px-2.5 py-1.5">
+        {/* Category dot (4px-wide vertical bar) keyed to the step definition's color */}
+        <span
+          aria-hidden
+          className="block w-[3px] h-4 rounded-sm shrink-0"
+          style={{ backgroundColor: def.color }}
+        />
+        <span
+          className="inline-flex h-[18px] w-[18px] items-center justify-center rounded shrink-0"
+          style={{ backgroundColor: `${def.color}22`, color: def.color }}
         >
-          <Icon size={13} />
-          {status === 'running' && (
-            // motion-safe so reduced-motion users don't get the ping pulse
-            <span className="absolute inset-0 motion-safe:animate-ping rounded-md ring-2 ring-amber-400/50" />
-          )}
+          <Icon size={11} />
         </span>
         <span className="flex min-w-0 flex-1 flex-col">
-          <span className="truncate text-[13px] font-medium text-slate-100">
+          <span className="truncate text-[12px] font-medium text-text-primary leading-tight">
             {d.templateLabel || def.label}
           </span>
           {d.templateLabel && (
-            <span className="truncate text-[9px] uppercase tracking-wider text-slate-400">
+            <span className="truncate text-[9px] uppercase tracking-wider text-text-faint">
               {def.label}
             </span>
           )}
         </span>
-        {disabled && (
-          <span
-            className="ml-auto inline-flex items-center gap-1 rounded bg-slate-700/40 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-slate-400"
-            role="status"
-            aria-label="Skipped"
-          >
-            <Ban size={9} aria-hidden="true" /> skipped
-          </span>
-        )}
-        {status && !disabled && (
-          <span
-            className={`ml-auto inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider ${runtime.badgeClass}`}
-            role="status"
-            aria-label={`Step ${status}`}
-          >
-            {status === 'running' && (
-              <Loader2 size={9} className="motion-safe:animate-spin" aria-hidden="true" />
-            )}
-            {status === 'success' && <Check size={9} aria-hidden="true" />}
-            {status === 'failed' && <X size={9} aria-hidden="true" />}
-            {status === 'skipped' && <Ban size={9} aria-hidden="true" />}
-            {status}
-          </span>
-        )}
         {missing.length > 0 && !status && !disabled && (
           <span
-            className="ml-auto inline-flex h-4 w-4 items-center justify-center rounded-full bg-rose-500/20 text-rose-300"
+            className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-rose-500/20 text-rose-300 shrink-0"
             title={`Missing required fields: ${missing.join(', ')}`}
+            aria-label={`Missing required fields: ${missing.join(', ')}`}
           >
-            <AlertCircle size={11} />
+            <AlertCircle size={10} />
           </span>
         )}
       </div>
+
       {summary && (
-        <div className="mt-1 truncate text-[11px] text-slate-400" title={summary}>
+        <div
+          className="px-2.5 pb-1.5 -mt-1 truncate text-[10.5px] text-text-muted"
+          title={summary}
+        >
           {summary}
         </div>
       )}
-      {duration && (
-        <div className="mt-0.5 text-right font-mono text-[10px] text-slate-400">{duration}</div>
+
+      {/* Footer — only rendered when we have something to say (status, duration,
+          or disabled state). Avoids an empty band on freshly-dropped nodes. */}
+      {(status || disabled || duration) && (
+        <div className="flex items-center gap-1.5 px-2.5 py-1 border-t border-border-subtle bg-bg-panel text-[10.5px]">
+          {disabled ? (
+            <span
+              className="inline-flex items-center gap-1 text-text-muted"
+              role="status"
+              aria-label="Skipped"
+            >
+              <Ban size={9} aria-hidden /> skipped
+            </span>
+          ) : status === 'running' ? (
+            <span className="inline-flex items-center gap-1 text-status-running" role="status" aria-label="Step running">
+              <Loader2 size={9} className="motion-safe:animate-spin" aria-hidden /> running
+            </span>
+          ) : status === 'success' ? (
+            <span className="inline-flex items-center gap-1 text-status-success" role="status" aria-label="Step succeeded">
+              <Check size={9} aria-hidden /> succeeded
+            </span>
+          ) : status === 'failed' ? (
+            <span className="inline-flex items-center gap-1 text-status-failed" role="status" aria-label="Step failed">
+              <X size={9} aria-hidden /> failed
+            </span>
+          ) : status === 'skipped' ? (
+            <span className="inline-flex items-center gap-1 text-text-muted" role="status" aria-label="Step skipped">
+              <Ban size={9} aria-hidden /> skipped
+            </span>
+          ) : null}
+          {duration && (
+            <span className="ml-auto font-mono text-text-faint">{duration}</span>
+          )}
+        </div>
       )}
-      <Handle type="source" position={Position.Bottom} />
+
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        className="!h-2 !w-2 !border-1.5 !border-border-emphasis !bg-bg-panel"
+      />
     </div>
   );
 }

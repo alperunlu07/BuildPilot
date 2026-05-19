@@ -22,6 +22,29 @@
   .animate-pulse-dot { animation: none; }
 }
 
+/* UI v2 Faz 5.A — running step animations. `pulse-soft` is a low-amplitude
+   opacity pulse on the entire node so it reads as "active" without the
+   harsh tailwind `animate-pulse` strobe. `progress-slide` drives the 2px
+   gradient bar across the top of running nodes. */
+@keyframes pulse-soft {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.85; }
+}
+.animate-pulse-soft {
+  animation: pulse-soft 2.4s ease-in-out infinite;
+}
+@keyframes progress-slide {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+.animate-progress-slide {
+  animation: progress-slide 1.6s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-pulse-soft,
+  .animate-progress-slide { animation: none; }
+}
+
 html,
 body,
 #root {
