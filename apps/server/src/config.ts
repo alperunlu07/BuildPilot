@@ -11,6 +11,7 @@ import type {
 } from '@buildpilot/shared-types';
 import { decryptSecret, encryptSecret, isEncrypted } from './crypto/secrets';
 import { CONFIG_DIR } from './paths';
+import { ServerConfigSchema, formatValidationError } from './config-schema';
 
 const CONFIG_FILE = join(CONFIG_DIR, 'config.json');
 
@@ -197,7 +198,28 @@ export function loadConfig(): ServerConfig {
     return { ...DEFAULT_CONFIG };
   }
   const raw = readFileSync(CONFIG_FILE, 'utf-8');
-  const parsed = JSON.parse(raw) as Partial<ServerConfig>;
+  let parsedRaw: unknown;
+  try {
+    parsedRaw = JSON.parse(raw);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    process.stderr.write(
+      `Invalid JSON in ~/.buildpilot/config.json: ${msg}\n` +
+        `Fix the syntax error and restart the server.\n`,
+    );
+    process.exit(1);
+  }
+  // Validate against the Zod schema BEFORE merging defaults. We pass the
+  // raw object so any error messages cite the exact key the user wrote;
+  // hiding behind a merged shape would obscure what's actually wrong on
+  // disk. The schema is .passthrough() at the top level so unknown future
+  // keys don't trip startup.
+  const validation = ServerConfigSchema.safeParse(parsedRaw);
+  if (!validation.success) {
+    process.stderr.write(formatValidationError(validation.error, parsedRaw) + '\n');
+    process.exit(1);
+  }
+  const parsed = validation.data as Partial<ServerConfig>;
   const merged = { ...DEFAULT_CONFIG, ...parsed } as ServerConfig;
   // Old configs predate the auth block — backfill the default so the rest
   // of the helpers can assume `cfg.auth` is always present.
