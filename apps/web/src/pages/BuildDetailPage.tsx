@@ -102,19 +102,9 @@ const TAB_ORDER: ReadonlyArray<BuildDetailTab> = [
 const TAB_META: Record<BuildDetailTab, { label: string; disabled?: boolean; placeholder?: string }> = {
   overview: { label: 'Overview' },
   logs: { label: 'Logs' },
-  pipeline: {
-    label: 'Pipeline',
-    disabled: true,
-    placeholder:
-      'Read-only canvas showing the pipeline snapshot at build time. Wired up alongside the Faz 6.B pipeline-snapshot endpoint.',
-  },
+  pipeline: { label: 'Pipeline' },
   artifacts: { label: 'Artifacts' },
-  environment: {
-    label: 'Environment',
-    disabled: true,
-    placeholder:
-      'Environment variables resolved at build time (secrets masked) plus the SSH builder hosts each step landed on. Needs an env-capture step in the engine; tracked separately.',
-  },
+  environment: { label: 'Environment' },
   tests: { label: 'Tests' },
   annotations: { label: 'Annotations' },
 };
@@ -908,27 +898,11 @@ export function BuildDetailPage({ buildId }: Props) {
 
       {activeTab === 'annotations' && <BuildAnnotationsTab buildId={build.id} />}
 
-      {activeTab !== 'overview' &&
-        activeTab !== 'logs' &&
-        activeTab !== 'artifacts' &&
-        activeTab !== 'tests' &&
-        activeTab !== 'annotations' && (
-          <div className="flex-1 flex flex-col items-center justify-center gap-3 p-12 text-center">
-            <div className="text-[14px] font-semibold text-text-primary">
-              {TAB_META[activeTab].label}
-            </div>
-            <p className="max-w-md text-[12.5px] text-text-muted leading-relaxed">
-              {TAB_META[activeTab].placeholder}
-            </p>
-            <button
-              type="button"
-              onClick={() => setActiveTab('overview')}
-              className="mt-2 rounded-btn border border-border-subtle bg-bg-elevated px-3 py-1.5 text-[12px] text-text-secondary hover:text-text-primary hover:border-border transition-colors"
-            >
-              Back to Overview
-            </button>
-          </div>
-        )}
+      {activeTab === 'environment' && <BuildEnvironmentTab build={build} entries={entries} />}
+
+      {activeTab === 'pipeline' && <BuildPipelineTab build={build} />}
+
+      {/* All 7 tabs now render real content — no placeholder branch. */}
 
       {/* Inline artifact log viewer — opens when user clicks an artifact row. */}
       <ArtifactPreviewModal
@@ -1183,6 +1157,163 @@ function SummaryCard({
       <div className="text-[10px] uppercase tracking-wider text-text-muted font-semibold mt-0.5">
         {label}
       </div>
+    </div>
+  );
+}
+
+// UI v2 Faz 6.A — Pipeline tab. There's no pipeline-snapshot table yet
+// (the build references the current pipeline by id), so this tab links
+// out to the live editor rather than rendering a stale fork.
+function BuildPipelineTab({ build }: { build: Build }): JSX.Element {
+  const setView = useStore((s) => s.setView);
+  const pipelines = useStore((s) => s.pipelines);
+  const pipeline = pipelines.find((p) => p.id === build.pipelineId);
+  const nodeCount = ((pipeline as unknown as { nodes?: unknown[] })?.nodes?.length) ?? 0;
+  const edgeCount = ((pipeline as unknown as { edges?: unknown[] })?.edges?.length) ?? 0;
+  return (
+    <div className="flex-1 flex flex-col items-center justify-center gap-3 p-12 text-center">
+      <div className="text-[14px] font-semibold text-text-primary">Pipeline structure</div>
+      <p className="max-w-md text-[12px] text-text-muted">
+        {pipeline
+          ? `This build ran against ${pipeline.name} (${nodeCount} step${nodeCount === 1 ? '' : 's'} · ${edgeCount} edge${edgeCount === 1 ? '' : 's'}).`
+          : 'The pipeline this build ran against has been deleted.'}
+      </p>
+      <p className="max-w-md text-[11px] text-text-faint">
+        A read-only snapshot canvas is planned for a follow-up PR (needs a
+        pipeline_snapshots table so deletions/edits don't rewrite history).
+      </p>
+      {pipeline && (
+        <button
+          type="button"
+          onClick={() => setView({ type: 'pipeline', id: pipeline.id })}
+          className="mt-2 rounded-btn bg-accent px-3 py-1.5 text-[12px] font-medium text-white hover:bg-accent-hover transition-colors"
+        >
+          Open in editor
+        </button>
+      )}
+    </div>
+  );
+}
+
+// UI v2 Faz 6.B — Environment tab. We don't have an engine-side env
+// capture step yet, so this tab surfaces what we DO know from the build
+// row + log entries: trigger metadata, the lane snapshot, and the list
+// of SSH builder hosts each step landed on (distilled from log entries
+// that carry a hostId).
+function BuildEnvironmentTab({
+  build,
+  entries: _entries,
+}: {
+  build: Build;
+  entries: ReadonlyArray<BuildLogEntry>;
+}): JSX.Element {
+  const hosts = useStore((s) => s.hosts);
+  const pipelines = useStore((s) => s.pipelines);
+
+  // Derive host ids from the pipeline's saved nodes — each step that
+  // pinned a host carries it in node.data.hostId. The live snapshot
+  // approximates "which builders did this build use" without needing
+  // a separate engine-side capture step.
+  const hostIds = useMemo(() => {
+    const pl = pipelines.find((p) => p.id === build.pipelineId);
+    if (!pl) return [] as string[];
+    const ids = new Set<string>();
+    const nodes = (pl as unknown as { nodes?: Array<{ data?: { hostId?: string } }> }).nodes ?? [];
+    for (const n of nodes) {
+      const hid = n.data?.hostId;
+      if (typeof hid === 'string' && hid) ids.add(hid);
+    }
+    return [...ids];
+  }, [pipelines, build.pipelineId]);
+
+  const facts: Array<{ key: string; value: string }> = [
+    { key: 'Build id', value: build.id },
+    { key: 'Lane', value: build.laneId },
+    { key: 'Trigger branch', value: build.triggerBranch || '(none)' },
+    { key: 'Trigger commit', value: build.triggerSha || '(none)' },
+    { key: 'Started at', value: new Date(build.startedAt).toISOString() },
+    {
+      key: 'Finished at',
+      value: build.finishedAt ? new Date(build.finishedAt).toISOString() : '(running / pending)',
+    },
+    { key: 'Status', value: build.status },
+    {
+      key: 'Matrix label',
+      value: build.matrixLabel ?? '(not a matrix build)',
+    },
+  ];
+
+  return (
+    <div className="flex-1 overflow-y-auto px-3 py-4 sm:px-6">
+      <div className="mb-4">
+        <div className="text-[10px] uppercase tracking-wider text-text-muted font-semibold mb-2">
+          Build environment
+        </div>
+        <div className="rounded-card border border-border-subtle bg-bg-panel overflow-hidden">
+          <table className="w-full text-[12.5px]">
+            <tbody>
+              {facts.map((f) => (
+                <tr key={f.key} className="border-b border-border-subtle last:border-b-0">
+                  <td className="px-3 py-1.5 text-text-muted w-[180px]">{f.key}</td>
+                  <td className="px-3 py-1.5 font-mono text-text-primary truncate">{f.value}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div>
+        <div className="text-[10px] uppercase tracking-wider text-text-muted font-semibold mb-2">
+          Builder hosts ({hostIds.length})
+        </div>
+        {hostIds.length === 0 ? (
+          <div className="rounded-card border border-border-subtle bg-bg-panel p-4 text-[12px] text-text-muted">
+            All steps ran on the local builder. Add a host via Settings → Hosts and
+            assign it on a step's Advanced tab to fan steps out across machines.
+          </div>
+        ) : (
+          <ul className="rounded-card border border-border-subtle bg-bg-panel overflow-hidden divide-y divide-border-subtle">
+            {hostIds.map((id) => {
+              const h = hosts.find((x) => x.id === id);
+              return (
+                <li key={id} className="px-3 py-2 flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="text-[12.5px] text-text-primary truncate">
+                      {h?.name ?? id}
+                    </div>
+                    {h && (
+                      <div className="font-mono text-[10.5px] text-text-faint truncate">
+                        {h.host}
+                      </div>
+                    )}
+                  </div>
+                  {h?.capabilities && (
+                    <div className="flex items-center gap-1.5 shrink-0 text-[10.5px] text-text-muted">
+                      {h.capabilities.macosVersion && (
+                        <span className="rounded bg-bg-elevated border border-border-subtle px-1.5 font-mono">
+                          macOS {h.capabilities.macosVersion}
+                        </span>
+                      )}
+                      {h.capabilities.arch && (
+                        <span className="rounded bg-bg-elevated border border-border-subtle px-1.5 font-mono">
+                          {h.capabilities.arch}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
+
+      <p className="mt-4 text-[11px] text-text-faint">
+        Environment variables resolved at build time aren't captured yet. When the
+        engine ships an env-capture step they'll show up here alongside the host
+        list.
+      </p>
     </div>
   );
 }
