@@ -196,12 +196,16 @@ Her PR'ın sonunda: `pnpm test` (tam suite, en az 525/525), `pnpm typecheck` (4 
 
 - **T6.B.1** — **Artifacts tab**: grid view, her artifact için Eye/Copy/Download aksiyonları, preview modal (image/log/json).
 - **T6.B.2** — **Environment tab**: env değişkenleri (encrypted alanlar maskeli), SSH builder listesi (bu build hangi hostlarda çalıştı).
-- **T6.B.3** — **Tests tab**: pass/fail/flaky sayıları, failed test detayları (stdout + stack trace). Test data nereden gelir — bu yeni bir backend kontratı; data.js'deki şemayı `shared-types`'a port etmek gerekebilir.
-- **T6.B.4** — **Annotations tab**: derleyici warning'leri, lint hataları. Aynı backend kontratı sorusu.
+- **T6.B.3** — **Tests tab**: pass/fail/flaky sayıları, failed test detayları (stdout + stack trace). **Backend contract zaten var** (`TestReportTree`, `GET /api/builds/:id/test-report`).
+- **T6.B.4** — **Annotations tab**: derleyici warning'leri, lint hataları. `Annotation` + `AnnotationsReport` tipleri eklendi (reality-check PR'ı). **Parser + endpoint Faz 6.B'de yazılacak**:
+  - Yeni `annotations` tablosu (build_id FK + Annotation alanları).
+  - Per-source parser'lar: xcodebuild log (yeni), swiftlint JSON (yeni), eslint JSON (yeni), gradle output (yeni).
+  - `GET /api/builds/:id/annotations` endpoint'i `AnnotationsReport` döner.
+  - Parser'lar `runner/finalisers` katmanında step bittikten sonra step output'unu okuyup persist eder (test reports'a benzer akış).
 
-**Verification:** Build sayfası 7 tab gösterir. Her tab içeriği yüklenir (Tests + Annotations data'sı yoksa "No data" placeholder).
+**Verification:** Build sayfası 7 tab gösterir. Her tab içeriği yüklenir.
 
-**Risk:** Tests + Annotations backend kontratı yok. Backend tarafında step output parse + persist mekanizması gerekecek — ya tasarım için fake data ile başlanır ya da bu iki tab Faz 12'ye ertelenir.
+**Risk azaltıldı:** Tests artık backend bekletmeden yapılabilir. Annotations için tip + tablo + parser şu sıralamayla PR'lanır: (1) DB migration + endpoint stub, (2) xcodebuild parser, (3) swiftlint parser, (4) eslint parser, (5) UI tab.
 
 ---
 
