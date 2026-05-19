@@ -1,16 +1,46 @@
 import type {
+  ApiToken,
+  AuditEventsResponse,
+  AuditAction,
+  AuditResource,
+  ApprovalDecideRequest,
   Build,
+  BuildApproval,
   BuildArtifact,
   BuildLogEntry,
+  BuildTrendsReport,
   Commit,
+  CoverageReport,
+  CreatedApiToken,
+  CreateUserInput,
+  DiskUsageReport,
+  FlakyTestsReport,
+  HomeMetrics,
+  Matrix,
+  MeResponse,
   NodeTemplate,
+  NotificationPrefs,
   Pipeline,
+  PipelineMetrics,
+  PrContext,
   Project,
   ProjectSummary,
+  ProjectVcsConfig,
+  ProjectVcsUpdate,
+  PruneBuildsResponse,
+  Secret,
+  SecretUsage,
   SshHost,
   StepType,
   TelegramConfigPublic,
   TelegramConfigUpdate,
+  TestReportKind,
+  TestReportTree,
+  UpdateUserInput,
+  User,
+  VaultFile,
+  VcsCredential,
+  VcsCredentialCreate,
 } from '@buildpilot/shared-types';
 
 const API = '/api';
@@ -26,7 +56,10 @@ async function http<T>(path: string, init?: RequestInit): Promise<T> {
   }
   if (init?.headers) Object.assign(headers, init.headers);
 
-  const res = await fetch(`${API}${path}`, { ...init, headers });
+  // Always include credentials so the session cookie (Cluster 11.A) makes
+  // it back and forth in dev mode where the API + web run on different
+  // ports. When auth is disabled the cookie isn't set, so this is a no-op.
+  const res = await fetch(`${API}${path}`, { credentials: 'include', ...init, headers });
   if (!res.ok) {
     const text = await res.text().catch(() => '');
     throw new Error(`${res.status} ${res.statusText}${text ? `: ${text}` : ''}`);
@@ -64,6 +97,15 @@ export const api = {
     http<{ ok: true }>(`/projects/${id}/fetch`, { method: 'POST' }),
   currentBranch: (id: string) =>
     http<{ branch: string; sha: string | null }>(`/projects/${id}/current-branch`),
+  // Cluster 11.G — tag-pattern preview. Returns each tag with the SHA it
+  // points at, sorted with a numeric-aware reverse compare (so v2.10 sorts
+  // after v2.9).
+  projectTags: (id: string, limit = 50) =>
+    http<Array<{ tag: string; sha: string }>>(`/projects/${id}/tags?limit=${limit}`),
+  // Cluster 11.G — list of changed files for a single commit. Used by the
+  // path-filter preview row drop-down.
+  commitChangedFiles: (id: string, sha: string) =>
+    http<{ sha: string; files: string[] }>(`/projects/${id}/commits/${sha}/changed-files`),
   projectSparkline: (id: string, limit = 30) =>
     http<Array<{
       id: string;
@@ -87,6 +129,13 @@ export const api = {
     http<Pipeline>(`/pipelines/${id}/clone`, {
       method: 'POST',
       body: JSON.stringify(name ? { name } : {}),
+    }),
+  // Cluster 11.C — declare / clear a matrix on a pipeline. Pass `null`
+  // to revert to the single-build (non-matrix) behavior.
+  pipelineSetMatrix: (id: string, matrix: Matrix | null) =>
+    http<Pipeline>(`/pipelines/${id}/matrix`, {
+      method: 'POST',
+      body: JSON.stringify({ matrix }),
     }),
 
   // ── Builds ───────────────────────────────────────────────
@@ -123,6 +172,19 @@ export const api = {
     }),
   cancelBuild: (id: string) =>
     http<{ ok: true }>(`/builds/${id}/cancel`, { method: 'POST' }),
+  // Cluster 11.C — child builds for a matrix parent. Returns [] when
+  // the parent isn't a matrix run or when the id refers to a regular
+  // single build.
+  listChildBuilds: (parentId: string) =>
+    http<Build[]>(`/builds/${parentId}/children`),
+  // Cluster 11.C — re-run only the failed (or cancelled) cells of a
+  // matrix parent. Spawns replacement child builds in place; the parent
+  // build is flipped back to running until the new pass settles.
+  rerunFailedMatrixCells: (parentId: string) =>
+    http<{ ok: true; rerun: number; children: Build[] }>(
+      `/builds/${parentId}/rerun-failed`,
+      { method: 'POST' },
+    ),
 
   // ── Node templates ───────────────────────────────────────
   listNodeTemplates: () => http<NodeTemplate[]>('/node-templates'),
@@ -180,6 +242,21 @@ export const api = {
       `/hosts/${id}/ping`,
       { method: 'POST' },
     ),
+  // Cluster 11.H — recent builds that ran (or are running) on this host.
+  // Pipeline-current-state best-effort; see server-side comment.
+  listHostBuilds: (id: string, limit = 50) =>
+    http<Array<{
+      id: string;
+      pipelineId: string;
+      projectId: string;
+      status: 'pending' | 'running' | 'success' | 'failed' | 'cancelled';
+      startedAt: number;
+      finishedAt: number | null;
+    }>>(`/hosts/${id}/builds?limit=${limit}`),
+  // Cluster 11.H — hourly concurrent build count buckets for a host load
+  // chart. Returns chronological order, oldest → newest.
+  hostLoad: (id: string, hours = 24) =>
+    http<Array<{ t: number; concurrent: number }>>(`/hosts/${id}/load?hours=${hours}`),
 
   // ── Telegram settings ────────────────────────────────────
   getTelegramConfig: () => http<TelegramConfigPublic>('/config/telegram'),
@@ -192,5 +269,182 @@ export const api = {
     http<{ ok: true } | { ok: false; error: string }>('/config/telegram/test', {
       method: 'POST',
       body: JSON.stringify(input),
+    }),
+
+  // ── Test channel (Cluster 11.I) ──────────────────────────
+  // Fires the step's runtime executor with the supplied data and reports
+  // the result inline. Used by the "Send test" button on every notify step.
+  testNotify: (input: { stepType: string; data: Record<string, unknown> }) =>
+    http<
+      | { ok: true; lines: Array<{ level: string; message: string }> }
+      | { ok: false; error: string; lines?: Array<{ level: string; message: string }> }
+    >('/test-notify', { method: 'POST', body: JSON.stringify(input) }),
+
+  // ── Metrics (Cluster 10.D) ───────────────────────────────
+  homeMetrics: () => http<HomeMetrics>('/metrics/home'),
+  pipelineMetrics: (id: string) => http<PipelineMetrics>(`/metrics/pipeline/${id}`),
+  diskUsage: () => http<DiskUsageReport>('/metrics/disk-usage'),
+  pruneBuilds: (olderThanDays: number) =>
+    http<PruneBuildsResponse>(`/builds/prune?olderThanDays=${olderThanDays}`, {
+      method: 'POST',
+    }),
+
+  // ── Observability — test reports + coverage (Cluster 11.F) ───────────
+  testReport: (
+    buildId: string,
+    opts: { kind?: TestReportKind; artifactId?: number } = {},
+  ) => {
+    const qs = new URLSearchParams();
+    if (opts.kind) qs.set('kind', opts.kind);
+    if (opts.artifactId !== undefined) qs.set('artifactId', String(opts.artifactId));
+    const q = qs.toString();
+    return http<TestReportTree>(`/builds/${buildId}/test-report${q ? `?${q}` : ''}`);
+  },
+  buildCoverage: (buildId: string) => http<CoverageReport>(`/builds/${buildId}/coverage`),
+
+  // Flaky test detection (Cluster 11.F item 4).
+  flakyTests: (pipelineId: string, buildCount = 30) =>
+    http<FlakyTestsReport>(`/flaky-tests?pipelineId=${pipelineId}&buildCount=${buildCount}`),
+  quarantineFlakyTest: (pipelineId: string, testKey: string, quarantined: boolean) =>
+    http<{ pipelineId: string; quarantined: string[] }>(
+      `/flaky-tests/${pipelineId}/quarantine`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ testKey, quarantined }),
+      },
+    ),
+
+  // Build duration trend (Cluster 11.F item 5).
+  buildTrends: (pipelineId: string, buildCount = 100) =>
+    http<BuildTrendsReport>(`/metrics/trends?pipelineId=${pipelineId}&buildCount=${buildCount}`),
+
+  // ── Auth (Cluster 11.A) ──────────────────────────────────
+  me: () => http<MeResponse>('/auth/me'),
+  login: (input: { username: string; password: string }) =>
+    http<{ user: User; expiresAt: number }>('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
+  logout: () => http<{ ok: true }>('/auth/logout', { method: 'POST' }),
+
+  // ── Users (Cluster 11.A) ─────────────────────────────────
+  listUsers: () => http<User[]>('/users'),
+  getCurrentUser: () => http<User>('/users/me'),
+  createUser: (input: CreateUserInput) =>
+    http<User>('/users', { method: 'POST', body: JSON.stringify(input) }),
+  updateUser: (id: string, patch: UpdateUserInput) =>
+    http<User>(`/users/${id}`, { method: 'PATCH', body: JSON.stringify(patch) }),
+  updateCurrentUser: (patch: UpdateUserInput) =>
+    http<User>('/users/me', { method: 'PATCH', body: JSON.stringify(patch) }),
+  updateNotificationPrefs: (prefs: NotificationPrefs) =>
+    http<User>('/users/me', {
+      method: 'PATCH',
+      body: JSON.stringify({ notificationPrefs: prefs }),
+    }),
+  deleteUser: (id: string) =>
+    http<{ ok: true }>(`/users/${id}`, { method: 'DELETE' }),
+
+  // ── Audit log (Cluster 11.A) ─────────────────────────────
+  listAuditEvents: (
+    filter: {
+      actor?: string;
+      action?: AuditAction;
+      resource?: AuditResource;
+      since?: number;
+      until?: number;
+      limit?: number;
+    } = {},
+  ) => {
+    const qs = new URLSearchParams();
+    if (filter.actor) qs.set('actor', filter.actor);
+    if (filter.action) qs.set('action', filter.action);
+    if (filter.resource) qs.set('resource', filter.resource);
+    if (filter.since !== undefined) qs.set('since', String(filter.since));
+    if (filter.until !== undefined) qs.set('until', String(filter.until));
+    if (filter.limit !== undefined) qs.set('limit', String(filter.limit));
+    const q = qs.toString();
+    return http<AuditEventsResponse>(`/audit-log${q ? `?${q}` : ''}`);
+  },
+  listAuditActors: () => http<string[]>('/audit-log/actors'),
+
+  // ── API tokens (Cluster 11.A) ────────────────────────────
+  listApiTokens: () => http<ApiToken[]>('/api-tokens'),
+  createApiToken: (input: { name: string; userId?: string }) =>
+    http<CreatedApiToken>('/api-tokens', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
+  deleteApiToken: (id: string) =>
+    http<{ ok: true }>(`/api-tokens/${id}`, { method: 'DELETE' }),
+
+  // ── Cluster 11.B — secrets & file vault ───────────────────
+  listSecrets: () => http<Secret[]>('/secrets'),
+  getSecret: (name: string) =>
+    http<Secret>(`/secrets/${encodeURIComponent(name)}`),
+  createSecret: (input: { name: string; value: string }) =>
+    http<Secret>('/secrets', { method: 'POST', body: JSON.stringify(input) }),
+  rotateSecret: (name: string, value: string) =>
+    http<Secret>(`/secrets/${encodeURIComponent(name)}`, {
+      method: 'PUT',
+      body: JSON.stringify({ value }),
+    }),
+  deleteSecret: (name: string) =>
+    http<{ ok: true }>(`/secrets/${encodeURIComponent(name)}`, { method: 'DELETE' }),
+  secretUsages: (name: string) =>
+    http<SecretUsage[]>(`/secrets/${encodeURIComponent(name)}/usages`),
+
+  listVaultFiles: () => http<VaultFile[]>('/vault-files'),
+  getVaultFile: (name: string) =>
+    http<VaultFile>(`/vault-files/${encodeURIComponent(name)}`),
+  uploadVaultFile: (input: {
+    name: string;
+    filename: string;
+    mime: string;
+    contentBase64: string;
+  }) =>
+    http<VaultFile>('/vault-files', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
+  deleteVaultFile: (name: string) =>
+    http<{ ok: true }>(`/vault-files/${encodeURIComponent(name)}`, { method: 'DELETE' }),
+  vaultFileDownloadUrl: (name: string) =>
+    `${API}/vault-files/${encodeURIComponent(name)}/download`,
+
+  // ── VCS credentials + per-project link (Cluster 11.E) ────────────────────
+  listVcsCredentials: () => http<VcsCredential[]>('/vcs/credentials'),
+  createVcsCredential: (input: VcsCredentialCreate) =>
+    http<VcsCredential>('/vcs/credentials', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    }),
+  deleteVcsCredential: (id: string) =>
+    http<{ ok: true }>(`/vcs/credentials/${id}`, { method: 'DELETE' }),
+  getProjectVcs: (id: string) => http<ProjectVcsConfig>(`/projects/${id}/vcs`),
+  setProjectVcs: (id: string, input: ProjectVcsUpdate) =>
+    http<ProjectVcsConfig>(`/projects/${id}/vcs`, {
+      method: 'PUT',
+      body: JSON.stringify(input),
+    }),
+
+  // PR context for a build (Cluster 11.E item 3).
+  buildPrContext: (buildId: string) =>
+    http<PrContext & { provider: VcsCredential['provider'] | null; repo: string | null }>(
+      `/builds/${buildId}/pr-context`,
+    ),
+
+  // ── Manual approval steps (Cluster 11.D) ─────────────────
+  listApprovals: (role?: string) =>
+    http<BuildApproval[]>(`/approvals${role ? `?role=${encodeURIComponent(role)}` : ''}`),
+  buildApprovals: (buildId: string) =>
+    http<BuildApproval[]>(`/builds/${buildId}/approvals`),
+  decideApproval: (
+    buildId: string,
+    approvalId: string,
+    body: ApprovalDecideRequest,
+  ) =>
+    http<BuildApproval>(`/builds/${buildId}/approvals/${approvalId}/decide`, {
+      method: 'POST',
+      body: JSON.stringify(body),
     }),
 };

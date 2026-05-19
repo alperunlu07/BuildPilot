@@ -9,9 +9,13 @@
     "build": "pnpm --filter \"./apps/*\" run build",
     "start": "pnpm --filter @buildpilot/server run start",
     "typecheck": "pnpm -r --if-present run typecheck",
-    "test": "pnpm -r --if-present run test"
+    "test": "pnpm -r --if-present run test && pnpm test:e2e",
+    "test:e2e": "playwright test --config=e2e/playwright.config.ts --project=happy-path",
+    "test:visreg": "playwright test --config=e2e/playwright.config.ts --project=visreg",
+    "seed": "pnpm --filter @buildpilot/server seed"
   },
   "devDependencies": {
+    "@playwright/test": "^1.49.0",
     "typescript": "^5.6.3"
   },
   "pnpm": {

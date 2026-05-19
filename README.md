@@ -344,9 +344,26 @@ On first run a default config is written to `~/.buildpilot/config.json`:
 }
 ```
 
-Set `host` to `0.0.0.0` to expose the dashboard on your LAN. **There
-is no authentication yet** — only do this on a network you trust (or
-front it with Tailscale / a reverse proxy with auth).
+Set `host` to `0.0.0.0` to expose the dashboard on your LAN. By default
+**authentication is disabled** so single-user installs Just Work. To turn
+on LAN auth (Cluster 11.A):
+
+1. Add an `auth: { enabled: true }` block to `~/.buildpilot/config.json`
+   (or flip the existing one). On the next server start a random
+   `sessionSecret` is generated and persisted encrypted-at-rest.
+2. Restart the server, navigate to the dashboard, and create the first
+   user via `POST /api/users` — this bootstrap call is allowed without
+   authentication while the user table is empty, and the resulting user
+   is forced to the `admin` role.
+3. From then on, the dashboard redirects to `/login` for unauthenticated
+   visitors and every request to the API enforces the session cookie or
+   `Authorization: Bearer <token>` header. Long-lived tokens live at
+   `/api-tokens`. The audit log at `/audit` records every state-mutating
+   call regardless of whether auth is on (anonymous calls show up as
+   `actor: anonymous`).
+
+To go back to the open default, set `auth.enabled` back to `false` and
+restart the server.
 
 You don't need to edit this file by hand for normal use — the dashboard's
 Settings page handles Telegram, and project / pipeline / host data lives
@@ -405,7 +422,21 @@ pnpm build      # production build of both apps
 pnpm start      # run the built server (no web dev server)
 pnpm typecheck  # tsc --noEmit across the workspace
 pnpm test       # run vitest suites
+pnpm seed       # populate a fresh DB with 3 demo projects + pipelines + history
 ```
+
+The seed script is idempotent (skips if "Demo: iOS app" already exists)
+and points each demo project at an isolated git repo in `$TMPDIR`. Use
+`BUILDPILOT_HOME=/tmp/bp-dev pnpm seed` to seed into a sandbox directory
+without touching your real `~/.buildpilot` install.
+
+### Storybook
+
+The web app ships a Storybook 8 component library so reviewers can browse
+UI variants in isolation (no API / SSE required). Run
+`pnpm --filter @buildpilot/web storybook` to launch the dev server on
+`localhost:6006`, or `pnpm --filter @buildpilot/web build-storybook` to
+emit a static bundle under `apps/web/storybook-static/`.
 
 ## Docs
 
@@ -417,6 +448,8 @@ pnpm test       # run vitest suites
 - [docs/TELEGRAM.md](docs/TELEGRAM.md) — bot setup, commands, approval
   flow, troubleshooting
 - [TODO.md](TODO.md) — living roadmap with commit-linked progress
+- [docs/UX-ROADMAP.md](docs/UX-ROADMAP.md) — UI/UX + platform polish
+  roadmap (companion to TODO.md)
 
 ## Roadmap highlights
 

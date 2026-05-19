@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { Project } from '@buildpilot/shared-types';
+import type { Project, VcsProvider } from '@buildpilot/shared-types';
 import { getDb } from './db';
 
 interface ProjectRow {
@@ -8,6 +8,9 @@ interface ProjectRow {
   path: string;
   default_branch: string;
   created_at: number;
+  vcs_provider: string | null;
+  vcs_repo: string | null;
+  vcs_credential_id: string | null;
 }
 
 function rowToProject(row: ProjectRow): Project {
@@ -17,6 +20,9 @@ function rowToProject(row: ProjectRow): Project {
     path: row.path,
     defaultBranch: row.default_branch,
     createdAt: row.created_at,
+    vcsProvider: (row.vcs_provider as VcsProvider | null) ?? null,
+    vcsRepo: row.vcs_repo ?? null,
+    vcsCredentialId: row.vcs_credential_id ?? null,
   };
 }
 
@@ -65,4 +71,29 @@ export function createProject(input: {
 
 export function deleteProject(id: string): void {
   getDb().prepare('DELETE FROM projects WHERE id = ?').run(id);
+}
+
+// Cluster 11.E — update the VCS link for a project. All three fields move
+// together; passing null on any of them clears the link entirely.
+export function updateProjectVcs(
+  id: string,
+  vcs: {
+    vcsProvider: VcsProvider | null;
+    vcsRepo: string | null;
+    vcsCredentialId: string | null;
+  },
+): Project | null {
+  // Normalize: if any required field is empty, clear all three (we only
+  // post when the full triple is present).
+  const allPresent =
+    vcs.vcsProvider !== null && vcs.vcsRepo !== null && vcs.vcsRepo.length > 0 && vcs.vcsCredentialId !== null;
+  const provider = allPresent ? vcs.vcsProvider : null;
+  const repo = allPresent ? vcs.vcsRepo : null;
+  const cred = allPresent ? vcs.vcsCredentialId : null;
+  getDb()
+    .prepare(
+      `UPDATE projects SET vcs_provider = ?, vcs_repo = ?, vcs_credential_id = ? WHERE id = ?`,
+    )
+    .run(provider, repo, cred, id);
+  return getProject(id);
 }

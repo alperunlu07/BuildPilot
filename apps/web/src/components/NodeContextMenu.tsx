@@ -1,0 +1,98 @@
+import { useEffect, useRef } from 'react';
+import { Copy, EyeOff, Play, Plus, Trash2 } from 'lucide-react';
+
+export interface NodeContextMenuProps {
+  x: number;
+  y: number;
+  nodeId: string;
+  disabled: boolean;
+  onClose(): void;
+  onRunFrom?(nodeId: string): void;
+  onClone(nodeId: string): void;
+  onDelete(nodeId: string): void;
+  onCopy(nodeId: string): void;
+  onToggleDisable(nodeId: string): void;
+}
+
+export function NodeContextMenu(props: NodeContextMenuProps) {
+  const { x, y, nodeId, disabled, onClose } = props;
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const onClick = (e: MouseEvent) => {
+      if (!ref.current?.contains(e.target as Node)) onClose();
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('mousedown', onClick);
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('mousedown', onClick);
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [onClose]);
+
+  const items: Array<{
+    label: string;
+    icon: React.ReactNode;
+    onClick(): void;
+    danger?: boolean;
+    hidden?: boolean;
+  }> = [
+    {
+      label: 'Run from here',
+      icon: <Play size={12} />,
+      onClick: () => props.onRunFrom?.(nodeId),
+      hidden: !props.onRunFrom,
+    },
+    {
+      label: 'Clone',
+      icon: <Plus size={12} />,
+      onClick: () => props.onClone(nodeId),
+    },
+    {
+      label: 'Copy',
+      icon: <Copy size={12} />,
+      onClick: () => props.onCopy(nodeId),
+    },
+    {
+      label: disabled ? 'Enable' : 'Disable',
+      icon: <EyeOff size={12} />,
+      onClick: () => props.onToggleDisable(nodeId),
+    },
+    {
+      label: 'Delete',
+      icon: <Trash2 size={12} />,
+      onClick: () => props.onDelete(nodeId),
+      danger: true,
+    },
+  ];
+
+  return (
+    <div
+      ref={ref}
+      style={{ left: x, top: y }}
+      className="fixed z-50 min-w-[160px] rounded-md border border-slate-700 bg-slate-900 py-1 text-[12px] text-slate-200 shadow-xl"
+    >
+      {items
+        .filter((it) => !it.hidden)
+        .map((it) => (
+          <button
+            key={it.label}
+            type="button"
+            onClick={() => {
+              it.onClick();
+              onClose();
+            }}
+            className={`flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-slate-800 ${
+              it.danger ? 'text-rose-300 hover:text-rose-200' : ''
+            }`}
+          >
+            {it.icon}
+            {it.label}
+          </button>
+        ))}
+    </div>
+  );
+}

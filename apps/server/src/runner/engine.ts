@@ -12,6 +12,9 @@ import { appendBuildLogEntry } from '../store/buildLogs';
 import { setPipelineLastBuiltSha } from '../store/pipelines';
 import { eventBus } from '../events/bus';
 import { cancelBuild, isCancelled, trackChild } from './coordinator';
+import { interpolateStepData } from '../secrets/interpolation';
+import { logger } from '../logger';
+import { postCheckRun } from '../vcs';
 import { runCheckout } from './steps/checkout';
 import { runPull } from './steps/pull';
 import { runShell } from './steps/shell';
@@ -100,10 +103,15 @@ import { runSteamUpload } from './steps/steamUpload';
 import { runSteamSetLive } from './steps/steamSetLive';
 import { runSteamWorkshopUpload } from './steps/steamWorkshopUpload';
 import { runIosDeviceLog } from './steps/iosDeviceLog';
+import { runManualApproval } from './steps/manualApproval';
 
 export interface StepContext {
   project: Project;
   build: Build;
+  // The DAG node id of the step currently executing. Most steps don't need
+  // this, but manualApproval (Cluster 11.D) stores it on the approval row
+  // so the UI can highlight the pending node.
+  nodeId: string;
   // Emit a single structured log line associated with the current step.
   log(message: string, level?: BuildLogLevel): void;
   // Wire a child_process so its stdout/stderr stream into the log table
@@ -203,6 +211,7 @@ const RUNNERS: Record<StepType, StepRunner> = {
   steamSetLive: runSteamSetLive,
   steamWorkshopUpload: runSteamWorkshopUpload,
   iosDeviceLog: runIosDeviceLog,
+  manualApproval: runManualApproval,
 };
 
 interface DagNode {
@@ -279,15 +288,49 @@ async function executeStep(
         )
       : null;
     const ctx = makeStepContext(build, project, node, persist, watchdogState);
+    // Cluster 11.B — resolve `${{ secrets.X }}` / `${{ files.X }}` markers
+    // immediately before invoking the runner. Missing references are
+    // surfaced as a log warning but don't abort the step: the runner will
+    // typically fail at the next sub-process call with a clearer error.
+    // Cleanup deletes any extracted temp files when the attempt finishes.
+    let interp: ReturnType<typeof interpolateStepData> | null = null;
     try {
-      await runner(ctx, node.data);
+      interp = interpolateStepData(node.data, { buildId: build.id, nodeId: node.id });
+      if (interp.missingSecrets.length > 0) {
+        persist(
+          'failure',
+          `⚠ missing secrets referenced by this step: ${interp.missingSecrets.join(', ')}`,
+          node.id,
+          node.type,
+        );
+      }
+      if (interp.missingFiles.length > 0) {
+        persist(
+          'failure',
+          `⚠ missing vault files referenced by this step: ${interp.missingFiles.join(', ')}`,
+          node.id,
+          node.type,
+        );
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      persist('failure', `✖ secret interpolation failed: ${msg}`, node.id, node.type);
       watchdogState?.cancel();
+      lastErr = err;
+      if (attempt < maxAttempts && retryPolicy?.enabled) continue;
+      return { ok: false, cancelled: false, attempts: attempt, error: lastErr };
+    }
+    try {
+      await runner(ctx, interp.data);
+      watchdogState?.cancel();
+      interp.cleanup();
       if (isCancelled(build.id)) {
         return { ok: false, cancelled: true, attempts: attempt, error: lastErr };
       }
       return { ok: true, cancelled: false, attempts: attempt, error: null };
     } catch (err) {
       watchdogState?.cancel();
+      interp.cleanup();
       lastErr = err;
       if (isCancelled(build.id)) {
         return { ok: false, cancelled: true, attempts: attempt, error: lastErr };
@@ -513,6 +556,15 @@ export async function runPipeline(args: {
   // The build may have been cancelled while still queued — short-circuit.
   if (isCancelled(build.id)) {
     persist('system', 'Pipeline cancelled before start.', null, null);
+    void postCheckRun({
+      project,
+      pipeline,
+      build,
+      state: 'cancelled',
+      summary: 'BuildPilot pipeline cancelled before start.',
+    }).catch((err) => {
+      logger.warn({ err: String(err), buildId: build.id }, 'vcs: pre-start cancel POST crashed');
+    });
     finalize(build, 'cancelled', pipeline);
     return;
   }
@@ -520,6 +572,19 @@ export async function runPipeline(args: {
   updateBuildStatus(build.id, 'running');
   build.status = 'running';
   eventBus.publish({ type: 'buildStarted', build });
+
+  // Cluster 11.E — fire-and-forget outbound check-run POST. Skipped silently
+  // when the project has no VCS link or the build has no triggerSha (e.g.
+  // local-only manual runs).
+  void postCheckRun({
+    project,
+    pipeline,
+    build,
+    state: 'in_progress',
+    summary: `Build #${build.id.slice(0, 8)} started on ${build.triggerBranch || 'unknown branch'}`,
+  }).catch((err) => {
+    logger.warn({ err: String(err), buildId: build.id }, 'vcs: in_progress POST crashed');
+  });
 
   persist('system', `Pipeline "${pipeline.name}" started`, null, null);
   if (build.triggerSha || build.triggerBranch) {
@@ -755,6 +820,26 @@ export async function runPipeline(args: {
     null,
     null,
   );
+
+  // Cluster 11.E — terminal outbound POST. Same fire-and-forget pattern.
+  const vcsState: 'success' | 'failure' | 'cancelled' =
+    finalStatus === 'success' ? 'success' : finalStatus === 'cancelled' ? 'cancelled' : 'failure';
+  const finishSummary =
+    finalStatus === 'success'
+      ? 'BuildPilot pipeline finished successfully.'
+      : finalStatus === 'cancelled'
+        ? 'BuildPilot pipeline cancelled.'
+        : 'BuildPilot pipeline failed — open the build for details.';
+  void postCheckRun({
+    project,
+    pipeline,
+    build,
+    state: vcsState,
+    summary: finishSummary,
+  }).catch((err) => {
+    logger.warn({ err: String(err), buildId: build.id }, 'vcs: terminal POST crashed');
+  });
+
   finalize(build, finalStatus, pipeline);
 }
 
@@ -791,6 +876,7 @@ function makeStepContext(
   return {
     project,
     build,
+    nodeId: node.id,
     log(message, level = 'info') {
       persistWithPoke(level, message, node.id, node.type);
     },

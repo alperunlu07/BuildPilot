@@ -1,6 +1,7 @@
 import type { TelegramNotifyStepData } from '@buildpilot/shared-types';
 import type { StepContext } from '../engine';
 import { getTelegramConfig } from '../telegramBot';
+import { suppressForMatrixSummary } from './_matrixGuard';
 
 function asBool(v: unknown): boolean {
   return v === true || v === 'true';
@@ -30,6 +31,11 @@ export async function runTelegramNotify(
   }
   if (!d.text || d.text.trim().length === 0) {
     throw new Error('telegramNotify: missing "text"');
+  }
+
+  if (suppressForMatrixSummary(ctx)) {
+    ctx.log('telegramNotify: skipped (matrix child — parent will send rolled-up summary)');
+    return;
   }
 
   const body: Record<string, unknown> = {

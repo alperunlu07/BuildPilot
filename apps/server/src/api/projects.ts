@@ -12,12 +12,14 @@ import {
 } from '../store/projects';
 import { listBuilds } from '../store/builds';
 import {
+  changedPathsInCommit,
   detectDefaultBranch,
   fetchAll,
   getCurrentBranch,
   getHeadSha,
   listBranches,
   listCommits,
+  listTagsWithSha,
   pull,
 } from '../git/operations';
 import { eventBus } from '../events/bus';
@@ -132,6 +134,37 @@ export async function projectsRoutes(app: FastifyInstance): Promise<void> {
     const branch = await getCurrentBranch(project.path);
     const sha = branch ? await getHeadSha(project.path, branch) : null;
     return { branch, sha };
+  });
+
+  // Cluster 11.G — tag list for the tag-pattern preview UI. Returns each
+  // tag with the commit SHA it resolves to, sorted newest-first by SHA's
+  // commit date isn't available cheaply here, so we just sort
+  // lexicographically reversed which puts semver-ish tags in the right
+  // order most of the time. Limit is bounded so a project with thousands
+  // of release tags doesn't ship them all to the dashboard.
+  app.get('/api/projects/:id/tags', async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const project = getProject(id);
+    if (!project) return reply.code(404).send({ error: 'not found' });
+    const q = (req.query as { limit?: string }) ?? {};
+    const limit = Math.min(Math.max(parseInt(q.limit ?? '50', 10) || 50, 1), 500);
+    const tags = await listTagsWithSha(project.path);
+    const sorted = tags.slice().sort((a, b) => b.tag.localeCompare(a.tag, undefined, { numeric: true }));
+    return sorted.slice(0, limit);
+  });
+
+  // Cluster 11.G — changed files for a single commit. Used by the
+  // path-filter preview to render ✓/✗ rows next to each commit. Returns
+  // a flat list of strings; empty for root commits or unknown SHAs.
+  app.get('/api/projects/:id/commits/:sha/changed-files', async (req, reply) => {
+    const { id, sha } = req.params as { id: string; sha: string };
+    const project = getProject(id);
+    if (!project) return reply.code(404).send({ error: 'not found' });
+    if (!/^[0-9a-fA-F]{4,64}$/.test(sha)) {
+      return reply.code(400).send({ error: 'invalid sha' });
+    }
+    const files = await changedPathsInCommit(project.path, sha);
+    return { sha, files };
   });
 
   // Phase 4 Cluster D — per-project build sparkline. Returns the last N

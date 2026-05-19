@@ -11,12 +11,30 @@ import { nodeTemplatesRoutes } from './api/nodeTemplates';
 import { hostsRoutes } from './api/hosts';
 import { triggerRoutes } from './api/triggers';
 import { configRoutes } from './api/config';
+import { metricsRoutes } from './api/metrics';
+import { testReportsRoutes } from './api/test-reports';
+import { flakyTestsRoutes } from './api/flaky-tests';
+import { secretsRoutes } from './api/secrets';
+import { vaultFilesRoutes } from './api/vault-files';
+import { vcsRoutes } from './api/vcs';
+import { prContextRoutes } from './api/pr-context';
+import { prCommandRoutes } from './api/pr-commands';
+import { approvalsRoutes } from './api/approvals';
 import { reloadSchedules, startPoller } from './poller';
 import { eventBus } from './events/bus';
 import { startTelegramBot } from './runner/telegramBot';
+import { registerSlackParser, slackBotRoutes } from './slack-bot';
+import { discordBotRoutes } from './discord-bot';
+import { testNotifyRoutes } from './api/test-notify';
 import { migratePlaintextSecrets } from './crypto/migrateSecrets';
 import { migrateHostsFile } from './store/hosts';
 import { pruneOldBuilds } from './store/retention';
+import { authRoutes } from './api/auth';
+import { usersRoutes } from './api/users';
+import { auditLogRoutes } from './api/audit-log';
+import { apiTokensRoutes } from './api/api-tokens';
+import { registerSessionMiddleware, pruneExpiredSessions } from './auth/sessions';
+import { registerAuditHook } from './audit';
 
 async function main(): Promise<void> {
   const config = loadConfig();
@@ -49,10 +67,29 @@ async function main(): Promise<void> {
       if (!origin) return cb(null, true);
       cb(null, allowedOrigins.has(origin));
     },
-    credentials: false,
+    // Cluster 11.A — credentials must be true so the session cookie
+    // round-trips between the Vite dev server (51732) and the API
+    // (51731). When auth is disabled the cookie isn't set, so this is
+    // a no-op for default installs.
+    credentials: true,
   });
 
   app.get('/api/health', async () => ({ ok: true, version: '0.1.0' }));
+
+  // Slack delivers x-www-form-urlencoded; register the raw-preserving
+  // parser before the routes so signature verification can read the body.
+  registerSlackParser(app);
+
+  // Cluster 11.A — session/bearer auth + audit hooks. Both hooks are
+  // registered unconditionally so flipping `auth.enabled` at runtime
+  // (between server restarts) doesn't need a code change.
+  await registerSessionMiddleware(app);
+  await registerAuditHook(app);
+
+  await authRoutes(app);
+  await usersRoutes(app);
+  await auditLogRoutes(app);
+  await apiTokensRoutes(app);
 
   await projectsRoutes(app);
   await pipelinesRoutes(app);
@@ -62,6 +99,18 @@ async function main(): Promise<void> {
   await hostsRoutes(app);
   await triggerRoutes(app);
   await configRoutes(app);
+  await metricsRoutes(app);
+  await slackBotRoutes(app);
+  await discordBotRoutes(app);
+  await testNotifyRoutes(app);
+  await testReportsRoutes(app);
+  await flakyTestsRoutes(app);
+  await secretsRoutes(app);
+  await vaultFilesRoutes(app);
+  await vcsRoutes(app);
+  await prContextRoutes(app);
+  await prCommandRoutes(app);
+  await approvalsRoutes(app);
 
   // Re-sync poller whenever projects change. Pipeline mutations also trigger sync;
   // for now we just sync on any project event and rely on listPipelines() returning
@@ -81,6 +130,12 @@ async function main(): Promise<void> {
 
   startPoller();
   if (config.telegram) startTelegramBot(config.telegram);
+
+  // Cluster 11.A — daily sweep to delete expired session rows. The
+  // middleware deletes them lazily on touch too; this just keeps the
+  // table tidy on long-running installs.
+  pruneExpiredSessions();
+  setInterval(() => pruneExpiredSessions(), 24 * 60 * 60 * 1000);
 
   // Phase 4 Cluster D — daily build retention sweep. Opt-in via
   // `buildRetentionDays` in config.json. The sweep runs immediately on boot

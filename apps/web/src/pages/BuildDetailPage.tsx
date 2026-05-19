@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ChevronLeft, Download, Filter, RotateCcw, Square } from 'lucide-react';
+import { Check, ChevronLeft, Download, FileBarChart, Filter, GitCompareArrows, Grid3X3, Link2, RotateCcw, Square } from 'lucide-react';
 import type {
   Build,
+  BuildApproval,
   BuildArtifact,
   BuildLogEntry,
   BuildLogLevel,
@@ -10,10 +11,30 @@ import type {
 import { useStore } from '../store/store';
 import { api } from '../lib/api';
 import { cn } from '../lib/cn';
+import { statusIcon, statusIconAnimationClass, statusLabel } from '../lib/statusIcon';
 import { LogTable } from '../components/LogTable';
+import { MatrixRunSummary } from '../components/MatrixRunSummary';
 import { StepGantt } from '../components/StepGantt';
 import { defaultActiveLevels } from '../components/LevelToggleBar';
 import { ArtifactPreviewModal } from '../components/ArtifactPreviewModal';
+import { FailureSummaryCard } from '../components/FailureSummaryCard';
+import { PrSummaryCard } from '../components/PrSummaryCard';
+import { ApprovalCard } from '../components/ApprovalCard';
+import { subscribe } from '../lib/events';
+import {
+  LogSearchBar,
+  loadLogPresets,
+  saveLogPresets,
+  useCompiledFilter,
+  type SavedLogFilter,
+} from '../components/LogSearchBar';
+import { TimestampRangeSlider } from '../components/TimestampRangeSlider';
+import { LogGroupBar } from '../components/LogGroupBar';
+import { StepDurationCompare } from '../components/StepDurationCompare';
+import { BuildDiffView } from '../components/BuildDiffView';
+import { commandFromEntry } from '../lib/copyCommand';
+import { buildGroupFilter, detectLogGroups } from '../lib/logGroups';
+import { Time } from '../lib/formatDate';
 
 const EMPTY: BuildLogEntry[] = [];
 
@@ -49,13 +70,29 @@ export function BuildDetailPage({ buildId }: Props) {
   const [build, setBuild] = useState<Build | null>(null);
   const [loading, setLoading] = useState(true);
   const [artifacts, setArtifacts] = useState<BuildArtifact[]>([]);
+  const [approvals, setApprovals] = useState<BuildApproval[]>([]);
   // Selected artifact for the inline log viewer modal. null = closed.
   const [previewArtifact, setPreviewArtifact] = useState<BuildArtifact | null>(null);
+  // Cluster 11.C — matrix children. Populated only when this build is the
+  // parent of a matrix fan-out; non-matrix builds keep this empty and
+  // skip rendering MatrixRunSummary.
+  const [matrixChildren, setMatrixChildren] = useState<Build[]>([]);
+  const [matrixRerunning, setMatrixRerunning] = useState(false);
 
   const [activeLevels, setActiveLevels] = useState<Set<BuildLogLevel>>(
     () => defaultActiveLevels(),
   );
   const [activeNodeId, setActiveNodeId] = useState<string | 'all'>('all');
+  const [query, setQuery] = useState('');
+  const [regex, setRegex] = useState(false);
+  const filter = useCompiledFilter(query, regex);
+  // Selected timestamp window — null = full build duration (no filter).
+  const [tsRange, setTsRange] = useState<[number, number] | null>(null);
+  const [presets, setPresets] = useState<SavedLogFilter[]>(() => loadLogPresets());
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(() => new Set());
+  const [diffOpen, setDiffOpen] = useState(false);
+  const [diffCandidates, setDiffCandidates] = useState<Build[]>([]);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -66,11 +103,15 @@ export function BuildDetailPage({ buildId }: Props) {
       api.getBuild(buildId),
       api.getBuildEntries(buildId),
       api.getBuildArtifacts(buildId).catch(() => []),
+      api.listChildBuilds(buildId).catch(() => [] as Build[]),
+      api.buildApprovals(buildId).catch(() => [] as BuildApproval[]),
     ])
-      .then(([b, ents, arts]) => {
+      .then(([b, ents, arts, children, apps]) => {
         if (!alive) return;
         setBuild(b);
         setArtifacts(arts);
+        setMatrixChildren(children);
+        setApprovals(apps);
         // Legacy builds (created before the structured-log table) only have
         // the flat `build.log` text. Synthesize one stdout-level entry per
         // line so the table view still shows them.
@@ -101,6 +142,49 @@ export function BuildDetailPage({ buildId }: Props) {
       alive = false;
     };
   }, [buildId, seedBuildEntries]);
+
+  useEffect(() => {
+    if (!build || matrixChildren.length === 0) return;
+    const stillMoving =
+      build.status === 'running' ||
+      build.status === 'pending' ||
+      matrixChildren.some(
+        (c) => c.status === 'running' || c.status === 'pending',
+      );
+    if (!stillMoving) return;
+    const handle = window.setInterval(async () => {
+      try {
+        const [refreshed, refreshedChildren] = await Promise.all([
+          api.getBuild(buildId),
+          api.listChildBuilds(buildId),
+        ]);
+        setBuild(refreshed);
+        setMatrixChildren(refreshedChildren);
+      } catch {
+        /* swallow */
+      }
+    }, 2000);
+    return () => window.clearInterval(handle);
+  }, [buildId, build, matrixChildren]);
+
+  useEffect(() => {
+    return subscribe((event) => {
+      if (event.type === 'buildAwaitingApproval' && event.buildId === buildId) {
+        setApprovals((cur) => {
+          const without = cur.filter((a) => a.id !== event.approval.id);
+          return [...without, event.approval];
+        });
+        setBuild((b) => (b ? { ...b, status: 'awaiting_approval' } : b));
+      } else if (event.type === 'buildApprovalDecided' && event.buildId === buildId) {
+        void api.buildApprovals(buildId).then((apps) => setApprovals(apps));
+        void api.getBuild(buildId).then((b) => setBuild(b));
+      } else if (event.type === 'buildStarted' && event.build.id === buildId) {
+        setBuild(event.build);
+      } else if (event.type === 'buildFinished' && event.build.id === buildId) {
+        setBuild(event.build);
+      }
+    });
+  }, [buildId]);
 
   const proj = build ? projects.find((p) => p.id === build.projectId) : null;
   const pipe = build ? pipelines.find((p) => p.id === build.pipelineId) : null;
@@ -135,6 +219,25 @@ export function BuildDetailPage({ buildId }: Props) {
     return [...seen.entries()];
   }, [entries]);
 
+  // Cluster 11.F — detect when a build has a test report or coverage
+  // artifact so we can offer a "Tests" jump-link button in the header.
+  const hasTestArtifact = useMemo(
+    () =>
+      artifacts.some(
+        (a) =>
+          /\.xcresult\/?$/i.test(a.path) ||
+          (a.path.toLowerCase().endsWith('.xml') &&
+            !/(?:^|\/)(coverage|cobertura)[^/]*\.xml$/i.test(a.path)),
+      ),
+    [artifacts],
+  );
+
+  const logGroups = useMemo(() => detectLogGroups(entries), [entries]);
+  const groupFilter = useMemo(
+    () => buildGroupFilter(logGroups, collapsedGroups),
+    [logGroups, collapsedGroups],
+  );
+
   const filtered = useMemo(() => {
     return entries.filter((e) => {
       if (!activeLevels.has(e.level)) return false;
@@ -145,9 +248,24 @@ export function BuildDetailPage({ buildId }: Props) {
           return false;
         }
       }
+      if (tsRange && (e.ts < tsRange[0] || e.ts > tsRange[1])) return false;
+      if (!groupFilter(e)) return false;
+      if (!filter.match(e.message)) return false;
       return true;
     });
-  }, [entries, activeLevels, activeNodeId]);
+  }, [entries, activeLevels, activeNodeId, filter, tsRange, groupFilter]);
+
+  // Bounds for the timestamp slider — earliest / latest log timestamp,
+  // falling back to the build start/finish if no entries yet.
+  const tsBounds = useMemo<[number, number] | null>(() => {
+    if (!build) return null;
+    const lo = entries.length > 0 ? entries[0]!.ts : build.startedAt;
+    const hi = entries.length > 0
+      ? entries[entries.length - 1]!.ts
+      : build.finishedAt ?? Date.now();
+    if (hi <= lo) return null;
+    return [lo, hi];
+  }, [entries, build]);
 
   const downloadLog = () => {
     if (!build) return;
@@ -174,11 +292,11 @@ export function BuildDetailPage({ buildId }: Props) {
   };
 
   if (loading && !build) {
-    return <div className="p-8 text-sm text-slate-500">Loading build…</div>;
+    return <div className="p-8 text-sm text-slate-400">Loading build…</div>;
   }
   if (!build) {
     return (
-      <div className="p-8 text-sm text-slate-500">
+      <div className="p-8 text-sm text-slate-400">
         Build not found.{' '}
         <button
           type="button"
@@ -196,37 +314,85 @@ export function BuildDetailPage({ buildId }: Props) {
     build.status === 'failed' ||
     build.status === 'cancelled';
 
+  // Cluster 11.C — this build is a parent matrix run when it has children
+  // (children rows reference this build via parent_build_id). The reverse
+  // — a build with a parentBuildId — is a matrix child that gets a "back
+  // to matrix" link instead of the regular Builds back button.
+  const isMatrixParent = matrixChildren.length > 0;
+  const isMatrixChild = build.parentBuildId !== null;
+
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <header className="border-b border-slate-800 bg-slate-900/40 px-6 py-3">
-        <button
-          type="button"
-          onClick={() => setView({ type: 'builds' })}
-          className="inline-flex items-center gap-1 text-[11px] uppercase tracking-wider text-slate-500 hover:text-slate-300"
-        >
-          <ChevronLeft size={12} /> Builds
-        </button>
+      <header className="border-b border-slate-800 bg-slate-900/40 px-3 py-3 sm:px-6">
+        {isMatrixChild && build.parentBuildId ? (
+          <button
+            type="button"
+            onClick={() => setView({ type: 'build', id: build.parentBuildId! })}
+            className="focusable inline-flex items-center gap-1 rounded text-[11px] uppercase tracking-wider text-sky-400 hover:text-sky-300"
+            aria-label="Back to parent matrix build"
+          >
+            <ChevronLeft size={12} /> Matrix
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setView({ type: 'builds' })}
+            className="focusable inline-flex items-center gap-1 rounded text-[11px] uppercase tracking-wider text-slate-400 hover:text-slate-300"
+            aria-label="Back to builds list"
+          >
+            <ChevronLeft size={12} /> Builds
+          </button>
+        )}
         <div className="mt-1 flex flex-wrap items-baseline gap-x-4 gap-y-1">
           <h1 className="text-lg font-semibold text-slate-100">
             {pipe?.name ?? 'Unknown pipeline'}
           </h1>
-          <span
-            className={cn(
-              'rounded-md px-2 py-0.5 text-[11px] font-medium uppercase tracking-wider',
-              build.status === 'running' && 'bg-amber-950/50 text-amber-300',
-              build.status === 'success' && 'bg-emerald-950/50 text-emerald-300',
-              build.status === 'failed' && 'bg-rose-950/50 text-rose-300',
-              build.status === 'pending' && 'bg-slate-800 text-slate-400',
-              build.status === 'cancelled' && 'bg-slate-800 text-slate-500',
-            )}
-          >
-            {build.status}
-          </span>
-          <span className="text-xs text-slate-500">
+          {(() => {
+            const StatusIcon = statusIcon(build.status);
+            return (
+              <span
+                className={cn(
+                  'inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-[11px] font-medium uppercase tracking-wider',
+                  build.status === 'running' && 'bg-amber-950/50 text-amber-300',
+                  build.status === 'success' && 'bg-emerald-950/50 text-emerald-300',
+                  build.status === 'failed' && 'bg-rose-950/50 text-rose-300',
+                  build.status === 'pending' && 'bg-slate-800 text-slate-400',
+                  build.status === 'cancelled' && 'bg-slate-800 text-slate-400',
+                )}
+                role="status"
+                aria-label={statusLabel(build.status)}
+              >
+                <StatusIcon
+                  size={11}
+                  className={statusIconAnimationClass(build.status)}
+                  aria-hidden="true"
+                />
+                {build.status}
+              </span>
+            );
+          })()}
+          <span className="text-xs text-slate-400">
             in <span className="text-slate-300">{proj?.name ?? '—'}</span>
           </span>
+          {isMatrixParent && (
+            <span
+              className="inline-flex items-center gap-1 rounded-md bg-indigo-950/50 px-2 py-0.5 text-[11px] font-medium uppercase tracking-wider text-indigo-300"
+              title={`Matrix run with ${matrixChildren.length} cell${matrixChildren.length === 1 ? '' : 's'}`}
+            >
+              <Grid3X3 size={11} aria-hidden="true" /> matrix · {matrixChildren.length}
+            </span>
+          )}
+          {isMatrixChild && build.matrixLabel && (
+            <span
+              className="inline-flex items-center gap-1 rounded-md bg-indigo-950/50 px-2 py-0.5 text-[11px] font-medium uppercase tracking-wider text-indigo-300"
+              title="This build is one cell of a matrix run"
+            >
+              <Grid3X3 size={11} aria-hidden="true" />{' '}
+              <span className="font-mono normal-case">{build.matrixLabel}</span>
+            </span>
+          )}
         </div>
-        <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
+        <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[11px] text-slate-400">
           <span className="font-mono">{build.id}</span>
           <span>·</span>
           <span>
@@ -241,19 +407,19 @@ export function BuildDetailPage({ buildId }: Props) {
             </span>
           </span>
           <span>·</span>
-          <span>started {new Date(build.startedAt).toLocaleString()}</span>
+          <Time ts={build.startedAt} prefix="started" />
           {finished && build.finishedAt && (
             <>
               <span>·</span>
-              <span>finished {new Date(build.finishedAt).toLocaleString()}</span>
+              <Time ts={build.finishedAt} prefix="finished" />
             </>
           )}
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex flex-wrap items-center gap-2">
             {!finished && (
               <button
                 type="button"
                 onClick={() => void cancelBuild(build.id)}
-                className="inline-flex items-center gap-1 rounded-md border border-rose-700/60 px-2 py-0.5 text-rose-300 hover:border-rose-500 hover:text-rose-200"
+                className="focusable inline-flex items-center gap-1 rounded-md border border-rose-700/60 px-2 py-0.5 text-rose-300 hover:border-rose-500 hover:text-rose-200"
               >
                 <Square size={10} /> Cancel
               </button>
@@ -265,16 +431,62 @@ export function BuildDetailPage({ buildId }: Props) {
                   const next = await triggerBuild(build.pipelineId, failedNodeId);
                   setView({ type: 'build', id: next.id });
                 }}
-                className="inline-flex items-center gap-1 rounded-md border border-amber-700/60 px-2 py-0.5 text-amber-300 hover:border-amber-500 hover:text-amber-200"
+                className="focusable inline-flex items-center gap-1 rounded-md border border-amber-700/60 px-2 py-0.5 text-amber-300 hover:border-amber-500 hover:text-amber-200"
                 title={`Re-run from the failed step (${failedNodeId.slice(0, 8)}) and onwards`}
               >
                 <RotateCcw size={11} /> Retry from failed step
               </button>
             )}
+            {hasTestArtifact && (
+              <button
+                type="button"
+                onClick={() => setView({ type: 'testReport', buildId: build.id })}
+                className="focusable inline-flex items-center gap-1 rounded-md border border-emerald-700/60 px-2 py-0.5 text-emerald-300 hover:border-emerald-500 hover:text-emerald-200"
+                title="View parsed test report (xcresult / JUnit)"
+              >
+                <FileBarChart size={11} /> Tests
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={async () => {
+                if (diffCandidates.length === 0) {
+                  const list = await api.listBuilds({
+                    pipelineId: build.pipelineId,
+                    limit: 50,
+                  });
+                  setDiffCandidates(list);
+                }
+                setDiffOpen(true);
+              }}
+              className="focusable inline-flex items-center gap-1 rounded-md border border-slate-700 px-2 py-0.5 text-slate-300 hover:border-sky-500 hover:text-sky-400"
+              title="Compare with another build"
+            >
+              <GitCompareArrows size={11} /> Compare
+            </button>
+            <button
+              type="button"
+              onClick={async () => {
+                const url = `${window.location.origin}/builds/${build.id}`;
+                try {
+                  await navigator.clipboard.writeText(url);
+                } catch {
+                  // Older browsers / non-secure contexts — fall back to prompt.
+                  window.prompt('Copy this build link:', url);
+                }
+                setLinkCopied(true);
+                window.setTimeout(() => setLinkCopied(false), 1500);
+              }}
+              className="focusable inline-flex items-center gap-1 rounded-md border border-slate-700 px-2 py-0.5 text-slate-300 hover:border-sky-500 hover:text-sky-400"
+              title="Copy a shareable link to this build"
+            >
+              {linkCopied ? <Check size={11} className="text-emerald-400" /> : <Link2 size={11} />}{' '}
+              {linkCopied ? 'Copied' : 'Copy link'}
+            </button>
             <button
               type="button"
               onClick={downloadLog}
-              className="inline-flex items-center gap-1 rounded-md border border-slate-700 px-2 py-0.5 text-slate-300 hover:border-sky-500 hover:text-sky-400"
+              className="focusable inline-flex items-center gap-1 rounded-md border border-slate-700 px-2 py-0.5 text-slate-300 hover:border-sky-500 hover:text-sky-400"
               title="Download log as .txt"
             >
               <Download size={11} /> Download
@@ -283,13 +495,77 @@ export function BuildDetailPage({ buildId }: Props) {
         </div>
       </header>
 
+      <PrSummaryCard buildId={build.id} />
+
+      {(() => {
+        const pending = approvals.find((a) => a.decision === null);
+        if (pending) {
+          return (
+            <ApprovalCard
+              approval={pending}
+              onDecided={(updated) => {
+                setApprovals((cur) =>
+                  cur.map((a) => (a.id === updated.id ? updated : a)),
+                );
+              }}
+            />
+          );
+        }
+        const last = approvals[approvals.length - 1];
+        if (last && last.decision) {
+          return <ApprovalCard approval={last} readOnly />;
+        }
+        return null;
+      })()}
+
+      {isMatrixParent && (
+        <MatrixRunSummary
+          parent={build}
+          children={matrixChildren}
+          onOpenChild={(id) => setView({ type: 'build', id })}
+          rerunning={matrixRerunning}
+          onRerunFailed={async () => {
+            if (matrixRerunning) return;
+            setMatrixRerunning(true);
+            try {
+              const res = await api.rerunFailedMatrixCells(build.id);
+              const [refreshed, refreshedChildren] = await Promise.all([
+                api.getBuild(build.id),
+                api.listChildBuilds(build.id),
+              ]);
+              setBuild(refreshed);
+              setMatrixChildren(refreshedChildren);
+              if (res.rerun === 0) {
+                /* no-op */
+              }
+            } finally {
+              setMatrixRerunning(false);
+            }
+          }}
+        />
+      )}
+
+      {build.status === 'failed' && !isMatrixParent && (
+        <FailureSummaryCard
+          entries={entries}
+          nodeLabel={(id, type) =>
+            `${nodeLabelMap.get(id) ?? type ?? '?'} · ${id.slice(0, 8)}`
+          }
+          onRetry={async (nodeId) => {
+            const next = await triggerBuild(build.pipelineId, nodeId);
+            setView({ type: 'build', id: next.id });
+          }}
+          onJumpToNode={(nodeId) => setActiveNodeId(nodeId)}
+        />
+      )}
+
       {artifacts.length > 0 && (
-        <div className="border-b border-slate-800 bg-slate-900/30 px-6 py-3">
+        <div className="border-b border-slate-800 bg-slate-900/30 px-3 py-3 sm:px-6">
           <div className="mb-2 flex items-baseline justify-between">
-            <span className="text-[10px] uppercase tracking-wider text-slate-500">
+            <span className="text-[10px] uppercase tracking-wider text-slate-400">
               Artifacts ({artifacts.length})
             </span>
-            <span className="text-[10px] text-slate-500">
+            <span className="text-[10px] text-slate-400">
               {formatBytes(artifacts.reduce((acc, a) => acc + a.size, 0))} total
             </span>
           </div>
@@ -308,7 +584,7 @@ export function BuildDetailPage({ buildId }: Props) {
                   {a.path}
                 </button>
                 <span className="flex shrink-0 items-center gap-2">
-                  <span className="text-slate-500">{formatBytes(a.size)}</span>
+                  <span className="text-slate-400">{formatBytes(a.size)}</span>
                   <button
                     type="button"
                     onClick={() => setPreviewArtifact(a)}
@@ -341,8 +617,16 @@ export function BuildDetailPage({ buildId }: Props) {
         onSelect={(id) => setActiveNodeId(id === activeNodeId ? 'all' : id)}
       />
 
-      <div className="flex flex-wrap items-center gap-3 border-b border-t border-slate-800 bg-slate-900/30 px-6 py-2 text-xs">
-        <Filter size={12} className="text-slate-500" />
+      <StepDurationCompare
+        build={build}
+        entries={entries}
+        nodeLabel={(id, type) =>
+          `${nodeLabelMap.get(id) ?? type ?? '?'} · ${id.slice(0, 8)}`
+        }
+      />
+
+      <div className="flex flex-wrap items-center gap-3 border-b border-t border-slate-800 bg-slate-900/30 px-3 py-2 text-xs sm:px-6">
+        <Filter size={12} className="text-slate-400" />
         <span className="text-slate-400">Levels</span>
         <div className="flex flex-wrap gap-1">
           {ALL_LEVELS.map((lvl) => {
@@ -356,7 +640,7 @@ export function BuildDetailPage({ buildId }: Props) {
                   'rounded-md border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider transition-colors',
                   on
                     ? 'border-slate-600 bg-slate-800 text-slate-100'
-                    : 'border-slate-800 bg-slate-950 text-slate-600 hover:text-slate-400',
+                    : 'border-slate-800 bg-slate-950 text-slate-400 hover:text-slate-400',
                 )}
               >
                 {lvl}
@@ -368,7 +652,7 @@ export function BuildDetailPage({ buildId }: Props) {
         <select
           value={activeNodeId}
           onChange={(e) => setActiveNodeId(e.target.value as typeof activeNodeId)}
-          className="rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-slate-100 focus:border-sky-500 focus:outline-none"
+          className="focusable rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-slate-100 focus:border-sky-500 focus:outline-none"
         >
           <option value="all">(all)</option>
           <option value="__pipeline__">pipeline-level</option>
@@ -378,11 +662,77 @@ export function BuildDetailPage({ buildId }: Props) {
             </option>
           ))}
         </select>
-        <span className="ml-auto text-slate-500">
+        <span className="text-slate-400">
           {filtered.length} / {entries.length} rows
           {entries.length >= 5000 && ' (capped at 5000 in memory)'}
         </span>
+        <div className="ml-auto flex w-full max-w-md items-center">
+          <LogSearchBar
+            query={query}
+            onQueryChange={setQuery}
+            regex={regex}
+            onRegexChange={setRegex}
+            regexError={filter.error}
+            presets={presets}
+            onApplyPreset={(p) => {
+              setQuery(p.query);
+              setRegex(p.regex);
+            }}
+            onSavePreset={(name) => {
+              const next: SavedLogFilter = {
+                id: `p-${Date.now().toString(36)}`,
+                name,
+                query,
+                regex,
+              };
+              const list = [...presets, next];
+              setPresets(list);
+              saveLogPresets(list);
+            }}
+            onDeletePreset={(id) => {
+              const list = presets.filter((p) => p.id !== id);
+              setPresets(list);
+              saveLogPresets(list);
+            }}
+          />
+        </div>
       </div>
+
+      <LogGroupBar
+        groups={logGroups}
+        collapsed={collapsedGroups}
+        onToggle={(id) =>
+          setCollapsedGroups((prev) => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id);
+            else next.add(id);
+            return next;
+          })
+        }
+        onToggleAll={(allCollapsed) =>
+          setCollapsedGroups(allCollapsed ? new Set() : new Set(logGroups.map((g) => g.id)))
+        }
+      />
+
+      {tsBounds && (
+        <div className="flex items-center gap-3 border-b border-slate-800 bg-slate-900/20 px-3 py-2 sm:px-6">
+          <span className="shrink-0 text-[10px] uppercase tracking-wider text-slate-400">
+            Time range
+          </span>
+          <div className="flex-1">
+            <TimestampRangeSlider
+              min={tsBounds[0]}
+              max={tsBounds[1]}
+              value={tsRange ?? tsBounds}
+              onChange={(next) => {
+                const same =
+                  next[0] === tsBounds[0] && next[1] === tsBounds[1];
+                setTsRange(same ? null : next);
+              }}
+            />
+          </div>
+        </div>
+      )}
 
       <div className="min-h-0 flex-1 px-2 pb-2">
         <LogTable
@@ -390,6 +740,7 @@ export function BuildDetailPage({ buildId }: Props) {
           nodeLabel={(id, type) =>
             `${nodeLabelMap.get(id) ?? type ?? '?'} · ${id.slice(0, 8)}`
           }
+          copyCommandFor={commandFromEntry}
           emptyMessage={entries.length === 0 ? 'Build queued / no output yet.' : 'No rows match these filters.'}
         />
       </div>
@@ -399,6 +750,17 @@ export function BuildDetailPage({ buildId }: Props) {
         artifact={previewArtifact}
         onClose={() => setPreviewArtifact(null)}
       />
+
+      {diffOpen && (
+        <BuildDiffView
+          current={build}
+          candidates={diffCandidates}
+          nodeLabel={(id, type) =>
+            `${nodeLabelMap.get(id) ?? type ?? '?'} · ${id.slice(0, 8)}`
+          }
+          onClose={() => setDiffOpen(false)}
+        />
+      )}
     </div>
   );
 }

@@ -5,6 +5,12 @@ export interface Project {
   path: string; // absolute path
   defaultBranch: string;
   createdAt: number;
+  // Cluster 11.E — outbound VCS feedback. All three are required to enable
+  // posting check-runs / commit statuses; absence (null) means the project
+  // is local-only and skips outbound posts.
+  vcsProvider?: VcsProvider | null;
+  vcsRepo?: string | null;
+  vcsCredentialId?: string | null;
 }
 
 export interface ProjectSummary extends Project {
@@ -114,7 +120,8 @@ export type StepType =
   | 'steamUpload'
   | 'steamSetLive'
   | 'steamWorkshopUpload'
-  | 'iosDeviceLog';
+  | 'iosDeviceLog'
+  | 'manualApproval';
 
 export type AiTool = 'claude' | 'codex' | 'aider' | 'gemini' | 'custom';
 
@@ -161,6 +168,18 @@ export interface PipelineWatch {
   // previous build for the same pipeline is still running, the previous
   // build is cancelled before the new one starts (rolling-build mode).
   cancelInProgressOnNewCommit?: boolean;
+  // Cluster 11.C — when true (default), a matrix pipeline emits a single
+  // rolled-up notification when the parent finishes.
+  matrixSummary?: boolean;
+  // Cluster 11.E — comma-separated allow-list of slash commands accepted via
+  // PR issue_comment webhooks.
+  prCommands?: string;
+  prCommandAuthors?: string;
+}
+
+// Cluster 11.C — declarative build matrix.
+export interface Matrix {
+  axes: Record<string, string[]>;
 }
 
 export interface Pipeline {
@@ -173,10 +192,23 @@ export interface Pipeline {
   createdAt: number;
   updatedAt: number;
   lastBuiltSha: string | null;
+  // Cluster 11.C — null when the pipeline has no matrix (single build per
+  // trigger, current behavior). When set, every trigger fans out into N
+  // child builds plus one parent summary build.
+  matrix: Matrix | null;
 }
 
 // ── Build ───────────────────────────────────────────────────────────────────
-export type BuildStatus = 'pending' | 'running' | 'success' | 'failed' | 'cancelled';
+export type BuildStatus =
+  | 'pending'
+  | 'running'
+  | 'success'
+  | 'failed'
+  | 'cancelled'
+  // Cluster 11.D — set while a `manualApproval` step is waiting on an
+  // in-app decision. The runner remains alive but parks until the
+  // approval is resolved (approve / reject / timeout).
+  | 'awaiting_approval';
 
 export interface Build {
   id: string;
@@ -188,6 +220,26 @@ export interface Build {
   startedAt: number;
   finishedAt: number | null;
   log: string;
+  // Cluster 11.C — matrix support.
+  //   parentBuildId: id of the parent "summary" build when this row is a
+  //     child of a matrix fan-out. null for ordinary (non-matrix) builds
+  //     and for the parent row itself.
+  //   matrixValues: the {axis: value} snapshot for this child build.
+  //     Populated only on children; null for the parent and for non-matrix
+  //     runs.
+  //   matrixLabel: stable human-readable label (e.g. "xcode=15, scheme=Free")
+  //     mirrored from matrixValues so the UI doesn't have to recompute.
+  parentBuildId: string | null;
+  matrixValues: Record<string, string> | null;
+  matrixLabel: string | null;
+}
+
+// Cluster 11.C — when a parent matrix build is being viewed, we want the
+// per-child status grid at a glance. This type is purely what the
+// MatrixRunSummary component renders; the server returns it inline on the
+// parent build response when applicable.
+export interface BuildWithMatrix extends Build {
+  children: Build[];
 }
 
 // ── Step data shapes ────────────────────────────────────────────────────────
@@ -1662,6 +1714,48 @@ export interface NodeTemplate {
   updatedAt: number;
 }
 
+// ── Cluster 11.B · Secrets & file vault ─────────────────────────────────────
+// A named secret stored encrypted-at-rest. The plaintext value is never
+// returned over the wire; the only way to roll it forward is rotate +
+// supply a new value. Step data references a secret with `${{ secrets.NAME }}`
+// markers that the engine interpolates immediately before step execution.
+export interface Secret {
+  id: string;
+  name: string; // unique; conventional uppercase snake (e.g. ASC_API_KEY)
+  createdAt: number;
+  updatedAt: number;
+  // Last time the engine resolved this secret during a build run. Null
+  // when the secret was created but never referenced yet.
+  lastUsedAt: number | null;
+}
+
+export interface SecretUsage {
+  pipelineId: string;
+  pipelineName: string;
+  nodeId: string;
+  nodeType: StepType;
+  fieldName: string;
+}
+
+// A binary file in the vault. Stored encrypted in SQLite (BLOB). Files
+// larger than VAULT_FILE_MAX_BYTES are rejected. Step data references a
+// vault file with `${{ files.NAME }}` — the engine extracts a fresh copy
+// to disk per run and substitutes the temp path before step execution.
+export interface VaultFile {
+  id: string;
+  name: string; // unique; conventional uppercase (e.g. APPLE_DIST_P12)
+  filename: string; // original filename (used to preserve extension on extract)
+  mime: string;
+  sizeBytes: number;
+  createdAt: number;
+  lastUsedAt: number | null;
+}
+
+// Hard cap so a misplaced .ipa doesn't try to land in the vault. Keeps
+// the BLOB cell small enough to round-trip through Fastify's default
+// JSON parser when needed and the SQLite page cache friendly.
+export const VAULT_FILE_MAX_BYTES = 10 * 1024 * 1024; // 10 MiB
+
 // ── Structured build logs ───────────────────────────────────────────────────
 // Each entry is one logical line, tagged with the originating pipeline node
 // and a coarse log level. The dashboard renders these as a logcat-style table.
@@ -1700,11 +1794,36 @@ export type ServerEvent =
       status: 'success' | 'failed' | 'skipped';
     }
   | { type: 'buildFinished'; build: Build }
+  // Cluster 11.C — emitted exactly once when a parent matrix build finishes
+  // (all children have settled). Carries the rolled-up child outcomes so
+  // notification consumers can render "3/4 succeeded, 1 failed (xcode=15,
+  // scheme=Pro)" without re-querying each child. Existing notify-step types
+  // ignore this event by default; bots/webhooks listening to the stream may
+  // opt to surface it.
+  | {
+      type: 'notifyMatrix';
+      parentBuildId: string;
+      pipelineId: string;
+      projectId: string;
+      total: number;
+      success: number;
+      failed: number;
+      cancelled: number;
+      children: Array<{ id: string; matrixLabel: string; status: BuildStatus }>;
+    }
   | { type: 'projectAdded'; project: Project }
   | { type: 'projectRemoved'; projectId: string }
   | { type: 'pipelineChanged'; pipelineId: string; action: 'created' | 'updated' | 'deleted' }
   | { type: 'nodeTemplateChanged'; templateId: string; action: 'created' | 'updated' | 'deleted' }
-  | { type: 'hostChanged'; hostId: string; action: 'created' | 'updated' | 'deleted' };
+  | { type: 'hostChanged'; hostId: string; action: 'created' | 'updated' | 'deleted' }
+  // Cluster 11.D — manual approval lifecycle.
+  | { type: 'buildAwaitingApproval'; buildId: string; approval: BuildApproval }
+  | {
+      type: 'buildApprovalDecided';
+      buildId: string;
+      approvalId: string;
+      decision: ApprovalDecision;
+    };
 
 // ── Server config ───────────────────────────────────────────────────────────
 export interface TelegramConfig {
@@ -1722,10 +1841,80 @@ export interface ServerConfig {
   dbPath: string;
   webOrigin: string | null;
   telegram?: TelegramConfig;
+  // Phase 4 Cluster 11.I — inbound slash-command bots.
+  slack?: SlackConfig;
+  discord?: DiscordConfig;
   // Phase 4 Cluster D — build retention. When > 0, builds older than N days
   // (and their associated log entries + artifact rows) are pruned on a daily
   // cleanup pass. Set to 0 / omitted to keep everything forever.
   buildRetentionDays?: number;
+  // Cluster 11.A — opt-in LAN auth.
+  auth?: AuthConfig;
+  // Cluster 11.E — GitHub OAuth app credentials.
+  githubOAuth?: GithubOAuthConfig;
+}
+
+// ── Slack (Cluster 11.I) ────────────────────────────────────────────────────
+// Inbound slash-command receiver only. `slackNotify` step type continues to
+// use raw webhook URLs (no token required), independent of this block.
+export interface SlackConfig {
+  enabled: boolean;
+  // Signing secret from the Slack app's Basic Information page; used to
+  // verify the X-Slack-Signature header on incoming requests.
+  signingSecret: string;
+  // Bot user OAuth token (xoxb-…). Optional — only used by the future
+  // outbound channel-post path; signature verification doesn't need it.
+  botToken: string;
+  // Default channel id (C…/G…) the bot posts to when a step omits its own.
+  defaultChannel: string;
+}
+
+export interface SlackConfigPublic {
+  enabled: boolean;
+  hasSigningSecret: boolean;
+  signingSecretPreview: string;
+  hasBotToken: boolean;
+  botTokenPreview: string;
+  defaultChannel: string;
+}
+
+export interface SlackConfigUpdate {
+  enabled?: boolean;
+  signingSecret?: string;
+  botToken?: string;
+  defaultChannel?: string;
+  clearSigningSecret?: boolean;
+  clearBotToken?: boolean;
+}
+
+// ── Discord (Cluster 11.I) ──────────────────────────────────────────────────
+// Inbound interactions endpoint. Like Slack, the outbound `discordNotify`
+// step uses raw webhook URLs and doesn't need this block.
+export interface DiscordConfig {
+  enabled: boolean;
+  // Ed25519 public key from the Discord developer portal; required to
+  // verify incoming X-Signature-Ed25519 headers.
+  publicKey: string;
+  // Application id — used by the slash-command registration script. Not
+  // a secret but bundled here so the dashboard can show it.
+  applicationId: string;
+  defaultChannelId: string;
+}
+
+export interface DiscordConfigPublic {
+  enabled: boolean;
+  hasPublicKey: boolean;
+  publicKeyPreview: string;
+  applicationId: string;
+  defaultChannelId: string;
+}
+
+export interface DiscordConfigUpdate {
+  enabled?: boolean;
+  publicKey?: string;
+  applicationId?: string;
+  defaultChannelId?: string;
+  clearPublicKey?: boolean;
 }
 
 // Shape returned by GET /api/config/telegram. Cleartext values never leave
@@ -1759,4 +1948,583 @@ export interface TelegramApprovalConfig {
   enabled: boolean;
   // When unset, falls back to telegram.defaultChatId.
   chatId?: string;
+}
+
+// ── Metrics ─────────────────────────────────────────────────────────────────
+// Phase 4 Cluster 10.D — metrics-led home dashboard. Response shape for
+// `GET /api/metrics/home`. All counts cover *finished* builds unless noted.
+export interface HomeMetrics {
+  // Builds currently in `pending` or `running` state.
+  runningBuildsCount: number;
+  // Number of finished builds in the trailing 24h window.
+  builds24h: number;
+  // success / failed / cancelled breakdown for the same 24h window.
+  successes24h: number;
+  failures24h: number;
+  cancelled24h: number;
+  // 0..1 — successes24h / (successes24h + failures24h). Null when no
+  // success+failure finished in the window (the UI can render "—").
+  successRate24h: number | null;
+  // Most recent 5 *failed* builds.
+  recentFailures: HomeMetricsRecentBuild[];
+  // Top 5 pipelines by average duration over their most recent up-to-30
+  // successful builds.
+  slowestPipelines: HomeMetricsSlowestPipeline[];
+  // Disk usage snapshot. `bytes` is the sum of `build_artifacts.size`.
+  diskUsage: {
+    totalBytes: number;
+    artifactCount: number;
+    buildCount: number;
+  };
+}
+
+export interface HomeMetricsRecentBuild {
+  id: string;
+  pipelineId: string;
+  pipelineName: string;
+  projectId: string;
+  projectName: string;
+  status: BuildStatus;
+  triggerSha: string;
+  triggerBranch: string;
+  startedAt: number;
+  finishedAt: number | null;
+  durationMs: number | null;
+}
+
+export interface HomeMetricsSlowestPipeline {
+  pipelineId: string;
+  pipelineName: string;
+  projectId: string;
+  projectName: string;
+  // Average duration of the up-to-30 most recent successful builds, in ms.
+  avgDurationMs: number;
+  sampleCount: number;
+}
+
+// `GET /api/metrics/pipeline/:id` — duration P50/P95 sparkline + step
+// duration breakdown over the last 30 builds for a single pipeline.
+export interface PipelineMetrics {
+  pipelineId: string;
+  pipelineName: string;
+  // Up-to-30 most recent finished builds, oldest → newest, for sparklines.
+  recentBuilds: PipelineMetricsBuild[];
+  // P50 / P95 over `recentBuilds` where the build has a finishedAt.
+  durationP50Ms: number | null;
+  durationP95Ms: number | null;
+  // Top 5 step types by average duration (descending). Computed from
+  // build_log_entries (▶ step started → ✔ step ok / ✖ step failed) over
+  // the same sample set.
+  slowestSteps: PipelineMetricsStep[];
+}
+
+export interface PipelineMetricsBuild {
+  id: string;
+  status: BuildStatus;
+  startedAt: number;
+  finishedAt: number | null;
+  durationMs: number | null;
+}
+
+export interface PipelineMetricsStep {
+  // Node id (stable within a pipeline) — also returned so the editor can
+  // highlight the actual node.
+  nodeId: string;
+  // The step type (e.g. `shell`, `unityBatch`). Useful as a label when the
+  // node has no human-readable name.
+  stepType: StepType;
+  avgDurationMs: number;
+  maxDurationMs: number;
+  sampleCount: number;
+}
+
+// `GET /api/metrics/disk-usage` — per-pipeline artifact byte breakdown so
+// the Disk Usage page can show where space goes. `pipelines` are sorted
+// descending by bytes.
+export interface DiskUsageReport {
+  totalBytes: number;
+  artifactCount: number;
+  buildCount: number;
+  pipelines: DiskUsagePipelineEntry[];
+  // Artifacts whose owning build was pruned (orphaned rows). They still
+  // consume bytes and can be cleaned up by re-running prune.
+  orphanBytes: number;
+  orphanArtifactCount: number;
+}
+
+export interface DiskUsagePipelineEntry {
+  pipelineId: string;
+  pipelineName: string;
+  projectId: string;
+  projectName: string;
+  bytes: number;
+  artifactCount: number;
+  buildCount: number;
+}
+
+// Response shape for `POST /api/builds/prune?olderThanDays=N`.
+export interface PruneBuildsResponse {
+  cutoffMs: number;
+  builds: number;
+  logEntries: number;
+  artifacts: number;
+}
+
+// ── Cluster 11.F · Observability deep dive ─────────────────────────────────
+// Test report tree returned by `GET /api/builds/:id/test-report`. Both
+// xcresult (parsed via `xcrun xcresulttool`) and JUnit XML files collapse
+// to this shape so the UI doesn't care which format produced it. When the
+// server can't parse (e.g. xcresult on a non-macOS host), it returns an
+// empty `suites` array plus a `note` explaining why so the UI can show
+// the reason rather than a silent empty state.
+export type TestReportKind = 'xcresult' | 'junit';
+
+export type TestStatus = 'passed' | 'failed' | 'skipped';
+
+export interface TestCase {
+  name: string;
+  // Optional suite-qualified class/identifier for click-to-jump deep-linking
+  // ("MyApp.LoginViewSpec" etc.). UI uses it as the secondary line on each
+  // row.
+  classname?: string;
+  status: TestStatus;
+  // Duration in seconds (matches JUnit `time=` attribute semantics).
+  durationSec?: number;
+  // Failure / error message captured at parse time. Undefined for passed
+  // tests. May include the full stack trace; the UI truncates with a
+  // "show more" toggle.
+  message?: string;
+  // Best-effort source location ("Tests/Login/LoginViewSpec.swift:42") so
+  // the UI can render a deep-link. Surfaced from JUnit `file`/`line`
+  // attributes or xcresult test issues when present.
+  file?: string;
+  line?: number;
+}
+
+export interface TestSuite {
+  name: string;
+  // Sum of child test durations in seconds. JUnit ships this on the
+  // `<testsuite time=>` attribute directly; for xcresult we sum children.
+  timeSec?: number;
+  tests: TestCase[];
+}
+
+export interface TestReportTree {
+  // The artifact this report was parsed from (relative path + DB id) so
+  // the UI can offer a "Download xcresult bundle" / "View raw XML" link.
+  artifactId: number | null;
+  artifactPath: string | null;
+  kind: TestReportKind;
+  // Totals across all suites — server pre-computes so each client doesn't
+  // have to walk the tree.
+  totalTests: number;
+  totalPassed: number;
+  totalFailed: number;
+  totalSkipped: number;
+  // Sum of all suite `timeSec` values (may be 0 if the source XML had no
+  // timing). Optional so a non-timing JUnit doesn't lie about duration.
+  totalDurationSec: number | null;
+  suites: TestSuite[];
+  // Filled in when parsing was skipped — e.g. xcresult bundle on a Linux
+  // host. Empty suites + a note lets the UI explain the situation cleanly.
+  note?: string;
+}
+
+// `GET /api/builds/:id/coverage` — Cobertura-format coverage parsed from the
+// `coverage.xml` artifact produced by the slatherCoverage step. We surface
+// the overall line-coverage rate plus the top-5 lowest-covered files so
+// the build detail can show a small panel without rendering the full
+// per-line HTML report.
+export interface CoverageReport {
+  artifactId: number | null;
+  artifactPath: string | null;
+  // 0..1 — the Cobertura `<coverage line-rate=>` root attribute. Null when
+  // the file is unparseable (the UI shows "—" rather than 0%).
+  lineRate: number | null;
+  // 0..1 — branch coverage when present. Many slather configurations omit
+  // it; null in that case.
+  branchRate: number | null;
+  // Total lines covered / total lines instrumented across all files.
+  linesCovered: number;
+  linesValid: number;
+  // Bottom-5 by line-rate, ascending. Each entry has the source path and
+  // its own line-rate so we can render a "files most in need of tests"
+  // shortlist.
+  lowestFiles: Array<{ filename: string; lineRate: number; lines: number }>;
+  note?: string;
+}
+
+// `GET /api/flaky-tests?buildCount=30&pipelineId=...` — aggregates test
+// pass/fail across recent builds and flags tests whose failure rate is
+// strictly between 0 and 1 (i.e. they pass sometimes and fail others).
+export interface FlakyTestEntry {
+  // Stable key the UI uses to toggle quarantine: "<classname>::<name>" or
+  // just "<name>" when classname is missing.
+  testKey: string;
+  name: string;
+  classname?: string;
+  runs: number;
+  passes: number;
+  failures: number;
+  skips: number;
+  // failures / (passes + failures); 0..1. Null when (passes+failures) is 0.
+  failureRate: number | null;
+  // Most recent run we saw this test in, for the "last seen" column.
+  lastSeenAt: number;
+  // Whether the user marked it quarantined on the owning pipeline.
+  quarantined: boolean;
+}
+
+export interface FlakyTestsReport {
+  pipelineId: string;
+  pipelineName: string;
+  projectId: string;
+  projectName: string;
+  // Number of builds inspected (may be less than `buildCount` when the
+  // pipeline is young).
+  buildsAnalyzed: number;
+  // Returned sorted by failureRate descending, then runs descending.
+  flaky: FlakyTestEntry[];
+}
+
+// `POST /api/flaky-tests/:pipelineId/quarantine` body.
+export interface FlakyQuarantineUpdate {
+  testKey: string;
+  quarantined: boolean;
+}
+
+// `GET /api/metrics/trends?pipelineId=...&buildCount=100` — extended trend
+// data for the BuildTrendsPage. Independent from PipelineMetrics so the
+// existing 30-build panel doesn't change shape.
+export interface BuildTrendsReport {
+  pipelineId: string;
+  pipelineName: string;
+  projectId: string;
+  projectName: string;
+  buildsAnalyzed: number;
+  durationP50Ms: number | null;
+  durationP95Ms: number | null;
+  // P95 over the FIRST half of the sample. Used as a "baseline" so the UI
+  // can show a 2× regression alert when the current P95 spikes.
+  baselineP95Ms: number | null;
+  // True when durationP95Ms > 2 × baselineP95Ms. UI uses it to render a
+  // red banner.
+  p95SpikeDetected: boolean;
+  // 0..1 — successful / (successful + failed) over the sample.
+  successRate: number | null;
+  // Oldest → newest. Used by both the duration sparkline and the
+  // success/failure dot grid.
+  builds: BuildTrendsBuild[];
+}
+
+export interface BuildTrendsBuild {
+  id: string;
+  status: BuildStatus;
+  startedAt: number;
+  finishedAt: number | null;
+  durationMs: number | null;
+}
+
+// ── Cluster 11.A — Auth, identity, audit ───────────────────────────────────
+// All of this only ships behind `auth.enabled` in config.json. When the flag
+// is false the endpoints below still exist but the session middleware skips
+// enforcement, so existing single-user installs work identically to today.
+
+export type UserRole = 'admin' | 'maintainer' | 'viewer';
+
+export interface NotificationPrefs {
+  desktop: boolean;
+  telegram: boolean;
+  slack: boolean;
+  discord: boolean;
+  email: boolean;
+}
+
+export const DEFAULT_NOTIFICATION_PREFS: NotificationPrefs = {
+  desktop: true,
+  telegram: true,
+  slack: true,
+  discord: true,
+  email: false,
+};
+
+// Public shape returned by all user-listing endpoints. The password hash
+// never leaves the server.
+export interface User {
+  id: string;
+  username: string;
+  displayName: string;
+  role: UserRole;
+  createdAt: number;
+  updatedAt: number;
+  lastLoginAt: number | null;
+  notificationPrefs: NotificationPrefs;
+}
+
+export interface CreateUserInput {
+  username: string;
+  password: string;
+  displayName?: string;
+  role?: UserRole;
+}
+
+export interface UpdateUserInput {
+  displayName?: string;
+  role?: UserRole;
+  // Setting a non-empty password resets it; empty/undefined leaves it as-is.
+  password?: string;
+  notificationPrefs?: NotificationPrefs;
+}
+
+export interface LoginRequest {
+  username: string;
+  password: string;
+}
+
+// Returned by GET /api/auth/me — `null` (HTTP 200 with `{ user: null }`)
+// means "auth is enabled but no session"; the special `authDisabled` flag
+// short-circuits the login screen when the server isn't enforcing auth.
+export interface MeResponse {
+  authEnabled: boolean;
+  user: User | null;
+}
+
+// Audit log row. `actor` is the username (or `'anonymous'` when auth is off
+// for a request that mutates state). `resourceId` is best-effort — it's
+// extracted from the URL pattern where possible.
+export type AuditAction = 'create' | 'update' | 'delete' | 'login' | 'logout' | 'other';
+export type AuditResource =
+  | 'project'
+  | 'pipeline'
+  | 'build'
+  | 'host'
+  | 'config'
+  | 'user'
+  | 'auth'
+  | 'apiToken'
+  | 'nodeTemplate'
+  | 'other';
+
+export interface AuditEvent {
+  id: number;
+  ts: number;
+  actor: string;
+  actorUserId: string | null;
+  action: AuditAction;
+  resource: AuditResource;
+  resourceId: string | null;
+  method: string;
+  path: string;
+  statusCode: number;
+  requestId: string | null;
+}
+
+export interface AuditEventsQuery {
+  actor?: string;
+  action?: AuditAction;
+  resource?: AuditResource;
+  since?: number;
+  until?: number;
+  limit?: number;
+}
+
+export interface AuditEventsResponse {
+  events: AuditEvent[];
+  // Set when the result was capped by `limit`. UI shows a "load older" hint.
+  truncated: boolean;
+}
+
+// API tokens are random 32-byte hex values handed to CI scripts. Only the
+// bcrypt hash lives in SQLite; the plaintext is shown once on creation.
+export interface ApiToken {
+  id: string;
+  userId: string;
+  name: string;
+  createdAt: number;
+  lastUsedAt: number | null;
+  // The username + role of the owner — pre-joined so the UI doesn't need a
+  // second fetch to render the list.
+  ownerUsername: string;
+  ownerRole: UserRole;
+}
+
+export interface CreateApiTokenInput {
+  name: string;
+  // Optional. When the caller is an admin this can target another user;
+  // non-admins always create tokens for themselves.
+  userId?: string;
+}
+
+// Server response immediately after a token is created — includes the
+// plaintext value exactly once. Subsequent GETs return only the metadata
+// shape above.
+export interface CreatedApiToken extends ApiToken {
+  token: string;
+}
+
+// Auth block in ServerConfig. Both fields default to "disabled / empty" so
+// brand-new installs behave identically to today. The session secret is
+// generated and persisted automatically the first time `auth.enabled` flips
+// to true.
+export interface AuthConfig {
+  enabled: boolean;
+  sessionSecret: string;
+}
+
+// ── Cluster 11.D — manual approval steps ────────────────────────────────────
+// The `manualApproval` step pauses a build mid-run and waits for an in-app
+// decision. While paused the build sits in status `awaiting_approval` and the
+// pending request is persisted in `build_approvals` so a server restart
+// doesn't lose it.
+
+export type ApprovalInputType = 'text' | 'select' | 'checkbox';
+
+export interface ApprovalInputSpec {
+  name: string;
+  label: string;
+  type: ApprovalInputType;
+  options?: string[];
+  required?: boolean;
+}
+
+// Per-step data for the `manualApproval` node.
+export interface ManualApprovalStepData {
+  message: string;
+  inputs?: ApprovalInputSpec[];
+  requiredApprovers?: number;
+  requiredRoles?: string[];
+  timeoutMinutes?: number;
+}
+
+export type ApprovalDecision = 'approve' | 'reject' | 'timeout';
+
+export interface BuildApproval {
+  id: string;
+  buildId: string;
+  pipelineId: string;
+  projectId: string;
+  nodeId: string;
+  message: string;
+  inputsSpec: ApprovalInputSpec[];
+  requiredApprovers: number;
+  requiredRoles: string[];
+  timeoutMinutes: number;
+  requestedAt: number;
+  decision: ApprovalDecision | null;
+  decidedBy: string | null;
+  decidedAt: number | null;
+  inputsValues: Record<string, string | boolean> | null;
+  approvers: Array<{
+    actor: string;
+    decision: 'approve' | 'reject';
+    at: number;
+  }>;
+}
+
+export interface ApprovalDecideRequest {
+  decision: 'approve' | 'reject';
+  inputValues?: Record<string, string | boolean>;
+  actor?: string;
+}
+
+// ── Cluster 11.E · VCS / PR feedback ────────────────────────────────────────
+// A stored credential used by the outbound check-run posting and PR-context
+// lookups. The `token` field is encrypted-at-rest via the existing crypto
+// allow-list (key name `vcsToken`).
+export type VcsProvider = 'github' | 'gitlab' | 'gitea';
+
+export interface VcsCredential {
+  id: string;
+  name: string;
+  provider: VcsProvider;
+  // Optional base URL for self-hosted GitLab / Gitea / GitHub Enterprise.
+  // Blank → use the provider's public default.
+  baseUrl: string | null;
+  // The decrypted token is never returned by the API — only on creation.
+  // List/get returns the masked preview only.
+  tokenPreview: string;
+  createdAt: number;
+}
+
+// `POST /api/vcs/credentials` body.
+export interface VcsCredentialCreate {
+  name: string;
+  provider: VcsProvider;
+  baseUrl?: string;
+  vcsToken: string;
+}
+
+// Per-project VCS link. Stored on the projects row; absence means "skip
+// outbound posts for this project".
+export interface ProjectVcsConfig {
+  vcsProvider: VcsProvider | null;
+  // owner/repo e.g. "alperunlu07/BuildPilot" (or namespaced GitLab path).
+  vcsRepo: string | null;
+  vcsCredentialId: string | null;
+}
+
+// `PUT /api/projects/:id/vcs` body.
+export type ProjectVcsUpdate = ProjectVcsConfig;
+
+// PR metadata associated with a build (commit may belong to N PRs; we return
+// all of them so the UI can render multiple cards if needed).
+export interface PrContext {
+  // The commit sha we looked up.
+  sha: string;
+  provider: VcsProvider;
+  // owner/repo we queried.
+  repo: string;
+  prs: PrSummary[];
+}
+
+export interface PrSummary {
+  number: number;
+  title: string;
+  state: 'open' | 'closed' | 'merged';
+  url: string;
+  authorLogin: string | null;
+  headBranch: string;
+  baseBranch: string;
+  labels: string[];
+  // Issue references parsed out of the PR body (#NNN style). Up to 20.
+  linkedIssues: number[];
+}
+
+// Pipeline-level slash command config (stored in pipeline data). Empty list
+// = comment triggers disabled for this pipeline.
+export interface PrCommandConfig {
+  // Allowed slash commands without the leading slash. `["run-ios", "run-all"]`
+  // accepts `/run-ios` and `/run-all`. Special token `"*"` allows any
+  // command.
+  commands: string[];
+  // Whitelist of GitHub/Gitea logins or GitLab usernames that are allowed
+  // to trigger the build. Empty = anyone with write access to the repo.
+  allowedAuthors: string[];
+}
+
+// Server-side projection of the outbound check-run state. The runner posts
+// one of these for each build start / finish.
+export type CheckRunState = 'queued' | 'in_progress' | 'success' | 'failure' | 'cancelled';
+
+// GitHub OAuth app config (lives in ~/.buildpilot/config.json).
+export interface GithubOAuthConfig {
+  clientId: string;
+  clientSecret: string;
+  // Where to redirect after a successful exchange. Defaults to the dashboard
+  // /vcs-credentials page when blank.
+  redirectAfter?: string;
+}
+
+export interface GithubOAuthConfigPublic {
+  hasClientId: boolean;
+  clientIdPreview: string;
+  hasClientSecret: boolean;
+  redirectAfter: string;
+}
+
+export interface GithubOAuthConfigUpdate {
+  clientId?: string;
+  clientSecret?: string;
+  redirectAfter?: string;
+  clearClientSecret?: boolean;
 }

@@ -1,6 +1,18 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
+// The dev server proxies /api + /events to the BuildPilot server. The port
+// defaults to 51731 (matching server config) but can be overridden via the
+// BUILDPILOT_API_PORT env var so the E2E fixture can spin up a server on a
+// dedicated port without colliding with a local dev instance.
+const apiPort = process.env.BUILDPILOT_API_PORT
+  ? Number(process.env.BUILDPILOT_API_PORT)
+  : 51731;
+const apiTarget = `http://127.0.0.1:${apiPort}`;
+// When E2E is driving the dev server we don't want Vite to pop a browser
+// window or fail on a busy port (the fixture picks the port deliberately).
+const isE2E = process.env.BUILDPILOT_API_PORT !== undefined;
+
 export default defineConfig({
   plugins: [react()],
   build: {
@@ -21,11 +33,11 @@ export default defineConfig({
     host: '127.0.0.1',
     port: 51732,
     strictPort: true,
-    open: true,
+    open: !isE2E,
     proxy: {
-      '/api': 'http://127.0.0.1:51731',
+      '/api': apiTarget,
       '/events': {
-        target: 'http://127.0.0.1:51731',
+        target: apiTarget,
         changeOrigin: true,
       },
     },

@@ -7,29 +7,51 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@buildpilot/shared-types": "workspace:*",
     "@buildpilot/step-registry": "workspace:*",
+    "@types/dagre": "^0.7.54",
     "@xyflow/react": "^12.3.5",
     "clsx": "^2.1.1",
+    "cmdk": "^1.1.1",
+    "dagre": "^0.8.5",
     "date-fns": "^4.1.0",
+    "i18next": "^26.2.0",
     "lucide-react": "^0.460.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "react-i18next": "^17.0.8",
+    "react-resizable-panels": "^4.11.1",
     "react-window": "^1.8.11",
+    "wouter": "^3.9.0",
     "zustand": "^5.0.2"
   },
   "devDependencies": {
+    "@storybook/addon-essentials": "8.6.18",
+    "@storybook/blocks": "8.6.18",
+    "@storybook/react": "8.6.18",
+    "@storybook/react-vite": "8.6.18",
+    "@storybook/test": "8.6.18",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.1.0",
+    "@testing-library/user-event": "^14.5.2",
     "@types/react": "^18.3.13",
     "@types/react-dom": "^18.3.1",
     "@types/react-window": "^1.8.8",
     "@vitejs/plugin-react": "^4.3.4",
     "autoprefixer": "^10.4.20",
+    "jsdom": "^25.0.1",
     "postcss": "^8.4.49",
+    "storybook": "8.6.18",
     "tailwindcss": "^3.4.15",
     "typescript": "^5.6.3",
-    "vite": "^6.0.1"
+    "vite": "^6.0.1",
+    "vitest": "^2.1.8"
   }
 }

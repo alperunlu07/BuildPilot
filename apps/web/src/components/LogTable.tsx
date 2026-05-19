@@ -1,7 +1,10 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { ArrowDownCircle } from 'lucide-react';
 import { FixedSizeList, type ListChildComponentProps } from 'react-window';
 import type { BuildLogEntry, BuildLogLevel, StepType } from '@buildpilot/shared-types';
 import { cn } from '../lib/cn';
+import { renderAnsi, type AnsiSegment } from '../lib/ansi';
+import { useMinWidth } from '../lib/breakpoint';
 
 interface Props {
   entries: BuildLogEntry[];
@@ -12,6 +15,9 @@ interface Props {
   // Compact = tighter row height for the bottom panel; default = roomier.
   compact?: boolean;
   emptyMessage?: string;
+  // Optional "Copy as terminal command" hook. Returning a non-null string
+  // surfaces a hover "copy" button on the row that writes it to clipboard.
+  copyCommandFor?(entry: BuildLogEntry): string | null;
 }
 
 const LEVEL_STYLE: Record<BuildLogLevel, { dot: string; pill: string }> = {
@@ -29,10 +35,18 @@ const LEVEL_STYLE: Record<BuildLogLevel, { dot: string; pill: string }> = {
 // VariableSizeList + per-row measurement, which costs more for big logs.
 const ROW_H = 24;
 const ROW_H_COMPACT = 20;
+// On sub-640px viewports we drop the timestamp + node columns and let the
+// level pill + message span the row in a tighter two-column layout. The row
+// height stays the same — message remains single-line truncated.
+const ROW_H_MOBILE = 28;
 
 // Grid column template — kept in sync between header and body rows so they
 // align. Last column (message) flexes.
 const GRID_COLS = 'minmax(0, 88px) minmax(0, 78px) minmax(0, 150px) minmax(0, 1fr)';
+// Mobile collapses the four-column desktop grid down to level + message so
+// the message has room to breathe on a 320px-wide viewport. Time + node
+// columns are surfaced via a hover/tap-friendly title attribute.
+const GRID_COLS_MOBILE = 'minmax(0, 64px) minmax(0, 1fr)';
 
 export function LogTable({
   entries,
@@ -40,12 +54,21 @@ export function LogTable({
   follow = true,
   compact = false,
   emptyMessage = 'Waiting for output…',
+  copyCommandFor,
 }: Props) {
-  const rowH = compact ? ROW_H_COMPACT : ROW_H;
+  // Below `sm:` we collapse to a level + message layout. We resolve this in
+  // JS rather than CSS because react-window needs a fixed numeric row height
+  // and the cell rendering is also branched on the viewport.
+  const isWide = useMinWidth('sm');
+  const rowH = !isWide ? ROW_H_MOBILE : compact ? ROW_H_COMPACT : ROW_H;
+  const gridCols = isWide ? GRID_COLS : GRID_COLS_MOBILE;
   const listRef = useRef<FixedSizeList>(null);
   const followRef = useRef(follow);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState<{ w: number; h: number }>({ w: 0, h: 0 });
+  // Mirrors followRef into render state so the "Jump to latest" button can
+  // appear/disappear when the user scrolls away from the bottom.
+  const [autoFollow, setAutoFollow] = useState(follow);
 
   // Measure the container so FixedSizeList knows how tall/wide to be. Using
   // ResizeObserver instead of forcing height: 100% on the list because the
@@ -72,31 +95,37 @@ export function LogTable({
     listRef.current?.scrollToItem(entries.length - 1, 'end');
   }, [entries.length]);
 
+  const jumpToLatest = useCallback(() => {
+    followRef.current = true;
+    setAutoFollow(true);
+    if (entries.length > 0) listRef.current?.scrollToItem(entries.length - 1, 'end');
+  }, [entries.length]);
+
   const itemData = useMemo(
-    () => ({ entries, nodeLabel, compact, rowH }),
-    [entries, nodeLabel, compact, rowH],
+    () => ({ entries, nodeLabel, compact, rowH, copyCommandFor, isWide, gridCols }),
+    [entries, nodeLabel, compact, rowH, copyCommandFor, isWide, gridCols],
   );
 
   if (entries.length === 0) {
     return (
-      <div className="flex h-full items-center justify-center text-xs text-slate-500">
+      <div className="flex h-full items-center justify-center text-xs text-bp-text-muted">
         {emptyMessage}
       </div>
     );
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col font-mono text-[12px]">
+    <div className="relative flex h-full min-h-0 flex-col font-mono text-[12px]">
       <div
         className={cn(
-          'sticky top-0 z-10 grid border-b border-slate-800 bg-slate-950/95 px-2 backdrop-blur',
+          'sticky top-0 z-10 grid border-b border-bp-surface-2 bg-bp-surface-0/95 px-2 backdrop-blur',
           compact ? 'py-1' : 'py-1.5',
         )}
-        style={{ gridTemplateColumns: GRID_COLS }}
+        style={{ gridTemplateColumns: gridCols }}
       >
-        <Th>Time</Th>
+        {isWide && <Th>Time</Th>}
         <Th>Level</Th>
-        <Th>Node</Th>
+        {isWide && <Th>Node</Th>}
         <Th>Message</Th>
       </div>
       <div ref={wrapperRef} className="flex-1 min-h-0">
@@ -112,7 +141,9 @@ export function LogTable({
             onScroll={({ scrollOffset, scrollUpdateWasRequested }) => {
               if (scrollUpdateWasRequested) return;
               const max = entries.length * rowH - size.h;
-              followRef.current = max - scrollOffset < rowH * 2;
+              const atBottom = max - scrollOffset < rowH * 2;
+              followRef.current = atBottom;
+              setAutoFollow((cur) => (cur === atBottom ? cur : atBottom));
             }}
             // Inline class for the inner container — react-window manages
             // its own scroll, we just style the scrollbar.
@@ -122,6 +153,16 @@ export function LogTable({
           </FixedSizeList>
         )}
       </div>
+      {!autoFollow && (
+        <button
+          type="button"
+          onClick={jumpToLatest}
+          className="absolute bottom-3 right-4 z-20 inline-flex items-center gap-1 rounded-full border border-sky-700 bg-bp-surface-1/90 px-2.5 py-1 text-[11px] text-sky-300 shadow-lg backdrop-blur hover:border-sky-500 hover:text-sky-200"
+          title="Re-enable autoscroll"
+        >
+          <ArrowDownCircle size={12} /> Jump to latest
+        </button>
+      )}
     </div>
   );
 }
@@ -131,25 +172,38 @@ interface RowItemData {
   nodeLabel?(nodeId: string, stepType: StepType | null): string;
   compact: boolean;
   rowH: number;
+  copyCommandFor?(entry: BuildLogEntry): string | null;
+  isWide: boolean;
+  gridCols: string;
 }
 
 function Row({ index, style, data }: ListChildComponentProps<RowItemData>) {
-  const { entries, nodeLabel, compact } = data;
+  const { entries, nodeLabel, compact, copyCommandFor, isWide, gridCols } = data;
   const e = entries[index]!;
   const lvlStyle = LEVEL_STYLE[e.level];
+  const cmd = copyCommandFor?.(e) ?? null;
+  // On narrow viewports, surface time + node info via title since the
+  // dedicated columns are hidden. This keeps the row terse without losing
+  // the metadata for users who long-press / hover.
+  const nodeLabelText = e.nodeId
+    ? (nodeLabel ? nodeLabel(e.nodeId, e.stepType) : `${e.stepType ?? '?'}:${e.nodeId.slice(0, 8)}`)
+    : 'pipeline';
+  const rowTitle = !isWide
+    ? `${fmtTime(e.ts)} · ${nodeLabelText} · ${e.message.replace(/\x1b\[[0-9;]*[A-Za-z]/g, '')}`
+    : e.message.replace(/\x1b\[[0-9;]*[A-Za-z]/g, '');
   return (
     <div
       style={style}
       className={cn(
-        'grid items-center border-t border-slate-900 px-2 hover:bg-slate-900/40',
+        'group grid items-center border-t border-bp-surface-1 px-2 hover:bg-bp-surface-1/40',
         compact ? 'py-0' : 'py-0',
       )}
     >
       <div
         className="grid w-full items-center"
-        style={{ gridTemplateColumns: GRID_COLS, height: '100%' }}
+        style={{ gridTemplateColumns: gridCols, height: '100%' }}
       >
-        <span className="truncate text-slate-500">{fmtTime(e.ts)}</span>
+        {isWide && <span className="truncate text-bp-text-muted">{fmtTime(e.ts)}</span>}
         <span
           className={cn(
             'inline-flex w-fit items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider',
@@ -159,34 +213,72 @@ function Row({ index, style, data }: ListChildComponentProps<RowItemData>) {
           <span className={cn('h-1.5 w-1.5 rounded-full', lvlStyle.dot)} />
           {e.level}
         </span>
-        <span className="truncate text-slate-300">
-          {e.nodeId
-            ? nodeLabel
-              ? nodeLabel(e.nodeId, e.stepType)
-              : `${e.stepType ?? '?'}:${e.nodeId.slice(0, 8)}`
-            : <span className="text-slate-600">—</span>}
-        </span>
+        {isWide && (
+          <span className="truncate text-bp-text-secondary">
+            {e.nodeId
+              ? nodeLabelText
+              : <span className="text-bp-text-muted">—</span>}
+          </span>
+        )}
         <span
           // Single-line truncation; full text on hover so virtualization
-          // can keep a fixed row height.
-          title={e.message}
+          // can keep a fixed row height. ANSI sequences are stripped from
+          // the title attr so the tooltip stays readable.
+          title={rowTitle}
           className={cn(
-            'truncate text-slate-200',
+            'relative flex items-center truncate text-bp-text-primary',
             e.level === 'stderr' && 'text-amber-200',
             e.level === 'failure' && 'text-rose-300',
             e.level === 'success' && 'text-emerald-300',
           )}
         >
-          {e.message}
+          <span className="min-w-0 truncate">
+            <AnsiMessage text={e.message} />
+          </span>
+          {cmd && (
+            <button
+              type="button"
+              onClick={(ev) => {
+                ev.stopPropagation();
+                void navigator.clipboard?.writeText(cmd);
+              }}
+              // On touch devices the hover-revealed copy button is unreachable,
+              // so make it always visible there via touch-target. On precise
+              // pointers it remains a group-hover affordance to keep rows tidy.
+              className="touch-target ml-2 hidden shrink-0 rounded border border-bp-surface-3 px-1.5 py-0 text-[10px] uppercase tracking-wider text-bp-text-muted hover:border-sky-500 hover:text-sky-300 group-hover:inline-flex"
+              title={`Copy: ${cmd}`}
+              aria-label={`Copy command: ${cmd}`}
+            >
+              copy
+            </button>
+          )}
         </span>
       </div>
     </div>
   );
 }
 
+// Renders a log message with inline ANSI SGR colors. Falls back to plain
+// text when the message contains no escape sequences (no work, no dom).
+function AnsiMessage({ text }: { text: string }) {
+  const segments = useMemo<AnsiSegment[]>(() => renderAnsi(text), [text]);
+  if (segments.length === 1 && Object.keys(segments[0]!.style).length === 0) {
+    return <>{segments[0]!.text}</>;
+  }
+  return (
+    <>
+      {segments.map((seg, i) => (
+        <span key={i} style={seg.style}>
+          {seg.text}
+        </span>
+      ))}
+    </>
+  );
+}
+
 function Th({ children }: { children: React.ReactNode }) {
   return (
-    <span className="truncate text-left text-[10px] font-medium uppercase tracking-wider text-slate-500">
+    <span className="truncate text-left text-[10px] font-medium uppercase tracking-wider text-bp-text-muted">
       {children}
     </span>
   );

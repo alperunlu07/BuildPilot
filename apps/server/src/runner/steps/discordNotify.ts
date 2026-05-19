@@ -1,5 +1,6 @@
 import type { DiscordNotifyStepData } from '@buildpilot/shared-types';
 import type { StepContext } from '../engine';
+import { suppressForMatrixSummary } from './_matrixGuard';
 
 export async function runDiscordNotify(
   ctx: StepContext,
@@ -8,6 +9,11 @@ export async function runDiscordNotify(
   const d = data as Partial<DiscordNotifyStepData>;
   if (!d.webhookUrl) throw new Error('discordNotify: missing "webhookUrl"');
   if (!d.content) throw new Error('discordNotify: missing "content"');
+
+  if (suppressForMatrixSummary(ctx)) {
+    ctx.log('discordNotify: skipped (matrix child — parent will send rolled-up summary)');
+    return;
+  }
 
   ctx.log(`discord → ${maskUrl(d.webhookUrl)}`);
   ctx.log(d.content, 'stdout');

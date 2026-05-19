@@ -1,5 +1,6 @@
 import type { EmailNotifyStepData } from '@buildpilot/shared-types';
 import type { StepContext } from '../engine';
+import { suppressForMatrixSummary } from './_matrixGuard';
 
 // Loose ambient type so tsc passes whether nodemailer is installed or not.
 // emailNotify is a Phase 3 step type — when the user actually wires it into
@@ -98,6 +99,11 @@ export async function runEmailNotify(
   const d = data as Partial<EmailNotifyStepData>;
   const msg = buildEmailMessage(d);
   const cfg = buildSmtpConfig(d);
+
+  if (suppressForMatrixSummary(ctx)) {
+    ctx.log('emailNotify: skipped (matrix child — parent will send rolled-up summary)');
+    return;
+  }
 
   ctx.log(`smtp ${cfg.auth.user}@${cfg.host}:${cfg.port} ${cfg.secure ? '(TLS)' : '(STARTTLS)'}`);
   ctx.log(`→ ${msg.to.join(', ')}${msg.cc ? ` cc:${msg.cc.join(',')}` : ''}`);

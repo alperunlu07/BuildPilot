@@ -7,6 +7,7 @@ import {
   Hammer,
   Plus,
   RefreshCw,
+  Sparkles,
   Trash2,
 } from 'lucide-react';
 import type { Commit, Pipeline } from '@buildpilot/shared-types';
@@ -14,6 +15,7 @@ import { useStore } from '../store/store';
 import { api } from '../lib/api';
 import { CommitItem } from '../components/CommitItem';
 import { CreatePipelineDialog } from '../components/CreatePipelineDialog';
+import { VcsLinkPanel } from '../components/VcsLinkPanel';
 import { computeGraph } from '../lib/graph';
 import { cn } from '../lib/cn';
 
@@ -36,10 +38,10 @@ export function ProjectDetailPage({ projectId }: Props) {
     [allBuilds, projectId],
   );
   const setView = useStore((s) => s.setView);
-  const removeProject = useStore((s) => s.removeProject);
+  const softDeleteProject = useStore((s) => s.softDeleteProject);
+  const softDeletePipeline = useStore((s) => s.softDeletePipeline);
   const triggerBuild = useStore((s) => s.triggerBuild);
   const loadBuilds = useStore((s) => s.loadBuilds);
-  const requestConfirmation = useStore((s) => s.requestConfirmation);
 
   const [currentBranch, setCurrentBranch] = useState<string>('');
   const [headSha, setHeadSha] = useState<string>('');
@@ -148,7 +150,7 @@ export function ProjectDetailPage({ projectId }: Props) {
         <button
           type="button"
           onClick={() => setView({ type: 'projects' })}
-          className="text-[11px] uppercase tracking-wider text-slate-500 hover:text-slate-300"
+          className="text-[11px] uppercase tracking-wider text-slate-400 hover:text-slate-300"
         >
           ← Projects
         </button>
@@ -156,24 +158,14 @@ export function ProjectDetailPage({ projectId }: Props) {
           <h1 className="text-lg font-semibold text-slate-100">{project.name}</h1>
           <button
             type="button"
-            onClick={() => {
-              requestConfirmation({
-                title: `Remove project "${project.name}"?`,
-                body:
-                  'Pipelines belonging to this project will also be deleted. ' +
-                  'Build history is kept.',
-                variant: 'destructive',
-                confirmLabel: 'Remove project',
-                onConfirm: () => removeProject(project.id),
-              });
-            }}
+            onClick={() => softDeleteProject(project.id)}
             className="text-[11px] text-rose-400 hover:text-rose-300"
             title="Remove project"
           >
             <Trash2 size={13} />
           </button>
         </div>
-        <code className="mt-0.5 block text-[11px] text-slate-500">{project.path}</code>
+        <code className="mt-0.5 block text-[11px] text-slate-400">{project.path}</code>
       </header>
 
       {/* BRANCH STRIP */}
@@ -185,14 +177,14 @@ export function ProjectDetailPage({ projectId }: Props) {
             <code className="font-mono font-semibold text-emerald-200">{currentBranch}</code>
           </span>
         ) : (
-          <span className="inline-flex items-center gap-1.5 rounded-md border border-slate-700 bg-slate-900 px-2.5 py-1 text-xs text-slate-500">
+          <span className="inline-flex items-center gap-1.5 rounded-md border border-slate-700 bg-slate-900 px-2.5 py-1 text-xs text-slate-400">
             <span className="h-1.5 w-1.5 rounded-full bg-slate-600" />
             checking…
           </span>
         )}
 
         <span className="flex items-center gap-1.5 text-xs text-slate-400">
-          <GitBranch size={12} className="text-slate-500" />
+          <GitBranch size={12} className="text-slate-400" />
           browse
           <select
             value={browseBranch}
@@ -248,7 +240,7 @@ export function ProjectDetailPage({ projectId }: Props) {
         {/* Commits — scrollable */}
         <div className="scrollbar-thin min-h-0 overflow-y-auto border-r border-slate-800 px-2 py-2">
           {commits.length === 0 ? (
-            <div className="py-10 text-center text-sm text-slate-500">No commits found.</div>
+            <div className="py-10 text-center text-sm text-slate-400">No commits found.</div>
           ) : (
             <ol className="relative">
               {layout.rows.map((r, idx) => (
@@ -282,8 +274,51 @@ export function ProjectDetailPage({ projectId }: Props) {
           </div>
 
           {pipelines.length === 0 ? (
-            <div className="rounded-md border border-dashed border-slate-700 bg-slate-900/40 p-4 text-center text-xs text-slate-500">
-              No pipelines yet. Create one to start watching commits and running builds.
+            <div className="rounded-md border border-dashed border-slate-700 bg-slate-900/40 p-5 text-center">
+              <GitBranch className="mx-auto mb-2 text-slate-400" size={24} />
+              <div className="text-sm font-medium text-slate-200">No pipelines yet</div>
+              <p className="mx-auto mt-1 max-w-[260px] text-[11px] text-slate-400">
+                A pipeline watches a branch and runs steps on every new commit.
+                Start blank or drop in the sample pipeline.
+              </p>
+              <div className="mt-3 flex flex-col gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setOpenCreate(true)}
+                  className="inline-flex items-center justify-center gap-1.5 rounded-md bg-sky-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-sky-500"
+                >
+                  <Plus size={12} /> New pipeline
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const sample = await api.createPipeline({
+                      projectId: project.id,
+                      name: 'Sample · checkout → pull → shell',
+                      watch: {
+                        branch: currentBranch || project.defaultBranch,
+                        intervalSec: 30,
+                        autoTrigger: 'ask',
+                      },
+                      nodes: [
+                        { id: 'n_checkout', type: 'checkout', position: { x: 0, y: 0 }, data: { branch: currentBranch || project.defaultBranch } },
+                        { id: 'n_pull', type: 'pull', position: { x: 240, y: 0 }, data: { remote: 'origin' } },
+                        { id: 'n_shell', type: 'shell', position: { x: 480, y: 0 }, data: { command: 'echo "Hello from BuildPilot"' } },
+                      ],
+                      edges: [
+                        { id: 'e_checkout_pull', source: 'n_checkout', target: 'n_pull', condition: 'success' },
+                        { id: 'e_pull_shell', source: 'n_pull', target: 'n_shell', condition: 'success' },
+                      ],
+                      matrix: null,
+                    });
+                    useStore.getState().upsertPipeline(sample);
+                    setView({ type: 'pipeline', id: sample.id });
+                  }}
+                  className="inline-flex items-center justify-center gap-1.5 rounded-md border border-slate-700 px-3 py-1.5 text-xs text-slate-200 hover:border-emerald-500 hover:text-emerald-300"
+                >
+                  <Sparkles size={12} /> Load sample pipeline
+                </button>
+              </div>
             </div>
           ) : (
             <ul className="space-y-2">
@@ -299,19 +334,12 @@ export function ProjectDetailPage({ projectId }: Props) {
                     useStore.getState().upsertPipeline(cloned);
                     setView({ type: 'pipeline', id: cloned.id });
                   }}
-                  onDelete={() => {
-                    requestConfirmation({
-                      title: `Delete pipeline "${pl.name}"?`,
-                      body: "Build history for this pipeline is kept; only the pipeline definition is removed.",
-                      variant: 'destructive',
-                      confirmLabel: 'Delete pipeline',
-                      onConfirm: () => useStore.getState().deletePipeline(pl.id),
-                    });
-                  }}
+                  onDelete={() => softDeletePipeline(pl.id)}
                 />
               ))}
             </ul>
           )}
+          <VcsLinkPanel projectId={project.id} />
         </aside>
       </div>
 
@@ -347,7 +375,7 @@ function PipelineRow({
         <button type="button" onClick={onOpen} className="min-w-0 flex-1 text-left">
           <div className="flex items-center gap-2 text-sm font-medium text-slate-100">
             <span className="truncate">{pipeline.name}</span>
-            <ChevronRight size={12} className="shrink-0 text-slate-500" />
+            <ChevronRight size={12} className="shrink-0 text-slate-400" />
           </div>
           <div className="mt-1 flex flex-wrap gap-1">
             <span

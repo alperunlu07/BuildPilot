@@ -1,7 +1,7 @@
 import { Folder, Plus, Trash2 } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
 import { useStore } from '../store/store';
 import { BuildSparkline } from '../components/BuildSparkline';
+import { Time } from '../lib/formatDate';
 
 interface Props {
   onAdd(): void;
@@ -10,8 +10,7 @@ interface Props {
 export function ProjectsPage({ onAdd }: Props) {
   const projects = useStore((s) => s.projects);
   const setView = useStore((s) => s.setView);
-  const removeProject = useStore((s) => s.removeProject);
-  const requestConfirmation = useStore((s) => s.requestConfirmation);
+  const softDeleteProject = useStore((s) => s.softDeleteProject);
 
   return (
     <div className="mx-auto max-w-4xl p-8">
@@ -25,16 +24,29 @@ export function ProjectsPage({ onAdd }: Props) {
         <button
           type="button"
           onClick={onAdd}
-          className="inline-flex items-center gap-1 rounded-md bg-sky-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-sky-500"
+          className="focusable inline-flex items-center gap-1 rounded-md bg-sky-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-sky-500"
         >
           <Plus size={14} /> Add project
         </button>
       </div>
 
       {projects.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-slate-800 bg-slate-900/40 p-10 text-center text-slate-400">
-          <Folder className="mx-auto mb-2 text-slate-600" size={28} />
-          No projects yet. Add a local git repository to start watching it.
+        <div className="rounded-lg border border-dashed border-slate-800 bg-slate-900/40 p-10 text-center">
+          <Folder className="mx-auto mb-3 text-slate-400" size={36} />
+          <div className="text-base font-medium text-slate-200">No projects yet</div>
+          <p className="mx-auto mt-1 max-w-md text-sm text-slate-400">
+            BuildPilot watches local git repositories and runs pipelines on every new
+            commit. Point it at a folder to start.
+          </p>
+          <div className="mt-5 flex justify-center">
+            <button
+              type="button"
+              onClick={onAdd}
+              className="focusable inline-flex items-center gap-1.5 rounded-md bg-sky-600 px-3.5 py-2 text-sm font-medium text-white hover:bg-sky-500"
+            >
+              <Plus size={14} /> Add your first project
+            </button>
+          </div>
         </div>
       ) : (
         <ul className="space-y-2">
@@ -48,28 +60,27 @@ export function ProjectsPage({ onAdd }: Props) {
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
-                  requestConfirmation({
-                    title: `Remove project "${p.name}"?`,
-                    body:
-                      'Pipelines belonging to this project will also be deleted. ' +
-                      'Build history is kept.',
-                    variant: 'destructive',
-                    confirmLabel: 'Remove project',
-                    onConfirm: () => removeProject(p.id),
-                  });
+                  softDeleteProject(p.id);
                 }}
-                className="absolute right-3 top-3 rounded-md border border-transparent p-1 text-slate-500 opacity-0 transition-opacity hover:border-rose-700 hover:text-rose-400 group-hover:opacity-100"
+                // touch-target bumps this to >=32px on coarse-pointer devices.
+                // We also force-visible on touch since `group-hover` never
+                // fires there — otherwise the delete affordance would be
+                // unreachable on a phone.
+                className="focusable touch-target absolute right-3 top-3 rounded-md border border-transparent p-1 text-slate-400 opacity-0 transition-opacity hover:border-rose-700 hover:text-rose-400 group-hover:opacity-100 [@media(pointer:coarse)]:opacity-100"
                 title="Remove this project"
+                aria-label={`Remove project ${p.name}`}
               >
                 <Trash2 size={14} />
               </button>
               <div className="flex items-baseline justify-between pr-8">
                 <h3 className="text-base font-medium text-slate-100">{p.name}</h3>
-                <span className="text-[11px] text-slate-500">
-                  added {formatDistanceToNow(p.createdAt, { addSuffix: true })}
-                </span>
+                <Time
+                  ts={p.createdAt}
+                  prefix="added"
+                  className="text-[11px] text-slate-400"
+                />
               </div>
-              <code className="mt-1 block truncate text-[11px] text-slate-500">{p.path}</code>
+              <code className="mt-1 block truncate text-[11px] text-slate-400">{p.path}</code>
               <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-slate-400">
                 <span className="rounded-md bg-slate-800 px-2 py-0.5">
                   default:{' '}

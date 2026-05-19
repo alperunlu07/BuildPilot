@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- BuildPilot launcher icon — solid sky-blue tile with a stylized hammer
+       glyph echoing the in-app "build/run" affordance. Kept intentionally
+       simple so it renders cleanly at 192/512 and as a maskable icon. -->
+  <rect width="512" height="512" rx="96" ry="96" fill="#0ea5e9"/>
+  <g transform="translate(96 96)" fill="none" stroke="#f8fafc" stroke-width="28" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Hammer head -->
+    <rect x="32" y="48" width="192" height="80" rx="12" fill="#f8fafc" stroke="none"/>
+    <!-- Handle -->
+    <rect x="120" y="128" width="32" height="208" rx="12" fill="#f8fafc" stroke="none"/>
+    <!-- Strike spark -->
+    <circle cx="248" cy="260" r="24" fill="#fde68a" stroke="none"/>
+    <path d="M232 244 L264 276 M264 244 L232 276" stroke="#0ea5e9" stroke-width="10"/>
+  </g>
+</svg>

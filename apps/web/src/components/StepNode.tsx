@@ -1,19 +1,24 @@
-import { Handle, Position, type NodeProps } from '@xyflow/react';
+import { Handle, Position, useReactFlow, type NodeProps } from '@xyflow/react';
+import { useCallback } from 'react';
 import {
+  AlertCircle,
   Apple,
   ArrowDownToLine,
   BadgeCheck,
+  Ban,
   Box,
   Boxes,
   Bug,
   AlignLeft,
   Camera,
+  Check,
   CloudUpload,
   CodeXml,
   FileCog,
   Frame,
   Gauge,
   GitBranch,
+  Loader2,
   Microscope,
   PenTool,
   Percent,
@@ -40,6 +45,7 @@ import {
   Upload,
   Wand2,
   Wrench,
+  X,
   type LucideIcon,
 } from 'lucide-react';
 import type { StepType } from '@buildpilot/shared-types';
@@ -97,18 +103,48 @@ interface StepNodeData {
   // Optional friendly name when the node was spawned from a saved template.
   // Falls back to the step type's built-in label.
   templateLabel?: string;
+  // TODO(engine): when true, the engine should treat this step as a no-op
+  // (skip execution and propagate a 'skipped' status to downstream edges).
+  // Until then this flag is UI-only and visually grays the node.
+  disabled?: boolean | string;
   [key: string]: unknown;
 }
 
-export function StepNode({ type, data, selected }: NodeProps) {
+export function StepNode({ id, type, data, selected }: NodeProps) {
   const def = STEP_DEFINITIONS[type as StepType];
+  const { setNodes } = useReactFlow();
+
+  // Cluster 10.F · keyboard navigation. tabIndex=0 makes the node a tab
+  // stop so screen-reader / keyboard users can iterate through the graph
+  // without touching the canvas pan/zoom shortcuts. Enter / Space toggles
+  // selection — once selected, the existing StepPropertyPanel pops out
+  // on the right.
+  //
+  // Tradeoff: react-flow installs its own keydown handlers on the canvas
+  // for Delete / Backspace / arrows. We don't preventDefault on those so
+  // they continue to bubble; we only swallow Enter / Space because those
+  // would otherwise scroll the surrounding container.
+  const onKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLDivElement>) => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      e.preventDefault();
+      e.stopPropagation();
+      setNodes((nds) =>
+        nds.map((n) => ({ ...n, selected: n.id === id ? true : false })),
+      );
+    },
+    [id, setNodes],
+  );
+
   if (!def) return null;
   const Icon = ICONS[def.icon] ?? Terminal;
 
   const d = data as StepNodeData;
+  const disabled = d.disabled === true || d.disabled === 'true';
   const status = d.runtimeStatus;
   const runtime = runtimeAppearance(status);
   const duration = formatDuration(d.runtimeStartedAt, d.runtimeFinishedAt, status);
+  const missing = collectMissingRequired(type as StepType, data as Record<string, unknown>);
 
   // Try to surface a one-line summary of the configured data.
   const summary = summariseData(type as StepType, data as Record<string, unknown>);
@@ -119,8 +155,18 @@ export function StepNode({ type, data, selected }: NodeProps) {
 
   return (
     <div
-      className={`rounded-md border bg-slate-900 px-3 py-2 shadow-md transition-shadow ${runtime.className}`}
-      style={{ borderColor, boxShadow, minWidth: 180 }}
+      className={`rounded-md border bg-slate-900 px-3 py-2 shadow-md transition-shadow ${runtime.className} ${disabled ? 'opacity-50 [filter:grayscale(0.7)]' : ''}`}
+      style={{
+        borderColor,
+        boxShadow,
+        minWidth: 180,
+        borderStyle: disabled ? 'dashed' : 'solid',
+      }}
+      tabIndex={0}
+      role="button"
+      aria-label={`${d.templateLabel || def.label}${status ? `, ${status}` : ''}${disabled ? ', skipped' : ''}`}
+      aria-pressed={selected}
+      onKeyDown={onKeyDown}
     >
       <Handle type="target" position={Position.Top} />
       <div className="flex items-center gap-2">
@@ -130,7 +176,8 @@ export function StepNode({ type, data, selected }: NodeProps) {
         >
           <Icon size={13} />
           {status === 'running' && (
-            <span className="absolute inset-0 animate-ping rounded-md ring-2 ring-amber-400/50" />
+            // motion-safe so reduced-motion users don't get the ping pulse
+            <span className="absolute inset-0 motion-safe:animate-ping rounded-md ring-2 ring-amber-400/50" />
           )}
         </span>
         <span className="flex min-w-0 flex-1 flex-col">
@@ -138,16 +185,41 @@ export function StepNode({ type, data, selected }: NodeProps) {
             {d.templateLabel || def.label}
           </span>
           {d.templateLabel && (
-            <span className="truncate text-[9px] uppercase tracking-wider text-slate-500">
+            <span className="truncate text-[9px] uppercase tracking-wider text-slate-400">
               {def.label}
             </span>
           )}
         </span>
-        {status && (
+        {disabled && (
           <span
-            className={`ml-auto rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider ${runtime.badgeClass}`}
+            className="ml-auto inline-flex items-center gap-1 rounded bg-slate-700/40 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-slate-400"
+            role="status"
+            aria-label="Skipped"
           >
+            <Ban size={9} aria-hidden="true" /> skipped
+          </span>
+        )}
+        {status && !disabled && (
+          <span
+            className={`ml-auto inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider ${runtime.badgeClass}`}
+            role="status"
+            aria-label={`Step ${status}`}
+          >
+            {status === 'running' && (
+              <Loader2 size={9} className="motion-safe:animate-spin" aria-hidden="true" />
+            )}
+            {status === 'success' && <Check size={9} aria-hidden="true" />}
+            {status === 'failed' && <X size={9} aria-hidden="true" />}
+            {status === 'skipped' && <Ban size={9} aria-hidden="true" />}
             {status}
+          </span>
+        )}
+        {missing.length > 0 && !status && !disabled && (
+          <span
+            className="ml-auto inline-flex h-4 w-4 items-center justify-center rounded-full bg-rose-500/20 text-rose-300"
+            title={`Missing required fields: ${missing.join(', ')}`}
+          >
+            <AlertCircle size={11} />
           </span>
         )}
       </div>
@@ -157,11 +229,27 @@ export function StepNode({ type, data, selected }: NodeProps) {
         </div>
       )}
       {duration && (
-        <div className="mt-0.5 text-right font-mono text-[10px] text-slate-500">{duration}</div>
+        <div className="mt-0.5 text-right font-mono text-[10px] text-slate-400">{duration}</div>
       )}
       <Handle type="source" position={Position.Bottom} />
     </div>
   );
+}
+
+function collectMissingRequired(type: StepType, data: Record<string, unknown>): string[] {
+  const def = STEP_DEFINITIONS[type];
+  if (!def) return [];
+  const out: string[] = [];
+  for (const field of def.fields) {
+    if (!field.required) continue;
+    const v = data[field.name];
+    const empty =
+      v === undefined ||
+      v === null ||
+      (typeof v === 'string' && v.trim().length === 0);
+    if (empty) out.push(field.label);
+  }
+  return out;
 }
 
 function formatDuration(
@@ -188,7 +276,9 @@ function runtimeAppearance(status: RuntimeStatus): {
   switch (status) {
     case 'running':
       return {
-        className: 'animate-pulse',
+        // motion-safe so reduced-motion users get the steady amber glow
+        // without the pulse animation.
+        className: 'motion-safe:animate-pulse',
         borderColor: '#fbbf24',
         boxShadow: '0 0 0 2px rgba(251,191,36,0.35), 0 0 24px rgba(251,191,36,0.55)',
         badgeClass: 'bg-amber-500/20 text-amber-300',

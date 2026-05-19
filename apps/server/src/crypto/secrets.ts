@@ -125,6 +125,17 @@ export const SENSITIVE_FIELDS = new Set([
   'playServiceAccountJson',
   'androidKeystorePassword',
   'androidKeyPassword',
+  // Phase 11.I notification bots — inbound signature secrets + bot tokens.
+  // (botToken is already in the list above for Telegram; included verbatim
+  // here as a reminder that Slack uses the same field name.)
+  'signingSecret',
+  'publicKey',
+  // Cluster 11.A — auth session signing secret.
+  'sessionSecret',
+  'apiTokenHash',
+  // Cluster 11.E — VCS tokens + GitHub OAuth client secret.
+  'vcsToken',
+  'clientSecret',
 ]);
 
 export function encryptSecretsInObject<T extends Record<string, unknown>>(obj: T): T {

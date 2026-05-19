@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type {
+  Matrix,
   Pipeline,
   PipelineEdge,
   PipelineNode,
@@ -38,6 +39,30 @@ interface PipelineRow {
   cron_expr: string | null;
   path_filter: string | null;
   cancel_in_progress_on_new_commit: number | null;
+  // Cluster 11.C — matrix declaration + summary-notification flag.
+  matrix_json: string | null;
+  matrix_summary: number | null;
+  // Cluster 11.E — PR comment trigger settings.
+  pr_commands: string | null;
+  pr_command_authors: string | null;
+}
+
+function parseMatrix(raw: string | null): Matrix | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as Matrix;
+    if (!parsed || typeof parsed !== 'object') return null;
+    if (!parsed.axes || typeof parsed.axes !== 'object') return null;
+    const axisNames = Object.keys(parsed.axes);
+    if (axisNames.length === 0) return null;
+    for (const k of axisNames) {
+      const v = parsed.axes[k];
+      if (!Array.isArray(v) || v.length === 0) return null;
+    }
+    return parsed;
+  } catch {
+    return null;
+  }
 }
 
 function rowToPipeline(row: PipelineRow): Pipeline {
@@ -54,12 +79,19 @@ function rowToPipeline(row: PipelineRow): Pipeline {
       cronExpr: row.cron_expr ?? undefined,
       pathFilter: row.path_filter ?? undefined,
       cancelInProgressOnNewCommit: row.cancel_in_progress_on_new_commit === 1,
+      // Defaults to true when the column is NULL (legacy row) so existing
+      // pipelines with a matrix get the rolled-up notification behavior
+      // for free.
+      matrixSummary: row.matrix_summary === null ? true : row.matrix_summary === 1,
+      prCommands: row.pr_commands ?? undefined,
+      prCommandAuthors: row.pr_command_authors ?? undefined,
     },
     nodes: decryptNodes(JSON.parse(row.nodes_json) as PipelineNode[]),
     edges: JSON.parse(row.edges_json) as PipelineEdge[],
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     lastBuiltSha: row.last_built_sha,
+    matrix: parseMatrix(row.matrix_json),
   };
 }
 
@@ -91,18 +123,37 @@ export interface PipelineInput {
   watch: PipelineWatch;
   nodes: PipelineNode[];
   edges: PipelineEdge[];
+  // Cluster 11.C — declarative matrix. Omit / null for non-matrix pipelines.
+  matrix?: Matrix | null;
+}
+
+function serialiseMatrix(matrix: Matrix | null | undefined): string | null {
+  if (!matrix) return null;
+  const axes = matrix.axes ?? {};
+  const axisNames = Object.keys(axes);
+  if (axisNames.length === 0) return null;
+  for (const name of axisNames) {
+    const vals = axes[name];
+    if (!Array.isArray(vals) || vals.length === 0) return null;
+  }
+  return JSON.stringify({ axes });
 }
 
 export function createPipeline(input: PipelineInput): Pipeline {
   const id = randomUUID();
   const now = Date.now();
+  const matrixJson = serialiseMatrix(input.matrix ?? null);
+  // matrixSummary defaults to true to match the documented opt-in flag.
+  const matrixSummary = input.watch.matrixSummary === false ? 0 : 1;
   getDb()
     .prepare(
       `INSERT INTO pipelines
        (id, project_id, name, watch_branch, watch_interval_sec, auto_trigger,
         nodes_json, edges_json, created_at, updated_at, telegram_approvals,
-        tag_pattern, cron_expr, path_filter, cancel_in_progress_on_new_commit)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        tag_pattern, cron_expr, path_filter, cancel_in_progress_on_new_commit,
+        matrix_json, matrix_summary,
+        pr_commands, pr_command_authors)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     .run(
       id,
@@ -120,17 +171,25 @@ export function createPipeline(input: PipelineInput): Pipeline {
       input.watch.cronExpr ?? null,
       input.watch.pathFilter ?? null,
       input.watch.cancelInProgressOnNewCommit ? 1 : 0,
+      matrixJson,
+      matrixSummary,
+      input.watch.prCommands ?? null,
+      input.watch.prCommandAuthors ?? null,
     );
   return {
     id,
     projectId: input.projectId,
     name: input.name,
-    watch: input.watch,
+    watch: {
+      ...input.watch,
+      matrixSummary: matrixSummary === 1,
+    },
     nodes: input.nodes,
     edges: input.edges,
     createdAt: now,
     updatedAt: now,
     lastBuiltSha: null,
+    matrix: matrixJson ? (input.matrix ?? null) : null,
   };
 }
 
@@ -147,14 +206,21 @@ export function updatePipeline(
     nodes: input.nodes ?? existing.nodes,
     edges: input.edges ?? existing.edges,
     updatedAt: Date.now(),
+    // `matrix` may be explicitly nulled — only fall back to the existing
+    // value when the caller didn't include the key at all.
+    matrix: input.matrix === undefined ? existing.matrix : input.matrix,
   };
+  const matrixJson = serialiseMatrix(merged.matrix);
+  const matrixSummary = merged.watch.matrixSummary === false ? 0 : 1;
   getDb()
     .prepare(
       `UPDATE pipelines SET
          name = ?, watch_branch = ?, watch_interval_sec = ?, auto_trigger = ?,
          nodes_json = ?, edges_json = ?, updated_at = ?, telegram_approvals = ?,
          tag_pattern = ?, cron_expr = ?, path_filter = ?,
-         cancel_in_progress_on_new_commit = ?
+         cancel_in_progress_on_new_commit = ?,
+         matrix_json = ?, matrix_summary = ?,
+         pr_commands = ?, pr_command_authors = ?
        WHERE id = ?`,
     )
     .run(
@@ -170,9 +236,21 @@ export function updatePipeline(
       merged.watch.cronExpr ?? null,
       merged.watch.pathFilter ?? null,
       merged.watch.cancelInProgressOnNewCommit ? 1 : 0,
+      matrixJson,
+      matrixSummary,
+      merged.watch.prCommands ?? null,
+      merged.watch.prCommandAuthors ?? null,
       id,
     );
+  merged.matrix = matrixJson ? merged.matrix : null;
+  merged.watch = { ...merged.watch, matrixSummary: matrixSummary === 1 };
   return merged;
+}
+
+// Cluster 11.C — convenience updater used by `pipelineSetMatrix` API.
+// Pass `null` to clear the matrix (revert to single-build behavior).
+export function setPipelineMatrix(id: string, matrix: Matrix | null): Pipeline | null {
+  return updatePipeline(id, { matrix });
 }
 
 export function deletePipeline(id: string): void {
@@ -201,6 +279,7 @@ export function clonePipeline(sourceId: string, newName?: string): Pipeline | nu
     watch: original.watch,
     nodes: newNodes,
     edges: newEdges,
+    matrix: original.matrix,
   });
 }
 

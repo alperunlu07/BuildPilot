@@ -1,10 +1,21 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import type {
+  DiscordConfig,
+  DiscordConfigPublic,
+  SlackConfig,
+  SlackConfigPublic,
   TelegramConfig,
   TelegramConfigPublic,
 } from '@buildpilot/shared-types';
-import { getTelegramConfigRuntime, saveTelegramConfig } from '../config';
+import {
+  getDiscordConfigRuntime,
+  getSlackConfigRuntime,
+  getTelegramConfigRuntime,
+  saveDiscordConfig,
+  saveSlackConfig,
+  saveTelegramConfig,
+} from '../config';
 import { startTelegramBot, stopTelegramBot } from '../runner/telegramBot';
 import { logger } from '../logger';
 
@@ -59,6 +70,63 @@ const testSchema = z.object({
   chatId: z.string().optional(),
 });
 
+const slackUpdateSchema = z.object({
+  enabled: z.boolean().optional(),
+  signingSecret: z.string().optional(),
+  botToken: z.string().optional(),
+  defaultChannel: z.string().optional(),
+  clearSigningSecret: z.boolean().optional(),
+  clearBotToken: z.boolean().optional(),
+});
+
+const discordUpdateSchema = z.object({
+  enabled: z.boolean().optional(),
+  publicKey: z.string().optional(),
+  applicationId: z.string().optional(),
+  defaultChannelId: z.string().optional(),
+  clearPublicKey: z.boolean().optional(),
+});
+
+function toSlackPublic(cfg: SlackConfig | null): SlackConfigPublic {
+  if (!cfg) {
+    return {
+      enabled: false,
+      hasSigningSecret: false,
+      signingSecretPreview: '',
+      hasBotToken: false,
+      botTokenPreview: '',
+      defaultChannel: '',
+    };
+  }
+  return {
+    enabled: Boolean(cfg.enabled),
+    hasSigningSecret: Boolean(cfg.signingSecret),
+    signingSecretPreview: preview(cfg.signingSecret),
+    hasBotToken: Boolean(cfg.botToken),
+    botTokenPreview: preview(cfg.botToken),
+    defaultChannel: cfg.defaultChannel ?? '',
+  };
+}
+
+function toDiscordPublic(cfg: DiscordConfig | null): DiscordConfigPublic {
+  if (!cfg) {
+    return {
+      enabled: false,
+      hasPublicKey: false,
+      publicKeyPreview: '',
+      applicationId: '',
+      defaultChannelId: '',
+    };
+  }
+  return {
+    enabled: Boolean(cfg.enabled),
+    hasPublicKey: Boolean(cfg.publicKey),
+    publicKeyPreview: preview(cfg.publicKey),
+    applicationId: cfg.applicationId ?? '',
+    defaultChannelId: cfg.defaultChannelId ?? '',
+  };
+}
+
 export async function configRoutes(app: FastifyInstance): Promise<void> {
   app.get('/api/config/telegram', async () => {
     return toPublic(getTelegramConfigRuntime());
@@ -110,6 +178,84 @@ export async function configRoutes(app: FastifyInstance): Promise<void> {
     }
 
     return toPublic(saved);
+  });
+
+  // ── Slack (Cluster 11.I) ─────────────────────────────────
+  app.get('/api/config/slack', async () => {
+    return toSlackPublic(getSlackConfigRuntime());
+  });
+
+  app.put('/api/config/slack', async (req, reply) => {
+    const parsed = slackUpdateSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return reply.code(400).send({ error: parsed.error.flatten() });
+    }
+    const input = parsed.data;
+    const existing = getSlackConfigRuntime() ?? {
+      enabled: false,
+      signingSecret: '',
+      botToken: '',
+      defaultChannel: '',
+    };
+    const nextSigningSecret = input.clearSigningSecret
+      ? ''
+      : input.signingSecret && input.signingSecret.length > 0
+        ? input.signingSecret
+        : existing.signingSecret;
+    const nextBotToken = input.clearBotToken
+      ? ''
+      : input.botToken && input.botToken.length > 0
+        ? input.botToken
+        : existing.botToken;
+    const merged: SlackConfig = {
+      enabled: typeof input.enabled === 'boolean' ? input.enabled : existing.enabled,
+      signingSecret: nextSigningSecret,
+      botToken: nextBotToken,
+      defaultChannel:
+        typeof input.defaultChannel === 'string'
+          ? input.defaultChannel
+          : existing.defaultChannel,
+    };
+    const saved = saveSlackConfig(merged);
+    return toSlackPublic(saved);
+  });
+
+  // ── Discord (Cluster 11.I) ───────────────────────────────
+  app.get('/api/config/discord', async () => {
+    return toDiscordPublic(getDiscordConfigRuntime());
+  });
+
+  app.put('/api/config/discord', async (req, reply) => {
+    const parsed = discordUpdateSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return reply.code(400).send({ error: parsed.error.flatten() });
+    }
+    const input = parsed.data;
+    const existing = getDiscordConfigRuntime() ?? {
+      enabled: false,
+      publicKey: '',
+      applicationId: '',
+      defaultChannelId: '',
+    };
+    const nextPublicKey = input.clearPublicKey
+      ? ''
+      : input.publicKey && input.publicKey.length > 0
+        ? input.publicKey
+        : existing.publicKey;
+    const merged: DiscordConfig = {
+      enabled: typeof input.enabled === 'boolean' ? input.enabled : existing.enabled,
+      publicKey: nextPublicKey,
+      applicationId:
+        typeof input.applicationId === 'string'
+          ? input.applicationId
+          : existing.applicationId,
+      defaultChannelId:
+        typeof input.defaultChannelId === 'string'
+          ? input.defaultChannelId
+          : existing.defaultChannelId,
+    };
+    const saved = saveDiscordConfig(merged);
+    return toDiscordPublic(saved);
   });
 
   // Send a quick sanity-check message using the supplied or stored token.

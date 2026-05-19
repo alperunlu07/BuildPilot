@@ -361,6 +361,14 @@ Turning the structured data BuildPilot already collects into actionable signal.
 - [ ] **Group / section folding in logs** — collapsible log groups (`::group::` / `--- ` markers from existing CIs supported)
 - [ ] **User-crash feedback loop** — pull TestFlight crashes back into the build dashboard via ASC API
 
+## 🎨 UI/UX & platform-polish roadmap
+
+The dashboard-side ergonomics, accessibility, and cross-cutting UI work
+that doesn't fit cleanly into a step-library phase is tracked in a
+companion document — see [`docs/UX-ROADMAP.md`](docs/UX-ROADMAP.md).
+Phases 10 (UI/UX), 11 (platform-wide UI for matrix / approvals / auth /
+observability), and 12 (developer ergonomics) live there.
+
 ## 🪲 Known issues
 
 - React Flow logs a "new nodeTypes object" warning on every render — cosmetic, no functional impact (the const is module-level; the warning is a false positive from StrictMode).

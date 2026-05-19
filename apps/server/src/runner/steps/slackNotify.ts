@@ -1,5 +1,6 @@
 import type { SlackNotifyStepData } from '@buildpilot/shared-types';
 import type { StepContext } from '../engine';
+import { suppressForMatrixSummary } from './_matrixGuard';
 
 export async function runSlackNotify(
   ctx: StepContext,
@@ -8,6 +9,14 @@ export async function runSlackNotify(
   const d = data as Partial<SlackNotifyStepData>;
   if (!d.webhookUrl) throw new Error('slackNotify: missing "webhookUrl"');
   if (!d.text) throw new Error('slackNotify: missing "text"');
+
+  // Cluster 11.C — child of a matrix run with rolled-up notifications.
+  // The parent build's notifyMatrix event will carry the summary; one
+  // message per cell would just be noise.
+  if (suppressForMatrixSummary(ctx)) {
+    ctx.log('slackNotify: skipped (matrix child — parent will send rolled-up summary)');
+    return;
+  }
 
   ctx.log(`slack → ${maskUrl(d.webhookUrl)}`);
   ctx.log(d.text, 'stdout');

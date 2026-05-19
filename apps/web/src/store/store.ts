@@ -5,25 +5,52 @@ import type {
   Commit,
   HostCapabilities,
   NodeTemplate,
+  NotificationPrefs,
   Pipeline,
   ProjectSummary,
   ServerEvent,
   SshHost,
+  User,
 } from '@buildpilot/shared-types';
 import { api } from '../lib/api';
 import { notify } from '../lib/notifications';
+import {
+  applyDensity,
+  applyTheme,
+  readStoredDensity,
+  readStoredTheme,
+  writeStoredDensity,
+  writeStoredTheme,
+  type Density,
+  type ThemeChoice,
+} from '../lib/theme';
 
 // Cap retained per-build log entries in-memory so a chatty Unity build doesn't
 // balloon the store. Older rows still live in SQLite and can be re-fetched.
 const MAX_LIVE_ENTRIES_PER_BUILD = 5000;
 
 export type View =
+  | { type: 'home' }
   | { type: 'projects' }
   | { type: 'project'; id: string }
   | { type: 'pipeline'; id: string }
   | { type: 'builds' }
   | { type: 'build'; id: string }
-  | { type: 'settings' };
+  | { type: 'settings' }
+  | { type: 'diskUsage' }
+  | { type: 'hosts' }
+  | { type: 'testReport'; buildId: string }
+  | { type: 'trends'; pipelineId?: string }
+  | { type: 'flakyTests'; pipelineId?: string }
+  | { type: 'login' }
+  | { type: 'users' }
+  | { type: 'account' }
+  | { type: 'audit' }
+  | { type: 'apiTokens' }
+  | { type: 'secrets'; name?: string }
+  | { type: 'vaultFiles' }
+  | { type: 'vcsCredentials' }
+  | { type: 'approvals' };
 
 export interface CommitToast {
   id: string;
@@ -41,13 +68,101 @@ export interface StepTiming {
   finishedAt?: number;
 }
 
+const LANGUAGE_KEY = 'buildpilot.lang';
+const FAVORITES_KEY = 'buildpilot.favorites';
+const RECENTS_KEY = 'buildpilot.recents';
+
+export interface FavoritesState {
+  projectIds: string[];
+  pipelineIds: string[];
+}
+
+export type RecentItem =
+  | { kind: 'project'; id: string; label: string; at: number }
+  | { kind: 'pipeline'; id: string; label: string; at: number }
+  | { kind: 'build'; id: string; label: string; at: number };
+
+function readLanguage(): string {
+  try {
+    const raw = localStorage.getItem(LANGUAGE_KEY);
+    if (raw === 'en' || raw === 'tr') return raw;
+  } catch {
+    // ignore
+  }
+  return 'en';
+}
+
+function readFavorites(): FavoritesState {
+  try {
+    const raw = localStorage.getItem(FAVORITES_KEY);
+    if (!raw) return { projectIds: [], pipelineIds: [] };
+    const parsed = JSON.parse(raw) as Partial<FavoritesState>;
+    return {
+      projectIds: Array.isArray(parsed.projectIds) ? parsed.projectIds : [],
+      pipelineIds: Array.isArray(parsed.pipelineIds) ? parsed.pipelineIds : [],
+    };
+  } catch {
+    return { projectIds: [], pipelineIds: [] };
+  }
+}
+
+function writeFavorites(f: FavoritesState): void {
+  try {
+    localStorage.setItem(FAVORITES_KEY, JSON.stringify(f));
+  } catch {
+    // ignore
+  }
+}
+
+function readRecents(): RecentItem[] {
+  try {
+    const raw = localStorage.getItem(RECENTS_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as RecentItem[];
+    return Array.isArray(parsed) ? parsed.slice(0, 5) : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeRecents(r: RecentItem[]): void {
+  try {
+    localStorage.setItem(RECENTS_KEY, JSON.stringify(r.slice(0, 5)));
+  } catch {
+    // ignore
+  }
+}
+
 export interface ConfirmationRequest {
   title: string;
   body: string;
   confirmLabel?: string;
   cancelLabel?: string;
   variant?: 'default' | 'destructive';
+  // When set, the dialog requires the user to type this value before the
+  // confirm button enables. Used for irreversible actions.
+  typedConfirmation?: string;
   onConfirm(): void | Promise<void>;
+}
+
+// A pending soft-delete that fires the real API call once the undo grace
+// period expires. The server has no trash-bin concept, so this exists
+// purely as a client-side deferral — the UI hides the entity immediately
+// and either commits or restores after the timer.
+export interface PendingDeletion {
+  id: string;
+  kind: 'project' | 'pipeline';
+  label: string;
+  // Original entity, kept verbatim so an UNDO can splice it back into the
+  // visible list at the right index.
+  snapshot: ProjectSummary | Pipeline;
+  // Position in the original list. Used to put the row back where it was.
+  index: number;
+  // setTimeout handle so undo can cancel before the API call fires.
+  timeoutHandle: ReturnType<typeof setTimeout>;
+  // When the toast will auto-expire (commit the delete). Used to drive a
+  // countdown bar in the UI.
+  expiresAt: number;
 }
 
 interface State {
@@ -71,6 +186,26 @@ interface State {
   // blockers / enterprise policies can't silently swallow destructive
   // actions.
   confirmation: ConfirmationRequest | null;
+  // Cluster 10.A — appearance + i18n preferences. Persisted in localStorage.
+  theme: ThemeChoice;
+  density: Density;
+  language: string;
+  favorites: FavoritesState;
+  recents: RecentItem[];
+  paletteOpen: boolean;
+  shortcutsHelpOpen: boolean;
+  pendingDeletions: PendingDeletion[];
+  // Transient error banners surfaced when optimistic actions roll back.
+  errorToasts: { id: string; message: string }[];
+  // Cluster 11.A — auth state. `authEnabled === false` keeps the dashboard
+  // wide open like today; `currentUser === null` while authEnabled is true
+  // is the "please log in" state.
+  authEnabled: boolean;
+  currentUser: User | null;
+  // True once the initial /api/auth/me call has resolved. Used to defer
+  // first-paint of routed pages until we know whether to redirect to
+  // /login.
+  authChecked: boolean;
 
   loadProjects(): Promise<void>;
   loadPipelines(projectId?: string): Promise<void>;
@@ -118,8 +253,33 @@ interface State {
   seedBuildEntries(buildId: string, entries: BuildLogEntry[]): void;
   requestConfirmation(req: ConfirmationRequest): void;
   closeConfirmation(): void;
+  setTheme(theme: ThemeChoice): void;
+  setDensity(d: Density): void;
+  setLanguage(lang: string): void;
+  toggleFavoriteProject(id: string): void;
+  toggleFavoritePipeline(id: string): void;
+  pushRecent(item: Omit<RecentItem, 'at'>): void;
+  openPalette(): void;
+  closePalette(): void;
+  togglePalette(): void;
+  openShortcutsHelp(): void;
+  closeShortcutsHelp(): void;
+  // Cluster 10.E — schedule a soft delete that the user can undo within the
+  // grace window. After the timer fires, the real API call is dispatched.
+  softDeleteProject(id: string): void;
+  softDeletePipeline(id: string): void;
+  undoDeletion(deletionId: string): void;
+  pushError(message: string): void;
+  dismissError(id: string): void;
   handleEvent(event: ServerEvent): void;
+  // Cluster 11.A — auth.
+  refreshAuth(): Promise<void>;
+  login(username: string, password: string): Promise<void>;
+  logout(): Promise<void>;
+  updateNotificationPrefs(prefs: NotificationPrefs): Promise<void>;
 }
+
+const UNDO_GRACE_MS = 5000;
 
 export const useStore = create<State>((set, get) => ({
   projects: [],
@@ -128,18 +288,44 @@ export const useStore = create<State>((set, get) => ({
   nodeTemplates: [],
   hosts: [],
   activeBuild: null,
-  view: { type: 'projects' },
+  view: { type: 'home' },
   toasts: [],
   stepStatus: {},
   stepTimings: {},
   entriesByBuild: {},
   confirmation: null,
+  theme: readStoredTheme(),
+  density: readStoredDensity(),
+  language: readLanguage(),
+  favorites: readFavorites(),
+  recents: readRecents(),
+  paletteOpen: false,
+  shortcutsHelpOpen: false,
+  pendingDeletions: [],
+  errorToasts: [],
+  authEnabled: false,
+  currentUser: null,
+  authChecked: false,
 
   async loadProjects() {
-    set({ projects: await api.listProjects() });
+    const list = await api.listProjects();
+    // Pending soft-deletes shouldn't reappear if a `projectAdded` event
+    // races us into a re-fetch before the API delete fires.
+    const hiddenProjects = new Set(
+      get()
+        .pendingDeletions.filter((d) => d.kind === 'project')
+        .map((d) => (d.snapshot as ProjectSummary).id),
+    );
+    set({ projects: list.filter((p) => !hiddenProjects.has(p.id)) });
   },
   async loadPipelines(projectId) {
-    set({ pipelines: await api.listPipelines(projectId) });
+    const list = await api.listPipelines(projectId);
+    const hiddenPipelines = new Set(
+      get()
+        .pendingDeletions.filter((d) => d.kind === 'pipeline')
+        .map((d) => (d.snapshot as Pipeline).id),
+    );
+    set({ pipelines: list.filter((p) => !hiddenPipelines.has(p.id)) });
   },
   async loadBuilds(filter = {}) {
     set({ builds: await api.listBuilds({ ...filter, limit: 30 }) });
@@ -196,6 +382,28 @@ export const useStore = create<State>((set, get) => ({
   },
   setView(view) {
     set({ view });
+    // Mirror navigation into the recents list. We resolve a human-readable
+    // label lazily here so callers don't need to pass one through.
+    const state = get();
+    let recent: Omit<RecentItem, 'at'> | null = null;
+    if (view.type === 'project') {
+      const p = state.projects.find((x) => x.id === view.id);
+      if (p) recent = { kind: 'project', id: p.id, label: p.name };
+    } else if (view.type === 'pipeline') {
+      const pl = state.pipelines.find((x) => x.id === view.id);
+      if (pl) recent = { kind: 'pipeline', id: pl.id, label: pl.name };
+    } else if (view.type === 'build') {
+      const b = state.builds.find((x) => x.id === view.id);
+      if (b) {
+        const pl = state.pipelines.find((x) => x.id === b.pipelineId);
+        recent = {
+          kind: 'build',
+          id: b.id,
+          label: `${pl?.name ?? 'pipeline'} · #${b.id.slice(0, 7)}`,
+        };
+      }
+    }
+    if (recent) get().pushRecent(recent);
   },
   upsertPipeline(p) {
     const idx = get().pipelines.findIndex((x) => x.id === p.id);
@@ -222,17 +430,77 @@ export const useStore = create<State>((set, get) => ({
     }
   },
   async triggerBuild(pipelineId, fromNodeId) {
-    const b = await api.triggerBuild(pipelineId, fromNodeId);
+    const pipeline = get().pipelines.find((p) => p.id === pipelineId);
+    // Optimistic placeholder so the editor + project page can flip to
+    // "Queued…" without waiting for the server round-trip. The real build
+    // (with the server-assigned id) replaces this entry on success; on
+    // error we roll it back and surface a toast.
+    const placeholder: Build = {
+      id: `opt-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`,
+      pipelineId,
+      projectId: pipeline?.projectId ?? '',
+      triggerSha: '',
+      triggerBranch: pipeline?.watch.branch ?? '',
+      status: 'pending',
+      startedAt: Date.now(),
+      finishedAt: null,
+      log: '',
+      parentBuildId: null,
+      matrixValues: null,
+      matrixLabel: null,
+    };
     set({
-      activeBuild: b,
-      entriesByBuild: { ...get().entriesByBuild, [b.id]: [] },
+      activeBuild: placeholder,
+      builds: [placeholder, ...get().builds],
     });
-    await get().loadBuilds();
-    return b;
+    try {
+      const b = await api.triggerBuild(pipelineId, fromNodeId);
+      set({
+        activeBuild: b,
+        builds: [b, ...get().builds.filter((x) => x.id !== placeholder.id)],
+        entriesByBuild: { ...get().entriesByBuild, [b.id]: [] },
+      });
+      await get().loadBuilds();
+      return b;
+    } catch (err) {
+      set({
+        activeBuild: null,
+        builds: get().builds.filter((x) => x.id !== placeholder.id),
+      });
+      get().pushError(
+        `Run failed: ${err instanceof Error ? err.message : String(err)}`,
+      );
+      throw err;
+    }
   },
   async cancelBuild(id) {
-    await api.cancelBuild(id);
-    await get().loadBuilds();
+    // Optimistic flip — mark cancelled locally; rollback on error.
+    const snapshot = get().builds.find((b) => b.id === id);
+    if (snapshot) {
+      set({
+        builds: get().builds.map((b) =>
+          b.id === id ? { ...b, status: 'cancelled' as const, finishedAt: b.finishedAt ?? Date.now() } : b,
+        ),
+        activeBuild:
+          get().activeBuild?.id === id
+            ? { ...get().activeBuild!, status: 'cancelled', finishedAt: get().activeBuild!.finishedAt ?? Date.now() }
+            : get().activeBuild,
+      });
+    }
+    try {
+      await api.cancelBuild(id);
+      await get().loadBuilds();
+    } catch (err) {
+      if (snapshot) {
+        set({
+          builds: get().builds.map((b) => (b.id === id ? snapshot : b)),
+        });
+      }
+      get().pushError(
+        `Cancel failed: ${err instanceof Error ? err.message : String(err)}`,
+      );
+      throw err;
+    }
   },
   async pullProject(id) {
     await api.pullProject(id);
@@ -262,6 +530,223 @@ export const useStore = create<State>((set, get) => ({
         ? merged.slice(merged.length - MAX_LIVE_ENTRIES_PER_BUILD)
         : merged;
     set({ entriesByBuild: { ...get().entriesByBuild, [buildId]: trimmed } });
+  },
+  setTheme(theme) {
+    writeStoredTheme(theme);
+    applyTheme(theme);
+    set({ theme });
+  },
+  setDensity(d) {
+    writeStoredDensity(d);
+    applyDensity(d);
+    set({ density: d });
+  },
+  setLanguage(lang) {
+    try {
+      localStorage.setItem(LANGUAGE_KEY, lang);
+    } catch {
+      // ignore
+    }
+    set({ language: lang });
+  },
+  toggleFavoriteProject(id) {
+    const cur = get().favorites;
+    const has = cur.projectIds.includes(id);
+    const next: FavoritesState = {
+      ...cur,
+      projectIds: has ? cur.projectIds.filter((x) => x !== id) : [...cur.projectIds, id],
+    };
+    writeFavorites(next);
+    set({ favorites: next });
+  },
+  toggleFavoritePipeline(id) {
+    const cur = get().favorites;
+    const has = cur.pipelineIds.includes(id);
+    const next: FavoritesState = {
+      ...cur,
+      pipelineIds: has ? cur.pipelineIds.filter((x) => x !== id) : [...cur.pipelineIds, id],
+    };
+    writeFavorites(next);
+    set({ favorites: next });
+  },
+  pushRecent(item) {
+    const filtered = get().recents.filter(
+      (r) => !(r.kind === item.kind && r.id === item.id),
+    );
+    const next: RecentItem[] = [{ ...item, at: Date.now() }, ...filtered].slice(0, 5);
+    writeRecents(next);
+    set({ recents: next });
+  },
+  openPalette() {
+    set({ paletteOpen: true });
+  },
+  closePalette() {
+    set({ paletteOpen: false });
+  },
+  togglePalette() {
+    set({ paletteOpen: !get().paletteOpen });
+  },
+  openShortcutsHelp() {
+    set({ shortcutsHelpOpen: true });
+  },
+  closeShortcutsHelp() {
+    set({ shortcutsHelpOpen: false });
+  },
+  softDeleteProject(id) {
+    const state = get();
+    const projects = state.projects;
+    const idx = projects.findIndex((p) => p.id === id);
+    if (idx === -1) return;
+    const snapshot = projects[idx]!;
+    const deletionId = `del-project-${id}-${Date.now().toString(36)}`;
+    const expiresAt = Date.now() + UNDO_GRACE_MS;
+    const handle = setTimeout(() => {
+      // Time's up — commit the delete to the server. Local state is already
+      // mutated; clean up the pending entry. The SSE projectRemoved event
+      // will reconcile any other tabs.
+      void api.removeProject(id).catch(() => {
+        // If the server call fails, snap the entity back so users don't
+        // silently lose data.
+        const cur = get();
+        const stillGone = !cur.projects.some((p) => p.id === id);
+        if (stillGone) {
+          set({ projects: [...cur.projects, snapshot] });
+        }
+      });
+      set({
+        pendingDeletions: get().pendingDeletions.filter((d) => d.id !== deletionId),
+      });
+    }, UNDO_GRACE_MS);
+    const pending: PendingDeletion = {
+      id: deletionId,
+      kind: 'project',
+      label: snapshot.name,
+      snapshot,
+      index: idx,
+      timeoutHandle: handle,
+      expiresAt,
+    };
+    set({
+      projects: projects.filter((p) => p.id !== id),
+      pendingDeletions: [...state.pendingDeletions, pending],
+      view: state.view.type === 'project' && state.view.id === id
+        ? { type: 'projects' }
+        : state.view,
+    });
+  },
+  softDeletePipeline(id) {
+    const state = get();
+    const pipelines = state.pipelines;
+    const idx = pipelines.findIndex((p) => p.id === id);
+    if (idx === -1) return;
+    const snapshot = pipelines[idx]!;
+    const deletionId = `del-pipeline-${id}-${Date.now().toString(36)}`;
+    const expiresAt = Date.now() + UNDO_GRACE_MS;
+    const handle = setTimeout(() => {
+      void api.deletePipeline(id).catch(() => {
+        const cur = get();
+        const stillGone = !cur.pipelines.some((p) => p.id === id);
+        if (stillGone) {
+          set({ pipelines: [...cur.pipelines, snapshot] });
+        }
+      });
+      set({
+        pendingDeletions: get().pendingDeletions.filter((d) => d.id !== deletionId),
+      });
+    }, UNDO_GRACE_MS);
+    const pending: PendingDeletion = {
+      id: deletionId,
+      kind: 'pipeline',
+      label: snapshot.name,
+      snapshot,
+      index: idx,
+      timeoutHandle: handle,
+      expiresAt,
+    };
+    const nextView =
+      state.view.type === 'pipeline' && state.view.id === id
+        ? ({ type: 'project', id: snapshot.projectId } as View)
+        : state.view;
+    set({
+      pipelines: pipelines.filter((p) => p.id !== id),
+      pendingDeletions: [...state.pendingDeletions, pending],
+      view: nextView,
+    });
+  },
+  pushError(message) {
+    const id = `err-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+    set({ errorToasts: [...get().errorToasts, { id, message }] });
+    // Auto-dismiss after 6 seconds so the corner doesn't fill up if many
+    // calls fail in succession.
+    setTimeout(() => {
+      set({ errorToasts: get().errorToasts.filter((e) => e.id !== id) });
+    }, 6000);
+  },
+  dismissError(id) {
+    set({ errorToasts: get().errorToasts.filter((e) => e.id !== id) });
+  },
+  async refreshAuth() {
+    try {
+      const res = await api.me();
+      set({
+        authEnabled: res.authEnabled,
+        currentUser: res.user,
+        authChecked: true,
+      });
+      // If the server says auth is on and there's no user, but we're not
+      // currently on the login screen, route there. We don't auto-flip
+      // away from /login when the user is null — that page handles its
+      // own redirect after a successful login.
+      const v = get().view;
+      if (
+        res.authEnabled &&
+        !res.user &&
+        v.type !== 'login' &&
+        v.type !== 'settings'
+      ) {
+        set({ view: { type: 'login' } });
+      }
+    } catch {
+      // Likely a 401 surfaced as a fetch error; surface the login screen.
+      set({ authChecked: true, currentUser: null });
+    }
+  },
+  async login(username, password) {
+    const res = await api.login({ username, password });
+    set({ currentUser: res.user, authEnabled: true, authChecked: true });
+  },
+  async logout() {
+    try {
+      await api.logout();
+    } catch {
+      // ignore — we still clear locally.
+    }
+    set({ currentUser: null, view: { type: 'login' } });
+  },
+  async updateNotificationPrefs(prefs) {
+    if (!get().currentUser) return;
+    const updated = await api.updateNotificationPrefs(prefs);
+    set({ currentUser: updated });
+  },
+  undoDeletion(deletionId) {
+    const state = get();
+    const pending = state.pendingDeletions.find((d) => d.id === deletionId);
+    if (!pending) return;
+    clearTimeout(pending.timeoutHandle);
+    if (pending.kind === 'project') {
+      const next = [...state.projects];
+      const snap = pending.snapshot as ProjectSummary;
+      next.splice(Math.min(pending.index, next.length), 0, snap);
+      set({ projects: next });
+    } else {
+      const next = [...state.pipelines];
+      const snap = pending.snapshot as Pipeline;
+      next.splice(Math.min(pending.index, next.length), 0, snap);
+      set({ pipelines: next });
+    }
+    set({
+      pendingDeletions: state.pendingDeletions.filter((d) => d.id !== deletionId),
+    });
   },
   handleEvent(event) {
     switch (event.type) {
@@ -361,6 +846,32 @@ export const useStore = create<State>((set, get) => ({
         }
         void get().loadBuilds();
         break;
+      case 'notifyMatrix': {
+        // Cluster 11.C — rolled-up summary for matrix pipelines. Refresh
+        // the build list so the parent + every child's status flip at
+        // once, then fire a single desktop toast summarising the matrix.
+        // This is the dashboard counterpart to the "single message per
+        // matrix" promise — individual children stayed quiet, and the
+        // parent posts one notification at the end.
+        void get().loadBuilds();
+        const projectName =
+          get().projects.find((p) => p.id === event.projectId)?.name ?? 'project';
+        const pipelineName =
+          get().pipelines.find((p) => p.id === event.pipelineId)?.name ?? 'pipeline';
+        const bits: string[] = [];
+        if (event.success > 0) bits.push(`${event.success} ok`);
+        if (event.failed > 0) bits.push(`${event.failed} failed`);
+        if (event.cancelled > 0) bits.push(`${event.cancelled} cancelled`);
+        notify({
+          title: `${projectName} · ${pipelineName} matrix done`,
+          body: `${event.success}/${event.total} succeeded${
+            bits.length > 0 ? ` (${bits.join(', ')})` : ''
+          }`,
+          tag: `notifyMatrix:${event.parentBuildId}`,
+          onClick: () => get().setView({ type: 'build', id: event.parentBuildId }),
+        });
+        break;
+      }
       case 'projectAdded':
       case 'projectRemoved':
         void get().loadProjects();

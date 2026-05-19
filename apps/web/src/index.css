@@ -56,3 +56,154 @@ body {
   background: #334155;
   border-radius: 4px;
 }
+
+/* ---------------------------------------------------------------------------
+   Light theme — remap the slate-* surfaces used pervasively in components
+   without rewriting every utility. This is intentionally a CSS-variable-free
+   override: we keep components writing `bg-slate-950` and just shift what
+   "slate-950" paints when html.light is set.
+   ---------------------------------------------------------------------------*/
+html.light {
+  color-scheme: light;
+}
+html.light body {
+  background: #f8fafc;
+  color: #0f172a;
+}
+html.light .bg-slate-950 { background-color: #f8fafc !important; }
+html.light .bg-slate-900 { background-color: #ffffff !important; }
+html.light .bg-slate-900\/40 { background-color: rgba(255,255,255,0.6) !important; }
+html.light .bg-slate-900\/60 { background-color: rgba(255,255,255,0.8) !important; }
+html.light .bg-slate-800 { background-color: #e2e8f0 !important; }
+html.light .bg-slate-800\/60 { background-color: rgba(226,232,240,0.7) !important; }
+html.light .bg-slate-800\/40 { background-color: rgba(226,232,240,0.5) !important; }
+html.light .border-slate-800 { border-color: #cbd5e1 !important; }
+html.light .border-slate-700 { border-color: #94a3b8 !important; }
+html.light .text-slate-100 { color: #0f172a !important; }
+html.light .text-slate-200 { color: #1e293b !important; }
+html.light .text-slate-300 { color: #334155 !important; }
+html.light .text-slate-400 { color: #475569 !important; }
+html.light .text-slate-500 { color: #64748b !important; }
+html.light .text-slate-600 { color: #94a3b8 !important; }
+html.light .placeholder\:text-slate-400::placeholder { color: #64748b !important; }
+html.light .hover\:bg-slate-800:hover { background-color: #cbd5e1 !important; }
+html.light .hover\:bg-slate-800\/60:hover { background-color: rgba(203,213,225,0.7) !important; }
+
+html.light .react-flow__background { background-color: #f1f5f9; }
+html.light .react-flow__controls,
+html.light .react-flow__controls-button {
+  background: #ffffff;
+  color: #0f172a;
+  border-color: #cbd5e1;
+}
+html.light .react-flow__controls-button:hover { background: #e2e8f0; }
+html.light .react-flow__edge-path { stroke: #94a3b8; }
+html.light .react-flow__handle { background: #94a3b8; border-color: #ffffff; }
+html.light .scrollbar-thin::-webkit-scrollbar-thumb { background: #cbd5e1; }
+
+/* ---------------------------------------------------------------------------
+   Density — compact tightens padding & line heights in tables, sidebar items,
+   project cards. Opt-in per component via [data-density].
+   ---------------------------------------------------------------------------*/
+html[data-density='compact'] .density-row { padding-top: 1px !important; padding-bottom: 1px !important; }
+html[data-density='compact'] .density-pad { padding: 0.25rem 0.5rem !important; }
+html[data-density='compact'] .density-card { padding: 0.5rem 0.75rem !important; }
+html[data-density='compact'] .density-gap { gap: 0.25rem !important; }
+
+/* ---------------------------------------------------------------------------
+   Cluster 10.F — Accessibility
+   ---------------------------------------------------------------------------*/
+
+/* Shared focus-visible ring. Apply with `className="focusable"` to any
+   interactive surface (button, input, role=button div, etc.). We render the
+   ring only on keyboard focus (focus-visible), not on mouse clicks, so
+   pointer users don't see distracting rings on every press.
+
+   The sky-500 (#0ea5e9) outline meets WCAG AA contrast against both
+   slate-950 (dark) and slate-50 (light) at 2px width. */
+.focusable:focus { outline: none; }
+.focusable:focus-visible {
+  outline: 2px solid #0ea5e9;
+  outline-offset: 2px;
+  border-radius: inherit;
+}
+
+/* Reduced motion — when a user opts in via OS / browser, kill all the
+   non-essential animations: spinners, pulses, the StepNode running glow,
+   the toast slide-ins, the live tail smooth-scroll. Keep instantaneous
+   state transitions (color flips for hover) — those don't move the page.
+   Tailwind ships `motion-safe:` / `motion-reduce:` variants we use at the
+   component level, but a global guard also catches lucide `animate-*`
+   utility classes attached directly. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Cluster 10.G — Mobile / small-screen experience
+   ---------------------------------------------------------------------------*/
+
+/* `touch-target` ensures any tap-able element clears the iOS Human Interface
+   Guidelines / Material 44dp minimum on coarse-pointer devices. On precise
+   pointers (mouse / trackpad) we leave the original compact sizing alone so
+   the desktop UI density doesn't change. Use min-w + min-h instead of
+   width/height so existing intrinsic-size buttons keep their padding-driven
+   shape and merely grow on touch.
+
+   The `pointer: coarse` query catches phones, tablets, and most touch
+   laptops; `hover: none` is an additional signal. We OR both so devices
+   that report only one still pick up the tweak. */
+@media (pointer: coarse), (hover: none) {
+  .touch-target {
+    min-width: 32px;
+    min-height: 32px;
+    /* Center the original glyph inside the enlarged hit zone. */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .touch-target-lg {
+    min-width: 44px;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+/* cmdk command palette */
+.cmdk-group {
+  margin-bottom: 0.25rem;
+}
+.cmdk-group [cmdk-group-heading] {
+  padding: 0.5rem 0.5rem 0.25rem;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+.cmdk-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.6rem;
+  border-radius: 0.375rem;
+  color: #cbd5f5;
+  cursor: pointer;
+  user-select: none;
+}
+.cmdk-item[data-selected='true'] {
+  background: #1e293b;
+  color: #f1f5f9;
+}
+html.light .cmdk-item { color: #1e293b; }
+html.light .cmdk-item[data-selected='true'] { background: #e2e8f0; color: #0f172a; }
+html.light .cmdk-group [cmdk-group-heading] { color: #94a3b8; }

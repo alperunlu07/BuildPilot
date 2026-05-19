@@ -44,13 +44,18 @@ export function AddProjectDialog({ open, onClose }: Props) {
       >
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-base font-semibold text-slate-100">Add project</h2>
-          <button type="button" onClick={onClose} className="text-slate-400 hover:text-slate-200">
+          <button
+            type="button"
+            onClick={onClose}
+            className="focusable rounded text-slate-400 hover:text-slate-200"
+            aria-label="Close add-project dialog"
+          >
             <X size={16} />
           </button>
         </div>
 
         <label className="mb-3 block">
-          <span className="mb-1 block text-xs uppercase tracking-wide text-slate-500">
+          <span className="mb-1 block text-xs uppercase tracking-wide text-slate-400">
             Repository path
           </span>
           <input
@@ -61,12 +66,12 @@ export function AddProjectDialog({ open, onClose }: Props) {
             required
             spellCheck={false}
             autoFocus
-            className="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm font-mono text-slate-100 placeholder:text-slate-600 focus:border-sky-500 focus:outline-none"
+            className="focusable w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm font-mono text-slate-100 placeholder:text-slate-400 focus:border-sky-500 focus:outline-none"
           />
         </label>
 
         <label className="mb-4 block">
-          <span className="mb-1 block text-xs uppercase tracking-wide text-slate-500">
+          <span className="mb-1 block text-xs uppercase tracking-wide text-slate-400">
             Display name (optional)
           </span>
           <input
@@ -74,7 +79,7 @@ export function AddProjectDialog({ open, onClose }: Props) {
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Defaults to folder name"
-            className="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-600 focus:border-sky-500 focus:outline-none"
+            className="focusable w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-400 focus:border-sky-500 focus:outline-none"
           />
         </label>
 
@@ -88,14 +93,14 @@ export function AddProjectDialog({ open, onClose }: Props) {
           <button
             type="button"
             onClick={onClose}
-            className="rounded-md px-3 py-1.5 text-sm text-slate-400 hover:text-slate-200"
+            className="focusable rounded-md px-3 py-1.5 text-sm text-slate-400 hover:text-slate-200"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={busy || !path.trim()}
-            className="rounded-md bg-sky-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-sky-500 disabled:cursor-not-allowed disabled:bg-slate-700"
+            className="focusable rounded-md bg-sky-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-sky-500 disabled:cursor-not-allowed disabled:bg-slate-700"
           >
             {busy ? 'Adding…' : 'Add project'}
           </button>

@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Filter, RefreshCw } from 'lucide-react';
+import { Filter, Hammer, History, RefreshCw } from 'lucide-react';
 import type { Build, BuildStatus } from '@buildpilot/shared-types';
 import { useStore } from '../store/store';
 import { api } from '../lib/api';
 import { cn } from '../lib/cn';
+import { Time } from '../lib/formatDate';
+import { statusIcon, statusIconAnimationClass, statusLabel } from '../lib/statusIcon';
 
 type StatusFilter = 'all' | BuildStatus;
 
@@ -13,6 +15,7 @@ const STATUS_LABELS: Record<BuildStatus, string> = {
   success: 'Success',
   failed: 'Failed',
   cancelled: 'Cancelled',
+  awaiting_approval: 'Awaiting approval',
 };
 
 export function BuildsPage() {
@@ -71,14 +74,14 @@ export function BuildsPage() {
           type="button"
           onClick={() => void reload()}
           disabled={loading}
-          className="inline-flex items-center gap-1 rounded-md border border-slate-700 px-2.5 py-1 text-xs text-slate-200 hover:border-sky-500 hover:text-sky-400 disabled:opacity-50"
+          className="focusable inline-flex items-center gap-1 rounded-md border border-slate-700 px-2.5 py-1 text-xs text-slate-200 hover:border-sky-500 hover:text-sky-400 disabled:opacity-50"
         >
-          <RefreshCw size={12} className={loading ? 'animate-spin' : ''} /> Refresh
+          <RefreshCw size={12} className={loading ? 'motion-safe:animate-spin' : ''} /> Refresh
         </button>
       </div>
 
       <div className="mb-4 flex flex-wrap items-center gap-3 rounded-md border border-slate-800 bg-slate-900/40 px-3 py-2 text-xs">
-        <Filter size={12} className="text-slate-500" />
+        <Filter size={12} className="text-slate-400" />
         <label className="flex items-center gap-1.5 text-slate-400">
           Project
           <select
@@ -87,7 +90,7 @@ export function BuildsPage() {
               setProjectId(e.target.value);
               setPipelineId('');
             }}
-            className="rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-slate-100 focus:border-sky-500 focus:outline-none"
+            className="focusable rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-slate-100 focus:border-sky-500 focus:outline-none"
           >
             <option value="">(all)</option>
             {projects.map((p) => (
@@ -102,7 +105,7 @@ export function BuildsPage() {
           <select
             value={pipelineId}
             onChange={(e) => setPipelineId(e.target.value)}
-            className="rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-slate-100 focus:border-sky-500 focus:outline-none"
+            className="focusable rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-slate-100 focus:border-sky-500 focus:outline-none"
           >
             <option value="">(all)</option>
             {visiblePipelines.map((p) => (
@@ -117,7 +120,7 @@ export function BuildsPage() {
           <select
             value={status}
             onChange={(e) => setStatus(e.target.value as StatusFilter)}
-            className="rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-slate-100 focus:border-sky-500 focus:outline-none"
+            className="focusable rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-slate-100 focus:border-sky-500 focus:outline-none"
           >
             <option value="all">(all)</option>
             {Object.entries(STATUS_LABELS).map(([k, v]) => (
@@ -130,13 +133,26 @@ export function BuildsPage() {
       </div>
 
       {builds.length === 0 ? (
-        <div className="rounded-md border border-dashed border-slate-800 bg-slate-900/40 p-10 text-center text-sm text-slate-500">
-          No builds match the current filters.
-        </div>
+        <BuildsEmptyState
+          hasFilters={projectId !== '' || pipelineId !== '' || status !== 'all'}
+          onClear={() => {
+            setProjectId('');
+            setPipelineId('');
+            setStatus('all');
+          }}
+          onTriggerFirst={() => {
+            // Hand the user off to their first pipeline so they can run it.
+            const firstPipeline = pipelines[0];
+            if (firstPipeline) setView({ type: 'pipeline', id: firstPipeline.id });
+            else if (projects[0]) setView({ type: 'project', id: projects[0].id });
+            else setView({ type: 'projects' });
+          }}
+          hasAnyPipeline={pipelines.length > 0}
+        />
       ) : (
         <div className="overflow-hidden rounded-md border border-slate-800">
           <table className="w-full text-left text-sm">
-            <thead className="bg-slate-900/60 text-[11px] uppercase tracking-wider text-slate-500">
+            <thead className="bg-slate-900/60 text-[11px] uppercase tracking-wider text-slate-400">
               <tr>
                 <th className="px-3 py-2">Status</th>
                 <th className="px-3 py-2">Project</th>
@@ -155,7 +171,16 @@ export function BuildsPage() {
                   <tr
                     key={b.id}
                     onClick={() => setView({ type: 'build', id: b.id })}
-                    className="cursor-pointer border-t border-slate-800 hover:bg-slate-900/60"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        setView({ type: 'build', id: b.id });
+                      }
+                    }}
+                    tabIndex={0}
+                    role="link"
+                    aria-label={`Open build for ${proj?.name ?? 'project'} / ${pipe?.name ?? 'pipeline'}, status ${b.status}`}
+                    className="focusable cursor-pointer border-t border-slate-800 hover:bg-slate-900/60"
                   >
                     <td className="px-3 py-2">
                       <StatusBadge status={b.status} />
@@ -167,7 +192,7 @@ export function BuildsPage() {
                       {b.triggerSha ? b.triggerSha.slice(0, 7) : '—'}
                     </td>
                     <td className="px-3 py-2 text-slate-400">
-                      {new Date(b.startedAt).toLocaleString()}
+                      <Time ts={b.startedAt} />
                     </td>
                     <td className="px-3 py-2 text-slate-400">{formatDuration(b)}</td>
                   </tr>
@@ -181,7 +206,56 @@ export function BuildsPage() {
   );
 }
 
+function BuildsEmptyState({
+  hasFilters,
+  onClear,
+  onTriggerFirst,
+  hasAnyPipeline,
+}: {
+  hasFilters: boolean;
+  onClear(): void;
+  onTriggerFirst(): void;
+  hasAnyPipeline: boolean;
+}) {
+  if (hasFilters) {
+    return (
+      <div className="rounded-md border border-dashed border-slate-800 bg-slate-900/40 p-10 text-center">
+        <Filter className="mx-auto mb-3 text-slate-400" size={32} />
+        <div className="text-sm font-medium text-slate-200">No builds match these filters</div>
+        <p className="mt-1 text-xs text-slate-400">Try clearing them or widening the search.</p>
+        <button
+          type="button"
+          onClick={onClear}
+          className="focusable mt-4 inline-flex items-center gap-1 rounded-md border border-slate-700 px-3 py-1.5 text-xs text-slate-200 hover:border-sky-500 hover:text-sky-300"
+        >
+          Clear filters
+        </button>
+      </div>
+    );
+  }
+  return (
+    <div className="rounded-md border border-dashed border-slate-800 bg-slate-900/40 p-10 text-center">
+      <History className="mx-auto mb-3 text-slate-400" size={36} />
+      <div className="text-base font-medium text-slate-200">No builds yet</div>
+      <p className="mx-auto mt-1 max-w-md text-sm text-slate-400">
+        Every build that has ever run on this machine will land here. Trigger your first
+        pipeline to get started.
+      </p>
+      <div className="mt-5 flex justify-center">
+        <button
+          type="button"
+          onClick={onTriggerFirst}
+          className="focusable inline-flex items-center gap-1.5 rounded-md bg-sky-600 px-3.5 py-2 text-sm font-medium text-white hover:bg-sky-500"
+        >
+          <Hammer size={14} /> {hasAnyPipeline ? 'Open a pipeline' : 'Add a project'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function StatusBadge({ status }: { status: BuildStatus }) {
+  const Icon = statusIcon(status);
   return (
     <span
       className={cn(
@@ -190,19 +264,12 @@ function StatusBadge({ status }: { status: BuildStatus }) {
         status === 'success' && 'bg-emerald-950/50 text-emerald-300',
         status === 'failed' && 'bg-rose-950/50 text-rose-300',
         status === 'pending' && 'bg-slate-800 text-slate-400',
-        status === 'cancelled' && 'bg-slate-800 text-slate-500',
+        status === 'cancelled' && 'bg-slate-800 text-slate-400',
       )}
+      role="status"
+      aria-label={statusLabel(status)}
     >
-      <span
-        className={cn(
-          'h-1.5 w-1.5 rounded-full',
-          status === 'running' && 'animate-pulse bg-amber-400',
-          status === 'success' && 'bg-emerald-400',
-          status === 'failed' && 'bg-rose-400',
-          status === 'pending' && 'bg-slate-500',
-          status === 'cancelled' && 'bg-slate-600',
-        )}
-      />
+      <Icon size={11} className={statusIconAnimationClass(status)} aria-hidden="true" />
       {STATUS_LABELS[status]}
     </span>
   );
