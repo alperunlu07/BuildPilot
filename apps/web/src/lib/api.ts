@@ -1,4 +1,5 @@
 import type {
+  AnnotationsReport,
   ApiToken,
   AuditEventsResponse,
   AuditAction,
@@ -352,6 +353,11 @@ export const api = {
     }),
 
   // ── Observability — test reports + coverage (Cluster 11.F) ───────────
+  // UI v2 Faz 6.B — annotations report (compiler warnings / lint
+  // diagnostics / etc.). Empty `annotations: []` + a `note` when the
+  // build has nothing to report.
+  buildAnnotations: (buildId: string) =>
+    http<AnnotationsReport>(`/builds/${buildId}/annotations`),
   testReport: (
     buildId: string,
     opts: { kind?: TestReportKind; artifactId?: number } = {},

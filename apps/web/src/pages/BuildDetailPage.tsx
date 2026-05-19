@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Check, ChevronLeft, Download, FileBarChart, Filter, GitCompareArrows, Grid3X3, Link2, RotateCcw, Square } from 'lucide-react';
 import type {
+  AnnotationsReport,
   Build,
   BuildApproval,
   BuildArtifact,
@@ -115,12 +116,7 @@ const TAB_META: Record<BuildDetailTab, { label: string; disabled?: boolean; plac
       'Environment variables resolved at build time (secrets masked) plus the SSH builder hosts each step landed on. Needs an env-capture step in the engine; tracked separately.',
   },
   tests: { label: 'Tests' },
-  annotations: {
-    label: 'Annotations',
-    disabled: true,
-    placeholder:
-      'Compiler warnings, lint errors, and other structured findings. Backend parsers land in a follow-up PR; the type contract is already in place.',
-  },
+  annotations: { label: 'Annotations' },
 };
 
 const ALL_LEVELS: BuildLogLevel[] = [
@@ -910,10 +906,13 @@ export function BuildDetailPage({ buildId }: Props) {
 
       {activeTab === 'tests' && <BuildTestsTab buildId={build.id} />}
 
+      {activeTab === 'annotations' && <BuildAnnotationsTab buildId={build.id} />}
+
       {activeTab !== 'overview' &&
         activeTab !== 'logs' &&
         activeTab !== 'artifacts' &&
-        activeTab !== 'tests' && (
+        activeTab !== 'tests' &&
+        activeTab !== 'annotations' && (
           <div className="flex-1 flex flex-col items-center justify-center gap-3 p-12 text-center">
             <div className="text-[14px] font-semibold text-text-primary">
               {TAB_META[activeTab].label}
@@ -1183,6 +1182,126 @@ function SummaryCard({
       <div className={`font-mono text-[20px] leading-tight ${toneClass}`}>{value}</div>
       <div className="text-[10px] uppercase tracking-wider text-text-muted font-semibold mt-0.5">
         {label}
+      </div>
+    </div>
+  );
+}
+
+// UI v2 Faz 6.B — Annotations tab. Fetches GET /api/builds/:id/annotations
+// (parsers persist to the build_annotations table; the endpoint just
+// reads them out sorted by file/line). Groups by file so users can scan
+// "this build's diagnostics" rather than scrolling a flat list.
+function BuildAnnotationsTab({ buildId }: { buildId: string }): JSX.Element {
+  const [report, setReport] = useState<AnnotationsReport | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    setLoading(true);
+    setError(null);
+    api
+      .buildAnnotations(buildId)
+      .then((r) => {
+        if (!alive) return;
+        setReport(r);
+        setLoading(false);
+      })
+      .catch((e) => {
+        if (!alive) return;
+        setError(e instanceof Error ? e.message : String(e));
+        setLoading(false);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [buildId]);
+
+  const grouped = useMemo(() => {
+    if (!report) return [];
+    const m = new Map<string, AnnotationsReport['annotations']>();
+    for (const a of report.annotations) {
+      const list = m.get(a.file) ?? [];
+      list.push(a);
+      m.set(a.file, list);
+    }
+    return [...m.entries()];
+  }, [report]);
+
+  if (loading) {
+    return (
+      <div className="flex-1 flex items-center justify-center text-[12.5px] text-text-muted p-12">
+        Loading annotations…
+      </div>
+    );
+  }
+  if (error) {
+    return (
+      <div className="flex-1 flex items-center justify-center text-[12.5px] text-text-muted p-12 text-center">
+        Couldn't load annotations: {error}
+      </div>
+    );
+  }
+  if (!report || report.totalCount === 0) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center gap-2 p-12 text-center">
+        <div className="text-[13px] text-text-primary">No annotations</div>
+        <p className="max-w-md text-[12px] text-text-muted">
+          {report?.note ??
+            'No compiler warnings or lint diagnostics were captured for this build.'}
+        </p>
+      </div>
+    );
+  }
+  return (
+    <div className="flex-1 overflow-y-auto px-3 py-4 sm:px-6">
+      <div className="grid grid-cols-3 gap-3 mb-4">
+        <SummaryCard label="Errors" value={report.errorCount} tone="failed" />
+        <SummaryCard label="Warnings" value={report.warningCount} tone="muted" />
+        <SummaryCard label="Info" value={report.infoCount} tone="neutral" />
+      </div>
+      <div className="space-y-3">
+        {grouped.map(([file, items]) => (
+          <div
+            key={file}
+            className="rounded-card border border-border-subtle bg-bg-panel overflow-hidden"
+          >
+            <div className="flex items-baseline justify-between px-3 py-2 border-b border-border-subtle bg-bg-elevated">
+              <span className="font-mono text-[12px] text-text-primary truncate">{file}</span>
+              <span className="text-[11px] text-text-muted">
+                {items.length} entr{items.length === 1 ? 'y' : 'ies'}
+              </span>
+            </div>
+            <ul className="divide-y divide-border-subtle">
+              {items.map((a, i) => (
+                <li key={`${a.file}-${a.line}-${i}`} className="px-3 py-2">
+                  <div className="flex items-baseline gap-2">
+                    <span
+                      className={`inline-block size-1.5 rounded-full shrink-0 ${
+                        a.level === 'error'
+                          ? 'bg-status-failed'
+                          : a.level === 'warning'
+                            ? 'bg-status-warn'
+                            : 'bg-text-muted'
+                      }`}
+                      aria-hidden
+                    />
+                    <span className="font-mono text-[11.5px] text-text-faint shrink-0">
+                      L{a.line}
+                      {a.column ? `:${a.column}` : ''}
+                    </span>
+                    {a.ruleId && (
+                      <span className="rounded bg-bg-elevated border border-border-subtle px-1.5 font-mono text-[10px] text-text-muted shrink-0">
+                        {a.ruleId}
+                      </span>
+                    )}
+                    <span className="text-[12px] text-text-primary">{a.message}</span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
       </div>
     </div>
   );

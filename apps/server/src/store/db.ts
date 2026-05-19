@@ -255,6 +255,33 @@ export function initDb(path: string): DB {
       max_concurrency INTEGER NOT NULL,
       created_at INTEGER NOT NULL
     );
+
+    -- UI v2 Faz 6.B — Annotations. Compiler warnings, lint diagnostics,
+    -- etc., parsed from per-step output and persisted alongside the build
+    -- so the UI can render them without re-parsing logs. Mirrors the
+    -- Annotation shape in shared-types. step_id is nullable for reports
+    -- merged across multiple steps. INDEX on build_id keeps the
+    -- annotations tab query O(log N) on a build with thousands of
+    -- entries; INDEX on fingerprint enables cross-build "same warning
+    -- across N builds" grouping in a future enhancement.
+    CREATE TABLE IF NOT EXISTS build_annotations (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      build_id TEXT NOT NULL REFERENCES builds(id) ON DELETE CASCADE,
+      step_id TEXT,
+      source TEXT NOT NULL,
+      level TEXT NOT NULL,
+      file TEXT NOT NULL,
+      line INTEGER NOT NULL,
+      column INTEGER,
+      message TEXT NOT NULL,
+      rule_id TEXT,
+      fingerprint TEXT,
+      created_at INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_build_annotations_build
+      ON build_annotations(build_id);
+    CREATE INDEX IF NOT EXISTS idx_build_annotations_fingerprint
+      ON build_annotations(fingerprint);
   `);
 
   // Seed the sentinel "default" lane. Idempotent: existing rows are kept.
