@@ -319,10 +319,12 @@ Quality-of-life for the people building BuildPilot itself.
   vitest coverage
 - [ ] **E2E happy-path test** — start server, add project, create
   pipeline, run a `shell` step, assert green status via SSE
-- [ ] **Settings JSON schema + validation** — `~/.buildpilot/config.json`
+- [x] **Settings JSON schema + validation** — `~/.buildpilot/config.json`
   surfaces JSON-schema errors at startup instead of crashing
-- [ ] **Dev seed script** — `pnpm seed` populates a fresh DB with three
+  (`apps/server/src/config-schema.ts` — 061af7e)
+- [x] **Dev seed script** — `pnpm seed` populates a fresh DB with three
   demo projects + pipelines for screenshotting and onboarding
+  (`apps/server/scripts/seed.ts` — 0fa87ce)
 - [ ] **Public component design tokens** — colors, spacings, type scale
   centralized in `tailwind.config.js` extension so dark/light + theme
   variants stay coherent

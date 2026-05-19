@@ -21,17 +21,17 @@ export function Breadcrumb({ onOpenMobileNav }: BreadcrumbProps = {}) {
   if (view.type === 'home') {
     if (!onOpenMobileNav) return null;
     return (
-      <div className="flex items-center border-b border-slate-800 bg-slate-900/60 px-3 py-2 md:hidden">
+      <div className="flex items-center border-b border-bp-surface-2 bg-bp-surface-1/60 px-3 py-2 md:hidden">
         <button
           type="button"
           onClick={onOpenMobileNav}
-          className="focusable touch-target rounded-md p-1.5 text-slate-300 hover:bg-slate-800 hover:text-slate-100"
+          className="focusable touch-target rounded-md p-1.5 text-bp-text-secondary hover:bg-bp-surface-2 hover:text-bp-text-primary"
           aria-label="Open navigation"
           title="Open navigation"
         >
           <Menu size={16} />
         </button>
-        <span className="ml-2 text-sm font-semibold text-slate-100">BuildPilot</span>
+        <span className="ml-2 text-sm font-semibold text-bp-text-primary">BuildPilot</span>
       </div>
     );
   }
@@ -85,13 +85,13 @@ export function Breadcrumb({ onOpenMobileNav }: BreadcrumbProps = {}) {
   return (
     <nav
       aria-label="Breadcrumb"
-      className="flex items-center gap-1 border-b border-slate-800 bg-slate-900/60 px-4 py-2 text-xs text-slate-400"
+      className="flex items-center gap-1 border-b border-bp-surface-2 bg-bp-surface-1/60 px-4 py-2 text-xs text-bp-text-muted"
     >
       {onOpenMobileNav && (
         <button
           type="button"
           onClick={onOpenMobileNav}
-          className="focusable touch-target mr-1 rounded-md p-1 text-slate-300 hover:bg-slate-800 hover:text-slate-100 md:hidden"
+          className="focusable touch-target mr-1 rounded-md p-1 text-bp-text-secondary hover:bg-bp-surface-2 hover:text-bp-text-primary md:hidden"
           aria-label="Open navigation"
           title="Open navigation"
         >
@@ -100,17 +100,17 @@ export function Breadcrumb({ onOpenMobileNav }: BreadcrumbProps = {}) {
       )}
       {crumbs.map((c, i) => (
         <span key={i} className="flex items-center gap-1">
-          {i > 0 && <ChevronRight size={11} className="text-slate-400" />}
+          {i > 0 && <ChevronRight size={11} className="text-bp-text-muted" />}
           {c.onClick ? (
             <button
               type="button"
               onClick={c.onClick}
-              className="focusable touch-target rounded px-1 py-0.5 hover:bg-slate-800 hover:text-slate-200"
+              className="focusable touch-target rounded px-1 py-0.5 hover:bg-bp-surface-2 hover:text-bp-text-primary"
             >
               {c.label}
             </button>
           ) : (
-            <span className="px-1 py-0.5 text-slate-200">{c.label}</span>
+            <span className="px-1 py-0.5 text-bp-text-primary">{c.label}</span>
           )}
         </span>
       ))}

@@ -50,13 +50,13 @@ export function ConfirmDialog({
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/70 backdrop-blur-sm"
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-bp-surface-0/70 backdrop-blur-sm"
       onClick={onCancel}
       role="presentation"
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-[420px] rounded-lg border border-slate-700 bg-slate-900 p-5 shadow-xl"
+        className="w-[420px] rounded-lg border border-bp-surface-3 bg-bp-surface-1 p-5 shadow-xl"
         role="alertdialog"
         aria-modal="true"
         aria-labelledby="confirm-dialog-title"
@@ -64,18 +64,18 @@ export function ConfirmDialog({
         <div className="mb-3 flex items-center gap-2">
           <AlertTriangle
             size={16}
-            className={variant === 'destructive' ? 'text-rose-400' : 'text-amber-400'}
+            className={variant === 'destructive' ? 'text-bp-error' : 'text-bp-warning'}
           />
-          <h3 id="confirm-dialog-title" className="text-sm font-semibold text-slate-100">{title}</h3>
+          <h3 id="confirm-dialog-title" className="text-sm font-semibold text-bp-text-primary">{title}</h3>
         </div>
-        <p className="mb-3 whitespace-pre-line text-[13px] leading-relaxed text-slate-300">
+        <p className="mb-3 whitespace-pre-line text-[13px] leading-relaxed text-bp-text-secondary">
           {body}
         </p>
         {needsType && (
           <div className="mb-4">
-            <p className="mb-1 text-[12px] text-slate-400">
+            <p className="mb-1 text-[12px] text-bp-text-muted">
               Type{' '}
-              <code className="rounded bg-slate-800 px-1 py-0.5 font-mono text-slate-200">
+              <code className="rounded bg-bp-surface-2 px-1 py-0.5 font-mono text-bp-text-primary">
                 {typedConfirmation}
               </code>{' '}
               to confirm:
@@ -90,7 +90,7 @@ export function ConfirmDialog({
               }}
               autoComplete="off"
               spellCheck={false}
-              className="focusable w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1.5 font-mono text-sm text-slate-100 focus:border-rose-500 focus:outline-none"
+              className="focusable w-full rounded-md border border-bp-surface-3 bg-bp-surface-0 px-2 py-1.5 font-mono text-sm text-bp-text-primary focus:border-rose-500 focus:outline-none"
             />
           </div>
         )}
@@ -98,7 +98,7 @@ export function ConfirmDialog({
           <button
             type="button"
             onClick={onCancel}
-            className="focusable touch-target rounded-md px-3 py-1.5 text-sm text-slate-400 hover:text-slate-200"
+            className="focusable touch-target rounded-md px-3 py-1.5 text-sm text-bp-text-muted hover:text-bp-text-primary"
             aria-label={`${cancelLabel} and close dialog`}
           >
             {cancelLabel}
@@ -110,7 +110,7 @@ export function ConfirmDialog({
             className={
               variant === 'destructive'
                 ? 'focusable rounded-md bg-rose-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-rose-500 disabled:cursor-not-allowed disabled:bg-rose-900/40 disabled:text-rose-300/40'
-                : 'focusable rounded-md bg-sky-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-sky-500 disabled:cursor-not-allowed disabled:bg-sky-900/40 disabled:text-sky-300/40'
+                : 'focusable rounded-md bg-bp-brand px-3 py-1.5 text-sm font-medium text-white hover:bg-sky-500 disabled:cursor-not-allowed disabled:bg-sky-900/40 disabled:text-sky-300/40'
             }
           >
             {confirmLabel}

@@ -170,12 +170,12 @@ export function Sidebar({
     return (
       <aside
         style={{ width: COLLAPSED_WIDTH }}
-        className="density-card relative flex h-full shrink-0 flex-col items-center border-r border-slate-800 bg-slate-950 py-2"
+        className="density-card relative flex h-full shrink-0 flex-col items-center border-r border-bp-surface-2 bg-bp-surface-0 py-2"
       >
         <button
           type="button"
           onClick={() => setCollapsed(false)}
-          className="focusable mb-2 rounded-md p-1.5 text-slate-400 hover:bg-slate-800/60 hover:text-slate-100"
+          className="focusable mb-2 rounded-md p-1.5 text-bp-text-muted hover:bg-bp-surface-2/60 hover:text-bp-text-primary"
           title="Expand sidebar"
           aria-label="Expand sidebar"
         >
@@ -275,26 +275,26 @@ export function Sidebar({
           role="presentation"
           aria-hidden="true"
           onClick={onMobileClose}
-          className="fixed inset-0 z-40 bg-slate-950/70 backdrop-blur-sm md:hidden"
+          className="fixed inset-0 z-40 bg-bp-surface-0/70 backdrop-blur-sm md:hidden"
         />
       )}
     <aside
       style={{ width: effectiveWidth }}
       className={cn(
-        'density-card relative flex h-full flex-col border-r border-slate-800 bg-slate-950',
+        'density-card relative flex h-full flex-col border-r border-bp-surface-2 bg-bp-surface-0',
         mobileClasses,
       )}
       aria-hidden={!isDesktop && !mobileOpen ? true : undefined}
     >
-      <div className="flex items-center justify-between border-b border-slate-800 px-4 py-3">
+      <div className="flex items-center justify-between border-b border-bp-surface-2 px-4 py-3">
         <button
           type="button"
           onClick={() => setView({ type: 'projects' })}
           className="focusable text-left"
           aria-label="Go to projects"
         >
-          <div className="text-base font-semibold tracking-tight text-slate-100">BuildPilot</div>
-          <div className="text-[11px] uppercase tracking-wider text-slate-400">Local CI/CD</div>
+          <div className="text-base font-semibold tracking-tight text-bp-text-primary">BuildPilot</div>
+          <div className="text-[11px] uppercase tracking-wider text-bp-text-muted">Local CI/CD</div>
         </button>
         <div className="flex items-center gap-1">
           <UserMenu />
@@ -409,7 +409,7 @@ export function Sidebar({
 
       {(favProjects.length > 0 || favPipelines.length > 0) && (
         <>
-          <div className="px-3 pt-3 text-[11px] uppercase tracking-wider text-slate-400">
+          <div className="px-3 pt-3 text-[11px] uppercase tracking-wider text-bp-text-muted">
             {t('nav.favorites')}
           </div>
           <ul className="space-y-0.5 px-2 pb-1">
@@ -457,13 +457,13 @@ export function Sidebar({
         </>
       )}
 
-      <div className="px-3 pt-3 text-[11px] uppercase tracking-wider text-slate-400">
+      <div className="px-3 pt-3 text-[11px] uppercase tracking-wider text-bp-text-muted">
         {t('nav.projects')}
       </div>
       <nav className="flex-1 overflow-y-auto px-2 py-2">
         {projects.length === 0 && (
-          <div className="px-3 py-6 text-sm text-slate-400">
-            No projects. Click <span className="text-slate-300">+</span> to add one.
+          <div className="px-3 py-6 text-sm text-bp-text-muted">
+            No projects. Click <span className="text-bp-text-secondary">+</span> to add one.
           </div>
         )}
         <ul className="space-y-0.5">
@@ -586,8 +586,8 @@ export function Sidebar({
       </nav>
 
       {recents.length > 0 && (
-        <div className="border-t border-slate-800 px-2 py-2">
-          <div className="px-1 pb-1 text-[10px] uppercase tracking-wider text-slate-400">
+        <div className="border-t border-bp-surface-2 px-2 py-2">
+          <div className="px-1 pb-1 text-[10px] uppercase tracking-wider text-bp-text-muted">
             {t('nav.recent')}
           </div>
           <ul className="space-y-0.5">
@@ -619,11 +619,11 @@ export function Sidebar({
         </div>
       )}
 
-      <div className="border-t border-slate-800 px-2 py-2">
+      <div className="border-t border-bp-surface-2 px-2 py-2">
         <button
           type="button"
           onClick={onShowChangelog}
-          className="focusable flex w-full items-center gap-2 rounded px-2 py-1 text-left text-[11px] text-slate-400 hover:bg-slate-800/60 hover:text-slate-200"
+          className="focusable flex w-full items-center gap-2 rounded px-2 py-1 text-left text-[11px] text-bp-text-muted hover:bg-bp-surface-2/60 hover:text-bp-text-primary"
           aria-label={changelogHasUnread ? "What's new (unread)" : "What's new"}
         >
           <Sparkles size={11} className="shrink-0 text-sky-400" />
@@ -681,7 +681,7 @@ function IconRail({
       aria-label={label}
       className={cn(
         'focusable flex h-9 w-9 items-center justify-center rounded-md',
-        active ? 'bg-slate-800 text-slate-100' : 'text-slate-400 hover:bg-slate-800/60 hover:text-slate-100',
+        active ? 'bg-bp-surface-2 text-bp-text-primary' : 'text-bp-text-muted hover:bg-bp-surface-2/60 hover:text-bp-text-primary',
       )}
     >
       {icon}
@@ -709,7 +709,7 @@ function NavItem({
       title={title}
       className={cn(
         'focusable density-row flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm',
-        active ? 'bg-slate-800 text-slate-100' : 'text-slate-300 hover:bg-slate-800/60',
+        active ? 'bg-bp-surface-2 text-bp-text-primary' : 'text-bp-text-secondary hover:bg-bp-surface-2/60',
       )}
     >
       {icon}

@@ -108,7 +108,7 @@ export function LogTable({
 
   if (entries.length === 0) {
     return (
-      <div className="flex h-full items-center justify-center text-xs text-slate-400">
+      <div className="flex h-full items-center justify-center text-xs text-bp-text-muted">
         {emptyMessage}
       </div>
     );
@@ -118,7 +118,7 @@ export function LogTable({
     <div className="relative flex h-full min-h-0 flex-col font-mono text-[12px]">
       <div
         className={cn(
-          'sticky top-0 z-10 grid border-b border-slate-800 bg-slate-950/95 px-2 backdrop-blur',
+          'sticky top-0 z-10 grid border-b border-bp-surface-2 bg-bp-surface-0/95 px-2 backdrop-blur',
           compact ? 'py-1' : 'py-1.5',
         )}
         style={{ gridTemplateColumns: gridCols }}
@@ -157,7 +157,7 @@ export function LogTable({
         <button
           type="button"
           onClick={jumpToLatest}
-          className="absolute bottom-3 right-4 z-20 inline-flex items-center gap-1 rounded-full border border-sky-700 bg-slate-900/90 px-2.5 py-1 text-[11px] text-sky-300 shadow-lg backdrop-blur hover:border-sky-500 hover:text-sky-200"
+          className="absolute bottom-3 right-4 z-20 inline-flex items-center gap-1 rounded-full border border-sky-700 bg-bp-surface-1/90 px-2.5 py-1 text-[11px] text-sky-300 shadow-lg backdrop-blur hover:border-sky-500 hover:text-sky-200"
           title="Re-enable autoscroll"
         >
           <ArrowDownCircle size={12} /> Jump to latest
@@ -195,7 +195,7 @@ function Row({ index, style, data }: ListChildComponentProps<RowItemData>) {
     <div
       style={style}
       className={cn(
-        'group grid items-center border-t border-slate-900 px-2 hover:bg-slate-900/40',
+        'group grid items-center border-t border-bp-surface-1 px-2 hover:bg-bp-surface-1/40',
         compact ? 'py-0' : 'py-0',
       )}
     >
@@ -203,7 +203,7 @@ function Row({ index, style, data }: ListChildComponentProps<RowItemData>) {
         className="grid w-full items-center"
         style={{ gridTemplateColumns: gridCols, height: '100%' }}
       >
-        {isWide && <span className="truncate text-slate-400">{fmtTime(e.ts)}</span>}
+        {isWide && <span className="truncate text-bp-text-muted">{fmtTime(e.ts)}</span>}
         <span
           className={cn(
             'inline-flex w-fit items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider',
@@ -214,10 +214,10 @@ function Row({ index, style, data }: ListChildComponentProps<RowItemData>) {
           {e.level}
         </span>
         {isWide && (
-          <span className="truncate text-slate-300">
+          <span className="truncate text-bp-text-secondary">
             {e.nodeId
               ? nodeLabelText
-              : <span className="text-slate-400">—</span>}
+              : <span className="text-bp-text-muted">—</span>}
           </span>
         )}
         <span
@@ -226,7 +226,7 @@ function Row({ index, style, data }: ListChildComponentProps<RowItemData>) {
           // the title attr so the tooltip stays readable.
           title={rowTitle}
           className={cn(
-            'relative flex items-center truncate text-slate-200',
+            'relative flex items-center truncate text-bp-text-primary',
             e.level === 'stderr' && 'text-amber-200',
             e.level === 'failure' && 'text-rose-300',
             e.level === 'success' && 'text-emerald-300',
@@ -245,7 +245,7 @@ function Row({ index, style, data }: ListChildComponentProps<RowItemData>) {
               // On touch devices the hover-revealed copy button is unreachable,
               // so make it always visible there via touch-target. On precise
               // pointers it remains a group-hover affordance to keep rows tidy.
-              className="touch-target ml-2 hidden shrink-0 rounded border border-slate-700 px-1.5 py-0 text-[10px] uppercase tracking-wider text-slate-400 hover:border-sky-500 hover:text-sky-300 group-hover:inline-flex"
+              className="touch-target ml-2 hidden shrink-0 rounded border border-bp-surface-3 px-1.5 py-0 text-[10px] uppercase tracking-wider text-bp-text-muted hover:border-sky-500 hover:text-sky-300 group-hover:inline-flex"
               title={`Copy: ${cmd}`}
               aria-label={`Copy command: ${cmd}`}
             >
@@ -278,7 +278,7 @@ function AnsiMessage({ text }: { text: string }) {
 
 function Th({ children }: { children: React.ReactNode }) {
   return (
-    <span className="truncate text-left text-[10px] font-medium uppercase tracking-wider text-slate-400">
+    <span className="truncate text-left text-[10px] font-medium uppercase tracking-wider text-bp-text-muted">
       {children}
     </span>
   );
