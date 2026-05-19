@@ -89,12 +89,12 @@ export function DiskUsagePage() {
     <div className="mx-auto max-w-4xl p-8">
       <div className="mb-6 flex items-baseline justify-between">
         <div>
-          <h1 className="flex items-center gap-2 text-xl font-semibold text-slate-100">
-            <HardDrive size={18} className="text-slate-400" />
+          <h1 className="flex items-center gap-2 text-xl font-semibold text-text-primary">
+            <HardDrive size={18} className="text-text-muted" />
             Disk usage
           </h1>
-          <p className="mt-1 text-sm text-slate-400">
-            Bytes BuildPilot is tracking in the <code className="text-slate-300">build_artifacts</code>{' '}
+          <p className="mt-1 text-sm text-text-muted">
+            Bytes BuildPilot is tracking in the <code className="text-text-secondary">build_artifacts</code>{' '}
             table. Prune builds to drop their rows; actual files on disk
             are not deleted.
           </p>
@@ -103,7 +103,7 @@ export function DiskUsagePage() {
           type="button"
           onClick={() => void reload()}
           disabled={loading}
-          className="focusable inline-flex items-center gap-1 rounded-md border border-slate-700 px-2.5 py-1 text-xs text-slate-200 hover:border-sky-500 hover:text-sky-400 disabled:opacity-50"
+          className="focusable inline-flex items-center gap-1 rounded-md border border-border-subtle px-2.5 py-1 text-xs text-text-primary hover:border-accent hover:text-accent disabled:opacity-50"
         >
           <RefreshCw size={12} className={loading ? 'motion-safe:animate-spin' : ''} /> Refresh
         </button>
@@ -118,40 +118,40 @@ export function DiskUsagePage() {
       {data && (
         <>
           <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <div className="rounded-md border border-slate-800 bg-slate-900/40 px-4 py-3">
-              <div className="text-[11px] uppercase tracking-wider text-slate-400">Total</div>
-              <div className="mt-1 text-2xl font-semibold text-slate-100">
+            <div className="rounded-md border border-border-subtle bg-bg-panel/60 px-4 py-3">
+              <div className="text-[11px] uppercase tracking-wider text-text-muted">Total</div>
+              <div className="mt-1 text-2xl font-semibold text-text-primary">
                 {formatBytes(data.totalBytes)}
               </div>
-              <div className="mt-0.5 text-[11px] text-slate-400">
+              <div className="mt-0.5 text-[11px] text-text-muted">
                 {data.artifactCount} artifact{data.artifactCount === 1 ? '' : 's'}
               </div>
             </div>
-            <div className="rounded-md border border-slate-800 bg-slate-900/40 px-4 py-3">
-              <div className="text-[11px] uppercase tracking-wider text-slate-400">Builds with artifacts</div>
-              <div className="mt-1 text-2xl font-semibold text-slate-100">{data.buildCount}</div>
+            <div className="rounded-md border border-border-subtle bg-bg-panel/60 px-4 py-3">
+              <div className="text-[11px] uppercase tracking-wider text-text-muted">Builds with artifacts</div>
+              <div className="mt-1 text-2xl font-semibold text-text-primary">{data.buildCount}</div>
             </div>
-            <div className="rounded-md border border-slate-800 bg-slate-900/40 px-4 py-3">
-              <div className="text-[11px] uppercase tracking-wider text-slate-400">Orphans</div>
-              <div className="mt-1 text-2xl font-semibold text-slate-100">
+            <div className="rounded-md border border-border-subtle bg-bg-panel/60 px-4 py-3">
+              <div className="text-[11px] uppercase tracking-wider text-text-muted">Orphans</div>
+              <div className="mt-1 text-2xl font-semibold text-text-primary">
                 {formatBytes(data.orphanBytes)}
               </div>
-              <div className="mt-0.5 text-[11px] text-slate-400">
+              <div className="mt-0.5 text-[11px] text-text-muted">
                 {data.orphanArtifactCount} artifact row
                 {data.orphanArtifactCount === 1 ? '' : 's'} without a parent build
               </div>
             </div>
           </div>
 
-          <div className="mb-4 rounded-md border border-slate-800 bg-slate-900/40 p-3">
-            <div className="mb-1 text-sm text-slate-200">Prune older builds</div>
-            <p className="mb-2 text-xs text-slate-400">
+          <div className="mb-4 rounded-md border border-border-subtle bg-bg-panel/60 p-3">
+            <div className="mb-1 text-sm text-text-primary">Prune older builds</div>
+            <p className="mb-2 text-xs text-text-muted">
               Drops finished builds (success / failed / cancelled) older than the
               chosen age along with their log entries and artifact rows. Still-
               running builds are skipped.
             </p>
             <div className="flex flex-wrap items-center gap-2">
-              <label className="text-xs text-slate-400">
+              <label className="text-xs text-text-muted">
                 Older than{' '}
                 <input
                   type="number"
@@ -159,7 +159,7 @@ export function DiskUsagePage() {
                   step={1}
                   value={pruneDays}
                   onChange={(e) => setPruneDays(e.target.value)}
-                  className="w-20 rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-slate-100 focus:border-sky-500 focus:outline-none"
+                  className="w-20 rounded-md border border-border-subtle bg-bg-panel px-2 py-1 text-text-primary focus:border-accent focus:outline-none"
                 />{' '}
                 days
               </label>
@@ -171,13 +171,13 @@ export function DiskUsagePage() {
               >
                 <Trash2 size={12} /> Prune
               </button>
-              {pruneMsg && <span className="text-xs text-slate-300">{pruneMsg}</span>}
+              {pruneMsg && <span className="text-xs text-text-secondary">{pruneMsg}</span>}
             </div>
           </div>
 
-          <div className="overflow-hidden rounded-md border border-slate-800">
+          <div className="overflow-hidden rounded-md border border-border-subtle">
             <table className="w-full text-left text-sm">
-              <thead className="bg-slate-900/60 text-[11px] uppercase tracking-wider text-slate-400">
+              <thead className="bg-bg-panel text-[11px] uppercase tracking-wider text-text-muted">
                 <tr>
                   <th className="px-3 py-2">Project</th>
                   <th className="px-3 py-2">Pipeline</th>
@@ -190,7 +190,7 @@ export function DiskUsagePage() {
               <tbody>
                 {data.pipelines.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-3 py-6 text-center text-sm text-slate-400">
+                    <td colSpan={6} className="px-3 py-6 text-center text-sm text-text-muted">
                       No artifacts recorded yet.
                     </td>
                   </tr>
@@ -199,28 +199,28 @@ export function DiskUsagePage() {
                     const pct =
                       data.totalBytes > 0 ? (p.bytes / data.totalBytes) * 100 : 0;
                     return (
-                      <tr key={p.pipelineId || `${p.projectId}:${p.pipelineName}`} className="border-t border-slate-800">
-                        <td className="px-3 py-2 text-slate-300">{p.projectName}</td>
+                      <tr key={p.pipelineId || `${p.projectId}:${p.pipelineName}`} className="border-t border-border-subtle">
+                        <td className="px-3 py-2 text-text-secondary">{p.projectName}</td>
                         <td className="px-3 py-2">
                           {p.pipelineId ? (
                             <button
                               type="button"
                               onClick={() => setView({ type: 'pipeline', id: p.pipelineId })}
-                              className="text-slate-200 hover:text-sky-400"
+                              className="text-text-primary hover:text-accent"
                             >
                               {p.pipelineName}
                             </button>
                           ) : (
-                            <span className="text-slate-200">{p.pipelineName}</span>
+                            <span className="text-text-primary">{p.pipelineName}</span>
                           )}
                         </td>
-                        <td className="px-3 py-2 text-right font-mono text-slate-200">
+                        <td className="px-3 py-2 text-right font-mono text-text-primary">
                           {formatBytes(p.bytes)}
                         </td>
-                        <td className="px-3 py-2 text-right text-slate-400">{p.artifactCount}</td>
-                        <td className="px-3 py-2 text-right text-slate-400">{p.buildCount}</td>
+                        <td className="px-3 py-2 text-right text-text-muted">{p.artifactCount}</td>
+                        <td className="px-3 py-2 text-right text-text-muted">{p.buildCount}</td>
                         <td className="px-3 py-2">
-                          <div className="h-1.5 w-full rounded-full bg-slate-800">
+                          <div className="h-1.5 w-full rounded-full bg-bg-elevated">
                             <div
                               className="h-1.5 rounded-full bg-sky-500/70"
                               style={{ width: `${pct}%` }}

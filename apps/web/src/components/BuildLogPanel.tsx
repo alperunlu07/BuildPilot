@@ -44,8 +44,8 @@ export function BuildLogPanel() {
     activeBuild.status === 'cancelled';
 
   return (
-    <div className="flex h-72 shrink-0 flex-col border-t border-slate-800 bg-slate-950">
-      <div className="flex items-center justify-between border-b border-slate-800 px-4 py-2 text-xs">
+    <div className="flex h-72 shrink-0 flex-col border-t border-border-subtle bg-bg-base">
+      <div className="flex items-center justify-between border-b border-border-subtle px-4 py-2 text-xs">
         <div className="flex items-center gap-2">
           {(() => {
             const StatusIcon = statusIcon(activeBuild.status);
@@ -58,8 +58,8 @@ export function BuildLogPanel() {
                   activeBuild.status === 'running' && 'text-amber-400',
                   activeBuild.status === 'success' && 'text-emerald-400',
                   activeBuild.status === 'failed' && 'text-rose-400',
-                  activeBuild.status === 'cancelled' && 'text-slate-400',
-                  activeBuild.status === 'pending' && 'text-slate-400',
+                  activeBuild.status === 'cancelled' && 'text-text-muted',
+                  activeBuild.status === 'pending' && 'text-text-muted',
                 )}
               >
                 <StatusIcon
@@ -70,26 +70,26 @@ export function BuildLogPanel() {
               </span>
             );
           })()}
-          <span className="font-medium uppercase tracking-wider text-slate-300">
+          <span className="font-medium uppercase tracking-wider text-text-secondary">
             Build {activeBuild.status}
           </span>
-          <span className="text-slate-400">·</span>
+          <span className="text-text-muted">·</span>
           <button
             type="button"
             onClick={() => setView({ type: 'build', id: activeBuild.id })}
-            className="font-mono text-slate-400 hover:text-sky-400"
+            className="font-mono text-text-muted hover:text-accent"
             title="Open full log"
           >
             {activeBuild.id.slice(0, 8)}
           </button>
           {activeBuild.triggerSha && (
             <>
-              <span className="text-slate-400">·</span>
-              <span className="font-mono text-sky-400">{activeBuild.triggerSha.slice(0, 7)}</span>
+              <span className="text-text-muted">·</span>
+              <span className="font-mono text-accent">{activeBuild.triggerSha.slice(0, 7)}</span>
             </>
           )}
-          <span className="text-slate-400">·</span>
-          <span className="text-slate-400">
+          <span className="text-text-muted">·</span>
+          <span className="text-text-muted">
             {filtered.length === entries.length
               ? `${entries.length} entries`
               : `${filtered.length} / ${entries.length} entries`}
@@ -108,7 +108,7 @@ export function BuildLogPanel() {
             </button>
           )}
           {finished && (
-            <span className="text-slate-400">
+            <span className="text-text-muted">
               Finished{' '}
               {activeBuild.finishedAt
                 ? new Date(activeBuild.finishedAt).toLocaleTimeString()

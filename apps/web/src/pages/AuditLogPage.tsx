@@ -44,7 +44,7 @@ function actionLabel(a: AuditAction): string {
 function statusColor(code: number): string {
   if (code >= 500) return 'text-rose-300';
   if (code >= 400) return 'text-amber-300';
-  if (code >= 300) return 'text-sky-300';
+  if (code >= 300) return 'text-accent-hover';
   return 'text-emerald-300';
 }
 
@@ -104,11 +104,11 @@ export function AuditLogPage() {
     <div className="mx-auto max-w-6xl space-y-4 p-6">
       <header className="flex items-center justify-between gap-3">
         <div>
-          <h1 className="flex items-center gap-2 text-xl font-semibold text-slate-100">
-            <ClipboardList size={18} className="text-sky-400" />
+          <h1 className="flex items-center gap-2 text-xl font-semibold text-text-primary">
+            <ClipboardList size={18} className="text-accent" />
             Audit log
           </h1>
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-text-muted">
             Records every state-mutating request (POST / PATCH / DELETE) along with the actor,
             HTTP status, and resource. Reads are not logged.
           </p>
@@ -116,20 +116,20 @@ export function AuditLogPage() {
         <button
           type="button"
           onClick={() => void reload()}
-          className="focusable flex items-center gap-1 rounded-md border border-slate-700 px-3 py-1.5 text-xs text-slate-200 hover:border-sky-500 hover:text-sky-300"
+          className="focusable flex items-center gap-1 rounded-md border border-border-subtle px-3 py-1.5 text-xs text-text-primary hover:border-accent hover:text-accent-hover"
         >
           <RefreshCcw size={13} />
           Refresh
         </button>
       </header>
 
-      <div className="grid grid-cols-1 gap-3 rounded-md border border-slate-800 bg-slate-900/40 p-3 sm:grid-cols-5">
+      <div className="grid grid-cols-1 gap-3 rounded-md border border-border-subtle bg-bg-panel/60 p-3 sm:grid-cols-5">
         <FilterField label="Actor">
           {actors.length > 0 ? (
             <select
               value={filters.actor}
               onChange={(e) => setFilters((f) => ({ ...f, actor: e.target.value }))}
-              className="focusable w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1 text-xs text-slate-200"
+              className="focusable w-full rounded-md border border-border-subtle bg-bg-base px-2 py-1 text-xs text-text-primary"
             >
               <option value="">All actors</option>
               {actors.map((a) => (
@@ -143,7 +143,7 @@ export function AuditLogPage() {
               type="text"
               value={filters.actor}
               onChange={(e) => setFilters((f) => ({ ...f, actor: e.target.value }))}
-              className="focusable w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1 text-xs text-slate-200"
+              className="focusable w-full rounded-md border border-border-subtle bg-bg-base px-2 py-1 text-xs text-text-primary"
               placeholder="username"
             />
           )}
@@ -154,7 +154,7 @@ export function AuditLogPage() {
             onChange={(e) =>
               setFilters((f) => ({ ...f, action: e.target.value as AuditAction | '' }))
             }
-            className="focusable w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1 text-xs text-slate-200"
+            className="focusable w-full rounded-md border border-border-subtle bg-bg-base px-2 py-1 text-xs text-text-primary"
           >
             <option value="">All actions</option>
             {ACTIONS.map((a) => (
@@ -170,7 +170,7 @@ export function AuditLogPage() {
             onChange={(e) =>
               setFilters((f) => ({ ...f, resource: e.target.value as AuditResource | '' }))
             }
-            className="focusable w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1 text-xs text-slate-200"
+            className="focusable w-full rounded-md border border-border-subtle bg-bg-base px-2 py-1 text-xs text-text-primary"
           >
             <option value="">All resources</option>
             {RESOURCES.map((r) => (
@@ -185,7 +185,7 @@ export function AuditLogPage() {
             type="datetime-local"
             value={filters.since}
             onChange={(e) => setFilters((f) => ({ ...f, since: e.target.value }))}
-            className="focusable w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1 text-xs text-slate-200"
+            className="focusable w-full rounded-md border border-border-subtle bg-bg-base px-2 py-1 text-xs text-text-primary"
           />
         </FilterField>
         <FilterField label="Until">
@@ -193,21 +193,21 @@ export function AuditLogPage() {
             type="datetime-local"
             value={filters.until}
             onChange={(e) => setFilters((f) => ({ ...f, until: e.target.value }))}
-            className="focusable w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1 text-xs text-slate-200"
+            className="focusable w-full rounded-md border border-border-subtle bg-bg-base px-2 py-1 text-xs text-text-primary"
           />
         </FilterField>
         <div className="sm:col-span-5">
           <button
             type="button"
             onClick={() => void reload()}
-            className="focusable rounded-md bg-sky-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-sky-500"
+            className="focusable rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:bg-accent-hover"
           >
             Apply filters
           </button>
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-3 text-[11px] text-slate-400">
+      <div className="flex flex-wrap gap-3 text-[11px] text-text-muted">
         <span>{events.length} events</span>
         {truncated && (
           <span className="text-amber-300">
@@ -216,7 +216,7 @@ export function AuditLogPage() {
         )}
         {Array.from(stats.entries()).map(([a, n]) => (
           <span key={a}>
-            <span className="text-slate-500">{a}:</span> {n}
+            <span className="text-text-faint">{a}:</span> {n}
           </span>
         ))}
       </div>
@@ -229,8 +229,8 @@ export function AuditLogPage() {
       )}
 
       <div className="overflow-x-auto">
-        <table className="w-full overflow-hidden rounded-md border border-slate-800 text-xs">
-          <thead className="bg-slate-900 text-[10px] uppercase tracking-wider text-slate-400">
+        <table className="w-full overflow-hidden rounded-md border border-border-subtle text-xs">
+          <thead className="bg-bg-panel text-[10px] uppercase tracking-wider text-text-muted">
             <tr>
               <th className="px-2 py-1.5 text-left">Time</th>
               <th className="px-2 py-1.5 text-left">Actor</th>
@@ -244,30 +244,30 @@ export function AuditLogPage() {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={7} className="px-2 py-3 text-center text-slate-400">
+                <td colSpan={7} className="px-2 py-3 text-center text-text-muted">
                   Loading…
                 </td>
               </tr>
             ) : events.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-2 py-3 text-center text-slate-400">
+                <td colSpan={7} className="px-2 py-3 text-center text-text-muted">
                   No events match the filters.
                 </td>
               </tr>
             ) : (
               events.map((e) => (
-                <tr key={e.id} className="border-t border-slate-800 hover:bg-slate-900/40">
-                  <td className="whitespace-nowrap px-2 py-1.5 font-mono text-[11px] text-slate-300">
+                <tr key={e.id} className="border-t border-border-subtle hover:bg-bg-panel/60">
+                  <td className="whitespace-nowrap px-2 py-1.5 font-mono text-[11px] text-text-secondary">
                     {new Date(e.ts).toLocaleString()}
                   </td>
-                  <td className="px-2 py-1.5 text-slate-200">{e.actor}</td>
-                  <td className="px-2 py-1.5 text-slate-200">{actionLabel(e.action)}</td>
-                  <td className="px-2 py-1.5 text-slate-200">{e.resource}</td>
-                  <td className="px-2 py-1.5 font-mono text-[11px] text-slate-400">
+                  <td className="px-2 py-1.5 text-text-primary">{e.actor}</td>
+                  <td className="px-2 py-1.5 text-text-primary">{actionLabel(e.action)}</td>
+                  <td className="px-2 py-1.5 text-text-primary">{e.resource}</td>
+                  <td className="px-2 py-1.5 font-mono text-[11px] text-text-muted">
                     {e.resourceId ?? '—'}
                   </td>
-                  <td className="px-2 py-1.5 font-mono text-[11px] text-slate-400">
-                    <span className="text-slate-500">{e.method}</span> {e.path}
+                  <td className="px-2 py-1.5 font-mono text-[11px] text-text-muted">
+                    <span className="text-text-faint">{e.method}</span> {e.path}
                   </td>
                   <td className={`px-2 py-1.5 font-mono text-[11px] ${statusColor(e.statusCode)}`}>
                     {e.statusCode}
@@ -291,7 +291,7 @@ function FilterField({
 }) {
   return (
     <div className="space-y-1">
-      <label className="text-[10px] uppercase tracking-wider text-slate-400">{label}</label>
+      <label className="text-[10px] uppercase tracking-wider text-text-muted">{label}</label>
       {children}
     </div>
   );

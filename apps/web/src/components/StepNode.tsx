@@ -351,7 +351,7 @@ function runtimeAppearance(status: RuntimeStatus): {
         className: 'opacity-60',
         borderColor: '#475569',
         boxShadow: undefined,
-        badgeClass: 'bg-slate-700/40 text-slate-400',
+        badgeClass: 'bg-border-subtle/40 text-text-muted',
       };
     default:
       return { className: '', badgeClass: '' };

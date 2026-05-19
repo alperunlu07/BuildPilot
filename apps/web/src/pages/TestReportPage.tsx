@@ -115,31 +115,31 @@ export function TestReportPage({ buildId }: Props) {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <header className="border-b border-slate-800 bg-slate-900/40 px-3 py-3 sm:px-6">
+      <header className="border-b border-border-subtle bg-bg-panel/60 px-3 py-3 sm:px-6">
         <button
           type="button"
           onClick={() => setView({ type: 'build', id: buildId })}
-          className="focusable inline-flex items-center gap-1 rounded text-[11px] uppercase tracking-wider text-slate-400 hover:text-slate-300"
+          className="focusable inline-flex items-center gap-1 rounded text-[11px] uppercase tracking-wider text-text-muted hover:text-text-secondary"
         >
           <ChevronLeft size={12} /> Back to build
         </button>
         <div className="mt-1 flex flex-wrap items-baseline gap-x-4 gap-y-1">
-          <h1 className="text-lg font-semibold text-slate-100">Test report</h1>
+          <h1 className="text-lg font-semibold text-text-primary">Test report</h1>
           {pipe && (
-            <span className="text-xs text-slate-400">
+            <span className="text-xs text-text-muted">
               {pipe.name}
-              {proj && <> in <span className="text-slate-300">{proj.name}</span></>}
+              {proj && <> in <span className="text-text-secondary">{proj.name}</span></>}
             </span>
           )}
-          <span className="font-mono text-[11px] text-slate-500">{buildId.slice(0, 8)}</span>
+          <span className="font-mono text-[11px] text-text-faint">{buildId.slice(0, 8)}</span>
         </div>
         {testArtifacts.length > 1 && (
           <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px]">
-            <span className="text-slate-400">Artifact:</span>
+            <span className="text-text-muted">Artifact:</span>
             <select
               value={activeArtifactId ?? ''}
               onChange={(e) => setActiveArtifactId(Number(e.target.value))}
-              className="focusable rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-100"
+              className="focusable rounded-md border border-border-subtle bg-bg-panel px-2 py-1 text-xs text-text-primary"
             >
               {testArtifacts.map((a) => (
                 <option key={a.id} value={a.id}>
@@ -152,7 +152,7 @@ export function TestReportPage({ buildId }: Props) {
         {activeArtifactId !== null && (
           <a
             href={api.artifactDownloadUrl(activeArtifactId)}
-            className="mt-1 inline-flex items-center gap-1 text-[11px] text-sky-400 hover:text-sky-300"
+            className="mt-1 inline-flex items-center gap-1 text-[11px] text-accent hover:text-accent-hover"
             download
           >
             <Download size={11} /> Download raw artifact
@@ -167,7 +167,7 @@ export function TestReportPage({ buildId }: Props) {
           </div>
         )}
         {loading && !report ? (
-          <div className="text-sm text-slate-400">Loading test report…</div>
+          <div className="text-sm text-text-muted">Loading test report…</div>
         ) : report ? (
           <TestReportTreeView
             report={report}
@@ -177,12 +177,12 @@ export function TestReportPage({ buildId }: Props) {
             onFilterChange={setFilter}
           />
         ) : (
-          <div className="text-sm text-slate-400">No report data.</div>
+          <div className="text-sm text-text-muted">No report data.</div>
         )}
 
         {hasCoverage && (
           <div className="mt-6">
-            <h2 className="mb-2 text-sm font-semibold text-slate-200">Coverage</h2>
+            <h2 className="mb-2 text-sm font-semibold text-text-primary">Coverage</h2>
             <CoverageReportPanel buildId={buildId} />
           </div>
         )}

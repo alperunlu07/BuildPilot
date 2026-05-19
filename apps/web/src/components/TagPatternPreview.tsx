@@ -83,29 +83,29 @@ export function TagPatternPreview({ projectId, value, onChange, previewLimit = 1
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2">
-        <Tag size={12} className="text-slate-400" />
+        <Tag size={12} className="text-text-muted" />
         <input
           type="text"
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder="v*.*.*"
           spellCheck={false}
-          className="w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1.5 font-mono text-xs text-slate-100 focus:border-sky-500 focus:outline-none"
+          className="w-full rounded-md border border-border-subtle bg-bg-base px-2 py-1.5 font-mono text-xs text-text-primary focus:border-accent focus:outline-none"
         />
       </div>
 
       {pattern && tags && (
-        <div className="text-[11px] text-slate-400">
+        <div className="text-[11px] text-text-muted">
           {matchCount} of {tags.length} tag{tags.length === 1 ? '' : 's'} match
         </div>
       )}
 
-      <div className="rounded border border-slate-800 bg-slate-950/40">
-        <div className="border-b border-slate-800 px-2 py-1 text-[10px] uppercase tracking-wider text-slate-500">
+      <div className="rounded border border-border-subtle bg-bg-base/40">
+        <div className="border-b border-border-subtle px-2 py-1 text-[10px] uppercase tracking-wider text-text-faint">
           Recent tags {tags ? `(showing ${visible.length} of ${tags.length})` : ''}
         </div>
         {loading && (
-          <div className="flex items-center gap-1.5 px-2 py-2 text-[11px] text-slate-400">
+          <div className="flex items-center gap-1.5 px-2 py-2 text-[11px] text-text-muted">
             <Loader2 size={11} className="animate-spin" /> Loading tags…
           </div>
         )}
@@ -113,10 +113,10 @@ export function TagPatternPreview({ projectId, value, onChange, previewLimit = 1
           <div className="px-2 py-2 text-[11px] text-rose-300">Couldn't load tags: {error}</div>
         )}
         {!loading && !error && tags && tags.length === 0 && (
-          <div className="px-2 py-2 text-[11px] text-slate-400">No tags in this repository.</div>
+          <div className="px-2 py-2 text-[11px] text-text-muted">No tags in this repository.</div>
         )}
         {!loading && !error && visible.length > 0 && (
-          <ul className="divide-y divide-slate-800/50">
+          <ul className="divide-y divide-border-subtle/50">
             {visible.map((row) => {
               const match = pattern.length > 0 && matchesPattern(row.tag, pattern);
               return (
@@ -126,25 +126,25 @@ export function TagPatternPreview({ projectId, value, onChange, previewLimit = 1
                 >
                   <div className="flex min-w-0 items-center gap-1.5">
                     {pattern.length === 0 ? (
-                      <span className="text-slate-600">·</span>
+                      <span className="text-text-faint">·</span>
                     ) : match ? (
                       <Check size={11} className="shrink-0 text-emerald-400" />
                     ) : (
-                      <X size={11} className="shrink-0 text-slate-500" />
+                      <X size={11} className="shrink-0 text-text-faint" />
                     )}
                     <span
                       className={`truncate ${
                         pattern.length === 0
-                          ? 'text-slate-300'
+                          ? 'text-text-secondary'
                           : match
                             ? 'text-emerald-200'
-                            : 'text-slate-400'
+                            : 'text-text-muted'
                       }`}
                     >
                       {row.tag}
                     </span>
                   </div>
-                  <span className="shrink-0 text-slate-600">{row.sha.slice(0, 7)}</span>
+                  <span className="shrink-0 text-text-faint">{row.sha.slice(0, 7)}</span>
                 </li>
               );
             })}

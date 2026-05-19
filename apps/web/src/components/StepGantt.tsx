@@ -49,7 +49,7 @@ export function StepGantt({
 
   return (
     <div className="space-y-1 px-3 py-3 sm:px-6">
-      <div className="flex items-baseline justify-between text-[10px] uppercase tracking-wider text-slate-400">
+      <div className="flex items-baseline justify-between text-[10px] uppercase tracking-wider text-text-muted">
         <span>Step timeline</span>
         <span className="font-mono">{formatDuration(totalMs)} total</span>
       </div>
@@ -73,7 +73,7 @@ export function StepGantt({
               onClick={() => onSelect?.(s.nodeId)}
               className={cn(
                 'focusable group relative block h-5 w-full overflow-hidden rounded-sm border text-left',
-                isSelected ? 'border-sky-500' : 'border-slate-800 hover:border-slate-600',
+                isSelected ? 'border-accent' : 'border-border-subtle hover:border-border',
               )}
               title={`${label} · ${s.status} · ${dur}`}
               aria-label={`${label}, ${s.status}, duration ${dur}`}
@@ -82,7 +82,7 @@ export function StepGantt({
                 className={cn('absolute top-0 h-full', COLOR[s.status])}
                 style={{ left: `${left}%`, width: `${width}%` }}
               />
-              <span className="relative z-10 flex h-full items-center justify-between px-2 text-[10px] font-mono text-slate-100 mix-blend-difference">
+              <span className="relative z-10 flex h-full items-center justify-between px-2 text-[10px] font-mono text-text-primary mix-blend-difference">
                 <span className="flex min-w-0 items-center gap-1.5">
                   <StatusIcon
                     size={10}
@@ -91,7 +91,7 @@ export function StepGantt({
                   />
                   <span className="truncate">{label}</span>
                 </span>
-                <span className="ml-2 shrink-0 text-slate-200/90">{dur}</span>
+                <span className="ml-2 shrink-0 text-text-primary/90">{dur}</span>
               </span>
             </button>
           );

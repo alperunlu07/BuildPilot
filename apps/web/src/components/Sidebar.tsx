@@ -185,7 +185,7 @@ export function Sidebar({
         </button>
         <div className="flex flex-col items-center gap-1">
           <IconRail
-            icon={<Home size={16} className="text-sky-400" />}
+            icon={<Home size={16} className="text-accent" />}
             active={view.type === 'home' || view.type === 'diskUsage'}
             onClick={() => setView({ type: 'home' })}
             label={t('nav.home')}
@@ -197,7 +197,7 @@ export function Sidebar({
             label={t('nav.builds')}
           />
           <IconRail
-            icon={<Server size={16} className="text-slate-300" />}
+            icon={<Server size={16} className="text-text-secondary" />}
             active={view.type === 'hosts'}
             onClick={() => setView({ type: 'hosts' })}
             label={t('nav.hosts')}
@@ -227,7 +227,7 @@ export function Sidebar({
             label="File vault"
           />
           <IconRail
-            icon={<Github size={16} className="text-slate-300" />}
+            icon={<Github size={16} className="text-text-secondary" />}
             active={view.type === 'vcsCredentials'}
             onClick={() => setView({ type: 'vcsCredentials' })}
             label="VCS credentials"
@@ -239,18 +239,18 @@ export function Sidebar({
             label="Approvals"
           />
           <IconRail
-            icon={<Settings size={16} className="text-slate-300" />}
+            icon={<Settings size={16} className="text-text-secondary" />}
             active={view.type === 'settings'}
             onClick={() => setView({ type: 'settings' })}
             label={t('nav.settings')}
           />
           <IconRail
-            icon={<Search size={16} className="text-slate-300" />}
+            icon={<Search size={16} className="text-text-secondary" />}
             onClick={openPalette}
             label="Command palette"
           />
           <IconRail
-            icon={<Plus size={16} className="text-slate-300" />}
+            icon={<Plus size={16} className="text-text-secondary" />}
             onClick={onAddProject}
             label={t('actions.addProject')}
           />
@@ -295,7 +295,7 @@ export function Sidebar({
           className="focusable flex items-center gap-2 text-left"
           aria-label="Go to projects"
         >
-          <Logo size={24} className="text-sky-400" />
+          <Logo size={24} className="text-accent" />
           <div className="leading-tight">
             <div className="text-base font-semibold tracking-tight text-bp-text-primary">BuildPilot</div>
             <div className="text-[11px] uppercase tracking-wider text-bp-text-muted">Local CI/CD</div>
@@ -306,7 +306,7 @@ export function Sidebar({
           <button
             type="button"
             onClick={openPalette}
-            className="focusable rounded-md border border-slate-700 p-1.5 text-slate-300 hover:border-sky-500 hover:text-sky-400"
+            className="focusable rounded-md border border-border-subtle p-1.5 text-text-secondary hover:border-accent hover:text-accent"
             title="Command palette (Cmd/Ctrl+K)"
             aria-label="Command palette"
           >
@@ -315,7 +315,7 @@ export function Sidebar({
           <button
             type="button"
             onClick={cycleTheme}
-            className="focusable rounded-md border border-slate-700 p-1.5 text-slate-300 hover:border-sky-500 hover:text-sky-400"
+            className="focusable rounded-md border border-border-subtle p-1.5 text-text-secondary hover:border-accent hover:text-accent"
             title={`${t('actions.toggleTheme')} (now: ${theme})`}
             aria-label={t('actions.toggleTheme')}
           >
@@ -324,7 +324,7 @@ export function Sidebar({
           <button
             type="button"
             onClick={onAddProject}
-            className="focusable rounded-md border border-slate-700 p-1.5 text-slate-300 hover:border-sky-500 hover:text-sky-400"
+            className="focusable rounded-md border border-border-subtle p-1.5 text-text-secondary hover:border-accent hover:text-accent"
             title={t('actions.addProject')}
             aria-label={t('actions.addProject')}
           >
@@ -333,7 +333,7 @@ export function Sidebar({
           <button
             type="button"
             onClick={() => setCollapsed(true)}
-            className="focusable touch-target hidden rounded-md border border-slate-700 p-1.5 text-slate-300 hover:border-sky-500 hover:text-sky-400 md:inline-flex"
+            className="focusable touch-target hidden rounded-md border border-border-subtle p-1.5 text-text-secondary hover:border-accent hover:text-accent md:inline-flex"
             title="Collapse sidebar"
             aria-label="Collapse sidebar"
           >
@@ -345,7 +345,7 @@ export function Sidebar({
       <div className="space-y-0.5 px-2 pt-3">
         <NavItem
           active={view.type === 'home' || view.type === 'diskUsage'}
-          icon={<Home size={14} className="text-sky-400" />}
+          icon={<Home size={14} className="text-accent" />}
           label={t('nav.home')}
           onClick={() => setView({ type: 'home' })}
         />
@@ -357,13 +357,13 @@ export function Sidebar({
         />
         <NavItem
           active={view.type === 'hosts'}
-          icon={<Server size={14} className="text-slate-400" />}
+          icon={<Server size={14} className="text-text-muted" />}
           label={t('nav.hosts')}
           onClick={() => setView({ type: 'hosts' })}
         />
         <NavItem
           active={view.type === 'queue'}
-          icon={<ListOrdered size={14} className="text-sky-400" />}
+          icon={<ListOrdered size={14} className="text-accent" />}
           label="Queue"
           onClick={() => setView({ type: 'queue' })}
           title="Pending and running builds, grouped by lane"
@@ -398,7 +398,7 @@ export function Sidebar({
         />
         <NavItem
           active={view.type === 'vcsCredentials'}
-          icon={<Github size={14} className="text-slate-300" />}
+          icon={<Github size={14} className="text-text-secondary" />}
           label="VCS credentials"
           onClick={() => setView({ type: 'vcsCredentials' })}
           title="Manage tokens used to post check-runs back to GitHub / GitLab / Gitea"
@@ -412,7 +412,7 @@ export function Sidebar({
         />
         <NavItem
           active={view.type === 'settings'}
-          icon={<Settings size={14} className="text-slate-400" />}
+          icon={<Settings size={14} className="text-text-muted" />}
           label={t('nav.settings')}
           onClick={() => setView({ type: 'settings' })}
         />
@@ -434,11 +434,11 @@ export function Sidebar({
                     className={cn(
                       'focusable density-row flex w-full items-center gap-2 rounded-md px-2 py-1 text-left text-xs',
                       active
-                        ? 'bg-slate-800 text-slate-100'
-                        : 'text-slate-300 hover:bg-slate-800/60',
+                        ? 'bg-bg-elevated text-text-primary'
+                        : 'text-text-secondary hover:bg-bg-hover/60',
                     )}
                   >
-                    <Folder size={12} className="text-sky-400" />
+                    <Folder size={12} className="text-accent" />
                     <span className="truncate">{p.name}</span>
                   </button>
                 </li>
@@ -454,8 +454,8 @@ export function Sidebar({
                     className={cn(
                       'focusable density-row flex w-full items-center gap-2 rounded-md px-2 py-1 text-left text-xs',
                       active
-                        ? 'bg-slate-800 text-slate-100'
-                        : 'text-slate-300 hover:bg-slate-800/60',
+                        ? 'bg-bg-elevated text-text-primary'
+                        : 'text-text-secondary hover:bg-bg-hover/60',
                     )}
                   >
                     <GitBranch size={12} className="text-emerald-400" />
@@ -488,8 +488,8 @@ export function Sidebar({
                   className={cn(
                     'group density-row flex w-full items-center gap-1 rounded-md px-2 py-1.5 text-left text-sm',
                     active
-                      ? 'bg-slate-800 text-slate-100'
-                      : 'text-slate-300 hover:bg-slate-800/60',
+                      ? 'bg-bg-elevated text-text-primary'
+                      : 'text-text-secondary hover:bg-bg-hover/60',
                   )}
                 >
                   <button
@@ -497,7 +497,7 @@ export function Sidebar({
                     onClick={() => setView({ type: 'project', id: p.id })}
                     className="focusable flex min-w-0 flex-1 items-center gap-2 rounded-md text-left"
                   >
-                    <Folder size={14} className="text-sky-400" />
+                    <Folder size={14} className="text-accent" />
                     <span className="truncate">{p.name}</span>
                   </button>
                   <button
@@ -510,7 +510,7 @@ export function Sidebar({
                       'focusable rounded p-0.5 transition-opacity',
                       isFav
                         ? 'text-amber-400 opacity-100'
-                        : 'text-slate-400 opacity-0 hover:text-amber-400 group-hover:opacity-100',
+                        : 'text-text-muted opacity-0 hover:text-amber-400 group-hover:opacity-100',
                     )}
                     aria-label={isFav ? 'Unpin project' : 'Pin project'}
                     title={isFav ? 'Unpin project' : 'Pin project'}
@@ -525,7 +525,7 @@ export function Sidebar({
                     }}
                     // Force-visible on touch so the trash button is actually
                     // reachable without a hover state to trigger group-hover.
-                    className="focusable touch-target rounded p-0.5 text-slate-400 opacity-0 transition-opacity hover:text-rose-400 group-hover:opacity-100 [@media(pointer:coarse)]:opacity-100"
+                    className="focusable touch-target rounded p-0.5 text-text-muted opacity-0 transition-opacity hover:text-rose-400 group-hover:opacity-100 [@media(pointer:coarse)]:opacity-100"
                     title="Remove this project"
                     aria-label="Remove project"
                   >
@@ -543,8 +543,8 @@ export function Sidebar({
                             className={cn(
                               'group density-row flex w-full items-center gap-1 rounded-md px-2 py-1 text-left text-xs',
                               plActive
-                                ? 'bg-slate-800 text-slate-100'
-                                : 'text-slate-400 hover:bg-slate-800/60',
+                                ? 'bg-bg-elevated text-text-primary'
+                                : 'text-text-muted hover:bg-bg-hover/60',
                             )}
                           >
                             <button
@@ -565,7 +565,7 @@ export function Sidebar({
                                 'focusable rounded p-0.5 transition-opacity',
                                 plFav
                                   ? 'text-amber-400 opacity-100'
-                                  : 'text-slate-400 opacity-0 hover:text-amber-400 group-hover:opacity-100',
+                                  : 'text-text-muted opacity-0 hover:text-amber-400 group-hover:opacity-100',
                               )}
                               aria-label={plFav ? 'Unpin pipeline' : 'Pin pipeline'}
                               title={plFav ? 'Unpin pipeline' : 'Pin pipeline'}
@@ -578,7 +578,7 @@ export function Sidebar({
                                 e.stopPropagation();
                                 softDeletePipeline(pl.id);
                               }}
-                              className="focusable touch-target rounded p-0.5 text-slate-400 opacity-0 transition-opacity hover:text-rose-400 group-hover:opacity-100 [@media(pointer:coarse)]:opacity-100"
+                              className="focusable touch-target rounded p-0.5 text-text-muted opacity-0 transition-opacity hover:text-rose-400 group-hover:opacity-100 [@media(pointer:coarse)]:opacity-100"
                               title="Delete this pipeline"
                               aria-label="Delete pipeline"
                             >
@@ -617,10 +617,10 @@ export function Sidebar({
                             : { type: 'build', id: r.id },
                       )
                     }
-                    className="focusable density-row flex w-full items-center gap-2 truncate rounded px-2 py-0.5 text-left text-[11px] text-slate-400 hover:bg-slate-800/60 hover:text-slate-200"
+                    className="focusable density-row flex w-full items-center gap-2 truncate rounded px-2 py-0.5 text-left text-[11px] text-text-muted hover:bg-bg-hover/60 hover:text-text-primary"
                     title={r.label}
                   >
-                    <Icon size={11} className="shrink-0 text-slate-400" />
+                    <Icon size={11} className="shrink-0 text-text-muted" />
                     <span className="truncate">{r.label}</span>
                   </button>
                 </li>
@@ -637,7 +637,7 @@ export function Sidebar({
           className="focusable flex w-full items-center gap-2 rounded px-2 py-1 text-left text-[11px] text-bp-text-muted hover:bg-bp-surface-2/60 hover:text-bp-text-primary"
           aria-label={changelogHasUnread ? "What's new (unread)" : "What's new"}
         >
-          <Sparkles size={11} className="shrink-0 text-sky-400" />
+          <Sparkles size={11} className="shrink-0 text-accent" />
           <span className="flex-1">What's new</span>
           {changelogHasUnread && (
             <span className="inline-flex h-1.5 w-1.5 rounded-full bg-sky-400" />
@@ -651,7 +651,7 @@ export function Sidebar({
           drive sidebar width via the collapse button. */}
       <div
         onMouseDown={onResizeMouseDown}
-        className="group absolute right-0 top-0 z-10 hidden h-full w-1 cursor-col-resize bg-transparent hover:bg-sky-500/30 md:block"
+        className="group absolute right-0 top-0 z-10 hidden h-full w-1 cursor-col-resize bg-transparent hover:bg-accent-hover/30 md:block"
         title="Drag to resize"
         role="separator"
         aria-orientation="vertical"
@@ -661,7 +661,7 @@ export function Sidebar({
         <button
           type="button"
           onClick={onMobileClose}
-          className="focusable touch-target absolute right-2 top-2 rounded-md p-1 text-slate-300 hover:bg-slate-800 hover:text-slate-100 md:hidden"
+          className="focusable touch-target absolute right-2 top-2 rounded-md p-1 text-text-secondary hover:bg-bg-elevated hover:text-text-primary md:hidden"
           aria-label="Close navigation"
           title="Close navigation"
         >

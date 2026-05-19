@@ -113,14 +113,14 @@ export function CommandPalette({ onAddProject, onManageHosts }: Props) {
                 onSelect={() => run(() => setView({ type: 'home' }))}
                 className="cmdk-item"
               >
-                <HomeIcon size={14} className="text-sky-400" /> {t('nav.home')}
+                <HomeIcon size={14} className="text-accent" /> {t('nav.home')}
               </Command.Item>
               <Command.Item
                 value="go projects"
                 onSelect={() => run(() => setView({ type: 'projects' }))}
                 className="cmdk-item"
               >
-                <Folder size={14} className="text-sky-400" /> {t('nav.projects')}
+                <Folder size={14} className="text-accent" /> {t('nav.projects')}
               </Command.Item>
               <Command.Item
                 value="go builds logs"
@@ -191,7 +191,7 @@ export function CommandPalette({ onAddProject, onManageHosts }: Props) {
                     onSelect={() => run(() => setView({ type: 'project', id: p.id }))}
                     className="cmdk-item"
                   >
-                    <Folder size={14} className="text-sky-400" />
+                    <Folder size={14} className="text-accent" />
                     <span className="truncate">{p.name}</span>
                     <span className="ml-auto truncate text-[10px] text-text-muted">{p.path}</span>
                   </Command.Item>

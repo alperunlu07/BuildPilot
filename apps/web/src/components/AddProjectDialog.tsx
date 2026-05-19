@@ -34,20 +34,20 @@ export function AddProjectDialog({ open, onClose }: Props) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-bg-base/60 backdrop-blur-sm"
       onClick={onClose}
     >
       <form
         onClick={(e) => e.stopPropagation()}
         onSubmit={submit}
-        className="w-[480px] rounded-lg border border-slate-700 bg-slate-900 p-5 shadow-xl"
+        className="w-[480px] rounded-lg border border-border-subtle bg-bg-panel p-5 shadow-xl"
       >
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-base font-semibold text-slate-100">Add project</h2>
+          <h2 className="text-base font-semibold text-text-primary">Add project</h2>
           <button
             type="button"
             onClick={onClose}
-            className="focusable rounded text-slate-400 hover:text-slate-200"
+            className="focusable rounded text-text-muted hover:text-text-primary"
             aria-label="Close add-project dialog"
           >
             <X size={16} />
@@ -55,7 +55,7 @@ export function AddProjectDialog({ open, onClose }: Props) {
         </div>
 
         <label className="mb-3 block">
-          <span className="mb-1 block text-xs uppercase tracking-wide text-slate-400">
+          <span className="mb-1 block text-xs uppercase tracking-wide text-text-muted">
             Repository path
           </span>
           <input
@@ -66,12 +66,12 @@ export function AddProjectDialog({ open, onClose }: Props) {
             required
             spellCheck={false}
             autoFocus
-            className="focusable w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm font-mono text-slate-100 placeholder:text-slate-400 focus:border-sky-500 focus:outline-none"
+            className="focusable w-full rounded-md border border-border-subtle bg-bg-base px-3 py-2 text-sm font-mono text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none"
           />
         </label>
 
         <label className="mb-4 block">
-          <span className="mb-1 block text-xs uppercase tracking-wide text-slate-400">
+          <span className="mb-1 block text-xs uppercase tracking-wide text-text-muted">
             Display name (optional)
           </span>
           <input
@@ -79,7 +79,7 @@ export function AddProjectDialog({ open, onClose }: Props) {
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Defaults to folder name"
-            className="focusable w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-400 focus:border-sky-500 focus:outline-none"
+            className="focusable w-full rounded-md border border-border-subtle bg-bg-base px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none"
           />
         </label>
 
@@ -93,14 +93,14 @@ export function AddProjectDialog({ open, onClose }: Props) {
           <button
             type="button"
             onClick={onClose}
-            className="focusable rounded-md px-3 py-1.5 text-sm text-slate-400 hover:text-slate-200"
+            className="focusable rounded-md px-3 py-1.5 text-sm text-text-muted hover:text-text-primary"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={busy || !path.trim()}
-            className="focusable rounded-md bg-sky-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-sky-500 disabled:cursor-not-allowed disabled:bg-slate-700"
+            className="focusable rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-white hover:bg-accent-hover disabled:cursor-not-allowed disabled:bg-bg-elevated"
           >
             {busy ? 'Adding…' : 'Add project'}
           </button>

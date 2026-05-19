@@ -23,9 +23,9 @@ function lineClass(line: string): string {
   if (/(\berror\b|\bERROR\b|<Error>|\bSIGABRT\b|\bSIGSEGV\b|\bcrash\b|\bCrash\b|\bFAIL(ED)?\b|\bException\b|✖|✖)/.test(l))
     return 'text-rose-300';
   if (/(\bwarn(ing)?\b|<Warning>|\bWARN\b)/i.test(l)) return 'text-amber-300';
-  if (/(<Notice>|\bINFO\b|✓|✔)/.test(l)) return 'text-sky-300';
-  if (/(<Debug>|\bDEBUG\b)/.test(l)) return 'text-slate-400';
-  return 'text-slate-200';
+  if (/(<Notice>|\bINFO\b|✓|✔)/.test(l)) return 'text-accent-hover';
+  if (/(<Debug>|\bDEBUG\b)/.test(l)) return 'text-text-muted';
+  return 'text-text-primary';
 }
 
 // Render a single line, optionally highlighting search-match spans.
@@ -143,20 +143,20 @@ export function ArtifactPreviewModal({ artifact, onClose }: Props) {
       onClick={onClose}
     >
       <div
-        className="flex w-full max-w-6xl flex-col overflow-hidden rounded-lg border border-slate-700 bg-slate-950 shadow-2xl"
+        className="flex w-full max-w-6xl flex-col overflow-hidden rounded-lg border border-border-subtle bg-bg-base shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* ── Header ───────────────────────────────────────────── */}
-        <header className="flex shrink-0 items-center justify-between gap-4 border-b border-slate-800 bg-slate-900/60 px-4 py-3">
+        <header className="flex shrink-0 items-center justify-between gap-4 border-b border-border-subtle bg-bg-panel px-4 py-3">
           <div className="min-w-0 flex-1">
-            <div className="truncate font-mono text-sm text-slate-200" title={artifact.path}>
+            <div className="truncate font-mono text-sm text-text-primary" title={artifact.path}>
               {fileName}
             </div>
-            <div className="text-[11px] text-slate-400">
+            <div className="text-[11px] text-text-muted">
               {formatBytes(size)} total
               {truncated && (
                 <>
-                  <span className="mx-1 text-slate-400">·</span>
+                  <span className="mx-1 text-text-muted">·</span>
                   <span className="text-amber-400">
                     showing first {formatBytes(bytesRead)} (truncated)
                   </span>
@@ -164,7 +164,7 @@ export function ArtifactPreviewModal({ artifact, onClose }: Props) {
               )}
               {lines.length > 0 && (
                 <>
-                  <span className="mx-1 text-slate-400">·</span>
+                  <span className="mx-1 text-text-muted">·</span>
                   {lines.length.toLocaleString()} lines
                 </>
               )}
@@ -175,7 +175,7 @@ export function ArtifactPreviewModal({ artifact, onClose }: Props) {
               onClick={() => {
                 navigator.clipboard.writeText(content).catch(() => undefined);
               }}
-              className="flex items-center gap-1 rounded border border-slate-700 px-2 py-1 text-[11px] text-slate-300 hover:bg-slate-800"
+              className="flex items-center gap-1 rounded border border-border-subtle px-2 py-1 text-[11px] text-text-secondary hover:bg-bg-elevated"
               title="Copy entire content to clipboard"
             >
               <Copy className="h-3 w-3" /> copy
@@ -183,14 +183,14 @@ export function ArtifactPreviewModal({ artifact, onClose }: Props) {
             <a
               href={api.artifactDownloadUrl(artifact.id)}
               download
-              className="flex items-center gap-1 rounded border border-slate-700 px-2 py-1 text-[11px] text-slate-300 hover:bg-slate-800"
+              className="flex items-center gap-1 rounded border border-border-subtle px-2 py-1 text-[11px] text-text-secondary hover:bg-bg-elevated"
               title="Download full file"
             >
               <Download className="h-3 w-3" /> download
             </a>
             <button
               onClick={onClose}
-              className="rounded p-1 text-slate-400 hover:bg-slate-800 hover:text-slate-100"
+              className="rounded p-1 text-text-muted hover:bg-bg-elevated hover:text-text-primary"
               title="Close (Esc)"
             >
               <X className="h-4 w-4" />
@@ -199,24 +199,24 @@ export function ArtifactPreviewModal({ artifact, onClose }: Props) {
         </header>
 
         {/* ── Search bar ────────────────────────────────────────── */}
-        <div className="flex shrink-0 items-center gap-2 border-b border-slate-800 bg-slate-900/30 px-4 py-2">
+        <div className="flex shrink-0 items-center gap-2 border-b border-border-subtle bg-bg-panel/30 px-4 py-2">
           <div className="relative flex-1">
-            <Search className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+            <Search className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-text-muted" />
             <input
               id="artifact-preview-search"
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="Search (⌘/Ctrl-F)…"
-              className="w-full rounded border border-slate-800 bg-slate-950 py-1 pl-7 pr-2 font-mono text-[12px] text-slate-100 placeholder:text-slate-400 focus:border-sky-700 focus:outline-none"
+              className="w-full rounded border border-border-subtle bg-bg-base py-1 pl-7 pr-2 font-mono text-[12px] text-text-primary placeholder:text-text-muted focus:border-sky-700 focus:outline-none"
             />
           </div>
           {q && (
-            <span className="text-[11px] tabular-nums text-slate-400">
+            <span className="text-[11px] tabular-nums text-text-muted">
               {matchCount.toLocaleString()} match{matchCount === 1 ? '' : 'es'}
             </span>
           )}
           {q && (
-            <label className="flex items-center gap-1 text-[11px] text-slate-400">
+            <label className="flex items-center gap-1 text-[11px] text-text-muted">
               <input
                 type="checkbox"
                 checked={onlyMatches}
@@ -226,7 +226,7 @@ export function ArtifactPreviewModal({ artifact, onClose }: Props) {
               only matches
             </label>
           )}
-          <label className="flex items-center gap-1 text-[11px] text-slate-400">
+          <label className="flex items-center gap-1 text-[11px] text-text-muted">
             <input
               type="checkbox"
               checked={wrap}
@@ -240,7 +240,7 @@ export function ArtifactPreviewModal({ artifact, onClose }: Props) {
               const el = bodyRef.current;
               if (el) el.scrollTo({ top: 0 });
             }}
-            className="rounded border border-slate-800 p-1 text-slate-400 hover:bg-slate-800"
+            className="rounded border border-border-subtle p-1 text-text-muted hover:bg-bg-elevated"
             title="Scroll to top"
           >
             <ChevronsUp className="h-3.5 w-3.5" />
@@ -250,7 +250,7 @@ export function ArtifactPreviewModal({ artifact, onClose }: Props) {
               const el = bodyRef.current;
               if (el) el.scrollTo({ top: el.scrollHeight });
             }}
-            className="rounded border border-slate-800 p-1 text-slate-400 hover:bg-slate-800"
+            className="rounded border border-border-subtle p-1 text-text-muted hover:bg-bg-elevated"
             title="Scroll to bottom"
           >
             <ChevronsDown className="h-3.5 w-3.5" />
@@ -258,9 +258,9 @@ export function ArtifactPreviewModal({ artifact, onClose }: Props) {
         </div>
 
         {/* ── Body ──────────────────────────────────────────────── */}
-        <div ref={bodyRef} className="min-h-0 flex-1 overflow-auto bg-slate-950">
+        <div ref={bodyRef} className="min-h-0 flex-1 overflow-auto bg-bg-base">
           {loading && (
-            <div className="flex h-full items-center justify-center text-sm text-slate-400">
+            <div className="flex h-full items-center justify-center text-sm text-text-muted">
               Loading…
             </div>
           )}
@@ -272,16 +272,16 @@ export function ArtifactPreviewModal({ artifact, onClose }: Props) {
           {!loading && !error && (
             <div className="font-mono text-[12px] leading-[1.45]">
               {visible.length === 0 && (
-                <div className="px-4 py-8 text-center text-slate-400">
+                <div className="px-4 py-8 text-center text-text-muted">
                   {q ? 'No matches.' : '(empty file)'}
                 </div>
               )}
               {visible.map((l) => (
                 <div
                   key={l.n}
-                  className="flex border-l-2 border-transparent hover:border-sky-600 hover:bg-slate-900/60"
+                  className="flex border-l-2 border-transparent hover:border-sky-600 hover:bg-bg-panel"
                 >
-                  <span className="sticky left-0 inline-block shrink-0 select-none border-r border-slate-800/80 bg-slate-950/80 px-2 py-px text-right text-slate-400 tabular-nums" style={{ minWidth: '4.5rem' }}>
+                  <span className="sticky left-0 inline-block shrink-0 select-none border-r border-border-subtle/80 bg-bg-base/80 px-2 py-px text-right text-text-muted tabular-nums" style={{ minWidth: '4.5rem' }}>
                     {l.n}
                   </span>
                   <span

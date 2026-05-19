@@ -83,15 +83,15 @@ export function VcsLinkPanel({ projectId }: Props) {
   const linked = config.vcsProvider !== null && config.vcsRepo !== null && config.vcsCredentialId !== null;
 
   return (
-    <section className="mt-4 rounded-md border border-slate-800 bg-slate-900/40 p-3">
+    <section className="mt-4 rounded-md border border-border-subtle bg-bg-panel/60 p-3">
       <div className="mb-2 flex items-center justify-between">
-        <h3 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-slate-300">
-          <Github size={12} className="text-slate-400" /> VCS feedback
+        <h3 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-text-secondary">
+          <Github size={12} className="text-text-muted" /> VCS feedback
         </h3>
         <button
           type="button"
           onClick={() => setView({ type: 'vcsCredentials' })}
-          className="text-[11px] text-slate-400 hover:text-sky-400"
+          className="text-[11px] text-text-muted hover:text-accent"
           title="Manage credentials"
         >
           manage…
@@ -99,11 +99,11 @@ export function VcsLinkPanel({ projectId }: Props) {
       </div>
 
       {loading ? (
-        <div className="text-[11px] text-slate-400">Loading…</div>
+        <div className="text-[11px] text-text-muted">Loading…</div>
       ) : (
         <div className="space-y-2 text-[11px]">
-          <label className="block text-slate-300">
-            <span className="mb-1 block text-slate-400">Provider</span>
+          <label className="block text-text-secondary">
+            <span className="mb-1 block text-text-muted">Provider</span>
             <select
               value={config.vcsProvider ?? ''}
               onChange={(e) =>
@@ -113,7 +113,7 @@ export function VcsLinkPanel({ projectId }: Props) {
                   vcsCredentialId: null,
                 })
               }
-              className="w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1 text-slate-200 focus:border-sky-500 focus:outline-none"
+              className="w-full rounded-md border border-border-subtle bg-bg-base px-2 py-1 text-text-primary focus:border-accent focus:outline-none"
             >
               <option value="">(none — outbound disabled)</option>
               <option value="github">GitHub</option>
@@ -124,24 +124,24 @@ export function VcsLinkPanel({ projectId }: Props) {
 
           {config.vcsProvider && (
             <>
-              <label className="block text-slate-300">
-                <span className="mb-1 block text-slate-400">Owner/repo</span>
+              <label className="block text-text-secondary">
+                <span className="mb-1 block text-text-muted">Owner/repo</span>
                 <input
                   type="text"
                   value={config.vcsRepo ?? ''}
                   onChange={(e) => setConfig({ ...config, vcsRepo: e.target.value || null })}
                   placeholder="alperunlu07/BuildPilot"
-                  className="w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1 font-mono text-slate-200 focus:border-sky-500 focus:outline-none"
+                  className="w-full rounded-md border border-border-subtle bg-bg-base px-2 py-1 font-mono text-text-primary focus:border-accent focus:outline-none"
                 />
               </label>
-              <label className="block text-slate-300">
-                <span className="mb-1 block text-slate-400">Credential</span>
+              <label className="block text-text-secondary">
+                <span className="mb-1 block text-text-muted">Credential</span>
                 <select
                   value={config.vcsCredentialId ?? ''}
                   onChange={(e) =>
                     setConfig({ ...config, vcsCredentialId: e.target.value || null })
                   }
-                  className="w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1 text-slate-200 focus:border-sky-500 focus:outline-none"
+                  className="w-full rounded-md border border-border-subtle bg-bg-base px-2 py-1 text-text-primary focus:border-accent focus:outline-none"
                 >
                   <option value="">(select a credential)</option>
                   {filteredCreds.map((c) => (
@@ -167,7 +167,7 @@ export function VcsLinkPanel({ projectId }: Props) {
                 type="button"
                 onClick={onClear}
                 disabled={saving}
-                className="rounded-md border border-slate-700 px-2 py-0.5 text-slate-300 hover:border-rose-500 hover:text-rose-300 disabled:opacity-50"
+                className="rounded-md border border-border-subtle px-2 py-0.5 text-text-secondary hover:border-rose-500 hover:text-rose-300 disabled:opacity-50"
               >
                 Unlink
               </button>
@@ -176,7 +176,7 @@ export function VcsLinkPanel({ projectId }: Props) {
               type="button"
               onClick={onSave}
               disabled={saving}
-              className="rounded-md bg-sky-600 px-2 py-0.5 font-medium text-white hover:bg-sky-500 disabled:opacity-50"
+              className="rounded-md bg-accent px-2 py-0.5 font-medium text-white hover:bg-accent-hover disabled:opacity-50"
             >
               {saving ? 'Saving…' : 'Save link'}
             </button>

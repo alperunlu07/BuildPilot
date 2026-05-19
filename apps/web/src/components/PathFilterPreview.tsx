@@ -170,21 +170,21 @@ export function PathFilterPreview({ projectId, branch, value, onChange, previewL
         rows={3}
         placeholder={'ios/**\nshared/**\n!docs/**'}
         spellCheck={false}
-        className="w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1.5 font-mono text-xs text-slate-100 focus:border-sky-500 focus:outline-none"
+        className="w-full rounded-md border border-border-subtle bg-bg-base px-2 py-1.5 font-mono text-xs text-text-primary focus:border-accent focus:outline-none"
       />
 
-      <div className="text-[11px] text-slate-400">
+      <div className="text-[11px] text-text-muted">
         {filter.patterns.length === 0
           ? 'No filter — every commit triggers a build.'
           : `${filter.patterns.length} pattern${filter.patterns.length === 1 ? '' : 's'} active.`}
       </div>
 
-      <div className="rounded border border-slate-800 bg-slate-950/40">
-        <div className="border-b border-slate-800 px-2 py-1 text-[10px] uppercase tracking-wider text-slate-500">
+      <div className="rounded border border-border-subtle bg-bg-base/40">
+        <div className="border-b border-border-subtle px-2 py-1 text-[10px] uppercase tracking-wider text-text-faint">
           Last {previewLimit} commits on {branch || '(no branch)'}
         </div>
         {loading && (
-          <div className="flex items-center gap-1.5 px-2 py-2 text-[11px] text-slate-400">
+          <div className="flex items-center gap-1.5 px-2 py-2 text-[11px] text-text-muted">
             <Loader2 size={11} className="animate-spin" /> Loading commits…
           </div>
         )}
@@ -192,10 +192,10 @@ export function PathFilterPreview({ projectId, branch, value, onChange, previewL
           <div className="px-2 py-2 text-[11px] text-rose-300">Couldn't load commits: {error}</div>
         )}
         {!loading && !error && commits && commits.length === 0 && (
-          <div className="px-2 py-2 text-[11px] text-slate-400">No commits.</div>
+          <div className="px-2 py-2 text-[11px] text-text-muted">No commits.</div>
         )}
         {!loading && !error && commits && commits.length > 0 && (
-          <ul className="divide-y divide-slate-800/50">
+          <ul className="divide-y divide-border-subtle/50">
             {commits.map((c) => {
               const state = filesBySha[c.sha];
               const verdict = passes(state?.files);
@@ -205,28 +205,28 @@ export function PathFilterPreview({ projectId, branch, value, onChange, previewL
                   <button
                     type="button"
                     onClick={() => toggleCommit(c.sha)}
-                    className="flex w-full items-center gap-1.5 px-2 py-1 text-left hover:bg-slate-900/40"
+                    className="flex w-full items-center gap-1.5 px-2 py-1 text-left hover:bg-bg-panel/60"
                   >
                     {isExpanded ? (
-                      <ChevronDown size={11} className="shrink-0 text-slate-500" />
+                      <ChevronDown size={11} className="shrink-0 text-text-faint" />
                     ) : (
-                      <ChevronRight size={11} className="shrink-0 text-slate-500" />
+                      <ChevronRight size={11} className="shrink-0 text-text-faint" />
                     )}
                     {verdict === 'pass' ? (
                       <Check size={11} className="shrink-0 text-emerald-400" />
                     ) : verdict === 'fail' ? (
-                      <X size={11} className="shrink-0 text-slate-500" />
+                      <X size={11} className="shrink-0 text-text-faint" />
                     ) : (
-                      <Loader2 size={11} className="shrink-0 animate-spin text-slate-500" />
+                      <Loader2 size={11} className="shrink-0 animate-spin text-text-faint" />
                     )}
-                    <span className="shrink-0 font-mono text-slate-500">{c.shortSha}</span>
+                    <span className="shrink-0 font-mono text-text-faint">{c.shortSha}</span>
                     <span
                       className={`truncate ${
                         verdict === 'pass'
                           ? 'text-emerald-200'
                           : verdict === 'fail'
-                            ? 'text-slate-500'
-                            : 'text-slate-300'
+                            ? 'text-text-faint'
+                            : 'text-text-secondary'
                       }`}
                     >
                       {c.subject || '(no subject)'}
@@ -234,9 +234,9 @@ export function PathFilterPreview({ projectId, branch, value, onChange, previewL
                   </button>
 
                   {isExpanded && (
-                    <div className="border-t border-slate-800/50 bg-slate-950/40 px-2 py-1.5">
+                    <div className="border-t border-border-subtle/50 bg-bg-base/40 px-2 py-1.5">
                       {state?.loading && (
-                        <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
+                        <div className="flex items-center gap-1.5 text-[11px] text-text-faint">
                           <Loader2 size={10} className="animate-spin" /> Loading changed files…
                         </div>
                       )}
@@ -246,7 +246,7 @@ export function PathFilterPreview({ projectId, branch, value, onChange, previewL
                         </div>
                       )}
                       {!state?.loading && !state?.error && state?.files && state.files.length === 0 && (
-                        <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
+                        <div className="flex items-center gap-1.5 text-[11px] text-text-faint">
                           <FileText size={10} /> No changed files (root commit or merge?).
                         </div>
                       )}
@@ -259,18 +259,18 @@ export function PathFilterPreview({ projectId, branch, value, onChange, previewL
                                 key={file}
                                 className={`flex items-center gap-1.5 ${
                                   filter.patterns.length === 0
-                                    ? 'text-slate-300'
+                                    ? 'text-text-secondary'
                                     : match
                                       ? 'text-emerald-200'
-                                      : 'text-slate-500'
+                                      : 'text-text-faint'
                                 }`}
                               >
                                 {filter.patterns.length === 0 ? (
-                                  <span className="text-slate-600">·</span>
+                                  <span className="text-text-faint">·</span>
                                 ) : match ? (
                                   <Check size={10} className="shrink-0 text-emerald-400" />
                                 ) : (
-                                  <X size={10} className="shrink-0 text-slate-600" />
+                                  <X size={10} className="shrink-0 text-text-faint" />
                                 )}
                                 <span className="truncate">{file}</span>
                               </li>

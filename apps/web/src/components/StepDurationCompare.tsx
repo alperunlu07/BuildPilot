@@ -69,13 +69,13 @@ export function StepDurationCompare({ build, entries, nodeLabel }: Props) {
   if (!finished || state !== 'ready' || deltas.length === 0) return null;
 
   return (
-    <div className="border-b border-slate-800 bg-slate-900/30 px-3 py-3 sm:px-6">
+    <div className="border-b border-border-subtle bg-bg-panel/30 px-3 py-3 sm:px-6">
       <div className="mb-2 flex flex-wrap items-baseline justify-between gap-1">
-        <span className="text-[10px] uppercase tracking-wider text-slate-400">
+        <span className="text-[10px] uppercase tracking-wider text-text-muted">
           Step durations vs last green build
         </span>
-        <span className="text-[10px] text-slate-400">
-          baseline: <span className="font-mono text-slate-300">
+        <span className="text-[10px] text-text-muted">
+          baseline: <span className="font-mono text-text-secondary">
             {baseline!.build.id.slice(0, 8)}
           </span>
         </span>
@@ -84,14 +84,14 @@ export function StepDurationCompare({ build, entries, nodeLabel }: Props) {
         {deltas.map((d) => (
           <li
             key={d.nodeId}
-            className="flex items-baseline gap-2 rounded-md border border-slate-800 bg-slate-950 px-2 py-1 text-[11px]"
+            className="flex items-baseline gap-2 rounded-md border border-border-subtle bg-bg-base px-2 py-1 text-[11px]"
           >
-            <span className="min-w-0 flex-1 truncate font-mono text-slate-200">
+            <span className="min-w-0 flex-1 truncate font-mono text-text-primary">
               {nodeLabel ? nodeLabel(d.nodeId, d.stepType) : `${d.stepType ?? '?'} · ${d.nodeId.slice(0, 8)}`}
             </span>
-            <span className="shrink-0 font-mono text-slate-300">{formatDur(d.current)}</span>
-            <span className="shrink-0 text-slate-400">vs</span>
-            <span className="shrink-0 font-mono text-slate-400">
+            <span className="shrink-0 font-mono text-text-secondary">{formatDur(d.current)}</span>
+            <span className="shrink-0 text-text-muted">vs</span>
+            <span className="shrink-0 font-mono text-text-muted">
               {d.previous === null ? '—' : formatDur(d.previous)}
             </span>
             <DeltaPill delta={d} />
@@ -104,10 +104,10 @@ export function StepDurationCompare({ build, entries, nodeLabel }: Props) {
 
 function DeltaPill({ delta }: { delta: StepDurationDelta }) {
   if (delta.previous === null) {
-    return <span className="shrink-0 text-[10px] uppercase tracking-wider text-slate-400">new</span>;
+    return <span className="shrink-0 text-[10px] uppercase tracking-wider text-text-muted">new</span>;
   }
   if (delta.deltaMs === null || delta.deltaMs === 0) {
-    return <span className="shrink-0 text-[10px] text-slate-400">±0</span>;
+    return <span className="shrink-0 text-[10px] text-text-muted">±0</span>;
   }
   const isSlower = delta.deltaMs > 0;
   return (

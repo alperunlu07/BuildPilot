@@ -73,7 +73,7 @@ export function NodeContextMenu(props: NodeContextMenuProps) {
     <div
       ref={ref}
       style={{ left: x, top: y }}
-      className="fixed z-50 min-w-[160px] rounded-md border border-slate-700 bg-slate-900 py-1 text-[12px] text-slate-200 shadow-xl"
+      className="fixed z-50 min-w-[160px] rounded-md border border-border-subtle bg-bg-panel py-1 text-[12px] text-text-primary shadow-xl"
     >
       {items
         .filter((it) => !it.hidden)
@@ -85,7 +85,7 @@ export function NodeContextMenu(props: NodeContextMenuProps) {
               it.onClick();
               onClose();
             }}
-            className={`flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-slate-800 ${
+            className={`flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-bg-elevated ${
               it.danger ? 'text-rose-300 hover:text-rose-200' : ''
             }`}
           >

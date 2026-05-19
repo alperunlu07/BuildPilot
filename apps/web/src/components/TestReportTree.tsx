@@ -107,19 +107,19 @@ export function TestReportTreeView({
 
   return (
     <div className="text-sm">
-      <div className="mb-3 flex flex-wrap items-center gap-3 rounded-md border border-slate-800 bg-slate-900/40 px-3 py-2 text-xs">
+      <div className="mb-3 flex flex-wrap items-center gap-3 rounded-md border border-border-subtle bg-bg-panel/60 px-3 py-2 text-xs">
         <div className="flex items-center gap-3">
-          <span className="text-slate-400">Tests</span>
-          <span className="font-semibold text-slate-100">{report.totalTests}</span>
+          <span className="text-text-muted">Tests</span>
+          <span className="font-semibold text-text-primary">{report.totalTests}</span>
           <span className="text-emerald-400">{report.totalPassed} passed</span>
           <span className="text-rose-400">{report.totalFailed} failed</span>
           {report.totalSkipped > 0 && (
             <span className="text-amber-400">{report.totalSkipped} skipped</span>
           )}
           {report.totalDurationSec != null && (
-            <span className="text-slate-400">· {formatSec(report.totalDurationSec)}</span>
+            <span className="text-text-muted">· {formatSec(report.totalDurationSec)}</span>
           )}
-          <span className="rounded-md border border-slate-700 px-1.5 py-0.5 uppercase tracking-wider text-slate-400">
+          <span className="rounded-md border border-border-subtle px-1.5 py-0.5 uppercase tracking-wider text-text-muted">
             {report.kind}
           </span>
         </div>
@@ -129,9 +129,9 @@ export function TestReportTreeView({
             placeholder="Filter…"
             value={filter}
             onChange={(e) => onFilterChange?.(e.target.value)}
-            className="focusable w-40 rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-100 focus:border-sky-500 focus:outline-none"
+            className="focusable w-40 rounded-md border border-border-subtle bg-bg-panel px-2 py-1 text-xs text-text-primary focus:border-accent focus:outline-none"
           />
-          <label className="flex items-center gap-1.5 text-xs text-slate-300">
+          <label className="flex items-center gap-1.5 text-xs text-text-secondary">
             <input
               type="checkbox"
               checked={failuresOnly}
@@ -150,7 +150,7 @@ export function TestReportTreeView({
       )}
 
       {filteredSuites.length === 0 ? (
-        <div className="rounded-md border border-dashed border-slate-800 px-3 py-8 text-center text-xs text-slate-400">
+        <div className="rounded-md border border-dashed border-border-subtle px-3 py-8 text-center text-xs text-text-muted">
           {report.suites.length === 0
             ? 'No suites parsed from this artifact.'
             : 'No tests match the current filter.'}
@@ -163,7 +163,7 @@ export function TestReportTreeView({
             return (
               <li
                 key={s.name}
-                className="rounded-md border border-slate-800 bg-slate-900/30"
+                className="rounded-md border border-border-subtle bg-bg-panel/30"
               >
                 <button
                   type="button"
@@ -172,14 +172,14 @@ export function TestReportTreeView({
                   aria-expanded={!isCollapsed}
                 >
                   {isCollapsed ? (
-                    <ChevronRight size={12} className="shrink-0 text-slate-400" />
+                    <ChevronRight size={12} className="shrink-0 text-text-muted" />
                   ) : (
-                    <ChevronDown size={12} className="shrink-0 text-slate-400" />
+                    <ChevronDown size={12} className="shrink-0 text-text-muted" />
                   )}
-                  <span className="min-w-0 flex-1 truncate font-mono text-xs text-slate-200">
+                  <span className="min-w-0 flex-1 truncate font-mono text-xs text-text-primary">
                     {s.name}
                   </span>
-                  <span className="flex shrink-0 items-center gap-2 text-[11px] text-slate-400">
+                  <span className="flex shrink-0 items-center gap-2 text-[11px] text-text-muted">
                     {c.failed > 0 && (
                       <span className="text-rose-400">{c.failed} failed</span>
                     )}
@@ -193,7 +193,7 @@ export function TestReportTreeView({
                   </span>
                 </button>
                 {!isCollapsed && (
-                  <ul className="border-t border-slate-800 px-2 py-1">
+                  <ul className="border-t border-border-subtle px-2 py-1">
                     {s.tests.map((t, idx) => {
                       const key = `${s.name}|${t.classname ?? ''}|${t.name}|${idx}`;
                       const isOpen = expanded.has(key);
@@ -217,24 +217,24 @@ export function TestReportTreeView({
                             aria-expanded={canExpand ? isOpen : undefined}
                           >
                             {statusIconFor(t.status)}
-                            <span className="min-w-0 flex-1 truncate text-slate-200">
+                            <span className="min-w-0 flex-1 truncate text-text-primary">
                               {t.name}
                               {t.classname && t.classname !== s.name && (
-                                <span className="ml-1.5 text-[10px] text-slate-500">
+                                <span className="ml-1.5 text-[10px] text-text-faint">
                                   · {t.classname}
                                 </span>
                               )}
                             </span>
                             {t.durationSec !== undefined && (
-                              <span className="shrink-0 font-mono text-[10px] text-slate-400">
+                              <span className="shrink-0 font-mono text-[10px] text-text-muted">
                                 {formatSec(t.durationSec)}
                               </span>
                             )}
                           </button>
                           {isOpen && canExpand && (
-                            <div className="ml-5 mt-1 rounded border border-rose-900/40 bg-slate-950/60 p-2 text-[11px] text-rose-200">
+                            <div className="ml-5 mt-1 rounded border border-rose-900/40 bg-bg-base/60 p-2 text-[11px] text-rose-200">
                               {t.file && (
-                                <div className="mb-1 font-mono text-[10px] text-sky-300">
+                                <div className="mb-1 font-mono text-[10px] text-accent-hover">
                                   {t.file}
                                   {t.line ? `:${t.line}` : ''}
                                 </div>
@@ -244,7 +244,7 @@ export function TestReportTreeView({
                                   {t.message}
                                 </pre>
                               ) : (
-                                <em className="text-slate-400">No failure message captured.</em>
+                                <em className="text-text-muted">No failure message captured.</em>
                               )}
                             </div>
                           )}

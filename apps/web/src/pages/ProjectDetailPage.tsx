@@ -146,16 +146,16 @@ export function ProjectDetailPage({ projectId }: Props) {
   return (
     <div className="flex h-full min-h-0 flex-col">
       {/* HEADER */}
-      <header className="border-b border-slate-800 bg-slate-900/40 px-6 py-3">
+      <header className="border-b border-border-subtle bg-bg-panel/60 px-6 py-3">
         <button
           type="button"
           onClick={() => setView({ type: 'projects' })}
-          className="text-[11px] uppercase tracking-wider text-slate-400 hover:text-slate-300"
+          className="text-[11px] uppercase tracking-wider text-text-muted hover:text-text-secondary"
         >
           ← Projects
         </button>
         <div className="mt-1 flex items-baseline justify-between">
-          <h1 className="text-lg font-semibold text-slate-100">{project.name}</h1>
+          <h1 className="text-lg font-semibold text-text-primary">{project.name}</h1>
           <button
             type="button"
             onClick={() => softDeleteProject(project.id)}
@@ -165,11 +165,11 @@ export function ProjectDetailPage({ projectId }: Props) {
             <Trash2 size={13} />
           </button>
         </div>
-        <code className="mt-0.5 block text-[11px] text-slate-400">{project.path}</code>
+        <code className="mt-0.5 block text-[11px] text-text-muted">{project.path}</code>
       </header>
 
       {/* BRANCH STRIP */}
-      <div className="flex flex-wrap items-center gap-3 border-b border-slate-800 bg-slate-950/60 px-6 py-2.5">
+      <div className="flex flex-wrap items-center gap-3 border-b border-border-subtle bg-bg-base/60 px-6 py-2.5">
         {currentBranch ? (
           <span className="inline-flex items-center gap-1.5 rounded-md border border-emerald-700/50 bg-emerald-950/40 px-2.5 py-1 text-xs text-emerald-300">
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
@@ -177,19 +177,19 @@ export function ProjectDetailPage({ projectId }: Props) {
             <code className="font-mono font-semibold text-emerald-200">{currentBranch}</code>
           </span>
         ) : (
-          <span className="inline-flex items-center gap-1.5 rounded-md border border-slate-700 bg-slate-900 px-2.5 py-1 text-xs text-slate-400">
-            <span className="h-1.5 w-1.5 rounded-full bg-slate-600" />
+          <span className="inline-flex items-center gap-1.5 rounded-md border border-border-subtle bg-bg-panel px-2.5 py-1 text-xs text-text-muted">
+            <span className="h-1.5 w-1.5 rounded-full bg-text-faint" />
             checking…
           </span>
         )}
 
-        <span className="flex items-center gap-1.5 text-xs text-slate-400">
-          <GitBranch size={12} className="text-slate-400" />
+        <span className="flex items-center gap-1.5 text-xs text-text-muted">
+          <GitBranch size={12} className="text-text-muted" />
           browse
           <select
             value={browseBranch}
             onChange={(e) => setBrowseBranch(e.target.value)}
-            className="ml-1 rounded-md border border-slate-700 bg-slate-900 px-2 py-1 font-mono text-xs text-slate-100 focus:border-sky-500 focus:outline-none"
+            className="ml-1 rounded-md border border-border-subtle bg-bg-panel px-2 py-1 font-mono text-xs text-text-primary focus:border-accent focus:outline-none"
           >
             <option value={ALL_BRANCHES}>(all branches)</option>
             {project.watchedBranches.map((b) => (
@@ -203,7 +203,7 @@ export function ProjectDetailPage({ projectId }: Props) {
         {browseBranch !== ALL_BRANCHES &&
           currentBranch &&
           browseBranch !== currentBranch && (
-            <span className="rounded-md bg-slate-800 px-2 py-0.5 text-[10px] uppercase tracking-wider text-slate-400">
+            <span className="rounded-md bg-bg-elevated px-2 py-0.5 text-[10px] uppercase tracking-wider text-text-muted">
               different branch
             </span>
           )}
@@ -219,7 +219,7 @@ export function ProjectDetailPage({ projectId }: Props) {
             type="button"
             onClick={onFetch}
             disabled={fetching}
-            className="inline-flex items-center gap-1 rounded-md border border-slate-700 px-2.5 py-1 text-xs text-slate-200 hover:border-sky-500 hover:text-sky-400 disabled:opacity-50"
+            className="inline-flex items-center gap-1 rounded-md border border-border-subtle px-2.5 py-1 text-xs text-text-primary hover:border-accent hover:text-accent disabled:opacity-50"
             title="git fetch --all --prune"
           >
             <RefreshCw size={12} /> {fetching ? 'Fetching…' : 'Fetch'}
@@ -228,7 +228,7 @@ export function ProjectDetailPage({ projectId }: Props) {
             type="button"
             onClick={onPull}
             disabled={pulling}
-            className="inline-flex items-center gap-1 rounded-md border border-slate-700 px-2.5 py-1 text-xs text-slate-200 hover:border-emerald-500 hover:text-emerald-400 disabled:opacity-50"
+            className="inline-flex items-center gap-1 rounded-md border border-border-subtle px-2.5 py-1 text-xs text-text-primary hover:border-emerald-500 hover:text-emerald-400 disabled:opacity-50"
           >
             <ArrowDownToLine size={12} /> {pulling ? 'Pulling…' : 'Pull'}
           </button>
@@ -238,9 +238,9 @@ export function ProjectDetailPage({ projectId }: Props) {
       {/* TWO-COLUMN BODY */}
       <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[minmax(0,1fr)_360px] xl:grid-cols-[minmax(0,1fr)_400px]">
         {/* Commits — scrollable */}
-        <div className="scrollbar-thin min-h-0 overflow-y-auto border-r border-slate-800 px-2 py-2">
+        <div className="scrollbar-thin min-h-0 overflow-y-auto border-r border-border-subtle px-2 py-2">
           {commits.length === 0 ? (
-            <div className="py-10 text-center text-sm text-slate-400">No commits found.</div>
+            <div className="py-10 text-center text-sm text-text-muted">No commits found.</div>
           ) : (
             <ol className="relative">
               {layout.rows.map((r, idx) => (
@@ -259,25 +259,25 @@ export function ProjectDetailPage({ projectId }: Props) {
         </div>
 
         {/* Pipelines — sticky panel */}
-        <aside className="scrollbar-thin min-h-0 overflow-y-auto bg-slate-950/30 px-4 py-3">
+        <aside className="scrollbar-thin min-h-0 overflow-y-auto bg-bg-base/30 px-4 py-3">
           <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-300">
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-text-secondary">
               Pipelines
             </h2>
             <button
               type="button"
               onClick={() => setOpenCreate(true)}
-              className="inline-flex items-center gap-1 rounded-md bg-sky-600 px-2 py-1 text-xs font-medium text-white hover:bg-sky-500"
+              className="inline-flex items-center gap-1 rounded-md bg-accent px-2 py-1 text-xs font-medium text-white hover:bg-accent-hover"
             >
               <Plus size={12} /> New
             </button>
           </div>
 
           {pipelines.length === 0 ? (
-            <div className="rounded-md border border-dashed border-slate-700 bg-slate-900/40 p-5 text-center">
-              <GitBranch className="mx-auto mb-2 text-slate-400" size={24} />
-              <div className="text-sm font-medium text-slate-200">No pipelines yet</div>
-              <p className="mx-auto mt-1 max-w-[260px] text-[11px] text-slate-400">
+            <div className="rounded-md border border-dashed border-border-subtle bg-bg-panel/60 p-5 text-center">
+              <GitBranch className="mx-auto mb-2 text-text-muted" size={24} />
+              <div className="text-sm font-medium text-text-primary">No pipelines yet</div>
+              <p className="mx-auto mt-1 max-w-[260px] text-[11px] text-text-muted">
                 A pipeline watches a branch and runs steps on every new commit.
                 Start blank or drop in the sample pipeline.
               </p>
@@ -285,7 +285,7 @@ export function ProjectDetailPage({ projectId }: Props) {
                 <button
                   type="button"
                   onClick={() => setOpenCreate(true)}
-                  className="inline-flex items-center justify-center gap-1.5 rounded-md bg-sky-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-sky-500"
+                  className="inline-flex items-center justify-center gap-1.5 rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:bg-accent-hover"
                 >
                   <Plus size={12} /> New pipeline
                 </button>
@@ -314,7 +314,7 @@ export function ProjectDetailPage({ projectId }: Props) {
                     useStore.getState().upsertPipeline(sample);
                     setView({ type: 'pipeline', id: sample.id });
                   }}
-                  className="inline-flex items-center justify-center gap-1.5 rounded-md border border-slate-700 px-3 py-1.5 text-xs text-slate-200 hover:border-emerald-500 hover:text-emerald-300"
+                  className="inline-flex items-center justify-center gap-1.5 rounded-md border border-border-subtle px-3 py-1.5 text-xs text-text-primary hover:border-emerald-500 hover:text-emerald-300"
                 >
                   <Sparkles size={12} /> Load sample pipeline
                 </button>
@@ -370,12 +370,12 @@ function PipelineRow({
   onDelete(): void | Promise<void>;
 }) {
   return (
-    <li className="rounded-md border border-slate-800 bg-slate-900/60 px-3 py-2.5">
+    <li className="rounded-md border border-border-subtle bg-bg-panel px-3 py-2.5">
       <div className="flex items-center justify-between gap-2">
         <button type="button" onClick={onOpen} className="min-w-0 flex-1 text-left">
-          <div className="flex items-center gap-2 text-sm font-medium text-slate-100">
+          <div className="flex items-center gap-2 text-sm font-medium text-text-primary">
             <span className="truncate">{pipeline.name}</span>
-            <ChevronRight size={12} className="shrink-0 text-slate-400" />
+            <ChevronRight size={12} className="shrink-0 text-text-muted" />
           </div>
           <div className="mt-1 flex flex-wrap gap-1">
             <span
@@ -383,22 +383,22 @@ function PipelineRow({
                 'rounded-md px-1.5 py-0.5 text-[10px] font-mono',
                 watchActive
                   ? 'bg-emerald-950/50 text-emerald-300'
-                  : 'bg-slate-800 text-slate-400',
+                  : 'bg-bg-elevated text-text-muted',
               )}
               title={watchActive ? 'matches current branch' : 'different branch'}
             >
               {pipeline.watch.branch}
             </span>
-            <span className="rounded-md bg-slate-800 px-1.5 py-0.5 text-[10px] text-slate-400">
+            <span className="rounded-md bg-bg-elevated px-1.5 py-0.5 text-[10px] text-text-muted">
               {pipeline.nodes.length} step{pipeline.nodes.length === 1 ? '' : 's'}
             </span>
-            <span className="rounded-md bg-slate-800 px-1.5 py-0.5 text-[10px] text-slate-400">
+            <span className="rounded-md bg-bg-elevated px-1.5 py-0.5 text-[10px] text-text-muted">
               {pipeline.watch.intervalSec}s
             </span>
             {pipeline.lastBuiltSha && (
-              <span className="rounded-md bg-slate-800 px-1.5 py-0.5 text-[10px] text-slate-400">
+              <span className="rounded-md bg-bg-elevated px-1.5 py-0.5 text-[10px] text-text-muted">
                 last:{' '}
-                <code className="font-mono text-sky-400">
+                <code className="font-mono text-accent">
                   {pipeline.lastBuiltSha.slice(0, 7)}
                 </code>
               </span>
@@ -409,7 +409,7 @@ function PipelineRow({
           <button
             type="button"
             onClick={() => void onClone()}
-            className="inline-flex items-center gap-1 rounded-md border border-slate-700 px-2 py-1 text-xs text-slate-300 hover:border-sky-500 hover:text-sky-400"
+            className="inline-flex items-center gap-1 rounded-md border border-border-subtle px-2 py-1 text-xs text-text-secondary hover:border-accent hover:text-accent"
             title="Duplicate this pipeline"
           >
             <Copy size={11} />
@@ -417,7 +417,7 @@ function PipelineRow({
           <button
             type="button"
             onClick={() => void onDelete()}
-            className="inline-flex items-center gap-1 rounded-md border border-slate-700 px-2 py-1 text-xs text-rose-400 hover:border-rose-500 hover:text-rose-300"
+            className="inline-flex items-center gap-1 rounded-md border border-border-subtle px-2 py-1 text-xs text-rose-400 hover:border-rose-500 hover:text-rose-300"
             title="Delete this pipeline"
           >
             <Trash2 size={11} />
@@ -425,7 +425,7 @@ function PipelineRow({
           <button
             type="button"
             onClick={onRun}
-            className="inline-flex items-center gap-1 rounded-md border border-slate-700 px-2 py-1 text-xs text-slate-200 hover:border-sky-500 hover:text-sky-400"
+            className="inline-flex items-center gap-1 rounded-md border border-border-subtle px-2 py-1 text-xs text-text-primary hover:border-accent hover:text-accent"
             title="Trigger build now"
           >
             <Hammer size={11} /> Run

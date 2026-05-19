@@ -26,12 +26,12 @@ interface Props {
 }
 
 const LEVEL_DOT: Record<BuildLogLevel, string> = {
-  system: 'bg-slate-400',
+  system: 'bg-text-muted',
   info: 'bg-sky-400',
   success: 'bg-emerald-400',
   failure: 'bg-rose-400',
   stderr: 'bg-amber-400',
-  stdout: 'bg-slate-500',
+  stdout: 'bg-text-faint',
 };
 
 export function LevelToggleBar({ active, onToggle, compact = false }: Props) {
@@ -47,8 +47,8 @@ export function LevelToggleBar({ active, onToggle, compact = false }: Props) {
             className={cn(
               'inline-flex items-center gap-1 rounded border px-1.5 py-0.5 uppercase tracking-wider transition-colors',
               on
-                ? 'border-slate-700 bg-slate-800 text-slate-100'
-                : 'border-slate-800 bg-slate-900/60 text-slate-400 hover:text-slate-300',
+                ? 'border-border-subtle bg-bg-elevated text-text-primary'
+                : 'border-border-subtle bg-bg-panel text-text-muted hover:text-text-secondary',
             )}
             title={on ? `Hide ${lvl} entries` : `Show ${lvl} entries`}
           >

@@ -186,19 +186,19 @@ export function ImportExportPanel({ onChanged }: { onChanged(): void | Promise<v
   }
 
   return (
-    <div className="mb-3 rounded-md border border-slate-800 bg-slate-900/40">
+    <div className="mb-3 rounded-md border border-border-subtle bg-bg-panel/60">
       <button
         type="button"
         onClick={() => setExpanded((v) => !v)}
-        className="focusable flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-300 hover:bg-slate-900/60"
+        className="focusable flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-text-secondary hover:bg-bg-panel"
         aria-expanded={expanded}
       >
         {expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
         Import / export encrypted bundle
       </button>
       {expanded && (
-        <div className="border-t border-slate-800 px-3 py-3 text-sm text-slate-300">
-          <p className="mb-3 text-xs text-slate-400">
+        <div className="border-t border-border-subtle px-3 py-3 text-sm text-text-secondary">
+          <p className="mb-3 text-xs text-text-muted">
             Bundles roundtrip the secrets <em>name list</em> + the vault file
             contents (files under 1 MiB include base64 inline). Because the server
             never exposes plaintext secrets, the user has to fill in each value
@@ -206,7 +206,7 @@ export function ImportExportPanel({ onChanged }: { onChanged(): void | Promise<v
           </p>
 
           {/* Export */}
-          <div className="mb-4 rounded border border-slate-800 bg-slate-900/60 p-3">
+          <div className="mb-4 rounded border border-border-subtle bg-bg-panel p-3">
             <div className="mb-2 flex items-center gap-2 text-[11px] uppercase tracking-wider text-emerald-400">
               <Download size={12} /> Export
             </div>
@@ -215,7 +215,7 @@ export function ImportExportPanel({ onChanged }: { onChanged(): void | Promise<v
               value={exportPass}
               onChange={(e) => setExportPass(e.target.value)}
               placeholder="Bundle passphrase (≥ 8 chars)"
-              className="focusable mb-2 w-full rounded-md border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-[13px] text-slate-100 focus:border-sky-500 focus:outline-none"
+              className="focusable mb-2 w-full rounded-md border border-border-subtle bg-bg-panel px-2.5 py-1.5 text-[13px] text-text-primary focus:border-accent focus:outline-none"
             />
             <button
               type="button"
@@ -231,12 +231,12 @@ export function ImportExportPanel({ onChanged }: { onChanged(): void | Promise<v
                   readOnly
                   value={exportText}
                   rows={5}
-                  className="w-full rounded-md border border-slate-700 bg-slate-900 px-2 py-1.5 font-mono text-[11px] text-slate-200"
+                  className="w-full rounded-md border border-border-subtle bg-bg-panel px-2 py-1.5 font-mono text-[11px] text-text-primary"
                 />
                 <button
                   type="button"
                   onClick={downloadBundle}
-                  className="rounded-md border border-slate-700 px-3 py-1 text-xs text-slate-200 hover:bg-slate-800"
+                  className="rounded-md border border-border-subtle px-3 py-1 text-xs text-text-primary hover:bg-bg-elevated"
                 >
                   Download as .json
                 </button>
@@ -245,8 +245,8 @@ export function ImportExportPanel({ onChanged }: { onChanged(): void | Promise<v
           </div>
 
           {/* Import */}
-          <div className="rounded border border-slate-800 bg-slate-900/60 p-3">
-            <div className="mb-2 flex items-center gap-2 text-[11px] uppercase tracking-wider text-sky-400">
+          <div className="rounded border border-border-subtle bg-bg-panel p-3">
+            <div className="mb-2 flex items-center gap-2 text-[11px] uppercase tracking-wider text-accent">
               <Upload size={12} /> Import
             </div>
             <textarea
@@ -255,16 +255,16 @@ export function ImportExportPanel({ onChanged }: { onChanged(): void | Promise<v
               placeholder="Paste encrypted bundle JSON here"
               rows={4}
               spellCheck={false}
-              className="focusable mb-2 w-full rounded-md border border-slate-700 bg-slate-900 px-2.5 py-1.5 font-mono text-[11px] text-slate-100 focus:border-sky-500 focus:outline-none"
+              className="focusable mb-2 w-full rounded-md border border-border-subtle bg-bg-panel px-2.5 py-1.5 font-mono text-[11px] text-text-primary focus:border-accent focus:outline-none"
             />
             <input
               type="password"
               value={importPass}
               onChange={(e) => setImportPass(e.target.value)}
               placeholder="Bundle passphrase"
-              className="focusable mb-2 w-full rounded-md border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-[13px] text-slate-100 focus:border-sky-500 focus:outline-none"
+              className="focusable mb-2 w-full rounded-md border border-border-subtle bg-bg-panel px-2.5 py-1.5 text-[13px] text-text-primary focus:border-accent focus:outline-none"
             />
-            <div className="mb-2 flex items-center gap-3 text-xs text-slate-300">
+            <div className="mb-2 flex items-center gap-3 text-xs text-text-secondary">
               <span>On name conflict:</span>
               <label className="inline-flex items-center gap-1">
                 <input
@@ -287,12 +287,12 @@ export function ImportExportPanel({ onChanged }: { onChanged(): void | Promise<v
               type="button"
               onClick={onImport}
               disabled={importBusy}
-              className="rounded-md border border-sky-500 bg-sky-500/10 px-3 py-1 text-xs font-medium text-sky-300 hover:bg-sky-500/20 disabled:opacity-50"
+              className="rounded-md border border-accent bg-sky-500/10 px-3 py-1 text-xs font-medium text-accent-hover hover:bg-accent-hover/20 disabled:opacity-50"
             >
               {importBusy ? 'Importing…' : 'Decrypt + import'}
             </button>
             {summary && (
-              <div className="mt-3 rounded border border-slate-800 bg-slate-900/40 px-3 py-2 text-[11px] text-slate-300">
+              <div className="mt-3 rounded border border-border-subtle bg-bg-panel/60 px-3 py-2 text-[11px] text-text-secondary">
                 <div>
                   Secrets — imported {summary.secretsImported}, skipped{' '}
                   {summary.secretsSkipped}, renamed {summary.secretsRenamed}

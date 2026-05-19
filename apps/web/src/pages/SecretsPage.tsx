@@ -155,13 +155,13 @@ export function SecretsPage() {
       <div className="min-w-0 flex-1 overflow-y-auto px-6 py-6">
         <div className="mb-4 flex items-center justify-between gap-3">
           <div>
-            <h2 className="flex items-center gap-2 text-lg font-semibold text-slate-100">
+            <h2 className="flex items-center gap-2 text-lg font-semibold text-text-primary">
               <KeyRound size={18} className="text-amber-400" />
               Secrets
             </h2>
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-text-muted">
               Reference in pipeline step fields with{' '}
-              <code className="rounded bg-slate-800 px-1 py-0.5 text-[11px] text-slate-200">
+              <code className="rounded bg-bg-elevated px-1 py-0.5 text-[11px] text-text-primary">
                 {'${{ secrets.NAME }}'}
               </code>
               . Values are write-only after creation.
@@ -174,7 +174,7 @@ export function SecretsPage() {
               setError(null);
               setShowCreate(true);
             }}
-            className="focusable inline-flex items-center gap-1.5 rounded-md border border-sky-500 bg-sky-500/10 px-3 py-1.5 text-sm font-medium text-sky-300 hover:bg-sky-500/20"
+            className="focusable inline-flex items-center gap-1.5 rounded-md border border-accent bg-sky-500/10 px-3 py-1.5 text-sm font-medium text-accent-hover hover:bg-accent-hover/20"
           >
             <Plus size={14} /> New secret
           </button>
@@ -182,26 +182,26 @@ export function SecretsPage() {
 
         <ImportExportPanel onChanged={reload} />
 
-        <div className="mb-3 flex items-center gap-2 rounded-md border border-slate-800 bg-slate-900/40 px-3 py-1.5">
-          <Search size={14} className="text-slate-400" />
+        <div className="mb-3 flex items-center gap-2 rounded-md border border-border-subtle bg-bg-panel/60 px-3 py-1.5">
+          <Search size={14} className="text-text-muted" />
           <input
             type="text"
             placeholder="Filter by name"
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
-            className="focusable flex-1 bg-transparent text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none"
+            className="focusable flex-1 bg-transparent text-sm text-text-primary placeholder:text-text-faint focus:outline-none"
           />
         </div>
 
         {loading ? (
-          <div className="rounded-md border border-slate-800 bg-slate-900/40 px-4 py-6 text-sm text-slate-400">
+          <div className="rounded-md border border-border-subtle bg-bg-panel/60 px-4 py-6 text-sm text-text-muted">
             Loading secrets…
           </div>
         ) : filtered.length === 0 ? (
-          <div className="rounded-md border border-slate-800 bg-slate-900/40 px-4 py-10 text-center text-sm text-slate-400">
+          <div className="rounded-md border border-border-subtle bg-bg-panel/60 px-4 py-10 text-center text-sm text-text-muted">
             {secrets.length === 0 ? (
               <>
-                No secrets yet. Click <span className="text-slate-200">New secret</span> to
+                No secrets yet. Click <span className="text-text-primary">New secret</span> to
                 add one.
               </>
             ) : (
@@ -209,9 +209,9 @@ export function SecretsPage() {
             )}
           </div>
         ) : (
-          <div className="overflow-hidden rounded-md border border-slate-800">
+          <div className="overflow-hidden rounded-md border border-border-subtle">
             <table className="w-full text-sm">
-              <thead className="bg-slate-900/60 text-[11px] uppercase tracking-wider text-slate-400">
+              <thead className="bg-bg-panel text-[11px] uppercase tracking-wider text-text-muted">
                 <tr>
                   <th className="px-3 py-2 text-left">Name</th>
                   <th className="px-3 py-2 text-left">Created</th>
@@ -226,24 +226,24 @@ export function SecretsPage() {
                     <tr
                       key={s.id}
                       className={cn(
-                        'border-t border-slate-800',
-                        active ? 'bg-slate-800/60' : 'hover:bg-slate-900/60',
+                        'border-t border-border-subtle',
+                        active ? 'bg-bg-hover/60' : 'hover:bg-bg-panel',
                       )}
                     >
                       <td className="px-3 py-2">
                         <button
                           type="button"
                           onClick={() => setView({ type: 'secrets', name: s.name })}
-                          className="focusable rounded text-left font-mono text-sky-300 hover:text-sky-200"
+                          className="focusable rounded text-left font-mono text-accent-hover hover:text-sky-200"
                         >
                           {s.name}
                         </button>
                       </td>
-                      <td className="px-3 py-2 text-xs text-slate-400">
+                      <td className="px-3 py-2 text-xs text-text-muted">
                         <Time ts={s.createdAt} />
                       </td>
-                      <td className="px-3 py-2 text-xs text-slate-400">
-                        {s.lastUsedAt ? <Time ts={s.lastUsedAt} /> : <span className="text-slate-500">never</span>}
+                      <td className="px-3 py-2 text-xs text-text-muted">
+                        {s.lastUsedAt ? <Time ts={s.lastUsedAt} /> : <span className="text-text-faint">never</span>}
                       </td>
                       <td className="px-3 py-2 text-right">
                         <div className="inline-flex items-center gap-1">
@@ -277,31 +277,31 @@ export function SecretsPage() {
       </div>
 
       {selectedName && (
-        <aside className="hidden w-96 shrink-0 border-l border-slate-800 bg-slate-950 md:flex md:flex-col">
-          <div className="flex items-center justify-between border-b border-slate-800 px-4 py-3">
+        <aside className="hidden w-96 shrink-0 border-l border-border-subtle bg-bg-base md:flex md:flex-col">
+          <div className="flex items-center justify-between border-b border-border-subtle px-4 py-3">
             <div>
-              <div className="text-[11px] uppercase tracking-wider text-slate-400">
+              <div className="text-[11px] uppercase tracking-wider text-text-muted">
                 Where used
               </div>
-              <div className="mt-0.5 font-mono text-sm text-sky-300">{selectedName}</div>
+              <div className="mt-0.5 font-mono text-sm text-accent-hover">{selectedName}</div>
             </div>
             <button
               type="button"
               onClick={() => setView({ type: 'secrets' })}
               aria-label="Close usages panel"
-              className="focusable rounded p-1 text-slate-400 hover:bg-slate-800 hover:text-slate-100"
+              className="focusable rounded p-1 text-text-muted hover:bg-bg-elevated hover:text-text-primary"
             >
               <X size={14} />
             </button>
           </div>
           <div className="flex-1 overflow-y-auto px-4 py-3">
             {usagesLoading ? (
-              <p className="text-sm text-slate-400">Scanning pipelines…</p>
+              <p className="text-sm text-text-muted">Scanning pipelines…</p>
             ) : !usages || usages.length === 0 ? (
-              <p className="text-sm text-slate-400">
+              <p className="text-sm text-text-muted">
                 No pipeline step currently references this secret. References are
                 detected by scanning for the literal{' '}
-                <code className="rounded bg-slate-800 px-1 text-[10px]">
+                <code className="rounded bg-bg-elevated px-1 text-[10px]">
                   {'${{ secrets.' + selectedName + ' }}'}
                 </code>{' '}
                 marker inside each pipeline's saved node data.
@@ -311,18 +311,18 @@ export function SecretsPage() {
                 {usages.map((u, i) => (
                   <li
                     key={`${u.pipelineId}:${u.nodeId}:${u.fieldName}:${i}`}
-                    className="rounded-md border border-slate-800 bg-slate-900/40 p-2"
+                    className="rounded-md border border-border-subtle bg-bg-panel/60 p-2"
                   >
                     <button
                       type="button"
                       onClick={() => setView({ type: 'pipeline', id: u.pipelineId })}
                       className="focusable block w-full text-left"
                     >
-                      <div className="text-sm font-medium text-slate-100">
+                      <div className="text-sm font-medium text-text-primary">
                         {u.pipelineName}
                       </div>
-                      <div className="mt-0.5 text-[11px] text-slate-400">
-                        node <span className="font-mono text-slate-300">{u.nodeId}</span> ·{' '}
+                      <div className="mt-0.5 text-[11px] text-text-muted">
+                        node <span className="font-mono text-text-secondary">{u.nodeId}</span> ·{' '}
                         <span className="font-mono text-emerald-300">{u.nodeType}</span> ·
                         field <span className="font-mono text-amber-300">{u.fieldName}</span>
                       </div>
@@ -344,7 +344,7 @@ export function SecretsPage() {
               <button
                 type="button"
                 onClick={() => setShowCreate(false)}
-                className="rounded-md border border-slate-700 px-3 py-1.5 text-sm text-slate-300 hover:bg-slate-800"
+                className="rounded-md border border-border-subtle px-3 py-1.5 text-sm text-text-secondary hover:bg-bg-elevated"
               >
                 Cancel
               </button>
@@ -352,7 +352,7 @@ export function SecretsPage() {
                 type="button"
                 onClick={onCreate}
                 disabled={busy}
-                className="rounded-md border border-sky-500 bg-sky-500/10 px-3 py-1.5 text-sm font-medium text-sky-300 hover:bg-sky-500/20 disabled:opacity-50"
+                className="rounded-md border border-accent bg-sky-500/10 px-3 py-1.5 text-sm font-medium text-accent-hover hover:bg-accent-hover/20 disabled:opacity-50"
               >
                 {busy ? 'Saving…' : 'Create'}
               </button>
@@ -368,7 +368,7 @@ export function SecretsPage() {
                 }
                 placeholder="ASC_API_KEY"
                 spellCheck={false}
-                className="focusable w-full rounded-md border border-slate-700 bg-slate-900 px-2.5 py-1.5 font-mono text-sm text-slate-100 focus:border-sky-500 focus:outline-none"
+                className="focusable w-full rounded-md border border-border-subtle bg-bg-panel px-2.5 py-1.5 font-mono text-sm text-text-primary focus:border-accent focus:outline-none"
               />
             </Field>
             <Field label="Value">
@@ -378,7 +378,7 @@ export function SecretsPage() {
                 placeholder="paste the secret here"
                 rows={5}
                 spellCheck={false}
-                className="focusable w-full rounded-md border border-slate-700 bg-slate-900 px-2.5 py-1.5 font-mono text-[12px] text-slate-100 focus:border-sky-500 focus:outline-none"
+                className="focusable w-full rounded-md border border-border-subtle bg-bg-panel px-2.5 py-1.5 font-mono text-[12px] text-text-primary focus:border-accent focus:outline-none"
               />
             </Field>
             {error && <p className="text-sm text-rose-400">{error}</p>}
@@ -395,7 +395,7 @@ export function SecretsPage() {
               <button
                 type="button"
                 onClick={() => setRotating(null)}
-                className="rounded-md border border-slate-700 px-3 py-1.5 text-sm text-slate-300 hover:bg-slate-800"
+                className="rounded-md border border-border-subtle px-3 py-1.5 text-sm text-text-secondary hover:bg-bg-elevated"
               >
                 Cancel
               </button>
@@ -411,7 +411,7 @@ export function SecretsPage() {
           }
         >
           <div className="space-y-3">
-            <p className="text-sm text-slate-300">
+            <p className="text-sm text-text-secondary">
               The previous value will be overwritten. Pipelines referencing this
               secret will pick up the new value on the next build.
             </p>
@@ -423,7 +423,7 @@ export function SecretsPage() {
                 }
                 rows={5}
                 spellCheck={false}
-                className="focusable w-full rounded-md border border-slate-700 bg-slate-900 px-2.5 py-1.5 font-mono text-[12px] text-slate-100 focus:border-sky-500 focus:outline-none"
+                className="focusable w-full rounded-md border border-border-subtle bg-bg-panel px-2.5 py-1.5 font-mono text-[12px] text-text-primary focus:border-accent focus:outline-none"
               />
             </Field>
             {error && <p className="text-sm text-rose-400">{error}</p>}
@@ -449,7 +449,7 @@ function IconButton({
       onClick={onClick}
       title={label}
       aria-label={label}
-      className="focusable rounded p-1 text-slate-300 hover:bg-slate-800 hover:text-slate-100"
+      className="focusable rounded p-1 text-text-secondary hover:bg-bg-elevated hover:text-text-primary"
     >
       {icon}
     </button>
@@ -459,7 +459,7 @@ function IconButton({
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="block">
-      <span className="mb-1 block text-[11px] uppercase tracking-wider text-slate-400">
+      <span className="mb-1 block text-[11px] uppercase tracking-wider text-text-muted">
         {label}
       </span>
       {children}
@@ -482,26 +482,26 @@ function Modal({
     <div
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 px-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-bg-base/70 px-4"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-lg rounded-lg border border-slate-800 bg-slate-900 shadow-xl"
+        className="w-full max-w-lg rounded-lg border border-border-subtle bg-bg-panel shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between border-b border-slate-800 px-4 py-3">
-          <h3 className="text-sm font-semibold text-slate-100">{title}</h3>
+        <div className="flex items-center justify-between border-b border-border-subtle px-4 py-3">
+          <h3 className="text-sm font-semibold text-text-primary">{title}</h3>
           <button
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="focusable rounded p-1 text-slate-400 hover:bg-slate-800 hover:text-slate-100"
+            className="focusable rounded p-1 text-text-muted hover:bg-bg-elevated hover:text-text-primary"
           >
             <X size={14} />
           </button>
         </div>
         <div className="px-4 py-3">{children}</div>
-        {footer && <div className="border-t border-slate-800 px-4 py-3">{footer}</div>}
+        {footer && <div className="border-t border-border-subtle px-4 py-3">{footer}</div>}
       </div>
     </div>
   );

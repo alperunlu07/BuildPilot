@@ -21,26 +21,26 @@ export function ToastContainer() {
         return (
           <div
             key={t.id}
-            className="pointer-events-auto overflow-hidden rounded-lg border border-amber-700/60 bg-slate-900 shadow-xl ring-1 ring-amber-500/10"
+            className="pointer-events-auto overflow-hidden rounded-lg border border-amber-700/60 bg-bg-panel shadow-xl ring-1 ring-amber-500/10"
           >
-            <div className="flex items-start gap-3 border-b border-slate-800 px-4 py-3">
+            <div className="flex items-start gap-3 border-b border-border-subtle px-4 py-3">
               <div className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-amber-500/15 text-amber-400">
                 <Hammer size={14} />
               </div>
               <div className="min-w-0 flex-1">
-                <div className="text-sm font-semibold text-slate-100">
+                <div className="text-sm font-semibold text-text-primary">
                   {t.commits.length} new commit{t.commits.length === 1 ? '' : 's'}
                 </div>
-                <div className="text-xs text-slate-400">
-                  <span className="text-slate-200">{project?.name ?? 'project'}</span>
-                  <span className="mx-1 text-slate-400">·</span>
+                <div className="text-xs text-text-muted">
+                  <span className="text-text-primary">{project?.name ?? 'project'}</span>
+                  <span className="mx-1 text-text-muted">·</span>
                   <span className="font-mono text-emerald-400">{t.branch}</span>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => dismissToast(t.id)}
-                className="focusable touch-target rounded text-slate-400 hover:text-slate-300"
+                className="focusable touch-target rounded text-text-muted hover:text-text-secondary"
                 aria-label="Dismiss new-commit toast"
               >
                 <X size={14} />
@@ -50,25 +50,25 @@ export function ToastContainer() {
             <ul className="max-h-48 overflow-y-auto px-4 py-2 text-[12px]">
               {t.commits.slice(0, 8).map((c) => (
                 <li key={c.sha} className="py-1">
-                  <code className="mr-2 text-[11px] text-sky-400">{c.shortSha}</code>
-                  <span className="text-slate-200">{c.subject}</span>
+                  <code className="mr-2 text-[11px] text-accent">{c.shortSha}</code>
+                  <span className="text-text-primary">{c.subject}</span>
                 </li>
               ))}
               {t.commits.length > 8 && (
-                <li className="py-1 text-[11px] text-slate-400">
+                <li className="py-1 text-[11px] text-text-muted">
                   +{t.commits.length - 8} more…
                 </li>
               )}
             </ul>
 
-            <div className="flex items-center justify-between gap-2 border-t border-slate-800 bg-slate-950/40 px-3 py-2">
+            <div className="flex items-center justify-between gap-2 border-t border-border-subtle bg-bg-base/40 px-3 py-2">
               <button
                 type="button"
                 onClick={() => {
                   setView({ type: 'project', id: t.projectId });
                   dismissToast(t.id);
                 }}
-                className="focusable rounded text-[11px] uppercase tracking-wider text-slate-400 hover:text-slate-200"
+                className="focusable rounded text-[11px] uppercase tracking-wider text-text-muted hover:text-text-primary"
               >
                 Open project
               </button>
@@ -78,7 +78,7 @@ export function ToastContainer() {
                   onClick={async () => {
                     await api.fetchProject(t.projectId);
                   }}
-                  className="focusable inline-flex items-center gap-1 rounded-md border border-slate-700 px-2.5 py-1 text-xs text-slate-200 hover:border-sky-500 hover:text-sky-400"
+                  className="focusable inline-flex items-center gap-1 rounded-md border border-border-subtle px-2.5 py-1 text-xs text-text-primary hover:border-accent hover:text-accent"
                   title="git fetch --all --prune"
                 >
                   <RefreshCw size={12} /> Fetch
@@ -89,7 +89,7 @@ export function ToastContainer() {
                     await api.pullProject(t.projectId);
                     dismissToast(t.id);
                   }}
-                  className="focusable inline-flex items-center gap-1 rounded-md border border-slate-700 px-2.5 py-1 text-xs text-slate-200 hover:border-emerald-500 hover:text-emerald-400"
+                  className="focusable inline-flex items-center gap-1 rounded-md border border-border-subtle px-2.5 py-1 text-xs text-text-primary hover:border-emerald-500 hover:text-emerald-400"
                 >
                   <ArrowDownToLine size={12} /> Pull
                 </button>
@@ -101,7 +101,7 @@ export function ToastContainer() {
                       await triggerBuild(t.pipelineId);
                       dismissToast(t.id);
                     }}
-                    className="focusable inline-flex items-center gap-1 rounded-md bg-sky-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-sky-500"
+                    className="focusable inline-flex items-center gap-1 rounded-md bg-accent px-2.5 py-1 text-xs font-medium text-white hover:bg-accent-hover"
                   >
                     <Hammer size={12} /> Pull &amp; Build
                   </button>

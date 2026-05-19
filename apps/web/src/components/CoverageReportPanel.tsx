@@ -22,14 +22,14 @@ function formatPct(rate: number | null): string {
 }
 
 function rateColor(rate: number | null): string {
-  if (rate == null) return 'text-slate-400';
+  if (rate == null) return 'text-text-muted';
   if (rate >= 0.8) return 'text-emerald-400';
   if (rate >= 0.5) return 'text-amber-400';
   return 'text-rose-400';
 }
 
 function rateBg(rate: number | null): string {
-  if (rate == null) return 'bg-slate-700';
+  if (rate == null) return 'bg-border-subtle';
   if (rate >= 0.8) return 'bg-emerald-500/70';
   if (rate >= 0.5) return 'bg-amber-500/70';
   return 'bg-rose-500/70';
@@ -64,7 +64,7 @@ export function CoverageReportPanel({ buildId }: Props) {
     );
   }
   if (!data) {
-    return <div className="text-xs text-slate-400">Loading coverage…</div>;
+    return <div className="text-xs text-text-muted">Loading coverage…</div>;
   }
 
   if (data.note && data.lineRate == null && data.lowestFiles.length === 0) {
@@ -100,11 +100,11 @@ export function CoverageReportPanel({ buildId }: Props) {
 
       {data.lineRate != null && (
         <div className="mb-3">
-          <div className="mb-1 flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-slate-400">
+          <div className="mb-1 flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-text-muted">
             <PieChart size={11} />
             Overall
           </div>
-          <div className="h-2 w-full overflow-hidden rounded-full bg-slate-800">
+          <div className="h-2 w-full overflow-hidden rounded-full bg-bg-elevated">
             <div
               className={`h-2 ${rateBg(data.lineRate)}`}
               style={{ width: `${Math.max(0, Math.min(1, data.lineRate)) * 100}%` }}
@@ -114,12 +114,12 @@ export function CoverageReportPanel({ buildId }: Props) {
       )}
 
       <div>
-        <div className="mb-1 flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-slate-400">
+        <div className="mb-1 flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-text-muted">
           <FileWarning size={11} />
           Lowest-covered files
         </div>
         {data.lowestFiles.length === 0 ? (
-          <div className="rounded-md border border-dashed border-slate-800 px-3 py-3 text-[11px] text-slate-400">
+          <div className="rounded-md border border-dashed border-border-subtle px-3 py-3 text-[11px] text-text-muted">
             No per-file breakdown in this coverage.xml.
           </div>
         ) : (
@@ -127,12 +127,12 @@ export function CoverageReportPanel({ buildId }: Props) {
             {data.lowestFiles.map((f) => (
               <li
                 key={f.filename}
-                className="grid grid-cols-[1fr_70px_60px] items-center gap-2 rounded-md bg-slate-900/40 px-2 py-1"
+                className="grid grid-cols-[1fr_70px_60px] items-center gap-2 rounded-md bg-bg-panel/60 px-2 py-1"
               >
-                <span className="min-w-0 truncate font-mono text-[11px] text-slate-200" title={f.filename}>
+                <span className="min-w-0 truncate font-mono text-[11px] text-text-primary" title={f.filename}>
                   {f.filename}
                 </span>
-                <div className="h-1 w-full rounded-full bg-slate-800">
+                <div className="h-1 w-full rounded-full bg-bg-elevated">
                   <div
                     className={`h-1 rounded-full ${rateBg(f.lineRate)}`}
                     style={{ width: `${Math.max(0, Math.min(1, f.lineRate)) * 100}%` }}
@@ -148,10 +148,10 @@ export function CoverageReportPanel({ buildId }: Props) {
       </div>
 
       {data.note && (
-        <div className="mt-2 text-[10px] text-slate-500">{data.note}</div>
+        <div className="mt-2 text-[10px] text-text-faint">{data.note}</div>
       )}
 
-      <div className="mt-2 text-[10px] text-slate-500">
+      <div className="mt-2 text-[10px] text-text-faint">
         PR delta widget needs outbound PR integration (follow-up).
       </div>
     </div>
@@ -168,9 +168,9 @@ function Stat({
   valueClass?: string;
 }) {
   return (
-    <div className="rounded-md border border-slate-800 bg-slate-900/40 px-2 py-1.5">
-      <div className="text-[10px] uppercase tracking-wider text-slate-400">{label}</div>
-      <div className={`text-sm font-semibold ${valueClass ?? 'text-slate-100'}`}>{value}</div>
+    <div className="rounded-md border border-border-subtle bg-bg-panel/60 px-2 py-1.5">
+      <div className="text-[10px] uppercase tracking-wider text-text-muted">{label}</div>
+      <div className={`text-sm font-semibold ${valueClass ?? 'text-text-primary'}`}>{value}</div>
     </div>
   );
 }

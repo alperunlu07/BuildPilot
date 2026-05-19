@@ -230,7 +230,7 @@ export function SecretReferenceAutocomplete({
         <ul
           role="listbox"
           aria-label={`${marker.kind} suggestions`}
-          className="absolute left-0 right-0 top-full z-30 mt-1 max-h-56 overflow-y-auto rounded-md border border-slate-700 bg-slate-900 py-1 text-sm shadow-lg"
+          className="absolute left-0 right-0 top-full z-30 mt-1 max-h-56 overflow-y-auto rounded-md border border-border-subtle bg-bg-panel py-1 text-sm shadow-lg"
         >
           {suggestions.map((s, i) => (
             <li key={s.name}>
@@ -243,12 +243,12 @@ export function SecretReferenceAutocomplete({
                   commit(s.name);
                 }}
                 className={cn(
-                  'flex w-full items-center justify-between px-3 py-1 text-left text-slate-200',
-                  i === highlight ? 'bg-slate-800' : 'hover:bg-slate-800/60',
+                  'flex w-full items-center justify-between px-3 py-1 text-left text-text-primary',
+                  i === highlight ? 'bg-bg-elevated' : 'hover:bg-bg-hover/60',
                 )}
               >
                 <span className="font-mono">{s.name}</span>
-                <span className="text-[10px] uppercase text-slate-400">
+                <span className="text-[10px] uppercase text-text-muted">
                   {marker.kind === 'secrets' ? 'secret' : 'file'}
                 </span>
               </button>

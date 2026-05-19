@@ -162,13 +162,13 @@ export function VaultFilesPage() {
     <div className="h-full overflow-y-auto px-6 py-6">
       <div className="mb-4 flex items-center justify-between gap-3">
         <div>
-          <h2 className="flex items-center gap-2 text-lg font-semibold text-slate-100">
+          <h2 className="flex items-center gap-2 text-lg font-semibold text-text-primary">
             <FileLock size={18} className="text-emerald-400" />
             File vault
           </h2>
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-text-muted">
             Reference in pipeline step fields with{' '}
-            <code className="rounded bg-slate-800 px-1 py-0.5 text-[11px] text-slate-200">
+            <code className="rounded bg-bg-elevated px-1 py-0.5 text-[11px] text-text-primary">
               {'${{ files.NAME }}'}
             </code>
             . Engine extracts a fresh copy to disk per build. Max 10 MiB per file.
@@ -181,32 +181,32 @@ export function VaultFilesPage() {
             setError(null);
             setShowUpload(true);
           }}
-          className="focusable inline-flex items-center gap-1.5 rounded-md border border-sky-500 bg-sky-500/10 px-3 py-1.5 text-sm font-medium text-sky-300 hover:bg-sky-500/20"
+          className="focusable inline-flex items-center gap-1.5 rounded-md border border-accent bg-sky-500/10 px-3 py-1.5 text-sm font-medium text-accent-hover hover:bg-accent-hover/20"
         >
           <Plus size={14} /> Upload file
         </button>
       </div>
 
-      <div className="mb-3 flex items-center gap-2 rounded-md border border-slate-800 bg-slate-900/40 px-3 py-1.5">
-        <Search size={14} className="text-slate-400" />
+      <div className="mb-3 flex items-center gap-2 rounded-md border border-border-subtle bg-bg-panel/60 px-3 py-1.5">
+        <Search size={14} className="text-text-muted" />
         <input
           type="text"
           placeholder="Filter by name or filename"
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
-          className="focusable flex-1 bg-transparent text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none"
+          className="focusable flex-1 bg-transparent text-sm text-text-primary placeholder:text-text-faint focus:outline-none"
         />
       </div>
 
       {loading ? (
-        <div className="rounded-md border border-slate-800 bg-slate-900/40 px-4 py-6 text-sm text-slate-400">
+        <div className="rounded-md border border-border-subtle bg-bg-panel/60 px-4 py-6 text-sm text-text-muted">
           Loading vault…
         </div>
       ) : filtered.length === 0 ? (
-        <div className="rounded-md border border-slate-800 bg-slate-900/40 px-4 py-10 text-center text-sm text-slate-400">
+        <div className="rounded-md border border-border-subtle bg-bg-panel/60 px-4 py-10 text-center text-sm text-text-muted">
           {files.length === 0 ? (
             <>
-              No vault files yet. Click <span className="text-slate-200">Upload file</span> to
+              No vault files yet. Click <span className="text-text-primary">Upload file</span> to
               add one.
             </>
           ) : (
@@ -214,9 +214,9 @@ export function VaultFilesPage() {
           )}
         </div>
       ) : (
-        <div className="overflow-hidden rounded-md border border-slate-800">
+        <div className="overflow-hidden rounded-md border border-border-subtle">
           <table className="w-full text-sm">
-            <thead className="bg-slate-900/60 text-[11px] uppercase tracking-wider text-slate-400">
+            <thead className="bg-bg-panel text-[11px] uppercase tracking-wider text-text-muted">
               <tr>
                 <th className="px-3 py-2 text-left">Name</th>
                 <th className="px-3 py-2 text-left">Filename</th>
@@ -227,14 +227,14 @@ export function VaultFilesPage() {
             </thead>
             <tbody>
               {filtered.map((f) => (
-                <tr key={f.id} className="border-t border-slate-800 hover:bg-slate-900/60">
-                  <td className="px-3 py-2 font-mono text-sky-300">{f.name}</td>
-                  <td className="px-3 py-2 text-xs text-slate-300">{f.filename}</td>
-                  <td className="px-3 py-2 text-right text-xs text-slate-400">
+                <tr key={f.id} className="border-t border-border-subtle hover:bg-bg-panel">
+                  <td className="px-3 py-2 font-mono text-accent-hover">{f.name}</td>
+                  <td className="px-3 py-2 text-xs text-text-secondary">{f.filename}</td>
+                  <td className="px-3 py-2 text-right text-xs text-text-muted">
                     {formatBytes(f.sizeBytes)}
                   </td>
-                  <td className="px-3 py-2 text-xs text-slate-400">
-                    {f.lastUsedAt ? <Time ts={f.lastUsedAt} /> : <span className="text-slate-500">never</span>}
+                  <td className="px-3 py-2 text-xs text-text-muted">
+                    {f.lastUsedAt ? <Time ts={f.lastUsedAt} /> : <span className="text-text-faint">never</span>}
                   </td>
                   <td className="px-3 py-2 text-right">
                     <div className="inline-flex items-center gap-1">
@@ -247,7 +247,7 @@ export function VaultFilesPage() {
                         href={api.vaultFileDownloadUrl(f.name)}
                         title="Download"
                         aria-label="Download"
-                        className="focusable rounded p-1 text-slate-300 hover:bg-slate-800 hover:text-slate-100"
+                        className="focusable rounded p-1 text-text-secondary hover:bg-bg-elevated hover:text-text-primary"
                       >
                         <Download size={13} />
                       </a>
@@ -274,7 +274,7 @@ export function VaultFilesPage() {
               <button
                 type="button"
                 onClick={() => setShowUpload(false)}
-                className="rounded-md border border-slate-700 px-3 py-1.5 text-sm text-slate-300 hover:bg-slate-800"
+                className="rounded-md border border-border-subtle px-3 py-1.5 text-sm text-text-secondary hover:bg-bg-elevated"
               >
                 Cancel
               </button>
@@ -282,7 +282,7 @@ export function VaultFilesPage() {
                 type="button"
                 onClick={onUpload}
                 disabled={busy}
-                className="rounded-md border border-sky-500 bg-sky-500/10 px-3 py-1.5 text-sm font-medium text-sky-300 hover:bg-sky-500/20 disabled:opacity-50"
+                className="rounded-md border border-accent bg-sky-500/10 px-3 py-1.5 text-sm font-medium text-accent-hover hover:bg-accent-hover/20 disabled:opacity-50"
               >
                 {busy ? 'Uploading…' : 'Upload'}
               </button>
@@ -305,16 +305,16 @@ export function VaultFilesPage() {
               className={cn(
                 'block cursor-pointer rounded-md border border-dashed px-4 py-6 text-center text-sm transition-colors',
                 dragOver
-                  ? 'border-sky-500 bg-sky-500/10 text-sky-100'
-                  : 'border-slate-700 bg-slate-900/60 text-slate-300 hover:border-slate-500',
+                  ? 'border-accent bg-sky-500/10 text-sky-100'
+                  : 'border-border-subtle bg-bg-panel text-text-secondary hover:border-text-faint',
               )}
             >
-              <Upload size={20} className="mx-auto mb-1 text-slate-400" />
+              <Upload size={20} className="mx-auto mb-1 text-text-muted" />
               <div>
                 {draft.filename ? (
-                  <span className="font-mono text-slate-200">
+                  <span className="font-mono text-text-primary">
                     {draft.filename}{' '}
-                    <span className="text-slate-400">
+                    <span className="text-text-muted">
                       ({formatBytes(draft.rawSize)})
                     </span>
                   </span>
@@ -343,7 +343,7 @@ export function VaultFilesPage() {
                 }
                 placeholder="APPLE_DIST_P12"
                 spellCheck={false}
-                className="focusable w-full rounded-md border border-slate-700 bg-slate-900 px-2.5 py-1.5 font-mono text-sm text-slate-100 focus:border-sky-500 focus:outline-none"
+                className="focusable w-full rounded-md border border-border-subtle bg-bg-panel px-2.5 py-1.5 font-mono text-sm text-text-primary focus:border-accent focus:outline-none"
               />
             </Field>
             <Field label="MIME type">
@@ -351,7 +351,7 @@ export function VaultFilesPage() {
                 value={draft.mime}
                 onChange={(e) => setDraft((d) => ({ ...d, mime: e.target.value }))}
                 spellCheck={false}
-                className="focusable w-full rounded-md border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-sm text-slate-100 focus:border-sky-500 focus:outline-none"
+                className="focusable w-full rounded-md border border-border-subtle bg-bg-panel px-2.5 py-1.5 text-sm text-text-primary focus:border-accent focus:outline-none"
               />
             </Field>
             {error && <p className="text-sm text-rose-400">{error}</p>}
@@ -377,7 +377,7 @@ function IconButton({
       onClick={onClick}
       title={label}
       aria-label={label}
-      className="focusable rounded p-1 text-slate-300 hover:bg-slate-800 hover:text-slate-100"
+      className="focusable rounded p-1 text-text-secondary hover:bg-bg-elevated hover:text-text-primary"
     >
       {icon}
     </button>
@@ -387,7 +387,7 @@ function IconButton({
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="block">
-      <span className="mb-1 block text-[11px] uppercase tracking-wider text-slate-400">
+      <span className="mb-1 block text-[11px] uppercase tracking-wider text-text-muted">
         {label}
       </span>
       {children}
@@ -410,26 +410,26 @@ function Modal({
     <div
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 px-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-bg-base/70 px-4"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-lg rounded-lg border border-slate-800 bg-slate-900 shadow-xl"
+        className="w-full max-w-lg rounded-lg border border-border-subtle bg-bg-panel shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between border-b border-slate-800 px-4 py-3">
-          <h3 className="text-sm font-semibold text-slate-100">{title}</h3>
+        <div className="flex items-center justify-between border-b border-border-subtle px-4 py-3">
+          <h3 className="text-sm font-semibold text-text-primary">{title}</h3>
           <button
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="focusable rounded p-1 text-slate-400 hover:bg-slate-800 hover:text-slate-100"
+            className="focusable rounded p-1 text-text-muted hover:bg-bg-elevated hover:text-text-primary"
           >
             <X size={14} />
           </button>
         </div>
         <div className="px-4 py-3">{children}</div>
-        {footer && <div className="border-t border-slate-800 px-4 py-3">{footer}</div>}
+        {footer && <div className="border-t border-border-subtle px-4 py-3">{footer}</div>}
       </div>
     </div>
   );

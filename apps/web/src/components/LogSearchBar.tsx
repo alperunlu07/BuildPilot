@@ -56,23 +56,23 @@ export function LogSearchBar({
     <div className="flex flex-1 items-center gap-1.5">
       <div
         className={cn(
-          'flex flex-1 items-center gap-1 rounded-md border bg-slate-900 px-2 py-1 text-xs',
-          regexError ? 'border-rose-700' : 'border-slate-700 focus-within:border-sky-500',
+          'flex flex-1 items-center gap-1 rounded-md border bg-bg-panel px-2 py-1 text-xs',
+          regexError ? 'border-rose-700' : 'border-border-subtle focus-within:border-accent',
         )}
       >
-        <Search size={12} className="text-slate-400" />
+        <Search size={12} className="text-text-muted" />
         <input
           type="text"
           value={query}
           onChange={(e) => onQueryChange(e.target.value)}
           placeholder={regex ? 'Regex (e.g. ^error|warning)' : 'Filter messages…'}
-          className="min-w-0 flex-1 bg-transparent text-slate-100 placeholder-slate-400 focus:outline-none"
+          className="min-w-0 flex-1 bg-transparent text-text-primary placeholder-text-muted focus:outline-none"
         />
         {query && (
           <button
             type="button"
             onClick={() => onQueryChange('')}
-            className="text-slate-400 hover:text-slate-300"
+            className="text-text-muted hover:text-text-secondary"
             title="Clear"
           >
             <X size={12} />
@@ -84,8 +84,8 @@ export function LogSearchBar({
           className={cn(
             'rounded px-1 py-0.5',
             regex
-              ? 'bg-sky-900/60 text-sky-300'
-              : 'text-slate-400 hover:bg-slate-800 hover:text-slate-300',
+              ? 'bg-sky-900/60 text-accent-hover'
+              : 'text-text-muted hover:bg-bg-elevated hover:text-text-secondary',
           )}
           title={regex ? 'Disable regex' : 'Enable regex mode'}
         >
@@ -102,29 +102,29 @@ export function LogSearchBar({
           <button
             type="button"
             onClick={() => setPresetsOpen((o) => !o)}
-            className="inline-flex items-center gap-1 rounded-md border border-slate-700 px-2 py-1 text-[11px] text-slate-300 hover:border-sky-500 hover:text-sky-400"
+            className="inline-flex items-center gap-1 rounded-md border border-border-subtle px-2 py-1 text-[11px] text-text-secondary hover:border-accent hover:text-accent"
             title="Saved filter presets"
           >
             <Bookmark size={12} /> Presets
             {presets.length > 0 && (
-              <span className="rounded-full bg-slate-800 px-1.5 text-[10px] text-slate-400">
+              <span className="rounded-full bg-bg-elevated px-1.5 text-[10px] text-text-muted">
                 {presets.length}
               </span>
             )}
           </button>
           {presetsOpen && (
-            <div className="absolute right-0 top-full z-30 mt-1 w-72 rounded-md border border-slate-700 bg-slate-900 p-2 text-xs shadow-lg">
-              <div className="mb-1 text-[10px] uppercase tracking-wider text-slate-400">
+            <div className="absolute right-0 top-full z-30 mt-1 w-72 rounded-md border border-border-subtle bg-bg-panel p-2 text-xs shadow-lg">
+              <div className="mb-1 text-[10px] uppercase tracking-wider text-text-muted">
                 Saved filters
               </div>
               {presets.length === 0 ? (
-                <div className="px-1 py-1 text-slate-400">No saved filters yet.</div>
+                <div className="px-1 py-1 text-text-muted">No saved filters yet.</div>
               ) : (
                 <ul className="max-h-48 space-y-0.5 overflow-y-auto">
                   {presets.map((p) => (
                     <li
                       key={p.id}
-                      className="group flex items-center justify-between gap-1 rounded px-1.5 py-1 hover:bg-slate-800"
+                      className="group flex items-center justify-between gap-1 rounded px-1.5 py-1 hover:bg-bg-elevated"
                     >
                       <button
                         type="button"
@@ -132,11 +132,11 @@ export function LogSearchBar({
                           onApplyPreset(p);
                           setPresetsOpen(false);
                         }}
-                        className="min-w-0 flex-1 text-left text-slate-200"
+                        className="min-w-0 flex-1 text-left text-text-primary"
                         title={`${p.regex ? 'regex: ' : ''}${p.query}`}
                       >
                         <div className="truncate font-medium">{p.name}</div>
-                        <div className="truncate font-mono text-[10px] text-slate-400">
+                        <div className="truncate font-mono text-[10px] text-text-muted">
                           {p.regex ? '/' : ''}
                           {p.query}
                           {p.regex ? '/' : ''}
@@ -145,7 +145,7 @@ export function LogSearchBar({
                       <button
                         type="button"
                         onClick={() => onDeletePreset(p.id)}
-                        className="shrink-0 text-slate-400 opacity-0 hover:text-rose-400 group-hover:opacity-100"
+                        className="shrink-0 text-text-muted opacity-0 hover:text-rose-400 group-hover:opacity-100"
                         title="Delete preset"
                       >
                         <Trash2 size={11} />
@@ -154,13 +154,13 @@ export function LogSearchBar({
                   ))}
                 </ul>
               )}
-              <div className="mt-2 flex items-center gap-1 border-t border-slate-800 pt-2">
+              <div className="mt-2 flex items-center gap-1 border-t border-border-subtle pt-2">
                 <input
                   type="text"
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
                   placeholder="Save current as…"
-                  className="min-w-0 flex-1 rounded border border-slate-700 bg-slate-950 px-1.5 py-1 text-slate-200 placeholder-slate-400 focus:border-sky-500 focus:outline-none"
+                  className="min-w-0 flex-1 rounded border border-border-subtle bg-bg-base px-1.5 py-1 text-text-primary placeholder-text-muted focus:border-accent focus:outline-none"
                 />
                 <button
                   type="button"
@@ -169,7 +169,7 @@ export function LogSearchBar({
                     onSavePreset(newName.trim());
                     setNewName('');
                   }}
-                  className="inline-flex items-center gap-1 rounded border border-sky-700 px-1.5 py-1 text-sky-300 hover:border-sky-500 disabled:opacity-40"
+                  className="inline-flex items-center gap-1 rounded border border-sky-700 px-1.5 py-1 text-accent-hover hover:border-accent disabled:opacity-40"
                   title={!query.trim() ? 'Type a filter first' : 'Save preset'}
                 >
                   <Plus size={11} /> Save

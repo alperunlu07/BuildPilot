@@ -120,25 +120,25 @@ export function HostsDialog({ open, onClose }: Props) {
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/70 backdrop-blur-sm"
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-bg-base/70 backdrop-blur-sm"
       onClick={onClose}
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="flex h-[600px] w-[820px] flex-col rounded-lg border border-slate-700 bg-slate-900 shadow-xl"
+        className="flex h-[600px] w-[820px] flex-col rounded-lg border border-border-subtle bg-bg-panel shadow-xl"
       >
-        <div className="flex items-center justify-between border-b border-slate-800 px-5 py-3">
+        <div className="flex items-center justify-between border-b border-border-subtle px-5 py-3">
           <div>
-            <h2 className="text-base font-semibold text-slate-100">Saved SSH hosts</h2>
-            <p className="text-[11px] text-slate-400">
-              Lives at <code className="text-slate-400">~/.buildpilot/hosts.json</code>. Used by
+            <h2 className="text-base font-semibold text-text-primary">Saved SSH hosts</h2>
+            <p className="text-[11px] text-text-muted">
+              Lives at <code className="text-text-muted">~/.buildpilot/hosts.json</code>. Used by
               Remote SSH, SFTP Upload, TestFlight, Keychain Unlock, and Profile Install steps.
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="focusable rounded text-slate-400 hover:text-slate-200"
+            className="focusable rounded text-text-muted hover:text-text-primary"
             aria-label="Close hosts dialog"
           >
             <X size={16} />
@@ -146,19 +146,19 @@ export function HostsDialog({ open, onClose }: Props) {
         </div>
 
         <div className="flex min-h-0 flex-1">
-          <div className="w-72 shrink-0 overflow-y-auto border-r border-slate-800 p-3">
+          <div className="w-72 shrink-0 overflow-y-auto border-r border-border-subtle p-3">
             <button
               type="button"
               onClick={() => setDraft(EMPTY_DRAFT)}
-              className="focusable mb-2 flex w-full items-center gap-2 rounded-md border border-dashed border-slate-700 px-3 py-2 text-xs text-slate-300 hover:border-sky-500 hover:text-sky-400"
+              className="focusable mb-2 flex w-full items-center gap-2 rounded-md border border-dashed border-border-subtle px-3 py-2 text-xs text-text-secondary hover:border-accent hover:text-accent"
             >
               <Plus size={12} /> New host
             </button>
             {sortedHosts.length === 0 && (
-              <div className="rounded-md border border-dashed border-slate-700 bg-slate-900/40 p-4 text-center">
-                <Server className="mx-auto mb-2 text-slate-400" size={22} />
-                <div className="text-xs font-medium text-slate-200">No saved hosts</div>
-                <p className="mt-1 text-[11px] text-slate-400">
+              <div className="rounded-md border border-dashed border-border-subtle bg-bg-panel/60 p-4 text-center">
+                <Server className="mx-auto mb-2 text-text-muted" size={22} />
+                <div className="text-xs font-medium text-text-primary">No saved hosts</div>
+                <p className="mt-1 text-[11px] text-text-muted">
                   Add a host on the right to use it from Remote SSH / SFTP / TestFlight / Mac
                   steps.
                 </p>
@@ -174,8 +174,8 @@ export function HostsDialog({ open, onClose }: Props) {
                     <div
                       className={`group rounded-md border p-2 text-left ${
                         active
-                          ? 'border-sky-500 bg-slate-800/60'
-                          : 'border-slate-800 bg-slate-900 hover:border-slate-600'
+                          ? 'border-accent bg-bg-hover/60'
+                          : 'border-border-subtle bg-bg-panel hover:border-border'
                       }`}
                     >
                       <div className="flex items-center gap-2">
@@ -185,10 +185,10 @@ export function HostsDialog({ open, onClose }: Props) {
                           className="focusable flex min-w-0 flex-1 flex-col rounded text-left"
                           aria-label={`Edit host ${h.name}`}
                         >
-                          <span className="truncate text-xs font-semibold text-slate-100">
+                          <span className="truncate text-xs font-semibold text-text-primary">
                             {h.name}
                           </span>
-                          <span className="truncate text-[11px] text-slate-400">{h.host}</span>
+                          <span className="truncate text-[11px] text-text-muted">{h.host}</span>
                         </button>
                         <button
                           type="button"
@@ -197,7 +197,7 @@ export function HostsDialog({ open, onClose }: Props) {
                             void probeOne(h.id);
                           }}
                           disabled={isProbing}
-                          className="focusable rounded p-0.5 text-slate-400 hover:text-sky-300 disabled:opacity-50"
+                          className="focusable rounded p-0.5 text-text-muted hover:text-accent-hover disabled:opacity-50"
                           title="Test SSH connection + read host capabilities"
                           aria-label={`Test connection to ${h.name}`}
                         >
@@ -215,7 +215,7 @@ export function HostsDialog({ open, onClose }: Props) {
                               onConfirm: () => deleteHost(h.id),
                             });
                           }}
-                          className="focusable rounded p-0.5 text-slate-400 opacity-0 transition-opacity hover:text-rose-400 group-hover:opacity-100"
+                          className="focusable rounded p-0.5 text-text-muted opacity-0 transition-opacity hover:text-rose-400 group-hover:opacity-100"
                           title="Delete this host"
                           aria-label={`Delete host ${h.name}`}
                         >
@@ -239,7 +239,7 @@ export function HostsDialog({ open, onClose }: Props) {
           </div>
 
           <form onSubmit={submit} className="flex min-w-0 flex-1 flex-col gap-3 overflow-y-auto p-5">
-            <div className="text-[11px] uppercase tracking-wider text-slate-400">
+            <div className="text-[11px] uppercase tracking-wider text-text-muted">
               {editing ? 'Edit host' : 'New host'}
             </div>
             <Field label="Name">
@@ -283,7 +283,7 @@ export function HostsDialog({ open, onClose }: Props) {
                 className="hd-input font-mono text-[12px]"
               />
             </Field>
-            <label className="flex items-center gap-2 text-[12px] text-slate-300">
+            <label className="flex items-center gap-2 text-[12px] text-text-secondary">
               <input
                 type="checkbox"
                 checked={draft.skipStrictHostKey}
@@ -306,7 +306,7 @@ export function HostsDialog({ open, onClose }: Props) {
                 <button
                   type="button"
                   onClick={() => setDraft(EMPTY_DRAFT)}
-                  className="focusable rounded-md px-3 py-1.5 text-sm text-slate-400 hover:text-slate-200"
+                  className="focusable rounded-md px-3 py-1.5 text-sm text-text-muted hover:text-text-primary"
                 >
                   Cancel edit
                 </button>
@@ -314,7 +314,7 @@ export function HostsDialog({ open, onClose }: Props) {
               <button
                 type="submit"
                 disabled={busy}
-                className="focusable rounded-md bg-sky-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-sky-500 disabled:cursor-not-allowed disabled:bg-slate-700"
+                className="focusable rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-white hover:bg-accent-hover disabled:cursor-not-allowed disabled:bg-bg-elevated"
               >
                 {busy ? 'Saving…' : editing ? 'Update host' : 'Add host'}
               </button>
@@ -331,7 +331,7 @@ export function HostsDialog({ open, onClose }: Props) {
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="block">
-      <span className="mb-1 block text-[11px] uppercase tracking-wider text-slate-400">{label}</span>
+      <span className="mb-1 block text-[11px] uppercase tracking-wider text-text-muted">{label}</span>
       {children}
     </label>
   );
@@ -346,7 +346,7 @@ function CapabilityRow({ caps }: { caps?: HostCapabilities }) {
       {caps.xcodeVersion && <Badge color="cyan">{caps.xcodeVersion}</Badge>}
       {caps.macosVersion && <Badge color="violet">macOS {caps.macosVersion}</Badge>}
       {caps.arch && <Badge color="slate">{caps.arch}</Badge>}
-      <span className="ml-auto text-[9px] uppercase tracking-wider text-slate-400" title={new Date(caps.lastCheckedAt).toLocaleString()}>
+      <span className="ml-auto text-[9px] uppercase tracking-wider text-text-muted" title={new Date(caps.lastCheckedAt).toLocaleString()}>
         {ageLabel}
       </span>
     </div>
@@ -356,7 +356,7 @@ function CapabilityRow({ caps }: { caps?: HostCapabilities }) {
 const BADGE_PALETTE: Record<string, string> = {
   cyan: 'bg-cyan-900/40 text-cyan-200 border-cyan-700/50',
   violet: 'bg-violet-900/40 text-violet-200 border-violet-700/50',
-  slate: 'bg-slate-800 text-slate-300 border-slate-700',
+  slate: 'bg-bg-elevated text-text-secondary border-border-subtle',
 };
 
 function Badge({ color, children }: { color: keyof typeof BADGE_PALETTE | string; children: React.ReactNode }) {

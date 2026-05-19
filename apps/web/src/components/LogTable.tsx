@@ -21,9 +21,9 @@ interface Props {
 }
 
 const LEVEL_STYLE: Record<BuildLogLevel, { dot: string; pill: string }> = {
-  system:  { dot: 'bg-slate-400',   pill: 'bg-slate-700/50 text-slate-300' },
-  info:    { dot: 'bg-sky-400',     pill: 'bg-sky-900/40 text-sky-300' },
-  stdout:  { dot: 'bg-slate-500',   pill: 'bg-slate-800 text-slate-400' },
+  system:  { dot: 'bg-text-muted',   pill: 'bg-border-subtle/50 text-text-secondary' },
+  info:    { dot: 'bg-sky-400',     pill: 'bg-sky-900/40 text-accent-hover' },
+  stdout:  { dot: 'bg-text-faint',   pill: 'bg-bg-elevated text-text-muted' },
   stderr:  { dot: 'bg-amber-400',   pill: 'bg-amber-900/40 text-amber-300' },
   success: { dot: 'bg-emerald-400', pill: 'bg-emerald-900/40 text-emerald-300' },
   failure: { dot: 'bg-rose-400',    pill: 'bg-rose-900/40 text-rose-300' },
@@ -157,7 +157,7 @@ export function LogTable({
         <button
           type="button"
           onClick={jumpToLatest}
-          className="absolute bottom-3 right-4 z-20 inline-flex items-center gap-1 rounded-full border border-sky-700 bg-bp-surface-1/90 px-2.5 py-1 text-[11px] text-sky-300 shadow-lg backdrop-blur hover:border-sky-500 hover:text-sky-200"
+          className="absolute bottom-3 right-4 z-20 inline-flex items-center gap-1 rounded-full border border-sky-700 bg-bp-surface-1/90 px-2.5 py-1 text-[11px] text-accent-hover shadow-lg backdrop-blur hover:border-accent hover:text-sky-200"
           title="Re-enable autoscroll"
         >
           <ArrowDownCircle size={12} /> Jump to latest
@@ -245,7 +245,7 @@ function Row({ index, style, data }: ListChildComponentProps<RowItemData>) {
               // On touch devices the hover-revealed copy button is unreachable,
               // so make it always visible there via touch-target. On precise
               // pointers it remains a group-hover affordance to keep rows tidy.
-              className="touch-target ml-2 hidden shrink-0 rounded border border-bp-surface-3 px-1.5 py-0 text-[10px] uppercase tracking-wider text-bp-text-muted hover:border-sky-500 hover:text-sky-300 group-hover:inline-flex"
+              className="touch-target ml-2 hidden shrink-0 rounded border border-bp-surface-3 px-1.5 py-0 text-[10px] uppercase tracking-wider text-bp-text-muted hover:border-accent hover:text-accent-hover group-hover:inline-flex"
               title={`Copy: ${cmd}`}
               aria-label={`Copy command: ${cmd}`}
             >

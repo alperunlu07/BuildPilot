@@ -34,7 +34,7 @@ export function SlashCommandConfig({
   const hasWildcard = tokens.includes('*');
   return (
     <div className="space-y-2">
-      <span className="block text-[11px] uppercase tracking-wide text-slate-400">
+      <span className="block text-[11px] uppercase tracking-wide text-text-muted">
         <MessageSquareCode size={11} className="mr-1 inline" />
         PR-comment trigger commands
       </span>
@@ -43,7 +43,7 @@ export function SlashCommandConfig({
         value={commands}
         onChange={(e) => onCommandsChange(e.target.value)}
         placeholder="run-ios, run-all  (or use * to accept the pipeline's name as a slug)"
-        className="w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1 font-mono text-xs text-slate-200 focus:border-sky-500 focus:outline-none"
+        className="w-full rounded-md border border-border-subtle bg-bg-base px-2 py-1 font-mono text-xs text-text-primary focus:border-accent focus:outline-none"
       />
       {tokens.length > 0 && (
         <div className="flex flex-wrap gap-1 text-[11px]">
@@ -52,8 +52,8 @@ export function SlashCommandConfig({
               key={t}
               className={
                 t === '*'
-                  ? 'rounded bg-sky-950/40 px-2 py-0.5 text-sky-300'
-                  : 'rounded bg-slate-800 px-2 py-0.5 text-slate-200'
+                  ? 'rounded bg-sky-950/40 px-2 py-0.5 text-accent-hover'
+                  : 'rounded bg-bg-elevated px-2 py-0.5 text-text-primary'
               }
             >
               /{t}
@@ -62,17 +62,17 @@ export function SlashCommandConfig({
         </div>
       )}
       {hasWildcard && (
-        <p className="text-[11px] text-sky-300">
+        <p className="text-[11px] text-accent-hover">
           Wildcard mode: any comment with /&lt;slug-of-pipeline-name&gt; will
           trigger this pipeline. e.g. <span className="font-mono">/{slug('Sample · checkout → pull → shell') || 'pipeline-name'}</span>.
         </p>
       )}
-      <p className="text-[11px] text-slate-400">
+      <p className="text-[11px] text-text-muted">
         Receivers: <code className="font-mono">POST /api/webhooks/pr-comment/&lt;projectId&gt;</code>.
         Optional HMAC secret via env{' '}
         <code className="font-mono">BUILDPILOT_PR_COMMENT_SECRET_&lt;projectId&gt;</code>.
       </p>
-      <span className="mt-2 block text-[11px] uppercase tracking-wide text-slate-400">
+      <span className="mt-2 block text-[11px] uppercase tracking-wide text-text-muted">
         Allowed authors (optional whitelist)
       </span>
       <input
@@ -80,7 +80,7 @@ export function SlashCommandConfig({
         value={authors}
         onChange={(e) => onAuthorsChange(e.target.value)}
         placeholder="alperunlu07, ci-bot   (empty = anyone with write access)"
-        className="w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1 font-mono text-xs text-slate-200 focus:border-sky-500 focus:outline-none"
+        className="w-full rounded-md border border-border-subtle bg-bg-base px-2 py-1 font-mono text-xs text-text-primary focus:border-accent focus:outline-none"
       />
     </div>
   );

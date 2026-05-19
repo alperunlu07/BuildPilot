@@ -436,8 +436,8 @@ export function BuildDetailPage({ buildId }: Props) {
                   build.status === 'running' && 'bg-amber-950/50 text-amber-300',
                   build.status === 'success' && 'bg-emerald-950/50 text-emerald-300',
                   build.status === 'failed' && 'bg-rose-950/50 text-rose-300',
-                  build.status === 'pending' && 'bg-slate-800 text-slate-400',
-                  build.status === 'cancelled' && 'bg-slate-800 text-slate-400',
+                  build.status === 'pending' && 'bg-bg-elevated text-text-muted',
+                  build.status === 'cancelled' && 'bg-bg-elevated text-text-muted',
                 )}
                 role="status"
                 aria-label={statusLabel(build.status)}
@@ -451,8 +451,8 @@ export function BuildDetailPage({ buildId }: Props) {
               </span>
             );
           })()}
-          <span className="text-xs text-slate-400">
-            in <span className="text-slate-300">{proj?.name ?? '—'}</span>
+          <span className="text-xs text-text-muted">
+            in <span className="text-text-secondary">{proj?.name ?? '—'}</span>
           </span>
           {isMatrixParent && (
             <span
@@ -472,7 +472,7 @@ export function BuildDetailPage({ buildId }: Props) {
             </span>
           )}
         </div>
-        <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[11px] text-slate-400">
+        <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[11px] text-text-muted">
           <span className="font-mono">{build.id}</span>
           <span>·</span>
           <span>
@@ -482,7 +482,7 @@ export function BuildDetailPage({ buildId }: Props) {
           <span>·</span>
           <span>
             commit{' '}
-            <span className="font-mono text-sky-400">
+            <span className="font-mono text-accent">
               {build.triggerSha ? build.triggerSha.slice(0, 7) : '—'}
             </span>
           </span>
@@ -539,7 +539,7 @@ export function BuildDetailPage({ buildId }: Props) {
                 }
                 setDiffOpen(true);
               }}
-              className="focusable inline-flex items-center gap-1 rounded-md border border-slate-700 px-2 py-0.5 text-slate-300 hover:border-sky-500 hover:text-sky-400"
+              className="focusable inline-flex items-center gap-1 rounded-md border border-border-subtle px-2 py-0.5 text-text-secondary hover:border-accent hover:text-accent"
               title="Compare with another build"
             >
               <GitCompareArrows size={11} /> Compare
@@ -557,7 +557,7 @@ export function BuildDetailPage({ buildId }: Props) {
                 setLinkCopied(true);
                 window.setTimeout(() => setLinkCopied(false), 1500);
               }}
-              className="focusable inline-flex items-center gap-1 rounded-md border border-slate-700 px-2 py-0.5 text-slate-300 hover:border-sky-500 hover:text-sky-400"
+              className="focusable inline-flex items-center gap-1 rounded-md border border-border-subtle px-2 py-0.5 text-text-secondary hover:border-accent hover:text-accent"
               title="Copy a shareable link to this build"
             >
               {linkCopied ? <Check size={11} className="text-emerald-400" /> : <Link2 size={11} />}{' '}
@@ -566,7 +566,7 @@ export function BuildDetailPage({ buildId }: Props) {
             <button
               type="button"
               onClick={downloadLog}
-              className="focusable inline-flex items-center gap-1 rounded-md border border-slate-700 px-2 py-0.5 text-slate-300 hover:border-sky-500 hover:text-sky-400"
+              className="focusable inline-flex items-center gap-1 rounded-md border border-border-subtle px-2 py-0.5 text-text-secondary hover:border-accent hover:text-accent"
               title="Download log as .txt"
             >
               <Download size={11} /> Download
@@ -689,12 +689,12 @@ export function BuildDetailPage({ buildId }: Props) {
       )}
 
       {artifacts.length > 0 && (
-        <div className="border-b border-slate-800 bg-slate-900/30 px-3 py-3 sm:px-6">
+        <div className="border-b border-border-subtle bg-bg-panel/30 px-3 py-3 sm:px-6">
           <div className="mb-2 flex items-baseline justify-between">
-            <span className="text-[10px] uppercase tracking-wider text-slate-400">
+            <span className="text-[10px] uppercase tracking-wider text-text-muted">
               Artifacts ({artifacts.length})
             </span>
-            <span className="text-[10px] text-slate-400">
+            <span className="text-[10px] text-text-muted">
               {formatBytes(artifacts.reduce((acc, a) => acc + a.size, 0))} total
             </span>
           </div>
@@ -711,23 +711,23 @@ export function BuildDetailPage({ buildId }: Props) {
               return (
                 <li
                   key={a.id}
-                  className="group flex items-center justify-between gap-2 rounded-md border border-slate-800 bg-slate-950 px-2 py-1 text-[11px] hover:border-slate-700"
+                  className="group flex items-center justify-between gap-2 rounded-md border border-border-subtle bg-bg-base px-2 py-1 text-[11px] hover:border-border-subtle"
                 >
                   <button
                     type="button"
                     onClick={onPathClick}
-                    className="min-w-0 flex-1 truncate text-left font-mono text-slate-200 hover:text-sky-300"
+                    className="min-w-0 flex-1 truncate text-left font-mono text-text-primary hover:text-accent-hover"
                     title={binary ? `Reveal ${a.path} in file manager` : `Preview ${a.path}`}
                   >
                     {a.path}
                   </button>
                   <span className="flex shrink-0 items-center gap-2">
-                    <span className="text-slate-400">{formatBytes(a.size)}</span>
+                    <span className="text-text-muted">{formatBytes(a.size)}</span>
                     {!binary && (
                       <button
                         type="button"
                         onClick={() => setPreviewArtifact(a)}
-                        className="text-sky-400 hover:text-sky-300"
+                        className="text-accent hover:text-accent-hover"
                       >
                         preview
                       </button>
@@ -735,14 +735,14 @@ export function BuildDetailPage({ buildId }: Props) {
                     <button
                       type="button"
                       onClick={() => api.revealArtifact(a.id).catch(() => undefined)}
-                      className="text-sky-400 hover:text-sky-300"
+                      className="text-accent hover:text-accent-hover"
                       title="Open the containing folder in the OS file manager"
                     >
                       open location
                     </button>
                     <a
                       href={api.artifactDownloadUrl(a.id)}
-                      className="text-sky-400 hover:text-sky-300"
+                      className="text-accent hover:text-accent-hover"
                       download
                     >
                       download
@@ -778,9 +778,9 @@ export function BuildDetailPage({ buildId }: Props) {
 
       {activeTab === 'logs' && (
         <>
-      <div className="flex flex-wrap items-center gap-3 border-b border-t border-slate-800 bg-slate-900/30 px-3 py-2 text-xs sm:px-6">
-        <Filter size={12} className="text-slate-400" />
-        <span className="text-slate-400">Levels</span>
+      <div className="flex flex-wrap items-center gap-3 border-b border-t border-border-subtle bg-bg-panel/30 px-3 py-2 text-xs sm:px-6">
+        <Filter size={12} className="text-text-muted" />
+        <span className="text-text-muted">Levels</span>
         <div className="flex flex-wrap gap-1">
           {ALL_LEVELS.map((lvl) => {
             const on = activeLevels.has(lvl);
@@ -792,8 +792,8 @@ export function BuildDetailPage({ buildId }: Props) {
                 className={cn(
                   'rounded-md border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider transition-colors',
                   on
-                    ? 'border-slate-600 bg-slate-800 text-slate-100'
-                    : 'border-slate-800 bg-slate-950 text-slate-400 hover:text-slate-400',
+                    ? 'border-border bg-bg-elevated text-text-primary'
+                    : 'border-border-subtle bg-bg-base text-text-muted hover:text-text-muted',
                 )}
               >
                 {lvl}
@@ -801,11 +801,11 @@ export function BuildDetailPage({ buildId }: Props) {
             );
           })}
         </div>
-        <span className="ml-2 text-slate-400">Node</span>
+        <span className="ml-2 text-text-muted">Node</span>
         <select
           value={activeNodeId}
           onChange={(e) => setActiveNodeId(e.target.value as typeof activeNodeId)}
-          className="focusable rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-slate-100 focus:border-sky-500 focus:outline-none"
+          className="focusable rounded-md border border-border-subtle bg-bg-panel px-2 py-1 text-text-primary focus:border-accent focus:outline-none"
         >
           <option value="all">(all)</option>
           <option value="__pipeline__">pipeline-level</option>
@@ -815,7 +815,7 @@ export function BuildDetailPage({ buildId }: Props) {
             </option>
           ))}
         </select>
-        <span className="text-slate-400">
+        <span className="text-text-muted">
           {filtered.length} / {entries.length} rows
           {entries.length >= 5000 && ' (capped at 5000 in memory)'}
         </span>
@@ -868,8 +868,8 @@ export function BuildDetailPage({ buildId }: Props) {
       />
 
       {tsBounds && (
-        <div className="flex items-center gap-3 border-b border-slate-800 bg-slate-900/20 px-3 py-2 sm:px-6">
-          <span className="shrink-0 text-[10px] uppercase tracking-wider text-slate-400">
+        <div className="flex items-center gap-3 border-b border-border-subtle bg-bg-panel/20 px-3 py-2 sm:px-6">
+          <span className="shrink-0 text-[10px] uppercase tracking-wider text-text-muted">
             Time range
           </span>
           <div className="flex-1">

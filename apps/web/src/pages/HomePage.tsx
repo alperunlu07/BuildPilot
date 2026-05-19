@@ -73,8 +73,8 @@ export function HomePage() {
     <div className="mx-auto max-w-6xl p-8">
       <div className="mb-6 flex items-baseline justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-slate-100">Dashboard</h1>
-          <p className="mt-1 text-sm text-slate-400">
+          <h1 className="text-xl font-semibold text-text-primary">Dashboard</h1>
+          <p className="mt-1 text-sm text-text-muted">
             At-a-glance build health for this BuildPilot instance.
           </p>
         </div>
@@ -82,7 +82,7 @@ export function HomePage() {
           type="button"
           onClick={() => void reload()}
           disabled={loading}
-          className="focusable inline-flex items-center gap-1 rounded-md border border-slate-700 px-2.5 py-1 text-xs text-slate-200 hover:border-sky-500 hover:text-sky-400 disabled:opacity-50"
+          className="focusable inline-flex items-center gap-1 rounded-md border border-border-subtle px-2.5 py-1 text-xs text-text-primary hover:border-accent hover:text-accent disabled:opacity-50"
         >
           <RefreshCw size={12} className={loading ? 'motion-safe:animate-spin' : ''} /> Refresh
         </button>
@@ -95,7 +95,7 @@ export function HomePage() {
       )}
 
       {!metrics && !error && (
-        <div className="rounded-md border border-slate-800 bg-slate-900/40 p-10 text-center text-sm text-slate-400">
+        <div className="rounded-md border border-border-subtle bg-bg-panel/60 p-10 text-center text-sm text-text-muted">
           Loading…
         </div>
       )}
@@ -120,7 +120,7 @@ export function HomePage() {
               }
             />
             <StatCard
-              icon={<CheckCircle2 size={16} className="text-sky-400" />}
+              icon={<CheckCircle2 size={16} className="text-accent" />}
               label="Builds · 24h"
               value={String(metrics.builds24h)}
               hint="finished in last 24h"
@@ -131,7 +131,7 @@ export function HomePage() {
               className="text-left"
             >
               <StatCard
-                icon={<HardDrive size={16} className="text-slate-300" />}
+                icon={<HardDrive size={16} className="text-text-secondary" />}
                 label="Disk usage"
                 value={formatBytes(metrics.diskUsage.totalBytes)}
                 hint={`${metrics.diskUsage.artifactCount} artifacts · ${metrics.diskUsage.buildCount} builds`}
@@ -141,14 +141,14 @@ export function HomePage() {
           </div>
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            <section className="rounded-md border border-slate-800 bg-slate-900/40">
-              <header className="flex items-center gap-2 border-b border-slate-800 px-4 py-2 text-sm text-slate-300">
+            <section className="rounded-md border border-border-subtle bg-bg-panel/60">
+              <header className="flex items-center gap-2 border-b border-border-subtle px-4 py-2 text-sm text-text-secondary">
                 <AlertTriangle size={14} className="text-rose-400" />
                 Recent failures
               </header>
               <div className="p-2">
                 {metrics.recentFailures.length === 0 ? (
-                  <div className="px-3 py-6 text-center text-sm text-slate-400">
+                  <div className="px-3 py-6 text-center text-sm text-text-muted">
                     No failed builds. Nice.
                   </div>
                 ) : (
@@ -158,16 +158,16 @@ export function HomePage() {
                         <button
                           type="button"
                           onClick={() => setView({ type: 'build', id: b.id })}
-                          className="flex w-full items-center justify-between gap-3 rounded-md px-2 py-1.5 text-left text-xs hover:bg-slate-800/60"
+                          className="flex w-full items-center justify-between gap-3 rounded-md px-2 py-1.5 text-left text-xs hover:bg-bg-hover/60"
                         >
                           <span className="min-w-0 flex-1 truncate">
                             <span className="text-rose-400">●</span>{' '}
-                            <span className="text-slate-200">{b.projectName}</span>{' '}
-                            <span className="text-slate-400">/</span>{' '}
-                            <span className="text-slate-300">{b.pipelineName}</span>
+                            <span className="text-text-primary">{b.projectName}</span>{' '}
+                            <span className="text-text-muted">/</span>{' '}
+                            <span className="text-text-secondary">{b.pipelineName}</span>
                           </span>
                           <span className="font-mono text-emerald-400">{b.triggerBranch}</span>
-                          <Time ts={b.startedAt} className="text-slate-400" />
+                          <Time ts={b.startedAt} className="text-text-muted" />
                         </button>
                       </li>
                     ))}
@@ -176,14 +176,14 @@ export function HomePage() {
               </div>
             </section>
 
-            <section className="rounded-md border border-slate-800 bg-slate-900/40">
-              <header className="flex items-center gap-2 border-b border-slate-800 px-4 py-2 text-sm text-slate-300">
+            <section className="rounded-md border border-border-subtle bg-bg-panel/60">
+              <header className="flex items-center gap-2 border-b border-border-subtle px-4 py-2 text-sm text-text-secondary">
                 <Timer size={14} className="text-amber-400" />
                 Slowest pipelines
               </header>
               <div className="p-2">
                 {metrics.slowestPipelines.length === 0 ? (
-                  <div className="px-3 py-6 text-center text-sm text-slate-400">
+                  <div className="px-3 py-6 text-center text-sm text-text-muted">
                     No successful builds yet — run a pipeline to see metrics.
                   </div>
                 ) : (
@@ -193,15 +193,15 @@ export function HomePage() {
                         <button
                           type="button"
                           onClick={() => setView({ type: 'pipeline', id: p.pipelineId })}
-                          className="flex w-full items-center justify-between gap-3 rounded-md px-2 py-1.5 text-left text-xs hover:bg-slate-800/60"
+                          className="flex w-full items-center justify-between gap-3 rounded-md px-2 py-1.5 text-left text-xs hover:bg-bg-hover/60"
                         >
                           <span className="min-w-0 flex-1 truncate">
-                            <span className="text-slate-200">{p.projectName}</span>{' '}
-                            <span className="text-slate-400">/</span>{' '}
-                            <span className="text-slate-300">{p.pipelineName}</span>
+                            <span className="text-text-primary">{p.projectName}</span>{' '}
+                            <span className="text-text-muted">/</span>{' '}
+                            <span className="text-text-secondary">{p.pipelineName}</span>
                           </span>
                           <span className="text-amber-300">{formatDurationMs(p.avgDurationMs)}</span>
-                          <span className="text-slate-400">avg · n={p.sampleCount}</span>
+                          <span className="text-text-muted">avg · n={p.sampleCount}</span>
                         </button>
                       </li>
                     ))}
@@ -213,10 +213,10 @@ export function HomePage() {
 
           {metrics.slowestPipelines.length > 0 && (
             <section className="mt-6">
-              <header className="mb-2 flex items-center gap-2 text-sm text-slate-300">
+              <header className="mb-2 flex items-center gap-2 text-sm text-text-secondary">
                 <Timer size={14} className="text-amber-400" />
                 <span>Per-pipeline detail</span>
-                <span className="text-[11px] text-slate-400">
+                <span className="text-[11px] text-text-muted">
                   · top {Math.min(3, metrics.slowestPipelines.length)} by avg duration
                 </span>
               </header>
@@ -224,16 +224,16 @@ export function HomePage() {
                 {metrics.slowestPipelines.slice(0, 3).map((p) => (
                   <div
                     key={p.pipelineId}
-                    className="rounded-md border border-slate-800 bg-slate-900/40 p-3"
+                    className="rounded-md border border-border-subtle bg-bg-panel/60 p-3"
                   >
                     <button
                       type="button"
                       onClick={() => setView({ type: 'pipeline', id: p.pipelineId })}
-                      className="mb-2 block w-full truncate text-left text-sm text-slate-200 hover:text-sky-400"
+                      className="mb-2 block w-full truncate text-left text-sm text-text-primary hover:text-accent"
                       title="Open pipeline editor"
                     >
-                      {p.projectName} <span className="text-slate-400">/</span>{' '}
-                      <span className="text-slate-300">{p.pipelineName}</span>
+                      {p.projectName} <span className="text-text-muted">/</span>{' '}
+                      <span className="text-text-secondary">{p.pipelineName}</span>
                     </button>
                     <PipelineMetricsPanel pipelineId={p.pipelineId} compact />
                   </div>
@@ -263,16 +263,16 @@ function StatCard({
   return (
     <div
       className={
-        'rounded-md border border-slate-800 bg-slate-900/40 px-4 py-3' +
+        'rounded-md border border-border-subtle bg-bg-panel/60 px-4 py-3' +
         (clickable ? ' transition-colors hover:border-sky-700' : '')
       }
     >
-      <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-wider text-slate-400">
+      <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-wider text-text-muted">
         {icon}
         <span>{label}</span>
       </div>
-      <div className="mt-1 text-2xl font-semibold text-slate-100">{value}</div>
-      {hint && <div className="mt-0.5 text-[11px] text-slate-400">{hint}</div>}
+      <div className="mt-1 text-2xl font-semibold text-text-primary">{value}</div>
+      {hint && <div className="mt-0.5 text-[11px] text-text-muted">{hint}</div>}
     </div>
   );
 }

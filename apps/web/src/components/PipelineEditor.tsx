@@ -881,7 +881,7 @@ function Editor({ pipeline }: Props) {
             <button
               type="button"
               onClick={runNow}
-              className="focusable inline-flex items-center gap-1 rounded-md bg-sky-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-sky-500"
+              className="focusable inline-flex items-center gap-1 rounded-md bg-accent px-2.5 py-1 text-xs font-medium text-white hover:bg-accent-hover"
             >
               <Hammer size={12} /> Run
             </button>
@@ -889,7 +889,7 @@ function Editor({ pipeline }: Props) {
           <button
             type="button"
             onClick={() => softDeletePipeline(pipeline.id)}
-            className="focusable inline-flex items-center gap-1 rounded-md border border-slate-700 px-2 py-1 text-xs text-rose-400 hover:border-rose-500 hover:text-rose-300"
+            className="focusable inline-flex items-center gap-1 rounded-md border border-border-subtle px-2 py-1 text-xs text-rose-400 hover:border-rose-500 hover:text-rose-300"
             title="Delete this pipeline"
             aria-label="Delete this pipeline"
           >
@@ -916,7 +916,7 @@ function Editor({ pipeline }: Props) {
             <button
               type="button"
               onClick={discardDraft}
-              className="rounded-md border border-slate-700 px-2.5 py-0.5 text-slate-300 hover:border-rose-500 hover:text-rose-300"
+              className="rounded-md border border-border-subtle px-2.5 py-0.5 text-text-secondary hover:border-rose-500 hover:text-rose-300"
             >
               Discard
             </button>
@@ -925,16 +925,16 @@ function Editor({ pipeline }: Props) {
       )}
 
       {triggersOpen && (
-        <div className="border-b border-slate-800 bg-slate-900/60 px-4 py-3">
+        <div className="border-b border-border-subtle bg-bg-panel px-4 py-3">
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-            <label className="block text-xs text-slate-300">
-              <span className="mb-1 block text-[11px] uppercase tracking-wide text-slate-500">
+            <label className="block text-xs text-text-secondary">
+              <span className="mb-1 block text-[11px] uppercase tracking-wide text-text-faint">
                 Execution Lane
               </span>
               {lanes.length === 0 ? (
                 <select
                   disabled
-                  className="w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1.5 text-xs text-slate-500"
+                  className="w-full rounded-md border border-border-subtle bg-bg-base px-2 py-1.5 text-xs text-text-faint"
                 >
                   <option>Loading lanes…</option>
                 </select>
@@ -945,7 +945,7 @@ function Editor({ pipeline }: Props) {
                     setLaneId(e.target.value);
                     setDirty(true);
                   }}
-                  className="w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1.5 text-xs text-slate-100 focus:border-sky-500 focus:outline-none"
+                  className="w-full rounded-md border border-border-subtle bg-bg-base px-2 py-1.5 text-xs text-text-primary focus:border-accent focus:outline-none"
                 >
                   {/* If the pipeline's current laneId no longer exists in the
                       lanes list (e.g. lane was deleted out-of-band), surface
@@ -962,8 +962,8 @@ function Editor({ pipeline }: Props) {
                 </select>
               )}
             </label>
-            <label className="block text-xs text-slate-300">
-              <span className="mb-1 block text-[11px] uppercase tracking-wide text-slate-500">
+            <label className="block text-xs text-text-secondary">
+              <span className="mb-1 block text-[11px] uppercase tracking-wide text-text-faint">
                 Priority
               </span>
               <input
@@ -975,14 +975,14 @@ function Editor({ pipeline }: Props) {
                   setPriority(Number(e.target.value));
                   setDirty(true);
                 }}
-                className="w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1.5 text-xs text-slate-100 focus:border-sky-500 focus:outline-none"
+                className="w-full rounded-md border border-border-subtle bg-bg-base px-2 py-1.5 text-xs text-text-primary focus:border-accent focus:outline-none"
               />
-              <span className="mt-1 block text-[10px] text-slate-500">
+              <span className="mt-1 block text-[10px] text-text-faint">
                 Lower runs first within the lane. Default 100.
               </span>
             </label>
-            <div className="block text-xs text-slate-300">
-              <span className="mb-1 block text-[11px] uppercase tracking-wide text-slate-400">
+            <div className="block text-xs text-text-secondary">
+              <span className="mb-1 block text-[11px] uppercase tracking-wide text-text-muted">
                 Tag pattern (glob)
               </span>
               <TagPatternPreview
@@ -994,8 +994,8 @@ function Editor({ pipeline }: Props) {
                 }}
               />
             </div>
-            <div className="block text-xs text-slate-300">
-              <span className="mb-1 block text-[11px] uppercase tracking-wide text-slate-400">
+            <div className="block text-xs text-text-secondary">
+              <span className="mb-1 block text-[11px] uppercase tracking-wide text-text-muted">
                 Cron (5-field, UTC)
               </span>
               <CronBuilder
@@ -1006,8 +1006,8 @@ function Editor({ pipeline }: Props) {
                 }}
               />
             </div>
-            <div className="block text-xs text-slate-300 md:col-span-2">
-              <span className="mb-1 block text-[11px] uppercase tracking-wide text-slate-400">
+            <div className="block text-xs text-text-secondary md:col-span-2">
+              <span className="mb-1 block text-[11px] uppercase tracking-wide text-text-muted">
                 Path filter globs (one per line — empty = build on every commit)
               </span>
               <PathFilterPreview
@@ -1020,7 +1020,7 @@ function Editor({ pipeline }: Props) {
                 }}
               />
             </div>
-            <label className="inline-flex items-center gap-2 text-xs text-slate-300 md:col-span-2">
+            <label className="inline-flex items-center gap-2 text-xs text-text-secondary md:col-span-2">
               <input
                 type="checkbox"
                 checked={watch.cancelInProgressOnNewCommit ?? false}
@@ -1033,7 +1033,7 @@ function Editor({ pipeline }: Props) {
               Cancel previous in-flight build when a new commit / trigger arrives
               (rolling-build mode)
             </label>
-            <div className="md:col-span-2 border-t border-slate-800 pt-3">
+            <div className="md:col-span-2 border-t border-border-subtle pt-3">
               <SlashCommandConfig
                 commands={watch.prCommands ?? ''}
                 onCommandsChange={(value) => {
@@ -1052,7 +1052,7 @@ function Editor({ pipeline }: Props) {
       )}
 
       {matrixOpen && (
-        <div className="border-b border-slate-800 bg-slate-900/60 px-4 py-3">
+        <div className="border-b border-border-subtle bg-bg-panel px-4 py-3">
           <MatrixEditor
             value={matrix}
             onChange={(next) => {
@@ -1061,7 +1061,7 @@ function Editor({ pipeline }: Props) {
             }}
           />
           <label
-            className="mt-3 inline-flex items-center gap-2 text-[11px] text-slate-300"
+            className="mt-3 inline-flex items-center gap-2 text-[11px] text-text-secondary"
             title="When on, child cells skip their notify steps; the parent build emits one rolled-up notification when all cells finish."
           >
             <input
@@ -1137,9 +1137,9 @@ function Editor({ pipeline }: Props) {
 
         <div ref={wrapperRef} className="relative min-h-0 flex-1" onDragOver={onDragOver} onDrop={onDrop}>
           {findOpen && (
-            <div className="absolute right-3 top-3 z-30 w-80 rounded-md border border-slate-700 bg-slate-900/95 p-2 shadow-xl backdrop-blur">
+            <div className="absolute right-3 top-3 z-30 w-80 rounded-md border border-border-subtle bg-bg-panel/95 p-2 shadow-xl backdrop-blur">
               <div className="flex items-center gap-2">
-                <Search size={12} className="text-slate-400" />
+                <Search size={12} className="text-text-muted" />
                 <input
                   autoFocus
                   type="text"
@@ -1157,9 +1157,9 @@ function Editor({ pipeline }: Props) {
                     }
                   }}
                   placeholder="Find in node ids, types, field values…"
-                  className="flex-1 rounded border border-slate-700 bg-slate-950 px-2 py-1 text-[12px] text-slate-100 focus:border-sky-500 focus:outline-none"
+                  className="flex-1 rounded border border-border-subtle bg-bg-base px-2 py-1 text-[12px] text-text-primary focus:border-accent focus:outline-none"
                 />
-                <span className="font-mono text-[10px] text-slate-400">
+                <span className="font-mono text-[10px] text-text-muted">
                   {findMatches.length === 0
                     ? '0/0'
                     : `${(findIndex % findMatches.length) + 1}/${findMatches.length}`}
@@ -1167,7 +1167,7 @@ function Editor({ pipeline }: Props) {
                 <button
                   type="button"
                   onClick={() => setFindOpen(false)}
-                  className="focusable rounded p-0.5 text-slate-400 hover:text-slate-300"
+                  className="focusable rounded p-0.5 text-text-muted hover:text-text-secondary"
                   title="Close"
                   aria-label="Close find/replace"
                 >
@@ -1180,13 +1180,13 @@ function Editor({ pipeline }: Props) {
                   value={replaceQuery}
                   onChange={(e) => setReplaceQuery(e.target.value)}
                   placeholder="Replace with…"
-                  className="flex-1 rounded border border-slate-700 bg-slate-950 px-2 py-1 text-[12px] text-slate-100 focus:border-sky-500 focus:outline-none"
+                  className="flex-1 rounded border border-border-subtle bg-bg-base px-2 py-1 text-[12px] text-text-primary focus:border-accent focus:outline-none"
                 />
                 <button
                   type="button"
                   onClick={replaceCurrent}
                   disabled={findMatches.length === 0 || findQuery === ''}
-                  className="rounded border border-slate-700 px-2 py-1 text-[11px] text-slate-200 hover:border-sky-500 disabled:opacity-40"
+                  className="rounded border border-border-subtle px-2 py-1 text-[11px] text-text-primary hover:border-accent disabled:opacity-40"
                 >
                   Replace
                 </button>
@@ -1194,7 +1194,7 @@ function Editor({ pipeline }: Props) {
                   type="button"
                   onClick={replaceAll}
                   disabled={findMatches.length === 0 || findQuery === ''}
-                  className="rounded border border-slate-700 px-2 py-1 text-[11px] text-slate-200 hover:border-sky-500 disabled:opacity-40"
+                  className="rounded border border-border-subtle px-2 py-1 text-[11px] text-text-primary hover:border-accent disabled:opacity-40"
                 >
                   All
                 </button>
@@ -1249,11 +1249,11 @@ function Editor({ pipeline }: Props) {
             <Controls position="bottom-right" showInteractive={false} />
             {edgeTooltip && (
               <div
-                className="pointer-events-none fixed z-50 rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-[11px] text-slate-200 shadow-lg"
+                className="pointer-events-none fixed z-50 rounded-md border border-border-subtle bg-bg-panel px-2 py-1 text-[11px] text-text-primary shadow-lg"
                 style={{ left: edgeTooltip.x + 12, top: edgeTooltip.y + 12 }}
               >
                 {edgeTooltip.text}
-                <div className="text-[9px] text-slate-400">click to cycle</div>
+                <div className="text-[9px] text-text-muted">click to cycle</div>
               </div>
             )}
             {showMinimap && (
@@ -1521,9 +1521,9 @@ function PaletteItem({
               className="inline-block h-2 w-2 rounded-full"
               style={{ backgroundColor: def.color }}
             />
-            <span className="font-semibold text-slate-100">{def.label}</span>
+            <span className="font-semibold text-text-primary">{def.label}</span>
           </div>
-          <p className="mt-1 text-[10.5px] text-slate-400">{def.description}</p>
+          <p className="mt-1 text-[10.5px] text-text-muted">{def.description}</p>
           {required.length > 0 && (
             <div className="mt-2">
               <div className="text-[9px] font-semibold uppercase tracking-wider text-rose-400">
@@ -1536,24 +1536,24 @@ function PaletteItem({
                   </li>
                 ))}
                 {required.length > 8 && (
-                  <li className="text-slate-400">+{required.length - 8} more…</li>
+                  <li className="text-text-muted">+{required.length - 8} more…</li>
                 )}
               </ul>
             </div>
           )}
           {optional.length > 0 && (
             <div className="mt-2">
-              <div className="text-[9px] font-semibold uppercase tracking-wider text-slate-400">
+              <div className="text-[9px] font-semibold uppercase tracking-wider text-text-muted">
                 Optional ({optional.length})
               </div>
-              <ul className="mt-0.5 space-y-0.5 text-slate-400">
+              <ul className="mt-0.5 space-y-0.5 text-text-muted">
                 {optional.slice(0, 6).map((f) => (
                   <li key={f.name} className="truncate">
                     · {f.label}
                   </li>
                 ))}
                 {optional.length > 6 && (
-                  <li className="text-slate-400">+{optional.length - 6} more…</li>
+                  <li className="text-text-muted">+{optional.length - 6} more…</li>
                 )}
               </ul>
             </div>

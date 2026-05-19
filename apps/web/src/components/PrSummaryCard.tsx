@@ -35,7 +35,7 @@ function stateColors(state: PrSummary['state']): string {
     case 'merged':
       return 'bg-violet-950/40 text-violet-300 border-violet-700/50';
     case 'closed':
-      return 'bg-slate-800 text-slate-400 border-slate-700';
+      return 'bg-bg-elevated text-text-muted border-border-subtle';
   }
 }
 
@@ -80,7 +80,7 @@ export function PrSummaryCard({ buildId }: Props) {
   // why no PR card appeared, but keep it small.
   if (!state.error && state.prs.length === 0) {
     return (
-      <div className="border-b border-slate-800 bg-slate-900/30 px-3 py-2 text-[11px] text-slate-500 sm:px-6">
+      <div className="border-b border-border-subtle bg-bg-panel/30 px-3 py-2 text-[11px] text-text-faint sm:px-6">
         <GitPullRequest size={11} className="mr-1 inline" />
         No open PR for this commit on {state.repo} ({state.provider}).
       </div>
@@ -96,11 +96,11 @@ export function PrSummaryCard({ buildId }: Props) {
   }
 
   return (
-    <div className="border-b border-slate-800 bg-slate-900/30 px-3 py-3 sm:px-6">
-      <div className="mb-2 text-[10px] uppercase tracking-wider text-slate-400">
+    <div className="border-b border-border-subtle bg-bg-panel/30 px-3 py-3 sm:px-6">
+      <div className="mb-2 text-[10px] uppercase tracking-wider text-text-muted">
         Linked {state.prs.length > 1 ? `pull requests (${state.prs.length})` : 'pull request'}
         {state.repo && (
-          <span className="ml-2 text-slate-500">
+          <span className="ml-2 text-text-faint">
             · {state.repo} ({state.provider})
           </span>
         )}
@@ -109,14 +109,14 @@ export function PrSummaryCard({ buildId }: Props) {
         {state.prs.map((pr) => (
           <li
             key={pr.number}
-            className="rounded-md border border-slate-800 bg-slate-950/60 px-3 py-2"
+            className="rounded-md border border-border-subtle bg-bg-base/60 px-3 py-2"
           >
             <div className="flex flex-wrap items-baseline gap-2">
               <a
                 href={pr.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-sm font-medium text-sky-400 hover:underline"
+                className="inline-flex items-center gap-1 text-sm font-medium text-accent hover:underline"
               >
                 #{pr.number} {pr.title}
                 <ExternalLink size={11} />
@@ -129,21 +129,21 @@ export function PrSummaryCard({ buildId }: Props) {
                 {pr.state}
               </span>
               {pr.authorLogin && (
-                <span className="text-[11px] text-slate-400">by @{pr.authorLogin}</span>
+                <span className="text-[11px] text-text-muted">by @{pr.authorLogin}</span>
               )}
             </div>
-            <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-slate-400">
+            <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-text-muted">
               <span className="font-mono">
                 <span className="text-emerald-400">{pr.headBranch}</span>
-                <span className="text-slate-500"> → </span>
-                <span className="text-sky-400">{pr.baseBranch}</span>
+                <span className="text-text-faint"> → </span>
+                <span className="text-accent">{pr.baseBranch}</span>
               </span>
               {pr.labels.length > 0 && (
                 <span className="flex flex-wrap gap-1">
                   {pr.labels.slice(0, 6).map((l) => (
                     <span
                       key={l}
-                      className="rounded bg-slate-800 px-1.5 py-0.5 text-[10px] text-slate-300"
+                      className="rounded bg-bg-elevated px-1.5 py-0.5 text-[10px] text-text-secondary"
                     >
                       {l}
                     </span>
@@ -151,10 +151,10 @@ export function PrSummaryCard({ buildId }: Props) {
                 </span>
               )}
               {pr.linkedIssues.length > 0 && (
-                <span className="text-slate-400">
+                <span className="text-text-muted">
                   refs:{' '}
                   {pr.linkedIssues.slice(0, 5).map((n, i) => (
-                    <span key={n} className="font-mono text-slate-300">
+                    <span key={n} className="font-mono text-text-secondary">
                       {i > 0 && ', '}#{n}
                     </span>
                   ))}

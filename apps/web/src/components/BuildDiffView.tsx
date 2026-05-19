@@ -82,29 +82,29 @@ export function BuildDiffView({ current, candidates, nodeLabel, onClose }: Props
   }, [curSide, baseSide]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-stretch justify-center bg-slate-950/80 p-4 backdrop-blur-sm">
-      <div className="flex h-full w-full max-w-6xl flex-col overflow-hidden rounded-lg border border-slate-700 bg-slate-900 shadow-2xl">
-        <header className="flex items-center justify-between border-b border-slate-800 bg-slate-900/80 px-4 py-2">
+    <div className="fixed inset-0 z-50 flex items-stretch justify-center bg-bg-base/80 p-4 backdrop-blur-sm">
+      <div className="flex h-full w-full max-w-6xl flex-col overflow-hidden rounded-lg border border-border-subtle bg-bg-panel shadow-2xl">
+        <header className="flex items-center justify-between border-b border-border-subtle bg-bg-panel px-4 py-2">
           <div className="flex items-center gap-2">
-            <GitCompareArrows size={14} className="text-sky-400" />
-            <span className="text-sm font-semibold text-slate-100">Build diff</span>
+            <GitCompareArrows size={14} className="text-accent" />
+            <span className="text-sm font-semibold text-text-primary">Build diff</span>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="rounded p-1 text-slate-400 hover:bg-slate-800 hover:text-slate-200"
+            className="rounded p-1 text-text-muted hover:bg-bg-elevated hover:text-text-primary"
             title="Close"
           >
             <X size={16} />
           </button>
         </header>
 
-        <div className="flex flex-wrap items-center gap-3 border-b border-slate-800 bg-slate-900/40 px-4 py-2 text-xs">
-          <span className="text-slate-400">Baseline</span>
+        <div className="flex flex-wrap items-center gap-3 border-b border-border-subtle bg-bg-panel/60 px-4 py-2 text-xs">
+          <span className="text-text-muted">Baseline</span>
           <select
             value={baseId}
             onChange={(e) => setBaseId(e.target.value)}
-            className="min-w-[20rem] rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-slate-100 focus:border-sky-500 focus:outline-none"
+            className="min-w-[20rem] rounded-md border border-border-subtle bg-bg-panel px-2 py-1 text-text-primary focus:border-accent focus:outline-none"
           >
             <option value="">— pick a build —</option>
             {candidates
@@ -115,28 +115,28 @@ export function BuildDiffView({ current, candidates, nodeLabel, onClose }: Props
                 </option>
               ))}
           </select>
-          <ArrowRight size={12} className="text-slate-400" />
-          <span className="font-mono text-slate-300">
+          <ArrowRight size={12} className="text-text-muted" />
+          <span className="font-mono text-text-secondary">
             {current.id.slice(0, 8)} · {current.status}
           </span>
-          {loading && <span className="text-slate-400">loading…</span>}
+          {loading && <span className="text-text-muted">loading…</span>}
           {error && <span className="text-rose-400">{error}</span>}
         </div>
 
         <div className="grid min-h-0 flex-1 grid-rows-[1fr_auto] gap-0 overflow-hidden">
           <div className="min-h-0 overflow-y-auto p-4">
-            <h3 className="mb-2 text-[10px] uppercase tracking-wider text-slate-400">
+            <h3 className="mb-2 text-[10px] uppercase tracking-wider text-text-muted">
               Step duration delta
             </h3>
             {deltas.length === 0 ? (
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-text-muted">
                 {baseId
                   ? 'Pick a baseline build to compare.'
                   : 'No previous builds available for this pipeline.'}
               </p>
             ) : (
               <table className="w-full text-left text-xs">
-                <thead className="text-[10px] uppercase tracking-wider text-slate-400">
+                <thead className="text-[10px] uppercase tracking-wider text-text-muted">
                   <tr>
                     <th className="py-1">Step</th>
                     <th className="py-1 text-right">Current</th>
@@ -146,25 +146,25 @@ export function BuildDiffView({ current, candidates, nodeLabel, onClose }: Props
                 </thead>
                 <tbody className="font-mono">
                   {deltas.map((d) => (
-                    <tr key={d.nodeId} className="border-t border-slate-800">
-                      <td className="py-1 text-slate-200">
+                    <tr key={d.nodeId} className="border-t border-border-subtle">
+                      <td className="py-1 text-text-primary">
                         {nodeLabel
                           ? nodeLabel(d.nodeId, d.stepType)
                           : `${d.stepType ?? '?'} · ${d.nodeId.slice(0, 8)}`}
                       </td>
-                      <td className="py-1 text-right text-slate-300">
+                      <td className="py-1 text-right text-text-secondary">
                         {formatDur(d.current)}
                       </td>
-                      <td className="py-1 text-right text-slate-400">
+                      <td className="py-1 text-right text-text-muted">
                         {d.previous === null ? '—' : formatDur(d.previous)}
                       </td>
                       <td
                         className={cn(
                           'py-1 text-right',
-                          d.deltaMs === null && 'text-slate-400',
+                          d.deltaMs === null && 'text-text-muted',
                           d.deltaMs !== null && d.deltaMs > 0 && 'text-rose-400',
                           d.deltaMs !== null && d.deltaMs < 0 && 'text-emerald-400',
-                          d.deltaMs === 0 && 'text-slate-400',
+                          d.deltaMs === 0 && 'text-text-muted',
                         )}
                       >
                         {d.deltaMs === null
@@ -180,14 +180,14 @@ export function BuildDiffView({ current, candidates, nodeLabel, onClose }: Props
             )}
           </div>
 
-          <div className="border-t border-slate-800 bg-slate-950/60 p-4">
-            <h3 className="mb-2 text-[10px] uppercase tracking-wider text-slate-400">
+          <div className="border-t border-border-subtle bg-bg-base/60 p-4">
+            <h3 className="mb-2 text-[10px] uppercase tracking-wider text-text-muted">
               First diverging log line
             </h3>
             {!curSide || !baseSide ? (
-              <p className="text-xs text-slate-400">—</p>
+              <p className="text-xs text-text-muted">—</p>
             ) : !divergence ? (
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-text-muted">
                 Log streams match through the shorter run; nothing diverged.
               </p>
             ) : (
@@ -212,16 +212,16 @@ function DiffLine({
 }) {
   return (
     <div className="flex items-baseline gap-2">
-      <span className="w-16 shrink-0 text-[10px] uppercase tracking-wider text-slate-400">
+      <span className="w-16 shrink-0 text-[10px] uppercase tracking-wider text-text-muted">
         {label}
       </span>
       {entry ? (
         <>
-          <span className="shrink-0 text-slate-400">[{entry.level}]</span>
-          <span className="break-words text-slate-200">{stripAnsi(entry.message)}</span>
+          <span className="shrink-0 text-text-muted">[{entry.level}]</span>
+          <span className="break-words text-text-primary">{stripAnsi(entry.message)}</span>
         </>
       ) : (
-        <span className="text-slate-400">(end of stream)</span>
+        <span className="text-text-muted">(end of stream)</span>
       )}
     </div>
   );

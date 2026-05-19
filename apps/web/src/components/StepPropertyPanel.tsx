@@ -161,7 +161,7 @@ export function StepPropertyPanel({
             </button>
           </div>
         </div>
-        <p className="mt-1 text-xs text-slate-400">{def.description}</p>
+        <p className="mt-1 text-xs text-text-muted">{def.description}</p>
 
         <div className="mt-3 flex gap-1 text-[11px] uppercase tracking-wider">
           <TabButton active={tab === 'properties'} onClick={() => setTab('properties')}>
@@ -240,12 +240,12 @@ export function StepPropertyPanel({
         </div>
       ) : (
         <div className="flex min-h-0 flex-1 flex-col">
-          <div className="border-b border-slate-800 px-3 py-1.5">
+          <div className="border-b border-border-subtle px-3 py-1.5">
             <LevelToggleBar active={activeLevels} onToggle={toggleLevel} compact />
           </div>
           <div className="min-h-0 flex-1">
             {nodeEntries.length === 0 ? (
-              <div className="px-4 py-6 text-xs text-slate-400">
+              <div className="px-4 py-6 text-xs text-text-muted">
                 No log entries for this node yet. Run the pipeline to see step output here.
               </div>
             ) : (
@@ -300,8 +300,8 @@ function AiAutoFixSection({
     onChange({ enabled, tool, prompt, maxRetries, ...value, ...patch });
 
   return (
-    <div className="mt-2 rounded-md border border-slate-800 bg-slate-900/40 p-3">
-      <label className="flex items-center gap-2 text-[11px] uppercase tracking-wider text-slate-300">
+    <div className="mt-2 rounded-md border border-border-subtle bg-bg-panel/60 p-3">
+      <label className="flex items-center gap-2 text-[11px] uppercase tracking-wider text-text-secondary">
         <input
           type="checkbox"
           checked={enabled}
@@ -313,13 +313,13 @@ function AiAutoFixSection({
       {enabled && (
         <div className="mt-3 space-y-2">
           <label className="block">
-            <span className="mb-1 block text-[10px] uppercase tracking-wider text-slate-400">
+            <span className="mb-1 block text-[10px] uppercase tracking-wider text-text-muted">
               Tool
             </span>
             <select
               value={tool}
               onChange={(e) => update({ tool: e.target.value })}
-              className="w-full rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-[12px] text-slate-100"
+              className="w-full rounded-md border border-border-subtle bg-bg-panel px-2 py-1 text-[12px] text-text-primary"
             >
               {['claude', 'codex', 'aider', 'gemini'].map((t) => (
                 <option key={t} value={t}>
@@ -329,7 +329,7 @@ function AiAutoFixSection({
             </select>
           </label>
           <label className="block">
-            <span className="mb-1 block text-[10px] uppercase tracking-wider text-slate-400">
+            <span className="mb-1 block text-[10px] uppercase tracking-wider text-text-muted">
               Max retries
             </span>
             <input
@@ -338,11 +338,11 @@ function AiAutoFixSection({
               max={10}
               value={maxRetries}
               onChange={(e) => update({ maxRetries: Math.max(1, Number(e.target.value)) })}
-              className="w-full rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-[12px] text-slate-100"
+              className="w-full rounded-md border border-border-subtle bg-bg-panel px-2 py-1 text-[12px] text-text-primary"
             />
           </label>
           <label className="block">
-            <span className="mb-1 block text-[10px] uppercase tracking-wider text-slate-400">
+            <span className="mb-1 block text-[10px] uppercase tracking-wider text-text-muted">
               Prompt template ({"{{"}step{"}}"}, {"{{"}error{"}}"}, {"{{"}nodeId{"}}"})
             </span>
             <textarea
@@ -351,10 +351,10 @@ function AiAutoFixSection({
               placeholder={`The pipeline step "{{step}}" failed with:\n{{error}}\nFix the issue minimally and exit.`}
               rows={5}
               spellCheck={false}
-              className="w-full rounded-md border border-slate-700 bg-slate-900 px-2 py-1 font-mono text-[11px] text-slate-100 placeholder:text-slate-400"
+              className="w-full rounded-md border border-border-subtle bg-bg-panel px-2 py-1 font-mono text-[11px] text-text-primary placeholder:text-text-muted"
             />
           </label>
-          <p className="text-[10px] text-slate-400">
+          <p className="text-[10px] text-text-muted">
             On failure the pipeline runs the chosen CLI with this prompt, then re-runs
             the step. Loops up to maxRetries times before bailing out.
           </p>
@@ -420,11 +420,11 @@ function CapabilityTagsSection({
     .map((t) => ({ tag: t, ok: tagMatches(t, hostCapabilities) }))
     .filter((x) => x.ok === false);
   return (
-    <div className="mt-2 rounded-md border border-slate-800 bg-slate-900/40 p-3">
-      <div className="text-[10px] uppercase tracking-wider text-slate-400">
+    <div className="mt-2 rounded-md border border-border-subtle bg-bg-panel/60 p-3">
+      <div className="text-[10px] uppercase tracking-wider text-text-muted">
         Requires capabilities
       </div>
-      <p className="mt-1 text-[10px] text-slate-400">
+      <p className="mt-1 text-[10px] text-text-muted">
         Capability tags are currently surfaced for documentation; engine routing
         comes in <code>TODO.md</code> Phase 4.D #multi-agent.
       </p>
@@ -440,8 +440,8 @@ function CapabilityTagsSection({
               className={cn(
                 'focusable rounded-full border px-2 py-0.5 text-[10px] font-medium',
                 active
-                  ? 'border-sky-500 bg-sky-900/40 text-sky-100'
-                  : 'border-slate-700 bg-slate-900 text-slate-300 hover:border-slate-500',
+                  ? 'border-accent bg-sky-900/40 text-sky-100'
+                  : 'border-border-subtle bg-bg-panel text-text-secondary hover:border-text-faint',
               )}
             >
               {tag}
@@ -477,9 +477,9 @@ function CommonControlsSection({
   const watchdogEnabled = watchdog.enabled === true;
   const watchdogIdle = typeof watchdog.idleSec === 'number' ? watchdog.idleSec : 600;
   return (
-    <div className="mt-2 rounded-md border border-slate-800 bg-slate-900/40 p-3 space-y-3">
-      <div className="text-[10px] uppercase tracking-wider text-slate-400">Step controls</div>
-      <label className="flex items-center gap-2 text-[12px] text-slate-300">
+    <div className="mt-2 rounded-md border border-border-subtle bg-bg-panel/60 p-3 space-y-3">
+      <div className="text-[10px] uppercase tracking-wider text-text-muted">Step controls</div>
+      <label className="flex items-center gap-2 text-[12px] text-text-secondary">
         <input
           type="checkbox"
           checked={disabled}
@@ -488,10 +488,10 @@ function CommonControlsSection({
         />
         Disable / skip this step
       </label>
-      <p className="-mt-1 text-[10px] text-slate-400">
+      <p className="-mt-1 text-[10px] text-text-muted">
         Visually grayed out. TODO(engine): treat as a no-op at run time.
       </p>
-      <label className="flex items-center gap-2 text-[12px] text-slate-300">
+      <label className="flex items-center gap-2 text-[12px] text-text-secondary">
         <input
           type="checkbox"
           checked={continueOnError}
@@ -500,13 +500,13 @@ function CommonControlsSection({
         />
         Continue on error (soft-fail; downstream success-edges still fire)
       </label>
-      <p className="-mt-1 text-[10px] text-slate-400">
+      <p className="-mt-1 text-[10px] text-text-muted">
         Mirrors GH <code>continue-on-error</code>, Buildkite <code>soft_fail</code>,
         GitLab <code>allow_failure</code>. The failure is logged but the pipeline keeps going.
       </p>
 
-      <div className="border-t border-slate-800 pt-2">
-        <label className="flex items-center gap-2 text-[12px] text-slate-300">
+      <div className="border-t border-border-subtle pt-2">
+        <label className="flex items-center gap-2 text-[12px] text-text-secondary">
           <input
             type="checkbox"
             checked={retryEnabled}
@@ -527,7 +527,7 @@ function CommonControlsSection({
         </label>
         {retryEnabled && (
           <div className="ml-5 mt-2 grid grid-cols-3 gap-2">
-            <label className="text-[10px] uppercase tracking-wider text-slate-400">
+            <label className="text-[10px] uppercase tracking-wider text-text-muted">
               Max retries
               <input
                 type="number"
@@ -545,10 +545,10 @@ function CommonControlsSection({
                     },
                   })
                 }
-                className="mt-0.5 w-full rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-[12px] text-slate-100"
+                className="mt-0.5 w-full rounded-md border border-border-subtle bg-bg-panel px-2 py-1 text-[12px] text-text-primary"
               />
             </label>
-            <label className="text-[10px] uppercase tracking-wider text-slate-400">
+            <label className="text-[10px] uppercase tracking-wider text-text-muted">
               Backoff (ms)
               <input
                 type="number"
@@ -565,10 +565,10 @@ function CommonControlsSection({
                     },
                   })
                 }
-                className="mt-0.5 w-full rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-[12px] text-slate-100"
+                className="mt-0.5 w-full rounded-md border border-border-subtle bg-bg-panel px-2 py-1 text-[12px] text-text-primary"
               />
             </label>
-            <label className="text-[10px] uppercase tracking-wider text-slate-400">
+            <label className="text-[10px] uppercase tracking-wider text-text-muted">
               Cap (ms)
               <input
                 type="number"
@@ -585,15 +585,15 @@ function CommonControlsSection({
                     },
                   })
                 }
-                className="mt-0.5 w-full rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-[12px] text-slate-100"
+                className="mt-0.5 w-full rounded-md border border-border-subtle bg-bg-panel px-2 py-1 text-[12px] text-text-primary"
               />
             </label>
           </div>
         )}
       </div>
 
-      <div className="border-t border-slate-800 pt-2">
-        <label className="flex items-center gap-2 text-[12px] text-slate-300">
+      <div className="border-t border-border-subtle pt-2">
+        <label className="flex items-center gap-2 text-[12px] text-text-secondary">
           <input
             type="checkbox"
             checked={watchdogEnabled}
@@ -608,7 +608,7 @@ function CommonControlsSection({
         </label>
         {watchdogEnabled && (
           <div className="ml-5 mt-2">
-            <label className="text-[10px] uppercase tracking-wider text-slate-400">
+            <label className="text-[10px] uppercase tracking-wider text-text-muted">
               Idle threshold (sec)
               <input
                 type="number"
@@ -623,7 +623,7 @@ function CommonControlsSection({
                     },
                   })
                 }
-                className="mt-0.5 w-full rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-[12px] text-slate-100"
+                className="mt-0.5 w-full rounded-md border border-border-subtle bg-bg-panel px-2 py-1 text-[12px] text-text-primary"
               />
             </label>
           </div>
@@ -645,8 +645,8 @@ function NotifyPolicySection({
   const current = (data.notifyOn as NotifyOn | undefined) ?? 'always';
   const selected = NOTIFY_OPTIONS.find((o) => o.value === current) ?? NOTIFY_OPTIONS[0];
   return (
-    <div className="mt-2 rounded-md border border-slate-800 bg-slate-900/40 p-3 space-y-2">
-      <div className="text-[10px] uppercase tracking-wider text-slate-400">
+    <div className="mt-2 rounded-md border border-border-subtle bg-bg-panel/60 p-3 space-y-2">
+      <div className="text-[10px] uppercase tracking-wider text-text-muted">
         Notification policy
       </div>
       <label className="block">
@@ -654,7 +654,7 @@ function NotifyPolicySection({
         <select
           value={current}
           onChange={(e) => onChange({ notifyOn: e.target.value as NotifyOn })}
-          className="focusable w-full rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-[12px] text-slate-100 focus:border-sky-500 focus:outline-none"
+          className="focusable w-full rounded-md border border-border-subtle bg-bg-panel px-2 py-1 text-[12px] text-text-primary focus:border-accent focus:outline-none"
         >
           {NOTIFY_OPTIONS.map((opt) => (
             <option key={opt.value} value={opt.value}>
@@ -663,9 +663,9 @@ function NotifyPolicySection({
           ))}
         </select>
       </label>
-      <p className="text-[10px] text-slate-400">
+      <p className="text-[10px] text-text-muted">
         {selected?.help}{' '}
-        <span className="text-slate-500">
+        <span className="text-text-faint">
           {/* The runner does not yet filter on this field — UI only. */}
           (TODO engine: filter on this at run time)
         </span>
@@ -711,16 +711,16 @@ function TestChannelSection({
   }
 
   return (
-    <div className="mt-2 rounded-md border border-slate-800 bg-slate-900/40 p-3 space-y-2">
+    <div className="mt-2 rounded-md border border-border-subtle bg-bg-panel/60 p-3 space-y-2">
       <div className="flex items-center justify-between gap-2">
-        <div className="text-[10px] uppercase tracking-wider text-slate-400">
+        <div className="text-[10px] uppercase tracking-wider text-text-muted">
           Test channel
         </div>
         <button
           type="button"
           onClick={run}
           disabled={status.kind === 'running'}
-          className="focusable rounded-md border border-slate-700 px-2 py-0.5 text-[11px] text-slate-200 hover:border-sky-500 hover:text-sky-300 disabled:opacity-50"
+          className="focusable rounded-md border border-border-subtle px-2 py-0.5 text-[11px] text-text-primary hover:border-accent hover:text-accent-hover disabled:opacity-50"
           title="Send a test message using this step's current configuration"
         >
           {status.kind === 'running' ? 'Sending…' : 'Send test'}
@@ -730,7 +730,7 @@ function TestChannelSection({
         <div className="text-[11px] text-emerald-400">
           ✓ Test message delivered.
           {status.lines.length > 0 && (
-            <pre className="mt-1 max-h-24 overflow-y-auto rounded bg-slate-950 p-1.5 font-mono text-[10px] text-slate-300">
+            <pre className="mt-1 max-h-24 overflow-y-auto rounded bg-bg-base p-1.5 font-mono text-[10px] text-text-secondary">
               {status.lines.map((l) => `[${l.level}] ${l.message}`).join('\n').slice(0, 800)}
             </pre>
           )}
@@ -740,14 +740,14 @@ function TestChannelSection({
         <div className="text-[11px] text-amber-400">
           ✖ Test failed: {status.error}
           {status.lines.length > 0 && (
-            <pre className="mt-1 max-h-24 overflow-y-auto rounded bg-slate-950 p-1.5 font-mono text-[10px] text-slate-400">
+            <pre className="mt-1 max-h-24 overflow-y-auto rounded bg-bg-base p-1.5 font-mono text-[10px] text-text-muted">
               {status.lines.map((l) => `[${l.level}] ${l.message}`).join('\n').slice(0, 800)}
             </pre>
           )}
         </div>
       )}
       {status.kind === 'idle' && (
-        <p className="text-[10px] text-slate-400">
+        <p className="text-[10px] text-text-muted">
           Uses this step&apos;s data — saves nothing. Server-side log lines from the
           executor are echoed back here.
         </p>
@@ -794,19 +794,19 @@ function BulkEditPanel({
   };
 
   return (
-    <aside className="flex h-full w-80 shrink-0 flex-col border-l border-slate-800 bg-slate-950">
-      <div className="border-b border-slate-800 px-4 py-3">
-        <div className="text-[11px] uppercase tracking-wider text-slate-400">Bulk edit</div>
-        <h3 className="mt-1 text-sm font-semibold text-slate-100">
+    <aside className="flex h-full w-80 shrink-0 flex-col border-l border-border-subtle bg-bg-base">
+      <div className="border-b border-border-subtle px-4 py-3">
+        <div className="text-[11px] uppercase tracking-wider text-text-muted">Bulk edit</div>
+        <h3 className="mt-1 text-sm font-semibold text-text-primary">
           {nodes.length} steps selected
         </h3>
-        <p className="mt-1 text-xs text-slate-400">
+        <p className="mt-1 text-xs text-text-muted">
           Tick a field and set a value; only ticked fields are applied to every selected node.
         </p>
       </div>
 
-      <div className="flex-1 space-y-4 overflow-y-auto px-4 py-3 text-[12px] text-slate-200">
-        <div className="rounded-md border border-slate-800 bg-slate-900/40 p-3">
+      <div className="flex-1 space-y-4 overflow-y-auto px-4 py-3 text-[12px] text-text-primary">
+        <div className="rounded-md border border-border-subtle bg-bg-panel/60 p-3">
           <label className="flex items-center gap-2">
             <input
               type="checkbox"
@@ -814,7 +814,7 @@ function BulkEditPanel({
               onChange={(e) => setSetHost(e.target.checked)}
               className="h-3.5 w-3.5"
             />
-            <span className="text-[11px] uppercase tracking-wider text-slate-400">
+            <span className="text-[11px] uppercase tracking-wider text-text-muted">
               Saved Mac host
             </span>
           </label>
@@ -822,7 +822,7 @@ function BulkEditPanel({
             <select
               value={hostId}
               onChange={(e) => setHostId(e.target.value)}
-              className="mt-2 w-full rounded-md border border-slate-700 bg-slate-900 px-2 py-1.5 text-[12px] text-slate-100"
+              className="mt-2 w-full rounded-md border border-border-subtle bg-bg-panel px-2 py-1.5 text-[12px] text-text-primary"
             >
               <option value="">(inline / clear)</option>
               {hosts.map((h) => (
@@ -834,7 +834,7 @@ function BulkEditPanel({
           )}
         </div>
 
-        <div className="rounded-md border border-slate-800 bg-slate-900/40 p-3">
+        <div className="rounded-md border border-border-subtle bg-bg-panel/60 p-3">
           <label className="flex items-center gap-2">
             <input
               type="checkbox"
@@ -842,12 +842,12 @@ function BulkEditPanel({
               onChange={(e) => setApplyContinue(e.target.checked)}
               className="h-3.5 w-3.5"
             />
-            <span className="text-[11px] uppercase tracking-wider text-slate-400">
+            <span className="text-[11px] uppercase tracking-wider text-text-muted">
               Continue on error
             </span>
           </label>
           {applyContinue && (
-            <label className="mt-2 flex items-center gap-2 text-slate-300">
+            <label className="mt-2 flex items-center gap-2 text-text-secondary">
               <input
                 type="checkbox"
                 checked={continueOnError}
@@ -859,7 +859,7 @@ function BulkEditPanel({
           )}
         </div>
 
-        <div className="rounded-md border border-slate-800 bg-slate-900/40 p-3">
+        <div className="rounded-md border border-border-subtle bg-bg-panel/60 p-3">
           <label className="flex items-center gap-2">
             <input
               type="checkbox"
@@ -867,12 +867,12 @@ function BulkEditPanel({
               onChange={(e) => setApplyDisabled(e.target.checked)}
               className="h-3.5 w-3.5"
             />
-            <span className="text-[11px] uppercase tracking-wider text-slate-400">
+            <span className="text-[11px] uppercase tracking-wider text-text-muted">
               Disable / skip
             </span>
           </label>
           {applyDisabled && (
-            <label className="mt-2 flex items-center gap-2 text-slate-300">
+            <label className="mt-2 flex items-center gap-2 text-text-secondary">
               <input
                 type="checkbox"
                 checked={disabledFlag}
@@ -884,7 +884,7 @@ function BulkEditPanel({
           )}
         </div>
 
-        <div className="rounded-md border border-slate-800 bg-slate-900/40 p-3">
+        <div className="rounded-md border border-border-subtle bg-bg-panel/60 p-3">
           <label className="flex items-center gap-2">
             <input
               type="checkbox"
@@ -892,13 +892,13 @@ function BulkEditPanel({
               onChange={(e) => setApplyRetry(e.target.checked)}
               className="h-3.5 w-3.5"
             />
-            <span className="text-[11px] uppercase tracking-wider text-slate-400">
+            <span className="text-[11px] uppercase tracking-wider text-text-muted">
               Retry policy
             </span>
           </label>
           {applyRetry && (
             <div className="mt-2 space-y-2">
-              <label className="flex items-center gap-2 text-slate-300">
+              <label className="flex items-center gap-2 text-text-secondary">
                 <input
                   type="checkbox"
                   checked={retryEnabled}
@@ -907,7 +907,7 @@ function BulkEditPanel({
                 />
                 enabled
               </label>
-              <label className="block text-[10px] uppercase tracking-wider text-slate-400">
+              <label className="block text-[10px] uppercase tracking-wider text-text-muted">
                 Max retries
                 <input
                   type="number"
@@ -915,17 +915,17 @@ function BulkEditPanel({
                   max={10}
                   value={retryMax}
                   onChange={(e) => setRetryMax(Math.max(0, Math.min(10, Number(e.target.value) || 0)))}
-                  className="mt-0.5 w-full rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-[12px] text-slate-100"
+                  className="mt-0.5 w-full rounded-md border border-border-subtle bg-bg-panel px-2 py-1 text-[12px] text-text-primary"
                 />
               </label>
-              <label className="block text-[10px] uppercase tracking-wider text-slate-400">
+              <label className="block text-[10px] uppercase tracking-wider text-text-muted">
                 Backoff (ms)
                 <input
                   type="number"
                   min={0}
                   value={retryBackoff}
                   onChange={(e) => setRetryBackoff(Math.max(0, Number(e.target.value) || 0))}
-                  className="mt-0.5 w-full rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-[12px] text-slate-100"
+                  className="mt-0.5 w-full rounded-md border border-border-subtle bg-bg-panel px-2 py-1 text-[12px] text-text-primary"
                 />
               </label>
             </div>
@@ -935,7 +935,7 @@ function BulkEditPanel({
         <button
           type="button"
           onClick={apply}
-          className="w-full rounded-md bg-sky-600 px-3 py-2 text-[12px] font-medium text-white hover:bg-sky-500"
+          className="w-full rounded-md bg-accent px-3 py-2 text-[12px] font-medium text-white hover:bg-accent-hover"
         >
           Apply to {nodes.length} step{nodes.length === 1 ? '' : 's'}
         </button>
@@ -973,7 +973,7 @@ function Field({
   return (
     <label className="block">
       <span className="mb-1 flex items-baseline justify-between">
-        <span className="text-xs uppercase tracking-wide text-slate-400">{field.label}</span>
+        <span className="text-xs uppercase tracking-wide text-text-muted">{field.label}</span>
         {field.required && <span className="text-[10px] text-rose-400">required</span>}
       </span>
       {field.type === 'textarea' ? (
@@ -984,13 +984,13 @@ function Field({
           placeholder={field.placeholder}
           rows={4}
           spellCheck={false}
-          className="focusable w-full rounded-md border border-slate-700 bg-slate-900 px-2.5 py-1.5 font-mono text-[12px] text-slate-100 placeholder:text-slate-400 focus:border-sky-500 focus:outline-none"
+          className="focusable w-full rounded-md border border-border-subtle bg-bg-panel px-2.5 py-1.5 font-mono text-[12px] text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none"
         />
       ) : field.type === 'select' ? (
         <select
           value={stringValue}
           onChange={(e) => onChange(e.target.value)}
-          className="focusable w-full rounded-md border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-[13px] text-slate-100 focus:border-sky-500 focus:outline-none"
+          className="focusable w-full rounded-md border border-border-subtle bg-bg-panel px-2.5 py-1.5 text-[13px] text-text-primary focus:border-accent focus:outline-none"
         >
           <option value="" disabled>
             (choose…)
@@ -1013,7 +1013,7 @@ function Field({
         <select
           value={stringValue}
           onChange={(e) => onChange(e.target.value)}
-          className="focusable w-full rounded-md border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-[13px] text-slate-100 focus:border-sky-500 focus:outline-none"
+          className="focusable w-full rounded-md border border-border-subtle bg-bg-panel px-2.5 py-1.5 text-[13px] text-text-primary focus:border-accent focus:outline-none"
         >
           <option value="">(inline / fill below)</option>
           {hosts.map((h) => (
@@ -1029,7 +1029,7 @@ function Field({
           onChange={(e) => onChange(Number(e.target.value))}
           placeholder={field.placeholder}
           spellCheck={false}
-          className="focusable w-full rounded-md border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-[13px] text-slate-100 placeholder:text-slate-400 focus:border-sky-500 focus:outline-none"
+          className="focusable w-full rounded-md border border-border-subtle bg-bg-panel px-2.5 py-1.5 text-[13px] text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none"
         />
       ) : (
         <SecretReferenceAutocomplete
@@ -1038,13 +1038,13 @@ function Field({
           onChange={(v) => onChange(v)}
           placeholder={field.placeholder}
           spellCheck={false}
-          className="focusable w-full rounded-md border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-[13px] text-slate-100 placeholder:text-slate-400 focus:border-sky-500 focus:outline-none"
+          className="focusable w-full rounded-md border border-border-subtle bg-bg-panel px-2.5 py-1.5 text-[13px] text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none"
         />
       )}
       {renderSecretAffordance && (
         <SecretUsageHint name={referencedSecret![1]!} />
       )}
-      {field.help && <p className="mt-1 text-[11px] text-slate-400">{field.help}</p>}
+      {field.help && <p className="mt-1 text-[11px] text-text-muted">{field.help}</p>}
     </label>
   );
 }
@@ -1061,7 +1061,7 @@ function SecretUsageHint({ name }: { name: string }) {
         e.preventDefault();
         setView({ type: 'secrets', name });
       }}
-      className="focusable mt-1 text-[11px] text-sky-400 hover:text-sky-300 hover:underline"
+      className="focusable mt-1 text-[11px] text-accent hover:text-accent-hover hover:underline"
       title={`See every pipeline node that references secrets.${name}`}
     >
       ↳ where is <code className="font-mono">{name}</code> used?

@@ -56,13 +56,13 @@ export function ApiTokensPage() {
     <div className="mx-auto max-w-4xl space-y-4 p-6">
       <header className="flex items-center justify-between gap-3">
         <div>
-          <h1 className="flex items-center gap-2 text-xl font-semibold text-slate-100">
+          <h1 className="flex items-center gap-2 text-xl font-semibold text-text-primary">
             <KeyRound size={18} className="text-amber-400" />
             API tokens
           </h1>
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-text-muted">
             Long-lived bearer tokens for CI scripts. Pass them as{' '}
-            <code className="rounded bg-slate-800 px-1 py-0.5 text-xs">
+            <code className="rounded bg-bg-elevated px-1 py-0.5 text-xs">
               Authorization: Bearer &lt;token&gt;
             </code>
             . Tokens inherit the owner's role.
@@ -71,7 +71,7 @@ export function ApiTokensPage() {
         <button
           type="button"
           onClick={() => setShowCreate(true)}
-          className="focusable flex items-center gap-1 rounded-md bg-sky-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-sky-500"
+          className="focusable flex items-center gap-1 rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:bg-accent-hover"
         >
           <Plus size={14} />
           New token
@@ -90,14 +90,14 @@ export function ApiTokensPage() {
       )}
 
       {loading ? (
-        <div className="text-sm text-slate-400">Loading…</div>
+        <div className="text-sm text-text-muted">Loading…</div>
       ) : tokens.length === 0 ? (
-        <div className="rounded-md border border-slate-800 bg-slate-900/40 p-6 text-sm text-slate-400">
+        <div className="rounded-md border border-border-subtle bg-bg-panel/60 p-6 text-sm text-text-muted">
           No tokens. Create one to call BuildPilot from CI scripts.
         </div>
       ) : (
-        <table className="w-full overflow-hidden rounded-md border border-slate-800 text-sm">
-          <thead className="bg-slate-900 text-xs uppercase tracking-wider text-slate-400">
+        <table className="w-full overflow-hidden rounded-md border border-border-subtle text-sm">
+          <thead className="bg-bg-panel text-xs uppercase tracking-wider text-text-muted">
             <tr>
               <th className="px-3 py-2 text-left">Name</th>
               <th className="px-3 py-2 text-left">Owner</th>
@@ -108,25 +108,25 @@ export function ApiTokensPage() {
           </thead>
           <tbody>
             {tokens.map((t) => (
-              <tr key={t.id} className="border-t border-slate-800 hover:bg-slate-900/40">
-                <td className="px-3 py-2 text-slate-200">{t.name}</td>
-                <td className="px-3 py-2 text-xs text-slate-300">
+              <tr key={t.id} className="border-t border-border-subtle hover:bg-bg-panel/60">
+                <td className="px-3 py-2 text-text-primary">{t.name}</td>
+                <td className="px-3 py-2 text-xs text-text-secondary">
                   <span className="font-mono">{t.ownerUsername}</span>
-                  <span className="ml-1 text-[10px] uppercase tracking-wider text-slate-500">
+                  <span className="ml-1 text-[10px] uppercase tracking-wider text-text-faint">
                     {t.ownerRole}
                   </span>
                 </td>
-                <td className="px-3 py-2 text-xs text-slate-400">
+                <td className="px-3 py-2 text-xs text-text-muted">
                   {new Date(t.createdAt).toLocaleString()}
                 </td>
-                <td className="px-3 py-2 text-xs text-slate-400">
-                  {t.lastUsedAt ? new Date(t.lastUsedAt).toLocaleString() : <span className="text-slate-500">never</span>}
+                <td className="px-3 py-2 text-xs text-text-muted">
+                  {t.lastUsedAt ? new Date(t.lastUsedAt).toLocaleString() : <span className="text-text-faint">never</span>}
                 </td>
                 <td className="px-3 py-2 text-right">
                   <button
                     type="button"
                     onClick={() => void revoke(t)}
-                    className="focusable rounded p-1 text-slate-400 hover:text-rose-400"
+                    className="focusable rounded p-1 text-text-muted hover:text-rose-400"
                     aria-label="Revoke token"
                     title="Revoke token"
                   >
@@ -193,7 +193,7 @@ function CreatedTokenBanner({
         thing stored on the server.
       </p>
       <div className="mt-2 flex items-center gap-2">
-        <code className="flex-1 break-all rounded bg-slate-950 px-2 py-1.5 font-mono text-xs text-emerald-200">
+        <code className="flex-1 break-all rounded bg-bg-base px-2 py-1.5 font-mono text-xs text-emerald-200">
           {token.token}
         </code>
         <button
@@ -250,25 +250,25 @@ function CreateTokenDialog({
     <div
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 px-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-bg-base/70 px-4"
       onClick={onClose}
     >
       <form
         onClick={(e) => e.stopPropagation()}
         onSubmit={submit}
-        className="density-card w-full max-w-md space-y-3 rounded-lg border border-slate-700 bg-slate-900 p-5 shadow-2xl"
+        className="density-card w-full max-w-md space-y-3 rounded-lg border border-border-subtle bg-bg-panel p-5 shadow-2xl"
       >
-        <h2 className="text-base font-semibold text-slate-100">Create API token</h2>
-        <p className="text-xs text-slate-400">
+        <h2 className="text-base font-semibold text-text-primary">Create API token</h2>
+        <p className="text-xs text-text-muted">
           Pick a memorable name so you can identify it later (e.g. "deploy.sh", "ci-runner-01").
         </p>
         <div className="space-y-1">
-          <label className="text-xs font-medium text-slate-300">Name</label>
+          <label className="text-xs font-medium text-text-secondary">Name</label>
           <input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="focusable w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1.5 text-sm text-slate-100 outline-none focus:border-sky-500"
+            className="focusable w-full rounded-md border border-border-subtle bg-bg-base px-2 py-1.5 text-sm text-text-primary outline-none focus:border-accent"
             placeholder="e.g. release-pipeline"
             autoFocus
           />
@@ -282,14 +282,14 @@ function CreateTokenDialog({
           <button
             type="button"
             onClick={onClose}
-            className="focusable rounded-md border border-slate-700 px-3 py-1.5 text-xs text-slate-300 hover:border-slate-500"
+            className="focusable rounded-md border border-border-subtle px-3 py-1.5 text-xs text-text-secondary hover:border-text-faint"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={submitting || !name.trim()}
-            className="focusable rounded-md bg-sky-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-sky-500 disabled:opacity-50"
+            className="focusable rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:bg-accent-hover disabled:opacity-50"
           >
             {submitting ? 'Creating…' : 'Create token'}
           </button>
