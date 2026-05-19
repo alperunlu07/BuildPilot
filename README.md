@@ -422,7 +422,13 @@ pnpm build      # production build of both apps
 pnpm start      # run the built server (no web dev server)
 pnpm typecheck  # tsc --noEmit across the workspace
 pnpm test       # run vitest suites
+pnpm seed       # populate a fresh DB with 3 demo projects + pipelines + history
 ```
+
+The seed script is idempotent (skips if "Demo: iOS app" already exists)
+and points each demo project at an isolated git repo in `$TMPDIR`. Use
+`BUILDPILOT_HOME=/tmp/bp-dev pnpm seed` to seed into a sandbox directory
+without touching your real `~/.buildpilot` install.
 
 ### Storybook
 

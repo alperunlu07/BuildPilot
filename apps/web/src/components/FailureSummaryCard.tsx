@@ -76,7 +76,7 @@ export function FailureSummaryCard({ entries, nodeLabel, onRetry, onJumpToNode }
             <button
               type="button"
               onClick={() => onJumpToNode?.(summary.nodeId)}
-              className="font-mono text-sm text-slate-100 hover:text-sky-300"
+              className="font-mono text-sm text-bp-text-primary hover:text-sky-300"
               title="Filter log to this step"
             >
               {label}
@@ -84,10 +84,10 @@ export function FailureSummaryCard({ entries, nodeLabel, onRetry, onJumpToNode }
           </div>
           <p className="mt-1 text-[12px] text-rose-200">{summary.failureMessage}</p>
 
-          <div className="mt-2 rounded-md border border-rose-900/40 bg-slate-950/60 p-2 font-mono text-[11px] leading-relaxed text-slate-300">
+          <div className="mt-2 rounded-md border border-rose-900/40 bg-bp-surface-0/60 p-2 font-mono text-[11px] leading-relaxed text-bp-text-secondary">
             {summary.tailLines.map((e) => (
               <div key={e.seq} className="flex gap-2">
-                <span className="shrink-0 text-slate-400">
+                <span className="shrink-0 text-bp-text-muted">
                   {new Date(e.ts).toLocaleTimeString()}
                 </span>
                 <span
@@ -111,7 +111,7 @@ export function FailureSummaryCard({ entries, nodeLabel, onRetry, onJumpToNode }
               </div>
               <ul className="space-y-0.5 font-mono">
                 {summary.aiFix.messages.slice(-3).map((m, i) => (
-                  <li key={i} className="break-words text-slate-300">
+                  <li key={i} className="break-words text-bp-text-secondary">
                     {m}
                   </li>
                 ))}

@@ -321,13 +321,16 @@ Quality-of-life for the people building BuildPilot itself.
   vitest coverage
 - [ ] **E2E happy-path test** — start server, add project, create
   pipeline, run a `shell` step, assert green status via SSE
-- [ ] **Settings JSON schema + validation** — `~/.buildpilot/config.json`
+- [x] **Settings JSON schema + validation** — `~/.buildpilot/config.json`
   surfaces JSON-schema errors at startup instead of crashing
-- [ ] **Dev seed script** — `pnpm seed` populates a fresh DB with three
+  (`apps/server/src/config-schema.ts` — 061af7e)
+- [x] **Dev seed script** — `pnpm seed` populates a fresh DB with three
   demo projects + pipelines for screenshotting and onboarding
-- [ ] **Public component design tokens** — colors, spacings, type scale
+  (`apps/server/scripts/seed.ts` — 0fa87ce)
+- [x] **Public component design tokens** — colors, spacings, type scale
   centralized in `tailwind.config.js` extension so dark/light + theme
   variants stay coherent
+  (`apps/web/tailwind.config.js` + `apps/web/DESIGN_TOKENS.md` — 98990b3)
 
 ---
 
@@ -360,4 +363,4 @@ theme.
 | ---------------------------------- | ---: | ------: | ------ |
 | 10. UI/UX overhaul (A–G)           |  54  |    2    | ✅ 96% (split view + swimlanes deferred as stretch) |
 | 11. Platform expansion (A–I)       |  34  |    0    | ✅ 100% (all 9 clusters shipped) |
-| 12. Developer ergonomics           |   0  |    7    | ⏸ 0%   |
+| 12. Developer ergonomics           |   3  |    4    | 🟡 43% (schema validation, seed, design tokens shipped) |

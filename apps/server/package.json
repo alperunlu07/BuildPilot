@@ -8,6 +8,7 @@
     "start": "tsx src/index.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "seed": "tsx scripts/seed.ts",
     "discord:register-commands": "tsx scripts/register-discord-commands.ts"
   },
   "dependencies": {

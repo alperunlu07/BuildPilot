@@ -9,7 +9,8 @@
     "build": "pnpm --filter \"./apps/*\" run build",
     "start": "pnpm --filter @buildpilot/server run start",
     "typecheck": "pnpm -r --if-present run typecheck",
-    "test": "pnpm -r --if-present run test"
+    "test": "pnpm -r --if-present run test",
+    "seed": "pnpm --filter @buildpilot/server seed"
   },
   "devDependencies": {
     "typescript": "^5.6.3"
