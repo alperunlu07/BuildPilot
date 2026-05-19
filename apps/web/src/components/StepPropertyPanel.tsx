@@ -53,7 +53,10 @@ interface Props {
   onSaveAsTemplate?(nodeId: string): void;
 }
 
-type Tab = 'properties' | 'logs';
+// UI v2 Faz 5.B — third tab for low-frequency knobs (retry/watchdog/
+// continueOnError/disabled) plus the AI Auto-Fix collapsible. Keeps the
+// Properties tab focused on the step's own fields and notify policy.
+type Tab = 'properties' | 'logs' | 'advanced';
 
 export function StepPropertyPanel({
   node,
@@ -91,7 +94,7 @@ export function StepPropertyPanel({
 
   if (!node) {
     return (
-      <aside className="flex h-full w-80 shrink-0 flex-col border-l border-slate-800 bg-slate-950 p-4 text-sm text-slate-400">
+      <aside className="flex h-full w-80 shrink-0 flex-col border-l border-border-subtle bg-bg-panel p-4 text-sm text-text-muted">
         Select a node to edit its properties.
       </aside>
     );
@@ -121,19 +124,19 @@ export function StepPropertyPanel({
   const stepAcceptsHost = def.fields.some((f) => f.type === 'hostSelect');
 
   return (
-    <aside className="flex h-full w-80 shrink-0 flex-col border-l border-slate-800 bg-slate-950">
-      <div className="border-b border-slate-800 px-4 py-3">
-        <div className="text-[11px] uppercase tracking-wider text-slate-400">
+    <aside className="flex h-full w-80 shrink-0 flex-col border-l border-border-subtle bg-bg-panel">
+      <div className="border-b border-border-subtle px-4 py-3">
+        <div className="text-[10px] uppercase tracking-wider text-text-muted font-semibold">
           Step properties
         </div>
         <div className="mt-1 flex items-center justify-between gap-2">
-          <h3 className="truncate text-sm font-semibold text-slate-100">{def.label}</h3>
+          <h3 className="truncate text-sm font-semibold text-text-primary">{def.label}</h3>
           <div className="flex items-center gap-2">
             {onSaveAsTemplate && (
               <button
                 type="button"
                 onClick={() => onSaveAsTemplate(node.id)}
-                className="focusable rounded text-[11px] text-sky-400 hover:text-sky-300"
+                className="rounded text-[11px] text-accent hover:text-accent-hover transition-colors"
                 title="Save this node's configuration as a reusable palette entry"
               >
                 Save as template
@@ -167,10 +170,13 @@ export function StepPropertyPanel({
           <TabButton active={tab === 'logs'} onClick={() => setTab('logs')}>
             Logs
             {nodeEntries.length > 0 && (
-              <span className="ml-1 rounded bg-slate-800 px-1 font-mono text-[10px] text-slate-300">
+              <span className="ml-1 rounded bg-bg-elevated px-1 font-mono text-[10px] text-text-secondary">
                 {nodeEntries.length}
               </span>
             )}
+          </TabButton>
+          <TabButton active={tab === 'advanced'} onClick={() => setTab('advanced')}>
+            Advanced
           </TabButton>
         </div>
       </div>
@@ -199,12 +205,6 @@ export function StepPropertyPanel({
               }
             />
           )}
-          <CommonControlsSection
-            data={node.data as Record<string, unknown>}
-            onChange={(patch) =>
-              onChange(node.id, { ...(node.data as Record<string, unknown>), ...patch })
-            }
-          />
           {NOTIFY_STEP_TYPES.has(stepType) && (
             <>
               <NotifyPolicySection
@@ -219,6 +219,18 @@ export function StepPropertyPanel({
               />
             </>
           )}
+        </div>
+      ) : tab === 'advanced' ? (
+        // Faz 5.B — moved here from the Properties tab so step-specific
+        // fields stay scannable. AI Auto-Fix joins the retry/watchdog/
+        // continueOnError/disabled cluster since they all gate execution.
+        <div className="flex-1 space-y-3 overflow-y-auto px-4 py-3">
+          <CommonControlsSection
+            data={node.data as Record<string, unknown>}
+            onChange={(patch) =>
+              onChange(node.id, { ...(node.data as Record<string, unknown>), ...patch })
+            }
+          />
           <AiAutoFixSection
             value={(node.data as Record<string, unknown>).aiAutoFix as Record<string, unknown> | undefined}
             onChange={(next) =>
@@ -261,10 +273,10 @@ function TabButton({
       onClick={onClick}
       aria-pressed={active}
       className={cn(
-        'focusable rounded-md px-2 py-0.5 font-semibold transition-colors',
+        'rounded-btn px-2 py-1 font-semibold transition-colors',
         active
-          ? 'bg-slate-800 text-slate-100'
-          : 'text-slate-400 hover:bg-slate-900 hover:text-slate-300',
+          ? 'bg-accent-soft text-accent'
+          : 'text-text-muted hover:bg-bg-hover hover:text-text-primary',
       )}
     >
       {children}

@@ -31,6 +31,7 @@ import { api } from '../lib/api';
 import { usePipelineClipboard } from '../lib/usePipelineClipboard';
 import { usePipelineHistory } from '../lib/usePipelineHistory';
 import { useStore } from '../store/store';
+import { cn } from '../lib/cn';
 import {
   clearDraft,
   draftDiffersFromPipeline,
@@ -703,18 +704,24 @@ function Editor({ pipeline }: Props) {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <header className="flex items-center justify-between border-b border-slate-800 bg-slate-900/50 px-4 py-2">
-        <div className="flex items-center gap-3">
+      {/* UI v2 Faz 5.B — pipeline editor header. Watch / interval / Telegram
+          / Triggers / Matrix render as chips on the left; undo/redo/save
+          actions sit on the right. Chips use bg-bg-elevated so the active
+          dot stands out, and a filled "●" marker shows when an advanced
+          option (tag pattern, cron, path filter, etc.) is configured. */}
+      <header className="flex items-center justify-between border-b border-border-subtle bg-bg-panel px-4 py-2">
+        <div className="flex items-center gap-2 min-w-0">
           <input
             value={name}
             onChange={(e) => {
               setName(e.target.value);
               setDirty(true);
             }}
-            className="bg-transparent text-base font-semibold text-slate-100 outline-none"
+            className="bg-transparent text-[15px] font-semibold text-text-primary outline-none min-w-0 max-w-[260px] truncate focus:bg-bg-hover rounded px-1 -mx-1 transition-colors"
+            aria-label="Pipeline name"
           />
-          <span className="inline-flex items-center gap-1.5 rounded-md bg-slate-800 px-2 py-0.5 text-[11px] uppercase tracking-wider text-slate-400">
-            Watch:
+          <span className="inline-flex items-center gap-1.5 rounded-btn bg-bg-elevated border border-border-subtle px-2 py-0.5 text-[11px] text-text-muted">
+            <span className="uppercase tracking-wider text-text-faint font-semibold">Watch:</span>
             <BranchSelect
               value={watch.branch}
               onChange={(b) => {
@@ -724,7 +731,7 @@ function Editor({ pipeline }: Props) {
               branches={branches}
             />
           </span>
-          <span className="rounded-md bg-slate-800 px-2 py-0.5 text-[11px] text-slate-400">
+          <span className="rounded-btn bg-bg-elevated border border-border-subtle px-2 py-0.5 text-[11px] text-text-muted">
             every{' '}
             <input
               type="number"
@@ -734,12 +741,12 @@ function Editor({ pipeline }: Props) {
                 setWatch({ ...watch, intervalSec: Math.max(5, Number(e.target.value)) });
                 setDirty(true);
               }}
-              className="w-12 bg-transparent text-center text-slate-100 outline-none"
+              className="w-12 bg-transparent text-center text-text-primary outline-none"
             />
             s
           </span>
           <label
-            className="inline-flex items-center gap-1 rounded-md bg-slate-800 px-2 py-0.5 text-[11px] text-slate-400"
+            className="inline-flex items-center gap-1 rounded-btn bg-bg-elevated border border-border-subtle px-2 py-0.5 text-[11px] text-text-muted hover:text-text-secondary cursor-pointer transition-colors"
             title="When the watched branch advances, send a Telegram message asking whether to build (requires bot configured in ~/.buildpilot/config.json)"
           >
             <input
@@ -749,42 +756,63 @@ function Editor({ pipeline }: Props) {
                 setWatch({ ...watch, telegramApprovals: e.target.checked });
                 setDirty(true);
               }}
-              className="h-3 w-3"
+              className="h-3 w-3 accent-accent"
             />
             Telegram ask
           </label>
           <button
             type="button"
             onClick={() => setTriggersOpen((v) => !v)}
-            className="inline-flex items-center gap-1 rounded-md bg-slate-800 px-2 py-0.5 text-[11px] text-slate-300 hover:text-slate-100"
+            className={cn(
+              'inline-flex items-center gap-1 rounded-btn border px-2 py-0.5 text-[11px] transition-colors',
+              triggersOpen
+                ? 'bg-accent-soft border-accent text-accent'
+                : 'bg-bg-elevated border-border-subtle text-text-secondary hover:text-text-primary',
+            )}
             title="Advanced trigger options (tag pattern, cron schedule, path filter, rolling builds)"
+            aria-expanded={triggersOpen}
           >
-            Triggers{' '}
-            {watch.tagPattern ||
-            watch.cronExpr ||
-            watch.pathFilter ||
-            watch.cancelInProgressOnNewCommit ||
-            watch.prCommands
-              ? '●'
-              : '…'}
+            Triggers
+            <span aria-hidden>
+              {watch.tagPattern ||
+              watch.cronExpr ||
+              watch.pathFilter ||
+              watch.cancelInProgressOnNewCommit ||
+              watch.prCommands
+                ? '●'
+                : '…'}
+            </span>
           </button>
           <button
             type="button"
             onClick={() => setMatrixOpen((v) => !v)}
-            className="inline-flex items-center gap-1 rounded-md bg-slate-800 px-2 py-0.5 text-[11px] text-slate-300 hover:text-slate-100"
+            className={cn(
+              'inline-flex items-center gap-1 rounded-btn border px-2 py-0.5 text-[11px] transition-colors',
+              matrixOpen
+                ? 'bg-accent-soft border-accent text-accent'
+                : 'bg-bg-elevated border-border-subtle text-text-secondary hover:text-text-primary',
+            )}
             title="Declarative build matrix — fan one trigger out into N parallel builds"
+            aria-expanded={matrixOpen}
           >
-            Matrix {matrix && Object.keys(matrix.axes).length > 0 ? '●' : '…'}
+            Matrix
+            <span aria-hidden>{matrix && Object.keys(matrix.axes).length > 0 ? '●' : '…'}</span>
           </button>
         </div>
 
-        <div className="flex items-center gap-2">
-          {dirty && <span className="text-[11px] text-amber-400">unsaved</span>}
+        <div className="flex items-center gap-2 shrink-0">
+          {dirty && <span className="text-[11px] text-status-running font-medium">unsaved</span>}
+          {!dirty && !saving && (
+            <span className="text-[11px] text-text-faint inline-flex items-center gap-1">
+              <span className="inline-block size-1.5 rounded-full bg-status-success" aria-hidden />
+              saved
+            </span>
+          )}
           <button
             type="button"
             onClick={doUndo}
             disabled={!history.canUndo}
-            className="focusable inline-flex items-center gap-1 rounded-md border border-slate-700 px-2 py-1 text-xs text-slate-300 hover:border-sky-500 hover:text-sky-400 disabled:cursor-not-allowed disabled:opacity-40"
+            className="inline-flex items-center gap-1 rounded-btn border border-border-subtle bg-bg-elevated px-2 py-1 text-xs text-text-secondary hover:text-text-primary hover:border-border disabled:cursor-not-allowed disabled:opacity-40 transition-colors"
             title="Undo (Cmd/Ctrl+Z)"
             aria-label="Undo last edit"
           >
@@ -794,7 +822,7 @@ function Editor({ pipeline }: Props) {
             type="button"
             onClick={doRedo}
             disabled={!history.canRedo}
-            className="focusable inline-flex items-center gap-1 rounded-md border border-slate-700 px-2 py-1 text-xs text-slate-300 hover:border-sky-500 hover:text-sky-400 disabled:cursor-not-allowed disabled:opacity-40"
+            className="inline-flex items-center gap-1 rounded-btn border border-border-subtle bg-bg-elevated px-2 py-1 text-xs text-text-secondary hover:text-text-primary hover:border-border disabled:cursor-not-allowed disabled:opacity-40 transition-colors"
             title="Redo (Cmd/Ctrl+Shift+Z)"
             aria-label="Redo edit"
           >
@@ -803,7 +831,7 @@ function Editor({ pipeline }: Props) {
           <button
             type="button"
             onClick={autoLayout}
-            className="focusable inline-flex items-center gap-1 rounded-md border border-slate-700 px-2 py-1 text-xs text-slate-300 hover:border-sky-500 hover:text-sky-400"
+            className="inline-flex items-center gap-1 rounded-btn border border-border-subtle bg-bg-elevated px-2 py-1 text-xs text-text-secondary hover:text-text-primary hover:border-border transition-colors"
             title="Auto-layout graph"
             aria-label="Auto-layout graph"
           >
@@ -820,11 +848,12 @@ function Editor({ pipeline }: Props) {
                 return next;
               });
             }}
-            className={`focusable inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs ${
+            className={cn(
+              'inline-flex items-center gap-1 rounded-btn border px-2 py-1 text-xs transition-colors',
               showMinimap
-                ? 'border-sky-500 bg-sky-950/40 text-sky-300'
-                : 'border-slate-700 text-slate-300 hover:border-sky-500 hover:text-sky-400'
-            }`}
+                ? 'border-accent bg-accent-soft text-accent'
+                : 'border-border-subtle bg-bg-elevated text-text-secondary hover:text-text-primary hover:border-border',
+            )}
             title="Toggle minimap"
             aria-label="Toggle minimap"
             aria-pressed={showMinimap}
@@ -835,7 +864,7 @@ function Editor({ pipeline }: Props) {
             type="button"
             onClick={save}
             disabled={!dirty || saving}
-            className="focusable inline-flex items-center gap-1 rounded-md border border-slate-700 px-2.5 py-1 text-xs text-slate-200 hover:border-sky-500 hover:text-sky-400 disabled:cursor-not-allowed disabled:opacity-40"
+            className="inline-flex items-center gap-1.5 rounded-btn bg-accent px-2.5 py-1 text-xs font-medium text-white hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-40 transition-colors"
           >
             <Save size={12} /> {saving ? 'Saving…' : 'Save'}
           </button>
