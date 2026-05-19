@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { StepContext } from '../engine';
-import { initDb } from '../../store/db';
+import { getDb, initDb } from '../../store/db';
 import { createPipeline } from '../../store/pipelines';
 import { createBuild } from '../../store/builds';
 import { createProject } from '../../store/projects';
@@ -20,6 +20,9 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  // Close DB before removing temp dir, otherwise Windows holds the WAL
+  // mmap'd file and rmSync fails with EPERM.
+  getDb().close();
   rmSync(dir, { recursive: true, force: true });
 });
 
