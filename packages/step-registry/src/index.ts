@@ -4680,6 +4680,7 @@ export const STEP_CATEGORIES: readonly StepCategoryGroup[] = [
       'simctlStatusBarOverride',
       'simctlPrivacyGrant',
       'storekitConfigure',
+      'iosDeviceLog',
     ],
   },
   {

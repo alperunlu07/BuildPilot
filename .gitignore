@@ -37,3 +37,11 @@ Thumbs.db
 
 # Claude Code subagent worktrees (temporary isolated copies)
 .claude/worktrees/
+
+# Playwright E2E + visual regression artifacts. Baselines live under
+# e2e/screenshots/ and ARE committed; diffs / failure traces are not.
+playwright-report/
+e2e/test-results/
+e2e/screenshots/**/diff/
+e2e/screenshots/**/*-actual.png
+e2e/screenshots/**/*-diff.png

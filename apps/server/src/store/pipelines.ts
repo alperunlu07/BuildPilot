@@ -151,7 +151,8 @@ export function createPipeline(input: PipelineInput): Pipeline {
        (id, project_id, name, watch_branch, watch_interval_sec, auto_trigger,
         nodes_json, edges_json, created_at, updated_at, telegram_approvals,
         tag_pattern, cron_expr, path_filter, cancel_in_progress_on_new_commit,
-        matrix_json, matrix_summary, pr_commands, pr_command_authors)
+        matrix_json, matrix_summary,
+        pr_commands, pr_command_authors)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     .run(
@@ -218,7 +219,7 @@ export function updatePipeline(
          nodes_json = ?, edges_json = ?, updated_at = ?, telegram_approvals = ?,
          tag_pattern = ?, cron_expr = ?, path_filter = ?,
          cancel_in_progress_on_new_commit = ?,
-         matrix_json = ?, matrix_summary = ?,
+         matrix_json = ?, matrix_summary = ?
          pr_commands = ?, pr_command_authors = ?
        WHERE id = ?`,
     )
