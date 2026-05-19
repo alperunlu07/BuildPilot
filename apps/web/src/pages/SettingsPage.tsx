@@ -16,6 +16,12 @@ import type { Lane, TelegramConfigPublic } from '@buildpilot/shared-types';
 import { api, LaneInUseError } from '../lib/api';
 import { useStore } from '../store/store';
 import type { Density, ThemeChoice } from '../lib/theme';
+import {
+  DEFAULT_ACCENT,
+  applyAccent,
+  readStoredAccent,
+  writeStoredAccent,
+} from '../lib/theme';
 import i18n from '../lib/i18n';
 
 // Banner state for the Telegram form. We use the local-only `idle` state to
@@ -133,10 +139,10 @@ export function SettingsPage() {
   return (
     <div className="mx-auto max-w-3xl p-8">
       <div className="mb-6">
-        <h1 className="text-xl font-semibold text-slate-100">Settings</h1>
-        <p className="mt-1 text-sm text-slate-400">
+        <h1 className="text-xl font-semibold text-text-primary">Settings</h1>
+        <p className="mt-1 text-sm text-text-muted">
           Server-wide configuration. Secrets are stored encrypted at rest in{' '}
-          <code className="rounded bg-slate-800 px-1 py-0.5 text-slate-300">
+          <code className="rounded bg-bg-elevated px-1 py-0.5 text-text-secondary">
             ~/.buildpilot/config.json
           </code>
           .
@@ -147,19 +153,19 @@ export function SettingsPage() {
 
       <LanesSection />
 
-      <section className="mt-6 rounded-lg border border-slate-800 bg-slate-900/40 p-5">
+      <section className="mt-6 rounded-lg border border-border-subtle bg-bg-panel/60 p-5">
         <div className="mb-4 flex items-center justify-between">
           <div>
-            <h2 className="flex items-center gap-2 text-base font-semibold text-slate-100">
-              <Send size={16} className="text-sky-400" /> Telegram
+            <h2 className="flex items-center gap-2 text-base font-semibold text-text-primary">
+              <Send size={16} className="text-accent" /> Telegram
             </h2>
-            <p className="mt-1 text-xs text-slate-400">
+            <p className="mt-1 text-xs text-text-muted">
               Bot token + default chat used by <code>telegramNotify</code> steps and
               branch-advance approval prompts. The bot restarts automatically when you
               save.
             </p>
           </div>
-          <label className="inline-flex items-center gap-2 text-sm text-slate-300">
+          <label className="inline-flex items-center gap-2 text-sm text-text-secondary">
             <input
               type="checkbox"
               checked={enabled}
@@ -183,7 +189,7 @@ export function SettingsPage() {
               <div className="relative flex-1">
                 <Lock
                   size={13}
-                  className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-slate-400"
+                  className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-text-muted"
                 />
                 <input
                   type={showToken ? 'text' : 'password'}
@@ -194,12 +200,12 @@ export function SettingsPage() {
                   }
                   autoComplete="off"
                   spellCheck={false}
-                  className="w-full rounded-md border border-slate-700 bg-slate-950 px-7 py-1.5 font-mono text-xs text-slate-100 placeholder:text-slate-400 focus:border-sky-500 focus:outline-none"
+                  className="w-full rounded-md border border-border-subtle bg-bg-base px-7 py-1.5 font-mono text-xs text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none"
                 />
                 <button
                   type="button"
                   onClick={() => setShowToken((v) => !v)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-300"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-secondary"
                   title={showToken ? 'Hide' : 'Show'}
                 >
                   {showToken ? <EyeOff size={13} /> : <Eye size={13} />}
@@ -209,7 +215,7 @@ export function SettingsPage() {
                 <button
                   type="button"
                   onClick={onClearToken}
-                  className="rounded-md border border-slate-700 px-2 py-1 text-xs text-slate-400 hover:border-rose-500 hover:text-rose-400"
+                  className="rounded-md border border-border-subtle px-2 py-1 text-xs text-text-muted hover:border-rose-500 hover:text-rose-400"
                   title="Remove the stored token"
                 >
                   Clear
@@ -234,13 +240,13 @@ export function SettingsPage() {
                 placeholder={loaded?.hasChatId ? '(unchanged)' : '-1001234567890 or @my_channel'}
                 autoComplete="off"
                 spellCheck={false}
-                className="flex-1 rounded-md border border-slate-700 bg-slate-950 px-3 py-1.5 font-mono text-xs text-slate-100 placeholder:text-slate-400 focus:border-sky-500 focus:outline-none"
+                className="flex-1 rounded-md border border-border-subtle bg-bg-base px-3 py-1.5 font-mono text-xs text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none"
               />
               {loaded?.hasChatId && (
                 <button
                   type="button"
                   onClick={onClearChatId}
-                  className="rounded-md border border-slate-700 px-2 py-1 text-xs text-slate-400 hover:border-rose-500 hover:text-rose-400"
+                  className="rounded-md border border-border-subtle px-2 py-1 text-xs text-text-muted hover:border-rose-500 hover:text-rose-400"
                   title="Remove the stored chat ID"
                 >
                   Clear
@@ -250,14 +256,14 @@ export function SettingsPage() {
           </Field>
         </div>
 
-        <div className="mt-5 flex items-center justify-between border-t border-slate-800 pt-4">
+        <div className="mt-5 flex items-center justify-between border-t border-border-subtle pt-4">
           <BannerView state={banner} />
           <div className="flex gap-2">
             <button
               type="button"
               onClick={onTest}
               disabled={banner.kind === 'testing' || banner.kind === 'saving'}
-              className="rounded-md border border-slate-700 px-3 py-1.5 text-sm text-slate-200 hover:border-sky-500 hover:text-sky-300 disabled:opacity-50"
+              className="rounded-md border border-border-subtle px-3 py-1.5 text-sm text-text-primary hover:border-accent hover:text-accent-hover disabled:opacity-50"
             >
               Send test message
             </button>
@@ -265,7 +271,7 @@ export function SettingsPage() {
               type="button"
               onClick={onSave}
               disabled={banner.kind === 'saving'}
-              className="rounded-md bg-sky-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-sky-500 disabled:opacity-50"
+              className="rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-white hover:bg-accent-hover disabled:opacity-50"
             >
               {banner.kind === 'saving' ? 'Saving…' : 'Save'}
             </button>
@@ -291,25 +297,25 @@ function AppearanceSection() {
   }
 
   return (
-    <section className="mb-6 rounded-lg border border-slate-800 bg-slate-900/40 p-5">
+    <section className="mb-6 rounded-lg border border-border-subtle bg-bg-panel/60 p-5">
       <div className="mb-4">
-        <h2 className="flex items-center gap-2 text-base font-semibold text-slate-100">
-          <Palette size={16} className="text-sky-400" /> Appearance
+        <h2 className="flex items-center gap-2 text-base font-semibold text-text-primary">
+          <Palette size={16} className="text-accent" /> Appearance
         </h2>
-        <p className="mt-1 text-xs text-slate-400">
+        <p className="mt-1 text-xs text-text-muted">
           Theme, density, and language. Stored in this browser only.
         </p>
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <div>
-          <div className="mb-1 text-xs font-medium uppercase tracking-wider text-slate-400">
+          <div className="mb-1 text-xs font-medium uppercase tracking-wider text-text-muted">
             {t('theme.title')}
           </div>
           <select
             value={theme}
             onChange={(e) => setTheme(e.target.value as ThemeChoice)}
-            className="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-1.5 text-sm text-slate-100 focus:border-sky-500 focus:outline-none"
+            className="w-full rounded-md border border-border-subtle bg-bg-base px-3 py-1.5 text-sm text-text-primary focus:border-accent focus:outline-none"
           >
             <option value="system">{t('theme.system')}</option>
             <option value="dark">{t('theme.dark')}</option>
@@ -317,33 +323,96 @@ function AppearanceSection() {
           </select>
         </div>
         <div>
-          <div className="mb-1 text-xs font-medium uppercase tracking-wider text-slate-400">
+          <div className="mb-1 text-xs font-medium uppercase tracking-wider text-text-muted">
             {t('density.title')}
           </div>
           <select
             value={density}
             onChange={(e) => setDensity(e.target.value as Density)}
-            className="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-1.5 text-sm text-slate-100 focus:border-sky-500 focus:outline-none"
+            className="w-full rounded-md border border-border-subtle bg-bg-base px-3 py-1.5 text-sm text-text-primary focus:border-accent focus:outline-none"
           >
             <option value="comfortable">{t('density.comfortable')}</option>
             <option value="compact">{t('density.compact')}</option>
           </select>
         </div>
         <div>
-          <div className="mb-1 text-xs font-medium uppercase tracking-wider text-slate-400">
+          <div className="mb-1 text-xs font-medium uppercase tracking-wider text-text-muted">
             {t('language.title')}
           </div>
           <select
             value={language}
             onChange={(e) => changeLanguage(e.target.value)}
-            className="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-1.5 text-sm text-slate-100 focus:border-sky-500 focus:outline-none"
+            className="w-full rounded-md border border-border-subtle bg-bg-base px-3 py-1.5 text-sm text-text-primary focus:border-accent focus:outline-none"
           >
             <option value="en">English</option>
             <option value="tr">Türkçe</option>
           </select>
         </div>
       </div>
+
+      <AccentPicker />
     </section>
+  );
+}
+
+// UI v2 Faz 12 — accent colour picker. Applies live via applyAccent()
+// so every component reading var(--accent*) repaints without a reload.
+function AccentPicker() {
+  const [accent, setAccent] = useState<string>(() => readStoredAccent());
+  const PRESETS = [
+    { hex: '#0ea5e9', name: 'Sky' },
+    { hex: '#22c55e', name: 'Green' },
+    { hex: '#f59e0b', name: 'Amber' },
+    { hex: '#ef4444', name: 'Red' },
+    { hex: '#8b5cf6', name: 'Violet' },
+    { hex: '#ec4899', name: 'Pink' },
+  ];
+  function pick(hex: string) {
+    setAccent(hex);
+    applyAccent(hex);
+    writeStoredAccent(hex);
+  }
+  return (
+    <div className="mt-4 pt-4 border-t border-border-subtle">
+      <div className="mb-2 text-xs font-medium uppercase tracking-wider text-text-muted">
+        Accent colour
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        {PRESETS.map((p) => (
+          <button
+            key={p.hex}
+            type="button"
+            onClick={() => pick(p.hex)}
+            title={p.name}
+            aria-label={`Accent ${p.name}`}
+            aria-pressed={accent.toLowerCase() === p.hex.toLowerCase()}
+            className={`h-7 w-7 rounded-full border-2 transition-transform hover:scale-110 ${
+              accent.toLowerCase() === p.hex.toLowerCase()
+                ? 'border-text-primary scale-110'
+                : 'border-border-subtle'
+            }`}
+            style={{ backgroundColor: p.hex }}
+          />
+        ))}
+        <label className="ml-2 inline-flex items-center gap-2 text-[12px] text-text-muted">
+          Custom
+          <input
+            type="color"
+            value={accent}
+            onChange={(e) => pick(e.target.value)}
+            className="h-7 w-7 rounded cursor-pointer border border-border-subtle bg-transparent"
+            aria-label="Custom accent hex"
+          />
+        </label>
+        <button
+          type="button"
+          onClick={() => pick(DEFAULT_ACCENT)}
+          className="ml-2 text-[11px] text-text-muted hover:text-text-primary transition-colors"
+        >
+          Reset
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -358,18 +427,18 @@ function Field({
 }) {
   return (
     <div>
-      <div className="mb-1 text-xs font-medium uppercase tracking-wider text-slate-400">
+      <div className="mb-1 text-xs font-medium uppercase tracking-wider text-text-muted">
         {label}
       </div>
       {children}
-      {hint && <div className="mt-1 text-[11px] text-slate-400">{hint}</div>}
+      {hint && <div className="mt-1 text-[11px] text-text-muted">{hint}</div>}
     </div>
   );
 }
 
 function BannerView({ state }: { state: Banner }) {
   if (state.kind === 'idle' || state.kind === 'saving' || state.kind === 'testing') {
-    return <div className="text-xs text-slate-400">&nbsp;</div>;
+    return <div className="text-xs text-text-muted">&nbsp;</div>;
   }
   if (state.kind === 'saved') {
     return (
@@ -481,12 +550,12 @@ function LanesSection() {
   }
 
   return (
-    <section className="rounded-lg border border-slate-800 bg-slate-900/40 p-5">
+    <section className="rounded-lg border border-border-subtle bg-bg-panel/60 p-5">
       <div className="mb-4">
-        <h2 className="flex items-center gap-2 text-base font-semibold text-slate-100">
-          <Layers size={16} className="text-sky-400" /> Execution Lanes
+        <h2 className="flex items-center gap-2 text-base font-semibold text-text-primary">
+          <Layers size={16} className="text-accent" /> Execution Lanes
         </h2>
-        <p className="mt-1 text-xs text-slate-400">
+        <p className="mt-1 text-xs text-text-muted">
           Lanes serialize pipeline runs that share hardware. Each lane has its own
           concurrency budget.
         </p>
@@ -509,9 +578,9 @@ function LanesSection() {
         </div>
       )}
 
-      <div className="divide-y divide-slate-800 rounded-md border border-slate-800 bg-slate-950/40">
+      <div className="divide-y divide-border-subtle rounded-md border border-border-subtle bg-bg-base/40">
         {lanes.length === 0 ? (
-          <div className="px-3 py-4 text-center text-xs text-slate-500">
+          <div className="px-3 py-4 text-center text-xs text-text-faint">
             No lanes yet. Add one below.
           </div>
         ) : (
@@ -529,7 +598,7 @@ function LanesSection() {
 
       <div className="mt-4 flex items-end gap-2">
         <div className="flex-1">
-          <div className="mb-1 text-xs font-medium uppercase tracking-wider text-slate-400">
+          <div className="mb-1 text-xs font-medium uppercase tracking-wider text-text-muted">
             Lane name
           </div>
           <input
@@ -538,11 +607,11 @@ function LanesSection() {
             onChange={(e) => setNewName(e.target.value)}
             placeholder="e.g. mac-builder-1"
             spellCheck={false}
-            className="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-1.5 text-xs text-slate-100 placeholder:text-slate-600 focus:border-sky-500 focus:outline-none"
+            className="w-full rounded-md border border-border-subtle bg-bg-base px-3 py-1.5 text-xs text-text-primary placeholder:text-text-faint focus:border-accent focus:outline-none"
           />
         </div>
         <div className="w-32">
-          <div className="mb-1 text-xs font-medium uppercase tracking-wider text-slate-400">
+          <div className="mb-1 text-xs font-medium uppercase tracking-wider text-text-muted">
             Max concurrency
           </div>
           <input
@@ -551,14 +620,14 @@ function LanesSection() {
             max={64}
             value={newMax}
             onChange={(e) => setNewMax(e.target.value)}
-            className="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-1.5 text-xs text-slate-100 focus:border-sky-500 focus:outline-none"
+            className="w-full rounded-md border border-border-subtle bg-bg-base px-3 py-1.5 text-xs text-text-primary focus:border-accent focus:outline-none"
           />
         </div>
         <button
           type="button"
           onClick={() => void onCreate()}
           disabled={adding}
-          className="inline-flex items-center gap-1.5 rounded-md bg-sky-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-sky-500 disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:bg-accent-hover disabled:opacity-50"
         >
           <Plus size={13} /> {adding ? 'Adding…' : 'Add lane'}
         </button>
@@ -628,15 +697,15 @@ function LaneRow({
             if (e.key === 'Enter' && dirty) void onSave();
           }}
           spellCheck={false}
-          className="w-full rounded-md border border-transparent bg-transparent px-1.5 py-1 text-sm text-slate-100 hover:border-slate-700 focus:border-sky-500 focus:bg-slate-950 focus:outline-none"
+          className="w-full rounded-md border border-transparent bg-transparent px-1.5 py-1 text-sm text-text-primary hover:border-border-subtle focus:border-accent focus:bg-bg-base focus:outline-none"
         />
-        <div className="px-1.5 text-[11px] text-slate-500">
+        <div className="px-1.5 text-[11px] text-text-faint">
           Used by {usageCount} pipeline{usageCount === 1 ? '' : 's'}
           {isDefault && ' · default lane'}
         </div>
       </div>
       <div className="flex items-center gap-1.5">
-        <span className="text-[11px] uppercase tracking-wider text-slate-500">Max</span>
+        <span className="text-[11px] uppercase tracking-wider text-text-faint">Max</span>
         <input
           type="number"
           min={1}
@@ -646,14 +715,14 @@ function LaneRow({
           onKeyDown={(e) => {
             if (e.key === 'Enter' && dirty) void onSave();
           }}
-          className="w-16 rounded-md border border-slate-700 bg-slate-950 px-2 py-1 text-center text-xs text-slate-100 focus:border-sky-500 focus:outline-none"
+          className="w-16 rounded-md border border-border-subtle bg-bg-base px-2 py-1 text-center text-xs text-text-primary focus:border-accent focus:outline-none"
         />
       </div>
       <button
         type="button"
         onClick={() => void onSave()}
         disabled={!dirty || saving}
-        className="rounded-md bg-sky-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-sky-500 disabled:cursor-not-allowed disabled:bg-slate-800 disabled:text-slate-500"
+        className="rounded-md bg-accent px-2.5 py-1 text-xs font-medium text-white hover:bg-accent-hover disabled:cursor-not-allowed disabled:bg-bg-elevated disabled:text-text-faint"
       >
         {saving ? 'Saving…' : 'Save'}
       </button>
@@ -662,7 +731,7 @@ function LaneRow({
         onClick={onDelete}
         disabled={isDefault}
         title={isDefault ? 'Default lane cannot be deleted' : `Delete ${lane.name}`}
-        className="rounded-md border border-slate-700 p-1.5 text-slate-400 hover:border-rose-500 hover:text-rose-400 disabled:cursor-not-allowed disabled:border-slate-800 disabled:text-slate-700 disabled:hover:border-slate-800 disabled:hover:text-slate-700"
+        className="rounded-md border border-border-subtle p-1.5 text-text-muted hover:border-rose-500 hover:text-rose-400 disabled:cursor-not-allowed disabled:border-border-subtle disabled:text-text-faint disabled:hover:border-border-subtle disabled:hover:text-text-faint"
       >
         <Trash2 size={13} />
       </button>

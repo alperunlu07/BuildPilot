@@ -188,18 +188,18 @@ export function HostsPage() {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <header className="flex items-center justify-between border-b border-slate-800 bg-slate-900/40 px-5 py-3">
+      <header className="flex items-center justify-between border-b border-border-subtle bg-bg-panel/60 px-5 py-3">
         <div>
-          <h1 className="text-base font-semibold text-slate-100">SSH Hosts</h1>
-          <p className="text-[11px] text-slate-400">
-            Saved hosts at <code className="text-slate-400">~/.buildpilot/hosts.json</code>. Used by
+          <h1 className="text-base font-semibold text-text-primary">SSH Hosts</h1>
+          <p className="text-[11px] text-text-muted">
+            Saved hosts at <code className="text-text-muted">~/.buildpilot/hosts.json</code>. Used by
             Remote SSH, SFTP Upload, TestFlight, Keychain Unlock, and Profile Install steps.
           </p>
         </div>
         <button
           type="button"
           onClick={beginNew}
-          className="focusable flex items-center gap-1.5 rounded-md bg-sky-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-sky-500"
+          className="focusable flex items-center gap-1.5 rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:bg-accent-hover"
         >
           <Plus size={13} /> Add host
         </button>
@@ -210,9 +210,9 @@ export function HostsPage() {
           {sortedHosts.length === 0 ? (
             <EmptyState onAdd={beginNew} />
           ) : (
-            <div className="overflow-hidden rounded-lg border border-slate-800">
+            <div className="overflow-hidden rounded-lg border border-border-subtle">
               <table className="w-full text-left text-xs">
-                <thead className="bg-slate-900/60 text-[10px] uppercase tracking-wider text-slate-400">
+                <thead className="bg-bg-panel text-[10px] uppercase tracking-wider text-text-muted">
                   <tr>
                     <th className="px-3 py-2">Status</th>
                     <th className="px-3 py-2">Name</th>
@@ -224,7 +224,7 @@ export function HostsPage() {
                     <th className="px-3 py-2"></th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800 bg-slate-950">
+                <tbody className="divide-y divide-border-subtle bg-bg-base">
                   {sortedHosts.map((h) => {
                     const isSelected = selectedHostId === h.id;
                     const ping = pingState[h.id];
@@ -262,13 +262,13 @@ export function HostsPage() {
         </main>
 
         {showEditor && (
-          <aside className="flex w-96 shrink-0 flex-col border-l border-slate-800 bg-slate-900/40">
-            <div className="flex items-center justify-between border-b border-slate-800 px-4 py-3">
+          <aside className="flex w-96 shrink-0 flex-col border-l border-border-subtle bg-bg-panel/60">
+            <div className="flex items-center justify-between border-b border-border-subtle px-4 py-3">
               <div>
-                <div className="text-[11px] uppercase tracking-wider text-slate-400">
+                <div className="text-[11px] uppercase tracking-wider text-text-muted">
                   {draft.id ? 'Edit host' : 'New host'}
                 </div>
-                <h2 className="text-sm font-semibold text-slate-100">
+                <h2 className="text-sm font-semibold text-text-primary">
                   {draft.id ? draft.name || 'Untitled' : 'Add a new host'}
                 </h2>
               </div>
@@ -279,7 +279,7 @@ export function HostsPage() {
                   setDraft(EMPTY_DRAFT);
                   setError(null);
                 }}
-                className="focusable rounded text-slate-400 hover:text-slate-200"
+                className="focusable rounded text-text-muted hover:text-text-primary"
                 aria-label="Close editor"
               >
                 ×
@@ -330,7 +330,7 @@ export function HostsPage() {
                   className="hp-input font-mono text-[12px]"
                 />
               </Field>
-              <label className="flex items-center gap-2 text-[12px] text-slate-300">
+              <label className="flex items-center gap-2 text-[12px] text-text-secondary">
                 <input
                   type="checkbox"
                   checked={draft.skipStrictHostKey}
@@ -356,14 +356,14 @@ export function HostsPage() {
                     setDraft(EMPTY_DRAFT);
                     setError(null);
                   }}
-                  className="focusable rounded-md px-3 py-1.5 text-sm text-slate-400 hover:text-slate-200"
+                  className="focusable rounded-md px-3 py-1.5 text-sm text-text-muted hover:text-text-primary"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={busy}
-                  className="focusable rounded-md bg-sky-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-sky-500 disabled:cursor-not-allowed disabled:bg-slate-700"
+                  className="focusable rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-white hover:bg-accent-hover disabled:cursor-not-allowed disabled:bg-bg-elevated"
                 >
                   {busy ? 'Saving…' : draft.id ? 'Update host' : 'Add host'}
                 </button>
@@ -402,7 +402,7 @@ function HostRow({
   const lastSeen = ping?.at ?? host.capabilities?.lastCheckedAt ?? null;
   return (
     <>
-      <tr className={cn('text-slate-200', selected && 'bg-slate-900/60')}>
+      <tr className={cn('text-text-primary', selected && 'bg-bg-panel')}>
         <td className="px-3 py-2">
           <StatusPill probing={probing} ping={ping} hasCaps={!!host.capabilities} />
         </td>
@@ -410,21 +410,21 @@ function HostRow({
           <button
             type="button"
             onClick={onToggleExpand}
-            className="focusable rounded text-left font-medium text-slate-100 hover:text-sky-300"
+            className="focusable rounded text-left font-medium text-text-primary hover:text-accent-hover"
             title="Toggle load chart and recent builds"
           >
             {host.name}
           </button>
           {host.description && (
-            <div className="mt-0.5 text-[11px] text-slate-400">{host.description}</div>
+            <div className="mt-0.5 text-[11px] text-text-muted">{host.description}</div>
           )}
         </td>
-        <td className="px-3 py-2 font-mono text-[11px] text-slate-300">{host.host}</td>
+        <td className="px-3 py-2 font-mono text-[11px] text-text-secondary">{host.host}</td>
         <td className="px-3 py-2">
           <CapabilityBadges caps={host.capabilities} />
         </td>
-        <td className="px-3 py-2 text-[11px] text-slate-400">
-          {lastSeen ? <Time ts={lastSeen} /> : <span className="text-slate-500">—</span>}
+        <td className="px-3 py-2 text-[11px] text-text-muted">
+          {lastSeen ? <Time ts={lastSeen} /> : <span className="text-text-faint">—</span>}
         </td>
         <td className="px-3 py-2">
           {inflight > 0 ? (
@@ -432,7 +432,7 @@ function HostRow({
               {inflight} running
             </span>
           ) : (
-            <span className="text-[11px] text-slate-500">idle</span>
+            <span className="text-[11px] text-text-faint">idle</span>
           )}
         </td>
         <td className="px-3 py-2">
@@ -444,7 +444,7 @@ function HostRow({
               type="button"
               onClick={onTest}
               disabled={probing}
-              className="focusable rounded p-1 text-slate-400 hover:text-sky-300 disabled:opacity-50"
+              className="focusable rounded p-1 text-text-muted hover:text-accent-hover disabled:opacity-50"
               title="Test SSH connection + refresh capabilities"
               aria-label={`Test connection to ${host.name}`}
             >
@@ -453,7 +453,7 @@ function HostRow({
             <button
               type="button"
               onClick={onEdit}
-              className="focusable rounded p-1 text-slate-400 hover:text-sky-300"
+              className="focusable rounded p-1 text-text-muted hover:text-accent-hover"
               title="Edit host"
               aria-label={`Edit host ${host.name}`}
             >
@@ -462,7 +462,7 @@ function HostRow({
             <button
               type="button"
               onClick={onDelete}
-              className="focusable rounded p-1 text-slate-400 hover:text-rose-400"
+              className="focusable rounded p-1 text-text-muted hover:text-rose-400"
               title="Delete host"
               aria-label={`Delete host ${host.name}`}
             >
@@ -473,7 +473,7 @@ function HostRow({
       </tr>
       {selected && (
         <tr>
-          <td colSpan={8} className="bg-slate-900/40 px-3 py-3">
+          <td colSpan={8} className="bg-bg-panel/60 px-3 py-3">
             <HostDetail hostId={host.id} />
           </td>
         </tr>
@@ -493,7 +493,7 @@ function StatusPill({
 }) {
   if (probing) {
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-slate-800 px-2 py-0.5 text-[10px] font-medium text-slate-300">
+      <span className="inline-flex items-center gap-1 rounded-full bg-bg-elevated px-2 py-0.5 text-[10px] font-medium text-text-secondary">
         <CircleDashed size={10} className="motion-safe:animate-spin" /> probing
       </span>
     );
@@ -519,14 +519,14 @@ function StatusPill({
   // snapshot, treat as "unknown but previously reachable"; otherwise the
   // dot is grey "unknown".
   return (
-    <span className="inline-flex items-center gap-1 rounded-full bg-slate-800 px-2 py-0.5 text-[10px] font-medium text-slate-400">
+    <span className="inline-flex items-center gap-1 rounded-full bg-bg-elevated px-2 py-0.5 text-[10px] font-medium text-text-muted">
       <CircleDashed size={10} /> {hasCaps ? 'unknown' : 'never probed'}
     </span>
   );
 }
 
 function CapabilityBadges({ caps }: { caps?: HostCapabilities }) {
-  if (!caps) return <span className="text-[11px] text-slate-500">—</span>;
+  if (!caps) return <span className="text-[11px] text-text-faint">—</span>;
   return (
     <div className="flex flex-wrap gap-1">
       {caps.xcodeVersion && <Badge color="cyan">{caps.xcodeVersion}</Badge>}
@@ -539,7 +539,7 @@ function CapabilityBadges({ caps }: { caps?: HostCapabilities }) {
 const BADGE_PALETTE: Record<string, string> = {
   cyan: 'bg-cyan-900/40 text-cyan-200 border-cyan-700/50',
   violet: 'bg-violet-900/40 text-violet-200 border-violet-700/50',
-  slate: 'bg-slate-800 text-slate-300 border-slate-700',
+  slate: 'bg-bg-elevated text-text-secondary border-border-subtle',
 };
 
 function Badge({ color, children }: { color: keyof typeof BADGE_PALETTE | string; children: React.ReactNode }) {
@@ -552,7 +552,7 @@ function Badge({ color, children }: { color: keyof typeof BADGE_PALETTE | string
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="block">
-      <span className="mb-1 block text-[11px] uppercase tracking-wider text-slate-400">{label}</span>
+      <span className="mb-1 block text-[11px] uppercase tracking-wider text-text-muted">{label}</span>
       {children}
     </label>
   );
@@ -560,17 +560,17 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 function EmptyState({ onAdd }: { onAdd(): void }) {
   return (
-    <div className="mx-auto mt-12 max-w-md rounded-lg border border-dashed border-slate-700 bg-slate-900/40 p-8 text-center">
-      <Server className="mx-auto mb-3 text-slate-400" size={32} />
-      <div className="text-sm font-medium text-slate-100">No saved hosts yet</div>
-      <p className="mt-1 text-xs text-slate-400">
+    <div className="mx-auto mt-12 max-w-md rounded-lg border border-dashed border-border-subtle bg-bg-panel/60 p-8 text-center">
+      <Server className="mx-auto mb-3 text-text-muted" size={32} />
+      <div className="text-sm font-medium text-text-primary">No saved hosts yet</div>
+      <p className="mt-1 text-xs text-text-muted">
         Saved hosts let Remote SSH / SFTP / TestFlight / Mac steps reuse credentials and a
         capability snapshot across pipelines.
       </p>
       <button
         type="button"
         onClick={onAdd}
-        className="focusable mt-4 inline-flex items-center gap-1.5 rounded-md bg-sky-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-sky-500"
+        className="focusable mt-4 inline-flex items-center gap-1.5 rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:bg-accent-hover"
       >
         <Plus size={13} /> Add your first host
       </button>
@@ -624,13 +624,13 @@ function HostDetail({ hostId }: { hostId: string }) {
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
       <div>
-        <div className="mb-2 text-[10px] uppercase tracking-wider text-slate-400">
+        <div className="mb-2 text-[10px] uppercase tracking-wider text-text-muted">
           Concurrent builds (last 24h)
         </div>
         <LoadChart data={load} />
       </div>
       <div>
-        <div className="mb-2 text-[10px] uppercase tracking-wider text-slate-400">
+        <div className="mb-2 text-[10px] uppercase tracking-wider text-text-muted">
           Recent builds on this host
         </div>
         <RecentBuildsList items={recent} />
@@ -643,12 +643,12 @@ function HostDetail({ hostId }: { hostId: string }) {
 // (24h) and a polyline area for concurrent build count.
 function LoadChart({ data }: { data: Array<{ t: number; concurrent: number }> | null }) {
   if (data === null) {
-    return <div className="h-20 animate-pulse rounded bg-slate-900/40" />;
+    return <div className="h-20 animate-pulse rounded bg-bg-panel/60" />;
   }
   const hasAny = data.some((d) => d.concurrent > 0);
   if (data.length === 0 || !hasAny) {
     return (
-      <div className="flex h-20 items-center justify-center rounded border border-dashed border-slate-700 bg-slate-900/40 text-[11px] text-slate-500">
+      <div className="flex h-20 items-center justify-center rounded border border-dashed border-border-subtle bg-bg-panel/60 text-[11px] text-text-faint">
         No data yet — no builds used this host in the last 24h.
       </div>
     );
@@ -699,10 +699,10 @@ function RecentBuildsList({
 }) {
   const setView = useStore((s) => s.setView);
   const pipelines = useStore((s) => s.pipelines);
-  if (items === null) return <div className="h-20 animate-pulse rounded bg-slate-900/40" />;
+  if (items === null) return <div className="h-20 animate-pulse rounded bg-bg-panel/60" />;
   if (items.length === 0) {
     return (
-      <div className="flex h-20 items-center justify-center rounded border border-dashed border-slate-700 bg-slate-900/40 text-[11px] text-slate-500">
+      <div className="flex h-20 items-center justify-center rounded border border-dashed border-border-subtle bg-bg-panel/60 text-[11px] text-text-faint">
         No builds referenced this host yet.
       </div>
     );
@@ -716,13 +716,13 @@ function RecentBuildsList({
             <button
               type="button"
               onClick={() => setView({ type: 'build', id: b.id })}
-              className="focusable flex w-full items-center justify-between gap-2 rounded border border-slate-800 bg-slate-950 px-2 py-1 text-left text-[11px] text-slate-200 hover:border-sky-600"
+              className="focusable flex w-full items-center justify-between gap-2 rounded border border-border-subtle bg-bg-base px-2 py-1 text-left text-[11px] text-text-primary hover:border-sky-600"
             >
               <span className="flex items-center gap-2">
                 <StatusDot status={b.status} />
                 <span className="truncate">{pl?.name ?? `#${b.id.slice(0, 7)}`}</span>
               </span>
-              <span className="text-[10px] text-slate-400">
+              <span className="text-[10px] text-text-muted">
                 <Time ts={b.startedAt} />
               </span>
             </button>
@@ -734,7 +734,7 @@ function RecentBuildsList({
 }
 
 const STATUS_COLOR: Record<string, string> = {
-  pending: 'bg-slate-500',
+  pending: 'bg-text-faint',
   running: 'bg-sky-400',
   success: 'bg-emerald-400',
   failed: 'bg-rose-400',
@@ -744,7 +744,7 @@ const STATUS_COLOR: Record<string, string> = {
 function StatusDot({ status }: { status: string }) {
   return (
     <span
-      className={cn('inline-block h-2 w-2 rounded-full', STATUS_COLOR[status] ?? 'bg-slate-500')}
+      className={cn('inline-block h-2 w-2 rounded-full', STATUS_COLOR[status] ?? 'bg-text-faint')}
       title={status}
       aria-label={status}
     />
@@ -770,10 +770,10 @@ function HostLoadSpark({ hostId }: { hostId: string }) {
       alive = false;
     };
   }, [hostId]);
-  if (data === null) return <div className="h-5 w-20 animate-pulse rounded bg-slate-900" />;
+  if (data === null) return <div className="h-5 w-20 animate-pulse rounded bg-bg-panel" />;
   const hasAny = data.some((d) => d.concurrent > 0);
   if (data.length === 0 || !hasAny) {
-    return <span className="text-[10px] text-slate-500">no data</span>;
+    return <span className="text-[10px] text-text-faint">no data</span>;
   }
   const W = 80;
   const H = 20;
