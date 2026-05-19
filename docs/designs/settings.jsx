@@ -256,7 +256,7 @@ function TelegramSection() {
       <SettingsRow label="Bot token" hint="From @BotFather · stored encrypted at rest"
                    control={
                      <div className="row gap-2">
-                       <input className="field-input mono" type="password" defaultValue="7239482101:AAEh4G6sV9mP_KFc5pJ1xK4z7Y3wL2N8qK" style={{ width: 280 }} />
+                       <input className="field-input mono" type="password" defaultValue="123456789:XXXXXXXX-PLACEHOLDER-NOT-A-REAL-TOKEN-XXXXX" style={{ width: 280 }} />
                        <button className="btn btn-ghost btn-icon btn-sm"><Icon.Eye size={11} /></button>
                      </div>
                    } />

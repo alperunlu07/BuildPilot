@@ -409,7 +409,7 @@ function PropertiesTab({ node, showHost, setShowHost, showAdv, setShowAdv, revea
       { key: "extraFlags", label: "Extra flags", type: "textarea", val: "-allowProvisioningUpdates\n-quiet", required: false },
     ];
     if (node.type === "telegram") return [
-      { key: "botToken", label: "Bot token", type: "password", val: "7239482101:AAEh4G6sV9mP_KFc5pJ1xK4z7Y3wL2N8qK", required: true, encrypted: true, hint: "Encrypted at rest with AES-256-GCM" },
+      { key: "botToken", label: "Bot token", type: "password", val: "123456789:XXXXXXXX-PLACEHOLDER-NOT-A-REAL-TOKEN-XXXXX", required: true, encrypted: true, hint: "Encrypted at rest with AES-256-GCM" },
       { key: "chatId", label: "Chat ID", type: "text", val: "-1001923847562", required: true },
       { key: "message", label: "Message template", type: "textarea", val: "✓ Build #{{ build.sha }} succeeded\\nbranch: {{ build.branch }}\\nduration: {{ build.duration }}", required: true, hint: "Mustache variables available: build.*, project.*, pipeline.*" },
       { key: "parseMode", label: "Parse mode", type: "select", val: "Markdown", options: ["Markdown", "HTML", "None"], required: false },
