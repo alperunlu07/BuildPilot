@@ -60,11 +60,36 @@ body {
   font-size: 12px;
 }
 .react-flow__edge-path {
-  stroke: #475569;
+  stroke: var(--border);
   stroke-width: 1.75;
+  transition: stroke 140ms;
 }
 .react-flow__edge.selected .react-flow__edge-path {
-  stroke: #38bdf8;
+  stroke: var(--accent);
+  stroke-width: 2;
+}
+/* UI v2 Faz 5.A.2 — running-state edges. The PipelineEditor adds the
+   `edge-running` class to edges whose target node is currently running
+   so the dashed stroke walks along the path while the step runs. */
+.react-flow__edge.edge-running .react-flow__edge-path {
+  stroke: var(--st-running);
+  stroke-width: 2;
+  stroke-dasharray: 5 4;
+  animation: edge-dash 1.2s linear infinite;
+}
+.react-flow__edge.edge-success .react-flow__edge-path {
+  stroke: var(--st-success);
+}
+.react-flow__edge.edge-failed .react-flow__edge-path {
+  stroke: var(--st-failed);
+}
+@keyframes edge-dash {
+  to { stroke-dashoffset: -18; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .react-flow__edge.edge-running .react-flow__edge-path {
+    animation: none;
+  }
 }
 .react-flow__handle {
   background: #475569;
@@ -72,20 +97,40 @@ body {
   width: 10px;
   height: 10px;
 }
+/* UI v2 Faz 5.A.5 — React Flow canvas chrome bound to v2 tokens so the
+   editor's background, controls, and minimap repaint with the theme. */
 .react-flow__background {
-  background-color: #0f172a;
+  background-color: var(--bg-base);
 }
 .react-flow__controls {
-  border: 1px solid #1e293b;
-  background: #0f172a;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-panel);
+  border-radius: 6px;
+  overflow: hidden;
 }
 .react-flow__controls-button {
-  background: #0f172a;
-  color: #cbd5f5;
-  border-bottom: 1px solid #1e293b;
+  background: var(--bg-panel);
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-subtle);
 }
 .react-flow__controls-button:hover {
-  background: #1e293b;
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+.react-flow__minimap {
+  background: var(--bg-panel) !important;
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.react-flow__minimap-mask {
+  fill: var(--bg-overlay);
+}
+.react-flow__minimap-node {
+  fill: var(--accent);
+  fill-opacity: 0.4;
+  stroke: var(--accent);
+  stroke-opacity: 0.6;
 }
 
 /* Custom scrollbar in log panels */

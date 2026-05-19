@@ -702,6 +702,96 @@ function Editor({ pipeline }: Props) {
     await triggerBuild(pipeline.id);
   };
 
+  // UI v2 Faz 5.A.4 — graph validation overlay. Walks the current
+  // nodes + edges to surface two classes of issue:
+  //   1. Orphan nodes (no incoming AND no outgoing edge) — unreachable
+  //      branches the user probably forgot to wire up
+  //   2. Cycles — DFS that records the recursion stack and flags edges
+  //      that close back into it. Reported as the node where the cycle
+  //      closes so the user can locate it on the canvas
+  // We recompute on every nodes/edges change, but the walk is O(N+E)
+  // and N is bounded at ~hundreds, so this stays cheap.
+  const validationIssues = useMemo(() => {
+    const issues: Array<{ kind: 'orphan' | 'cycle'; nodeId: string; label: string }> = [];
+    if (nodes.length <= 1) return issues;
+    const inEdges = new Map<string, number>();
+    const outEdges = new Map<string, string[]>();
+    for (const n of nodes) {
+      inEdges.set(n.id, 0);
+      outEdges.set(n.id, []);
+    }
+    for (const e of edges) {
+      inEdges.set(e.target, (inEdges.get(e.target) ?? 0) + 1);
+      outEdges.get(e.source)?.push(e.target);
+    }
+    const labelFor = (id: string): string => {
+      const n = nodes.find((x) => x.id === id);
+      if (!n) return id.slice(0, 8);
+      const data = n.data as { templateLabel?: string };
+      const def = n.type ? STEP_DEFINITIONS[n.type as StepType] : undefined;
+      return data?.templateLabel ?? def?.label ?? n.type ?? id.slice(0, 8);
+    };
+    // Orphans
+    for (const n of nodes) {
+      if ((inEdges.get(n.id) ?? 0) === 0 && (outEdges.get(n.id) ?? []).length === 0) {
+        issues.push({ kind: 'orphan', nodeId: n.id, label: labelFor(n.id) });
+      }
+    }
+    // Cycles via DFS
+    const WHITE = 0;
+    const GREY = 1;
+    const BLACK = 2;
+    const color = new Map<string, number>();
+    for (const n of nodes) color.set(n.id, WHITE);
+    const cyclesFound = new Set<string>();
+    const dfs = (id: string) => {
+      color.set(id, GREY);
+      for (const next of outEdges.get(id) ?? []) {
+        const c = color.get(next) ?? WHITE;
+        if (c === GREY) cyclesFound.add(next);
+        else if (c === WHITE) dfs(next);
+      }
+      color.set(id, BLACK);
+    };
+    for (const n of nodes) {
+      if ((color.get(n.id) ?? WHITE) === WHITE) dfs(n.id);
+    }
+    for (const id of cyclesFound) {
+      issues.push({ kind: 'cycle', nodeId: id, label: labelFor(id) });
+    }
+    return issues;
+  }, [nodes, edges]);
+  // UI v2 Faz 5.A.2 — decorate edges with a runtime-status class so the
+  // CSS rules in index.css can paint them (animated dash for running,
+  // status-coloured stroke for success/failed). The decoration is
+  // derived, not stored, so React Flow's internal edge changes never
+  // race with our paint.
+  const decoratedEdges = useMemo(
+    () =>
+      edges.map((e) => {
+        const target = nodes.find((n) => n.id === e.target);
+        const status = (target?.data as { runtimeStatus?: string } | undefined)?.runtimeStatus;
+        const cls =
+          status === 'running'
+            ? 'edge-running'
+            : status === 'failed'
+              ? 'edge-failed'
+              : status === 'success'
+                ? 'edge-success'
+                : undefined;
+        return cls ? { ...e, className: cls } : e;
+      }),
+    [edges, nodes],
+  );
+  const [validationOpen, setValidationOpen] = useState(false);
+  const focusOnNode = useCallback(
+    (id: string) => {
+      setNodes((nds) => nds.map((n) => ({ ...n, selected: n.id === id })));
+      setValidationOpen(false);
+    },
+    [setNodes],
+  );
+
   return (
     <div className="flex h-full min-h-0 flex-col">
       {/* UI v2 Faz 5.B — pipeline editor header. Watch / interval / Telegram
@@ -1136,6 +1226,63 @@ function Editor({ pipeline }: Props) {
         />
 
         <div ref={wrapperRef} className="relative min-h-0 flex-1" onDragOver={onDragOver} onDrop={onDrop}>
+          {/* UI v2 Faz 5.A.4 — validation overlay. Floats top-left so it
+              doesn't clash with the find dialog (top-right) or the canvas
+              controls (bottom-right). */}
+          {validationIssues.length > 0 && (
+            <div className="absolute left-3 top-3 z-30">
+              {validationOpen ? (
+                <div className="w-72 rounded-card border border-status-warn/40 bg-bg-panel/95 shadow-xl backdrop-blur">
+                  <div className="flex items-center justify-between border-b border-border-subtle px-3 py-2">
+                    <span className="text-[11px] uppercase tracking-wider font-semibold text-status-warn">
+                      {validationIssues.length} issue{validationIssues.length === 1 ? '' : 's'}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setValidationOpen(false)}
+                      className="rounded p-0.5 text-text-muted hover:text-text-primary"
+                      aria-label="Close validation panel"
+                    >
+                      <X size={12} />
+                    </button>
+                  </div>
+                  <ul className="max-h-64 overflow-y-auto p-2 space-y-1">
+                    {validationIssues.map((iss, idx) => (
+                      <li key={`${iss.kind}-${iss.nodeId}-${idx}`}>
+                        <button
+                          type="button"
+                          onClick={() => focusOnNode(iss.nodeId)}
+                          className="w-full text-left rounded px-2 py-1 text-[12px] text-text-secondary hover:bg-bg-hover hover:text-text-primary transition-colors"
+                        >
+                          <span
+                            className={cn(
+                              'inline-block w-1.5 h-1.5 rounded-full mr-2',
+                              iss.kind === 'cycle' ? 'bg-status-failed' : 'bg-status-warn',
+                            )}
+                            aria-hidden
+                          />
+                          <span className="font-medium">
+                            {iss.kind === 'cycle' ? 'Cycle' : 'Orphan'}
+                          </span>
+                          <span className="ml-1 text-text-muted">{iss.label}</span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setValidationOpen(true)}
+                  className="inline-flex items-center gap-1.5 rounded-pill border border-status-warn/40 bg-bg-panel/95 px-2.5 h-7 text-[11px] font-medium text-status-warn shadow-md backdrop-blur hover:border-status-warn transition-colors"
+                  title="Pipeline validation issues — click to inspect"
+                >
+                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-status-warn animate-pulse-dot" aria-hidden />
+                  {validationIssues.length} issue{validationIssues.length === 1 ? '' : 's'}
+                </button>
+              )}
+            </div>
+          )}
           {findOpen && (
             <div className="absolute right-3 top-3 z-30 w-80 rounded-md border border-border-subtle bg-bg-panel/95 p-2 shadow-xl backdrop-blur">
               <div className="flex items-center gap-2">
@@ -1203,7 +1350,7 @@ function Editor({ pipeline }: Props) {
           )}
           <ReactFlow
             nodes={nodes}
-            edges={edges}
+            edges={decoratedEdges}
             nodeTypes={nodeTypes}
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
