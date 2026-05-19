@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { randomBytes } from 'node:crypto';
 import type {
+  AiIntegrationsConfig,
   AuthConfig,
   DiscordConfig,
   GithubOAuthConfig,
@@ -305,6 +306,25 @@ export function saveGithubOAuthConfig(next: GithubOAuthConfig): GithubOAuthConfi
   writeFileSync(CONFIG_FILE, JSON.stringify(toOnDisk(updated), null, 2), 'utf-8');
   cachedConfig = updated;
   return updated.githubOAuth!;
+}
+
+// ── AI Integrations (UI-v2 Faz 10) ──────────────────────────────────────────
+// Returns an empty block (not null) when nothing is configured so the
+// runner code can `?? {}` without a null check. Nothing here is encrypted
+// because path/model strings aren't secrets — toOnDisk/toRuntime pass the
+// block through unchanged.
+export function getAiIntegrationsRuntime(): AiIntegrationsConfig {
+  return cachedConfig?.aiIntegrations ?? {};
+}
+
+export function saveAiIntegrationsConfig(
+  next: AiIntegrationsConfig,
+): AiIntegrationsConfig {
+  const base = cachedConfig ?? loadConfig();
+  const updated: ServerConfig = { ...base, aiIntegrations: { ...next } };
+  writeFileSync(CONFIG_FILE, JSON.stringify(toOnDisk(updated), null, 2), 'utf-8');
+  cachedConfig = updated;
+  return updated.aiIntegrations!;
 }
 
 export const CONFIG_PATH = CONFIG_FILE;

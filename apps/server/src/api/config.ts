@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import type {
+  AiIntegrationsConfig,
   DiscordConfig,
   DiscordConfigPublic,
   SlackConfig,
@@ -9,9 +10,11 @@ import type {
   TelegramConfigPublic,
 } from '@buildpilot/shared-types';
 import {
+  getAiIntegrationsRuntime,
   getDiscordConfigRuntime,
   getSlackConfigRuntime,
   getTelegramConfigRuntime,
+  saveAiIntegrationsConfig,
   saveDiscordConfig,
   saveSlackConfig,
   saveTelegramConfig,
@@ -85,6 +88,21 @@ const discordUpdateSchema = z.object({
   applicationId: z.string().optional(),
   defaultChannelId: z.string().optional(),
   clearPublicKey: z.boolean().optional(),
+});
+
+// AI Integrations: every field optional so the dashboard can PATCH a single
+// tool override without round-tripping the entire block. Empty string is
+// treated as "clear this override" — saves a separate clear-flag per field.
+const aiToolUpdateSchema = z.object({
+  path: z.string().optional(),
+  model: z.string().optional(),
+});
+
+const aiIntegrationsUpdateSchema = z.object({
+  claude: aiToolUpdateSchema.optional(),
+  codex: aiToolUpdateSchema.optional(),
+  aider: aiToolUpdateSchema.optional(),
+  gemini: aiToolUpdateSchema.optional(),
 });
 
 function toSlackPublic(cfg: SlackConfig | null): SlackConfigPublic {
@@ -256,6 +274,65 @@ export async function configRoutes(app: FastifyInstance): Promise<void> {
     };
     const saved = saveDiscordConfig(merged);
     return toDiscordPublic(saved);
+  });
+
+  // ── AI Integrations (UI-v2 Faz 10) ───────────────────────────────────────
+  // Path/model overrides for the four built-in AI CLIs. Empty strings clear
+  // the override (caller doesn't need separate clear-flags); omitted tool
+  // keys keep their existing overrides untouched (per-tool PATCH semantics).
+  app.get('/api/config/ai-integrations', async () => {
+    return getAiIntegrationsRuntime();
+  });
+
+  app.put('/api/config/ai-integrations', async (req, reply) => {
+    const parsed = aiIntegrationsUpdateSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return reply.code(400).send({ error: parsed.error.flatten() });
+    }
+    const input = parsed.data;
+    const existing = getAiIntegrationsRuntime();
+
+    // Per-tool merge: empty string clears, undefined keeps existing, any
+    // other value overwrites. Strip fully-empty tool blocks so the JSON
+    // stays minimal — { claude: {} } would otherwise persist forever.
+    function mergeTool(
+      prev: AiIntegrationsConfig['claude'] | undefined,
+      next: AiIntegrationsConfig['claude'] | undefined,
+    ): AiIntegrationsConfig['claude'] | undefined {
+      if (next === undefined) return prev;
+      const path =
+        next.path === undefined
+          ? prev?.path
+          : next.path.trim().length === 0
+            ? undefined
+            : next.path.trim();
+      const model =
+        next.model === undefined
+          ? prev?.model
+          : next.model.trim().length === 0
+            ? undefined
+            : next.model.trim();
+      if (!path && !model) return undefined;
+      return { ...(path ? { path } : {}), ...(model ? { model } : {}) };
+    }
+
+    const merged: AiIntegrationsConfig = {
+      claude: mergeTool(existing.claude, input.claude),
+      codex: mergeTool(existing.codex, input.codex),
+      aider: mergeTool(existing.aider, input.aider),
+      gemini: mergeTool(existing.gemini, input.gemini),
+    };
+
+    // Drop undefined tool keys so the persisted JSON only contains tools
+    // that actually have overrides — makes the file readable when users
+    // poke at it by hand.
+    const cleaned: AiIntegrationsConfig = {};
+    if (merged.claude) cleaned.claude = merged.claude;
+    if (merged.codex) cleaned.codex = merged.codex;
+    if (merged.aider) cleaned.aider = merged.aider;
+    if (merged.gemini) cleaned.gemini = merged.gemini;
+
+    return saveAiIntegrationsConfig(cleaned);
   });
 
   // Send a quick sanity-check message using the supplied or stored token.

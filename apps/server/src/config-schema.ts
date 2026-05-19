@@ -90,6 +90,25 @@ export const GithubOAuthConfigSchema = z
   })
   .passthrough();
 
+// Per-tool AI overrides (path + model). Both fields optional — an empty
+// block means "use the hardcoded defaults from aiPrompt.ts". Nothing here
+// is a secret, so no encryption/redaction layer is involved.
+export const AiToolConfigSchema = z
+  .object({
+    path: z.string().optional(),
+    model: z.string().optional(),
+  })
+  .passthrough();
+
+export const AiIntegrationsConfigSchema = z
+  .object({
+    claude: AiToolConfigSchema.optional(),
+    codex: AiToolConfigSchema.optional(),
+    aider: AiToolConfigSchema.optional(),
+    gemini: AiToolConfigSchema.optional(),
+  })
+  .passthrough();
+
 // ── Top-level schema ───────────────────────────────────────────────────────
 
 export const ServerConfigSchema = z
@@ -122,6 +141,7 @@ export const ServerConfigSchema = z
       .optional(),
     auth: AuthConfigSchema.optional(),
     githubOAuth: GithubOAuthConfigSchema.optional(),
+    aiIntegrations: AiIntegrationsConfigSchema.optional(),
   })
   // .passthrough() so future fields added by a newer server build don't
   // brick an older install that happens to read the same file (and

@@ -1885,6 +1885,9 @@ export interface ServerConfig {
   auth?: AuthConfig;
   // Cluster 11.E — GitHub OAuth app credentials.
   githubOAuth?: GithubOAuthConfig;
+  // UI-v2 Faz 10 — per-tool AI CLI overrides. Optional everywhere; empty
+  // block keeps the legacy hardcoded defaults.
+  aiIntegrations?: AiIntegrationsConfig;
 }
 
 // ── Slack (Cluster 11.I) ────────────────────────────────────────────────────
@@ -1960,6 +1963,32 @@ export interface TelegramConfigPublic {
   botTokenPreview: string; // e.g. "••••1234" or ""
   hasChatId: boolean;
   chatIdPreview: string; // e.g. "@channel" or "••••5678" or ""
+}
+
+// ── AI Integrations ────────────────────────────────────────────────────────
+// Per-tool overrides for the four built-in AI CLIs used by aiPrompt steps
+// and the AI auto-fix loop. Empty / undefined fields fall back to the
+// hardcoded defaults in apps/server/src/runner/steps/aiPrompt.ts, so an
+// empty AiIntegrationsConfig is a valid "use defaults everywhere" state.
+//
+// None of these values are secrets — they're paths and model names — so
+// the public shape is identical to the runtime shape (no preview/redaction).
+export interface AiToolConfig {
+  // Override the binary the runner spawns. Empty = look up the tool name
+  // on PATH (the legacy behaviour). Useful when the user has Claude Code
+  // installed at a non-standard prefix or wants to point at a wrapper.
+  path?: string;
+  // Override the model passed to the CLI when it supports a --model flag.
+  // Empty = let the CLI pick its own default. Surface in the dashboard so
+  // users can pin a specific snapshot (e.g. "claude-opus-4-7") per project.
+  model?: string;
+}
+
+export interface AiIntegrationsConfig {
+  claude?: AiToolConfig;
+  codex?: AiToolConfig;
+  aider?: AiToolConfig;
+  gemini?: AiToolConfig;
 }
 
 // Body accepted by PUT /api/config/telegram. Any string field left as the
