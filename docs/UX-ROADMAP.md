@@ -239,8 +239,8 @@ Cross-refs: `TODO.md` Phase 2.6.C, 4.B.
   destination group) — `10a5122`
 - [x] **Approvals inbox** — a top-level view listing every pipeline
   currently waiting on the current user — `3bd3e98`
-- [ ] **Required-reviewer policy** — `N approvers, M of them with role X`
-  + optional wait timer
+- [x] **Required-reviewer policy** — `N approvers, M of them with role X`
+  + optional wait timer — `pending`
 
 ### Cluster 11.E · PR / VCS feedback
 
