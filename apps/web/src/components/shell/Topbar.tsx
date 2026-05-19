@@ -192,6 +192,9 @@ function Breadcrumb({
     case 'hosts':
       crumbs.push({ label: tHosts });
       break;
+    case 'catalog':
+      crumbs.push({ label: 'Step Catalog' });
+      break;
   }
 
   return (

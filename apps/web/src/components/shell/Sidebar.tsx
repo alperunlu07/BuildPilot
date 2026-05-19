@@ -1,5 +1,6 @@
 import {
   AlertTriangle,
+  Boxes,
   CheckCircle2,
   ChevronDown,
   ChevronRight,
@@ -359,6 +360,13 @@ export function Sidebar({
             onClick={() => setView({ type: 'queue' })}
             count={queuePending > 0 ? queuePending : undefined}
             title="Pending and running builds, grouped by lane"
+          />
+          <NavItem
+            icon={<Boxes size={14} />}
+            label="Step Catalog"
+            active={view.type === 'catalog'}
+            onClick={() => setView({ type: 'catalog' })}
+            title="Reference for every step type BuildPilot supports"
           />
           <NavItem
             icon={<LineChart size={14} />}

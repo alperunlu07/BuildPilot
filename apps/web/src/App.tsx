@@ -19,6 +19,7 @@ import { PipelinePage } from './pages/PipelinePage';
 import { BuildsPage } from './pages/BuildsPage';
 import { BuildDetailPage } from './pages/BuildDetailPage';
 import { QueuePage } from './pages/QueuePage';
+import { CatalogPage } from './pages/CatalogPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { DiskUsagePage } from './pages/DiskUsagePage';
 import { HostsPage } from './pages/HostsPage';
@@ -224,6 +225,7 @@ export function App() {
         {view.type === 'builds' && <BuildsPage />}
         {view.type === 'build' && <BuildDetailPage buildId={view.id} />}
         {view.type === 'queue' && <QueuePage />}
+        {view.type === 'catalog' && <CatalogPage />}
         {view.type === 'settings' && <SettingsPage />}
         {view.type === 'diskUsage' && <DiskUsagePage />}
         {view.type === 'hosts' && <HostsPage />}

@@ -53,7 +53,8 @@ export type View =
   | { type: 'vaultFiles' }
   | { type: 'vcsCredentials' }
   | { type: 'approvals' }
-  | { type: 'queue' };
+  | { type: 'queue' }
+  | { type: 'catalog' };
 
 export interface CommitToast {
   id: string;
