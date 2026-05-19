@@ -57,7 +57,10 @@ export function ApprovalCard({ approval, onDecided, readOnly = false }: Props) {
 
   const settled = approval.decision !== null;
   const approvedCount = approval.approvers.filter((a) => a.decision === 'approve').length;
+  const rejectedCount = approval.approvers.filter((a) => a.decision === 'reject').length;
   const showActions = !settled && !readOnly;
+  const multiApprover = approval.requiredApprovers > 1;
+  const remaining = Math.max(0, approval.requiredApprovers - approvedCount);
 
   async function decide(decision: 'approve' | 'reject') {
     if (decision === 'approve') {
@@ -104,13 +107,12 @@ export function ApprovalCard({ approval, onDecided, readOnly = false }: Props) {
       <header className="mb-2 flex flex-wrap items-center gap-2">
         <ShieldCheck size={14} className="text-amber-400" />
         <span className="text-[11px] font-semibold uppercase tracking-wider text-amber-300">
-          Manual approval{settled ? ` · ${approval.decision}` : ' required'}
+          {settled
+            ? `Manual approval · ${approval.decision}`
+            : multiApprover
+              ? `Awaiting approval (${approvedCount} of ${approval.requiredApprovers} received)`
+              : 'Manual approval required'}
         </span>
-        {approval.requiredApprovers > 1 && (
-          <span className="text-[11px] text-amber-300">
-            {approvedCount}/{approval.requiredApprovers} approvals collected
-          </span>
-        )}
         {approval.requiredRoles.length > 0 && (
           <span className="text-[11px] text-amber-300">
             roles: {approval.requiredRoles.join(', ')}
@@ -122,6 +124,39 @@ export function ApprovalCard({ approval, onDecided, readOnly = false }: Props) {
           </span>
         )}
       </header>
+
+      {!settled && multiApprover && (
+        <div className="mb-3 rounded-md border border-amber-700/40 bg-amber-950/40 px-2.5 py-1.5 text-[11px] text-amber-100">
+          {remaining > 0 ? (
+            <>
+              {remaining} more approval{remaining === 1 ? '' : 's'} needed before
+              this step can resume.
+            </>
+          ) : (
+            <>All required approvals collected — finalising…</>
+          )}
+          {rejectedCount > 0 && (
+            <span className="ml-1 text-rose-300">
+              {' '}
+              ({rejectedCount} reject{rejectedCount === 1 ? '' : 's'} received — any reject finalises the step)
+            </span>
+          )}
+          {approval.requiredRoles.length > 0 && (
+            <div className="mt-1 text-[10px] text-amber-300/80">
+              Eligible reviewers: anyone with role{' '}
+              {approval.requiredRoles.map((r) => (
+                <code
+                  key={r}
+                  className="rounded bg-amber-900/50 px-1 py-0.5 font-mono text-[10px]"
+                >
+                  {r}
+                </code>
+              ))}{' '}
+              (soft hint — out-of-role decisions are allowed but logged).
+            </div>
+          )}
+        </div>
+      )}
 
       <div
         className="prose prose-invert mb-3 max-w-none text-sm leading-relaxed text-slate-100"
@@ -249,10 +284,33 @@ export function ApprovalCard({ approval, onDecided, readOnly = false }: Props) {
 
       {approval.approvers.length > 0 && (
         <div className="mt-2 text-[11px] text-slate-400">
-          Decisions so far:{' '}
-          {approval.approvers
-            .map((a) => `${a.actor}=${a.decision}`)
-            .join(', ')}
+          <span className="font-semibold uppercase tracking-wider text-slate-500">
+            Decisions so far
+          </span>
+          <ul className="mt-0.5 space-y-0.5">
+            {approval.approvers.map((a) => (
+              <li key={`${a.actor}-${a.at}`} className="flex items-center gap-2">
+                <span
+                  className={
+                    a.decision === 'approve'
+                      ? 'inline-flex items-center gap-1 text-emerald-300'
+                      : 'inline-flex items-center gap-1 text-rose-300'
+                  }
+                >
+                  {a.decision === 'approve' ? (
+                    <CheckCircle2 size={10} />
+                  ) : (
+                    <XCircle size={10} />
+                  )}
+                  {a.decision}
+                </span>
+                <span className="font-mono text-slate-300">{a.actor}</span>
+                <span className="text-slate-500">
+                  {new Date(a.at).toLocaleTimeString()}
+                </span>
+              </li>
+            ))}
+          </ul>
         </div>
       )}
     </section>

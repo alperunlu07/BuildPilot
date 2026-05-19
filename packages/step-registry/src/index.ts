@@ -4541,12 +4541,18 @@ export const STEP_DEFINITIONS: Record<StepType, StepDefinition> = {
         label: 'Required distinct approvers',
         type: 'number',
         defaultValue: 1,
+        help:
+          'Number of distinct actors that must Approve before the step resumes. ' +
+          'A single Reject from any actor finalises the step as rejected.',
       },
       {
         name: 'requiredRoles',
-        label: 'Required roles (comma-separated; soft hint until auth lands)',
+        label: 'Required roles',
         type: 'text',
         placeholder: 'release-manager, qa-lead',
+        help:
+          'Comma-separated role names. Soft role check until SSO is ' +
+          'enforced — out-of-role decisions are allowed but logged to the build log.',
       },
       {
         name: 'timeoutMinutes',

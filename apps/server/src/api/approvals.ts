@@ -19,6 +19,7 @@ import {
   recordApproverDecision,
 } from '../store/approvals';
 import { getBuild } from '../store/builds';
+import { appendBuildLogEntry } from '../store/buildLogs';
 import { eventBus } from '../events/bus';
 import { resolveApproval } from '../runner/approvalBus';
 import { logger } from '../logger';
@@ -84,7 +85,9 @@ export async function approvalsRoutes(app: FastifyInstance): Promise<void> {
 
       // Soft role check — if requiredRoles is set but auth isn't enforced
       // yet, log the mismatch but still record the decision so the flow
-      // works pre-auth.
+      // works pre-auth. We write to both the server logger (so ops sees it
+      // in stdout) AND the build's own log so the audit trail on
+      // BuildDetailPage records who decided out-of-role.
       if (
         approval.requiredRoles.length > 0 &&
         role &&
@@ -99,6 +102,18 @@ export async function approvalsRoutes(app: FastifyInstance): Promise<void> {
           },
           'approval decision recorded despite role mismatch (soft enforcement)',
         );
+        const note = appendBuildLogEntry({
+          buildId,
+          ts: Date.now(),
+          level: 'info',
+          nodeId: approval.nodeId,
+          stepType: 'manualApproval',
+          message:
+            `▸ soft role mismatch: ${actor} (role=${role}) decided ` +
+            `"${parsed.data.decision}" — required roles were ` +
+            `[${approval.requiredRoles.join(', ')}] (decision allowed until SSO is enforced)`,
+        });
+        eventBus.publish({ type: 'buildLogEntry', buildId, entry: note });
       }
 
       const updated = recordApproverDecision(
