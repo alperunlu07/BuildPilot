@@ -75,6 +75,63 @@ interface Props {
   buildId: string;
 }
 
+// UI v2 Faz 6.A — the 7-tab navigation outlined in MIGRATION_TODO.
+// `overview` and `logs` carry real content today; the remaining four
+// render placeholders until the respective 6.B sub-PRs land.
+type BuildDetailTab =
+  | 'overview'
+  | 'logs'
+  | 'pipeline'
+  | 'artifacts'
+  | 'environment'
+  | 'tests'
+  | 'annotations';
+
+const TAB_ORDER: ReadonlyArray<BuildDetailTab> = [
+  'overview',
+  'logs',
+  'pipeline',
+  'artifacts',
+  'environment',
+  'tests',
+  'annotations',
+];
+
+const TAB_META: Record<BuildDetailTab, { label: string; disabled?: boolean; placeholder?: string }> = {
+  overview: { label: 'Overview' },
+  logs: { label: 'Logs' },
+  pipeline: {
+    label: 'Pipeline',
+    disabled: true,
+    placeholder:
+      'Read-only canvas showing the pipeline snapshot at build time. Wired up alongside the Faz 6.B pipeline-snapshot endpoint.',
+  },
+  artifacts: {
+    label: 'Artifacts',
+    disabled: true,
+    placeholder:
+      'Grid view of every artifact this build produced, with preview / copy-path / download actions. Currently surfaced inline on the Overview tab.',
+  },
+  environment: {
+    label: 'Environment',
+    disabled: true,
+    placeholder:
+      'Environment variables resolved at build time (secrets masked) plus the SSH builder hosts each step landed on.',
+  },
+  tests: {
+    label: 'Tests',
+    disabled: true,
+    placeholder:
+      'Pass / fail / flaky counts plus per-case detail. The TestReport endpoint already exists — wiring lands in Faz 6.B.',
+  },
+  annotations: {
+    label: 'Annotations',
+    disabled: true,
+    placeholder:
+      'Compiler warnings, lint errors, and other structured findings. Backend parsers land in Faz 6.B; the type contract is already in place.',
+  },
+};
+
 const ALL_LEVELS: BuildLogLevel[] = [
   'system',
   'info',
@@ -97,6 +154,12 @@ export function BuildDetailPage({ buildId }: Props) {
   const [loading, setLoading] = useState(true);
   const [artifacts, setArtifacts] = useState<BuildArtifact[]>([]);
   const [approvals, setApprovals] = useState<BuildApproval[]>([]);
+  // UI v2 Faz 6.A — tab shell for the build detail page. Default lands on
+  // Overview (the legacy single-page experience). Logs lifts the bottom
+  // section out of the scroll so users can jump straight to the table.
+  // Pipeline / Artifacts / Environment / Tests / Annotations stay as
+  // placeholders here; their content is wired up in 6.B sub-PRs.
+  const [activeTab, setActiveTab] = useState<BuildDetailTab>('overview');
   // Selected artifact for the inline log viewer modal. null = closed.
   const [previewArtifact, setPreviewArtifact] = useState<BuildArtifact | null>(null);
   // Cluster 11.C — matrix children. Populated only when this build is the
@@ -318,15 +381,15 @@ export function BuildDetailPage({ buildId }: Props) {
   };
 
   if (loading && !build) {
-    return <div className="p-8 text-sm text-slate-400">Loading build…</div>;
+    return <div className="p-8 text-sm text-text-muted">Loading build…</div>;
   }
   if (!build) {
     return (
-      <div className="p-8 text-sm text-slate-400">
+      <div className="p-8 text-sm text-text-muted">
         Build not found.{' '}
         <button
           type="button"
-          className="text-sky-400 hover:underline"
+          className="text-accent hover:underline"
           onClick={() => setView({ type: 'builds' })}
         >
           Back to builds
@@ -349,12 +412,12 @@ export function BuildDetailPage({ buildId }: Props) {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <header className="border-b border-slate-800 bg-slate-900/40 px-3 py-3 sm:px-6">
+      <header className="border-b border-border-subtle bg-bg-panel px-3 py-3 sm:px-6">
         {isMatrixChild && build.parentBuildId ? (
           <button
             type="button"
             onClick={() => setView({ type: 'build', id: build.parentBuildId! })}
-            className="focusable inline-flex items-center gap-1 rounded text-[11px] uppercase tracking-wider text-sky-400 hover:text-sky-300"
+            className="inline-flex items-center gap-1 rounded text-[11px] uppercase tracking-wider text-accent hover:text-accent-hover transition-colors"
             aria-label="Back to parent matrix build"
           >
             <ChevronLeft size={12} /> Matrix
@@ -363,14 +426,14 @@ export function BuildDetailPage({ buildId }: Props) {
           <button
             type="button"
             onClick={() => setView({ type: 'builds' })}
-            className="focusable inline-flex items-center gap-1 rounded text-[11px] uppercase tracking-wider text-slate-400 hover:text-slate-300"
+            className="inline-flex items-center gap-1 rounded text-[11px] uppercase tracking-wider text-text-muted hover:text-text-primary transition-colors"
             aria-label="Back to builds list"
           >
             <ChevronLeft size={12} /> Builds
           </button>
         )}
         <div className="mt-1 flex flex-wrap items-baseline gap-x-4 gap-y-1">
-          <h1 className="text-lg font-semibold text-slate-100">
+          <h1 className="text-lg font-semibold text-text-primary tracking-tight">
             {pipe?.name ?? 'Unknown pipeline'}
           </h1>
           {(() => {
@@ -521,6 +584,55 @@ export function BuildDetailPage({ buildId }: Props) {
         </div>
       </header>
 
+      {/* UI v2 Faz 6.A — tab nav. Underline-style row matching v2 Tabs
+          primitive but rendered inline so it can reach into the page's
+          activeTab state without lifting it. */}
+      <nav
+        className="flex items-center gap-1 border-b border-border-subtle bg-bg-panel px-2 sm:px-4"
+        role="tablist"
+        aria-label="Build sections"
+      >
+        {TAB_ORDER.map((tab) => {
+          const active = activeTab === tab;
+          const meta = TAB_META[tab];
+          const disabled = meta.disabled;
+          return (
+            <button
+              key={tab}
+              type="button"
+              role="tab"
+              aria-selected={active}
+              aria-disabled={disabled}
+              onClick={() => !disabled && setActiveTab(tab)}
+              className={cn(
+                'relative flex items-center gap-1.5 px-3 h-9 text-[12.5px] font-medium transition-colors',
+                active
+                  ? 'text-text-primary'
+                  : disabled
+                    ? 'text-text-faint cursor-not-allowed'
+                    : 'text-text-muted hover:text-text-secondary',
+              )}
+              title={disabled ? `${meta.label} — coming soon` : meta.label}
+            >
+              {meta.label}
+              {disabled && (
+                <span className="rounded bg-bg-elevated border border-border-subtle px-1 text-[9px] uppercase tracking-wider text-text-faint">
+                  soon
+                </span>
+              )}
+              {active && (
+                <span
+                  className="absolute inset-x-2 bottom-0 h-[2px] bg-accent rounded-t-sm"
+                  aria-hidden
+                />
+              )}
+            </button>
+          );
+        })}
+      </nav>
+
+      {activeTab === 'overview' && (
+        <>
       <PrSummaryCard buildId={build.id} />
 
       {(() => {
@@ -670,7 +782,11 @@ export function BuildDetailPage({ buildId }: Props) {
           `${nodeLabelMap.get(id) ?? type ?? '?'} · ${id.slice(0, 8)}`
         }
       />
+        </>
+      )}
 
+      {activeTab === 'logs' && (
+        <>
       <div className="flex flex-wrap items-center gap-3 border-b border-t border-slate-800 bg-slate-900/30 px-3 py-2 text-xs sm:px-6">
         <Filter size={12} className="text-slate-400" />
         <span className="text-slate-400">Levels</span>
@@ -790,6 +906,26 @@ export function BuildDetailPage({ buildId }: Props) {
           emptyMessage={entries.length === 0 ? 'Build queued / no output yet.' : 'No rows match these filters.'}
         />
       </div>
+        </>
+      )}
+
+      {activeTab !== 'overview' && activeTab !== 'logs' && (
+        <div className="flex-1 flex flex-col items-center justify-center gap-3 p-12 text-center">
+          <div className="text-[14px] font-semibold text-text-primary">
+            {TAB_META[activeTab].label}
+          </div>
+          <p className="max-w-md text-[12.5px] text-text-muted leading-relaxed">
+            {TAB_META[activeTab].placeholder}
+          </p>
+          <button
+            type="button"
+            onClick={() => setActiveTab('overview')}
+            className="mt-2 rounded-btn border border-border-subtle bg-bg-elevated px-3 py-1.5 text-[12px] text-text-secondary hover:text-text-primary hover:border-border transition-colors"
+          >
+            Back to Overview
+          </button>
+        </div>
+      )}
 
       {/* Inline artifact log viewer — opens when user clicks an artifact row. */}
       <ArtifactPreviewModal
