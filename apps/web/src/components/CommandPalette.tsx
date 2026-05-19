@@ -56,25 +56,25 @@ export function CommandPalette({ onAddProject, onManageHosts }: Props) {
     <div
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 z-[90] flex items-start justify-center bg-black/60 pt-[12vh]"
+      className="fixed inset-0 z-[90] flex items-start justify-center bg-bg-overlay pt-[12vh]"
       onClick={close}
     >
       <div
-        className="w-full max-w-xl overflow-hidden rounded-lg border border-slate-800 bg-slate-900 shadow-2xl"
+        className="w-full max-w-xl overflow-hidden rounded-card border border-border-subtle bg-bg-panel shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <Command label="Command palette" loop>
-          <div className="border-b border-slate-800 px-3">
+          <div className="border-b border-border-subtle px-3">
             <Command.Input
               autoFocus
               value={query}
               onValueChange={setQuery}
               placeholder={t('palette.placeholder')}
-              className="w-full bg-transparent py-3 text-sm text-slate-100 placeholder:text-slate-400 focus:outline-none"
+              className="w-full bg-transparent py-3 text-sm text-text-primary placeholder:text-text-faint focus:outline-none"
             />
           </div>
           <Command.List className="max-h-[60vh] overflow-y-auto p-2 text-sm">
-            <Command.Empty className="px-3 py-6 text-center text-slate-400">
+            <Command.Empty className="px-3 py-6 text-center text-text-muted">
               {t('palette.empty')}
             </Command.Empty>
 
@@ -99,7 +99,7 @@ export function CommandPalette({ onAddProject, onManageHosts }: Props) {
                       }}
                       className="cmdk-item"
                     >
-                      <Icon size={14} className="text-slate-400" />
+                      <Icon size={14} className="text-text-muted" />
                       <span className="truncate">{r.label}</span>
                     </Command.Item>
                   );
@@ -134,14 +134,14 @@ export function CommandPalette({ onAddProject, onManageHosts }: Props) {
                 onSelect={() => run(() => setView({ type: 'settings' }))}
                 className="cmdk-item"
               >
-                <SettingsIcon size={14} className="text-slate-400" /> {t('nav.settings')}
+                <SettingsIcon size={14} className="text-text-muted" /> {t('nav.settings')}
               </Command.Item>
               <Command.Item
                 value="go disk usage"
                 onSelect={() => run(() => setView({ type: 'diskUsage' }))}
                 className="cmdk-item"
               >
-                <HardDrive size={14} className="text-slate-400" /> {t('nav.diskUsage')}
+                <HardDrive size={14} className="text-text-muted" /> {t('nav.diskUsage')}
               </Command.Item>
               <Command.Item
                 value="add project new"
@@ -155,14 +155,14 @@ export function CommandPalette({ onAddProject, onManageHosts }: Props) {
                 onSelect={() => run(() => setView({ type: 'hosts' }))}
                 className="cmdk-item"
               >
-                <Server size={14} className="text-slate-400" /> {t('nav.hosts')}
+                <Server size={14} className="text-text-muted" /> {t('nav.hosts')}
               </Command.Item>
               <Command.Item
                 value="quick add ssh host"
                 onSelect={() => run(onManageHosts)}
                 className="cmdk-item"
               >
-                <Plus size={14} className="text-slate-400" /> Quick-add SSH host
+                <Plus size={14} className="text-text-muted" /> Quick-add SSH host
               </Command.Item>
               <Command.Item
                 value="toggle theme"
@@ -178,7 +178,7 @@ export function CommandPalette({ onAddProject, onManageHosts }: Props) {
                 onSelect={() => run(openShortcutsHelp)}
                 className="cmdk-item"
               >
-                <Keyboard size={14} className="text-slate-400" /> {t('actions.help')}
+                <Keyboard size={14} className="text-text-muted" /> {t('actions.help')}
               </Command.Item>
             </Command.Group>
 
@@ -193,7 +193,7 @@ export function CommandPalette({ onAddProject, onManageHosts }: Props) {
                   >
                     <Folder size={14} className="text-sky-400" />
                     <span className="truncate">{p.name}</span>
-                    <span className="ml-auto truncate text-[10px] text-slate-400">{p.path}</span>
+                    <span className="ml-auto truncate text-[10px] text-text-muted">{p.path}</span>
                   </Command.Item>
                 ))}
               </Command.Group>
@@ -212,7 +212,7 @@ export function CommandPalette({ onAddProject, onManageHosts }: Props) {
                     >
                       <GitBranch size={14} className="text-emerald-400" />
                       <span className="truncate">{pl.name}</span>
-                      <span className="ml-auto truncate text-[10px] text-slate-400">
+                      <span className="ml-auto truncate text-[10px] text-text-muted">
                         {proj?.name ?? ''}
                       </span>
                     </Command.Item>
@@ -254,7 +254,7 @@ export function CommandPalette({ onAddProject, onManageHosts }: Props) {
                     >
                       <History size={14} className="text-amber-400" />
                       <span className="truncate">#{b.id.slice(0, 7)}</span>
-                      <span className="ml-auto truncate text-[10px] text-slate-400">
+                      <span className="ml-auto truncate text-[10px] text-text-muted">
                         {pl?.name ?? ''} · {b.status}
                       </span>
                     </Command.Item>

@@ -216,7 +216,8 @@ html[data-density='compact'] .density-gap { gap: 0.25rem !important; }
   }
 }
 
-/* cmdk command palette */
+/* cmdk command palette — uses v2 tokens so dark/light + accent flip
+   without touching component code. Faz 3 refresh. */
 .cmdk-group {
   margin-bottom: 0.25rem;
 }
@@ -226,22 +227,19 @@ html[data-density='compact'] .density-gap { gap: 0.25rem !important; }
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #64748b;
+  color: var(--text-faint);
 }
 .cmdk-item {
   display: flex;
   align-items: center;
   gap: 0.5rem;
   padding: 0.4rem 0.6rem;
-  border-radius: 0.375rem;
-  color: #cbd5f5;
+  border-radius: 6px;
+  color: var(--text-secondary);
   cursor: pointer;
   user-select: none;
 }
 .cmdk-item[data-selected='true'] {
-  background: #1e293b;
-  color: #f1f5f9;
+  background: var(--bg-hover);
+  color: var(--text-primary);
 }
-html.light .cmdk-item { color: #1e293b; }
-html.light .cmdk-item[data-selected='true'] { background: #e2e8f0; color: #0f172a; }
-html.light .cmdk-group [cmdk-group-heading] { color: #94a3b8; }
