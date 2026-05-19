@@ -7,6 +7,7 @@ import type {
   BuildLogEntry,
   BuildLogLevel,
   StepType,
+  TestReportTree,
 } from '@buildpilot/shared-types';
 import { useStore } from '../store/store';
 import { api } from '../lib/api';
@@ -106,29 +107,19 @@ const TAB_META: Record<BuildDetailTab, { label: string; disabled?: boolean; plac
     placeholder:
       'Read-only canvas showing the pipeline snapshot at build time. Wired up alongside the Faz 6.B pipeline-snapshot endpoint.',
   },
-  artifacts: {
-    label: 'Artifacts',
-    disabled: true,
-    placeholder:
-      'Grid view of every artifact this build produced, with preview / copy-path / download actions. Currently surfaced inline on the Overview tab.',
-  },
+  artifacts: { label: 'Artifacts' },
   environment: {
     label: 'Environment',
     disabled: true,
     placeholder:
-      'Environment variables resolved at build time (secrets masked) plus the SSH builder hosts each step landed on.',
+      'Environment variables resolved at build time (secrets masked) plus the SSH builder hosts each step landed on. Needs an env-capture step in the engine; tracked separately.',
   },
-  tests: {
-    label: 'Tests',
-    disabled: true,
-    placeholder:
-      'Pass / fail / flaky counts plus per-case detail. The TestReport endpoint already exists — wiring lands in Faz 6.B.',
-  },
+  tests: { label: 'Tests' },
   annotations: {
     label: 'Annotations',
     disabled: true,
     placeholder:
-      'Compiler warnings, lint errors, and other structured findings. Backend parsers land in Faz 6.B; the type contract is already in place.',
+      'Compiler warnings, lint errors, and other structured findings. Backend parsers land in a follow-up PR; the type contract is already in place.',
   },
 };
 
@@ -909,23 +900,36 @@ export function BuildDetailPage({ buildId }: Props) {
         </>
       )}
 
-      {activeTab !== 'overview' && activeTab !== 'logs' && (
-        <div className="flex-1 flex flex-col items-center justify-center gap-3 p-12 text-center">
-          <div className="text-[14px] font-semibold text-text-primary">
-            {TAB_META[activeTab].label}
-          </div>
-          <p className="max-w-md text-[12.5px] text-text-muted leading-relaxed">
-            {TAB_META[activeTab].placeholder}
-          </p>
-          <button
-            type="button"
-            onClick={() => setActiveTab('overview')}
-            className="mt-2 rounded-btn border border-border-subtle bg-bg-elevated px-3 py-1.5 text-[12px] text-text-secondary hover:text-text-primary hover:border-border transition-colors"
-          >
-            Back to Overview
-          </button>
-        </div>
+      {activeTab === 'artifacts' && (
+        <BuildArtifactsTab
+          artifacts={artifacts}
+          onPreview={setPreviewArtifact}
+          isBinary={isBinaryArtifact}
+        />
       )}
+
+      {activeTab === 'tests' && <BuildTestsTab buildId={build.id} />}
+
+      {activeTab !== 'overview' &&
+        activeTab !== 'logs' &&
+        activeTab !== 'artifacts' &&
+        activeTab !== 'tests' && (
+          <div className="flex-1 flex flex-col items-center justify-center gap-3 p-12 text-center">
+            <div className="text-[14px] font-semibold text-text-primary">
+              {TAB_META[activeTab].label}
+            </div>
+            <p className="max-w-md text-[12.5px] text-text-muted leading-relaxed">
+              {TAB_META[activeTab].placeholder}
+            </p>
+            <button
+              type="button"
+              onClick={() => setActiveTab('overview')}
+              className="mt-2 rounded-btn border border-border-subtle bg-bg-elevated px-3 py-1.5 text-[12px] text-text-secondary hover:text-text-primary hover:border-border transition-colors"
+            >
+              Back to Overview
+            </button>
+          </div>
+        )}
 
       {/* Inline artifact log viewer — opens when user clicks an artifact row. */}
       <ArtifactPreviewModal
@@ -943,6 +947,243 @@ export function BuildDetailPage({ buildId }: Props) {
           onClose={() => setDiffOpen(false)}
         />
       )}
+    </div>
+  );
+}
+
+// UI v2 Faz 6.B — Artifacts tab. Same data source as the Overview's
+// inline artifact list, rendered as a v2 token-aligned grid with the
+// design's per-artifact action chips.
+function BuildArtifactsTab({
+  artifacts,
+  onPreview,
+  isBinary,
+}: {
+  artifacts: BuildArtifact[];
+  onPreview(a: BuildArtifact): void;
+  isBinary(path: string): boolean;
+}): JSX.Element {
+  if (artifacts.length === 0) {
+    return (
+      <div className="flex-1 flex items-center justify-center text-[12.5px] text-text-muted p-12 text-center">
+        This build produced no artifacts. Add an{' '}
+        <code className="ml-1 mr-1 font-mono text-text-secondary">artifact</code> step to a
+        pipeline to capture build outputs.
+      </div>
+    );
+  }
+  const totalSize = artifacts.reduce((acc, a) => acc + a.size, 0);
+  return (
+    <div className="flex-1 overflow-y-auto px-3 py-4 sm:px-6">
+      <div className="mb-3 flex items-baseline justify-between">
+        <div className="text-[10px] uppercase tracking-wider text-text-muted font-semibold">
+          {artifacts.length} artifact{artifacts.length === 1 ? '' : 's'}
+        </div>
+        <div className="text-[11px] font-mono text-text-faint">
+          {formatBytes(totalSize)} total
+        </div>
+      </div>
+      <ul className="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-3">
+        {artifacts.map((a) => {
+          const binary = isBinary(a.path);
+          return (
+            <li
+              key={a.id}
+              className="group rounded-card border border-border-subtle bg-bg-panel p-3 hover:border-border transition-colors"
+            >
+              <button
+                type="button"
+                onClick={() => (binary ? api.revealArtifact(a.id).catch(() => undefined) : onPreview(a))}
+                className="block w-full truncate text-left font-mono text-[12px] text-text-primary hover:text-accent transition-colors"
+                title={binary ? `Reveal ${a.path}` : `Preview ${a.path}`}
+              >
+                {a.path}
+              </button>
+              <div className="mt-2 flex items-center justify-between text-[11px]">
+                <span className="text-text-muted">{formatBytes(a.size)}</span>
+                <div className="flex items-center gap-2">
+                  {!binary && (
+                    <button
+                      type="button"
+                      onClick={() => onPreview(a)}
+                      className="text-accent hover:text-accent-hover transition-colors"
+                    >
+                      preview
+                    </button>
+                  )}
+                  <a
+                    href={api.artifactDownloadUrl(a.id)}
+                    className="text-accent hover:text-accent-hover transition-colors"
+                  >
+                    download
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => navigator.clipboard.writeText(a.path).catch(() => undefined)}
+                    className="text-text-muted hover:text-text-primary transition-colors"
+                    title="Copy path"
+                  >
+                    copy
+                  </button>
+                </div>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
+// UI v2 Faz 6.B — Tests tab. Wires the existing test-report endpoint
+// (xcresult / JUnit parser already shipped) into the build detail tab
+// shell so users don't have to bounce out to /test-report.
+function BuildTestsTab({ buildId }: { buildId: string }): JSX.Element {
+  const [report, setReport] = useState<TestReportTree | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    setLoading(true);
+    setError(null);
+    api
+      .testReport(buildId)
+      .then((r) => {
+        if (!alive) return;
+        setReport(r);
+        setLoading(false);
+      })
+      .catch((e) => {
+        if (!alive) return;
+        setError(e instanceof Error ? e.message : String(e));
+        setLoading(false);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [buildId]);
+
+  if (loading) {
+    return (
+      <div className="flex-1 flex items-center justify-center text-[12.5px] text-text-muted p-12">
+        Loading test report…
+      </div>
+    );
+  }
+  if (error || !report) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center gap-2 p-12 text-center">
+        <div className="text-[13px] text-text-primary">No test report yet</div>
+        <p className="max-w-md text-[12px] text-text-muted">
+          {error
+            ? `Couldn't load the test report: ${error}`
+            : 'Add an xcresultParse or junitParse step downstream of your test runner to capture results.'}
+        </p>
+      </div>
+    );
+  }
+  return (
+    <div className="flex-1 overflow-y-auto px-3 py-4 sm:px-6">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+        <SummaryCard label="Total" value={report.totalTests} tone="neutral" />
+        <SummaryCard label="Passed" value={report.totalPassed} tone="success" />
+        <SummaryCard label="Failed" value={report.totalFailed} tone="failed" />
+        <SummaryCard label="Skipped" value={report.totalSkipped} tone="muted" />
+      </div>
+      {report.note && (
+        <div className="mb-3 rounded-card border border-border-subtle bg-bg-elevated px-3 py-2 text-[12px] text-text-muted">
+          {report.note}
+        </div>
+      )}
+      {report.suites.length === 0 ? (
+        <div className="text-[12.5px] text-text-muted text-center py-8">
+          No test suites in this report.
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {report.suites.map((suite, suiteIdx) => {
+            const failedInSuite = suite.tests.filter((t) => t.status === 'failed');
+            return (
+              <div
+                key={`${suite.name}-${suiteIdx}`}
+                className="rounded-card border border-border-subtle bg-bg-panel overflow-hidden"
+              >
+                <div className="flex items-baseline justify-between px-3 py-2 border-b border-border-subtle bg-bg-elevated">
+                  <span className="font-mono text-[12.5px] text-text-primary truncate">
+                    {suite.name}
+                  </span>
+                  <span className="text-[11px] text-text-muted">
+                    {suite.tests.length} test{suite.tests.length === 1 ? '' : 's'}
+                    {failedInSuite.length > 0 && (
+                      <span className="ml-2 text-status-failed">
+                        {failedInSuite.length} failed
+                      </span>
+                    )}
+                  </span>
+                </div>
+                {failedInSuite.length > 0 && (
+                  <ul className="divide-y divide-border-subtle">
+                    {failedInSuite.map((tc, tcIdx) => (
+                      <li key={`${tc.name}-${tcIdx}`} className="px-3 py-2">
+                        <div className="flex items-baseline gap-2">
+                          <span className="inline-block size-1.5 rounded-full bg-status-failed shrink-0" aria-hidden />
+                          <span className="font-mono text-[12px] text-text-primary truncate">
+                            {tc.name}
+                          </span>
+                          {tc.classname && (
+                            <span className="font-mono text-[10.5px] text-text-faint truncate">
+                              · {tc.classname}
+                            </span>
+                          )}
+                        </div>
+                        {tc.message && (
+                          <pre className="mt-1 ml-3.5 max-h-32 overflow-y-auto rounded bg-bg-base px-2 py-1.5 text-[11px] font-mono text-text-secondary whitespace-pre-wrap">
+                            {tc.message}
+                          </pre>
+                        )}
+                        {tc.file && (
+                          <div className="mt-1 ml-3.5 text-[10.5px] font-mono text-text-faint">
+                            {tc.file}
+                            {tc.line ? `:${tc.line}` : ''}
+                          </div>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SummaryCard({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: number;
+  tone: 'neutral' | 'success' | 'failed' | 'muted';
+}): JSX.Element {
+  const toneClass =
+    tone === 'success'
+      ? 'text-status-success'
+      : tone === 'failed'
+        ? 'text-status-failed'
+        : tone === 'muted'
+          ? 'text-text-muted'
+          : 'text-text-primary';
+  return (
+    <div className="rounded-card border border-border-subtle bg-bg-panel px-3 py-2">
+      <div className={`font-mono text-[20px] leading-tight ${toneClass}`}>{value}</div>
+      <div className="text-[10px] uppercase tracking-wider text-text-muted font-semibold mt-0.5">
+        {label}
+      </div>
     </div>
   );
 }
