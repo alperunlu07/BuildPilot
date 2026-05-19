@@ -224,9 +224,7 @@ export function initDb(path: string): DB {
       ON build_approvals(build_id);
     CREATE INDEX IF NOT EXISTS idx_build_approvals_pending
       ON build_approvals(decision, requested_at);
-    -- Cluster 11.E — VCS feedback credentials. The token field is encrypted
-    -- at rest with the same field-level crypto used elsewhere (see
-    -- crypto/secrets.ts; allow-list key is vcsToken).
+    -- Cluster 11.E — VCS feedback credentials.
     CREATE TABLE IF NOT EXISTS vcs_credentials (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
@@ -236,11 +234,7 @@ export function initDb(path: string): DB {
       created_at INTEGER NOT NULL
     );
 
-    -- Cluster 11.E — per-build check-run posts so reruns can cancel the
-    -- previous external entry instead of stacking them. One row per
-    -- (build_id, provider). The ref column holds the provider id
-    -- (GitHub check_run id, GitLab status id, Gitea status id) so we can
-    -- update / overwrite it later.
+    -- Cluster 11.E — per-build check-run posts.
     CREATE TABLE IF NOT EXISTS vcs_check_runs (
       build_id TEXT NOT NULL,
       provider TEXT NOT NULL,

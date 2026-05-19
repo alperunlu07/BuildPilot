@@ -100,6 +100,7 @@ function makeMockContext(lines: CapturedLine[]): StepContext {
   return {
     project,
     build,
+    nodeId: 'test-notify-mock',
     log(message: string, level: BuildLogLevel = 'info'): void {
       lines.push({ level, message });
     },

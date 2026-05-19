@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Check, ChevronLeft, Download, FileBarChart, Filter, GitCompareArrows, Grid3X3, Link2, RotateCcw, Square } from 'lucide-react';
 import type {
   Build,
+  BuildApproval,
   BuildArtifact,
   BuildLogEntry,
   BuildLogLevel,
@@ -18,6 +19,8 @@ import { defaultActiveLevels } from '../components/LevelToggleBar';
 import { ArtifactPreviewModal } from '../components/ArtifactPreviewModal';
 import { FailureSummaryCard } from '../components/FailureSummaryCard';
 import { PrSummaryCard } from '../components/PrSummaryCard';
+import { ApprovalCard } from '../components/ApprovalCard';
+import { subscribe } from '../lib/events';
 import {
   LogSearchBar,
   loadLogPresets,
@@ -67,6 +70,7 @@ export function BuildDetailPage({ buildId }: Props) {
   const [build, setBuild] = useState<Build | null>(null);
   const [loading, setLoading] = useState(true);
   const [artifacts, setArtifacts] = useState<BuildArtifact[]>([]);
+  const [approvals, setApprovals] = useState<BuildApproval[]>([]);
   // Selected artifact for the inline log viewer modal. null = closed.
   const [previewArtifact, setPreviewArtifact] = useState<BuildArtifact | null>(null);
   // Cluster 11.C — matrix children. Populated only when this build is the
@@ -100,12 +104,14 @@ export function BuildDetailPage({ buildId }: Props) {
       api.getBuildEntries(buildId),
       api.getBuildArtifacts(buildId).catch(() => []),
       api.listChildBuilds(buildId).catch(() => [] as Build[]),
+      api.buildApprovals(buildId).catch(() => [] as BuildApproval[]),
     ])
-      .then(([b, ents, arts, children]) => {
+      .then(([b, ents, arts, children, apps]) => {
         if (!alive) return;
         setBuild(b);
         setArtifacts(arts);
         setMatrixChildren(children);
+        setApprovals(apps);
         // Legacy builds (created before the structured-log table) only have
         // the flat `build.log` text. Synthesize one stdout-level entry per
         // line so the table view still shows them.
@@ -137,10 +143,6 @@ export function BuildDetailPage({ buildId }: Props) {
     };
   }, [buildId, seedBuildEntries]);
 
-  // Cluster 11.C — refresh child rows while the parent is still running
-  // so the MatrixRunSummary grid reflects each cell's progress without
-  // requiring the user to reload the page. 2s polling matches the cadence
-  // the rest of the dashboard uses for in-flight builds.
   useEffect(() => {
     if (!build || matrixChildren.length === 0) return;
     const stillMoving =
@@ -159,11 +161,30 @@ export function BuildDetailPage({ buildId }: Props) {
         setBuild(refreshed);
         setMatrixChildren(refreshedChildren);
       } catch {
-        /* swallow — next tick retries */
+        /* swallow */
       }
     }, 2000);
     return () => window.clearInterval(handle);
   }, [buildId, build, matrixChildren]);
+
+  useEffect(() => {
+    return subscribe((event) => {
+      if (event.type === 'buildAwaitingApproval' && event.buildId === buildId) {
+        setApprovals((cur) => {
+          const without = cur.filter((a) => a.id !== event.approval.id);
+          return [...without, event.approval];
+        });
+        setBuild((b) => (b ? { ...b, status: 'awaiting_approval' } : b));
+      } else if (event.type === 'buildApprovalDecided' && event.buildId === buildId) {
+        void api.buildApprovals(buildId).then((apps) => setApprovals(apps));
+        void api.getBuild(buildId).then((b) => setBuild(b));
+      } else if (event.type === 'buildStarted' && event.build.id === buildId) {
+        setBuild(event.build);
+      } else if (event.type === 'buildFinished' && event.build.id === buildId) {
+        setBuild(event.build);
+      }
+    });
+  }, [buildId]);
 
   const proj = build ? projects.find((p) => p.id === build.projectId) : null;
   const pipe = build ? pipelines.find((p) => p.id === build.pipelineId) : null;
@@ -475,6 +496,27 @@ export function BuildDetailPage({ buildId }: Props) {
       </header>
 
       <PrSummaryCard buildId={build.id} />
+
+      {(() => {
+        const pending = approvals.find((a) => a.decision === null);
+        if (pending) {
+          return (
+            <ApprovalCard
+              approval={pending}
+              onDecided={(updated) => {
+                setApprovals((cur) =>
+                  cur.map((a) => (a.id === updated.id ? updated : a)),
+                );
+              }}
+            />
+          );
+        }
+        const last = approvals[approvals.length - 1];
+        if (last && last.decision) {
+          return <ApprovalCard approval={last} readOnly />;
+        }
+        return null;
+      })()}
 
       {isMatrixParent && (
         <MatrixRunSummary

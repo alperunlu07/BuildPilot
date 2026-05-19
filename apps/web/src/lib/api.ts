@@ -3,7 +3,9 @@ import type {
   AuditEventsResponse,
   AuditAction,
   AuditResource,
+  ApprovalDecideRequest,
   Build,
+  BuildApproval,
   BuildArtifact,
   BuildLogEntry,
   BuildTrendsReport,
@@ -430,4 +432,19 @@ export const api = {
     http<PrContext & { provider: VcsCredential['provider'] | null; repo: string | null }>(
       `/builds/${buildId}/pr-context`,
     ),
+
+  // ── Manual approval steps (Cluster 11.D) ─────────────────
+  listApprovals: (role?: string) =>
+    http<BuildApproval[]>(`/approvals${role ? `?role=${encodeURIComponent(role)}` : ''}`),
+  buildApprovals: (buildId: string) =>
+    http<BuildApproval[]>(`/builds/${buildId}/approvals`),
+  decideApproval: (
+    buildId: string,
+    approvalId: string,
+    body: ApprovalDecideRequest,
+  ) =>
+    http<BuildApproval>(`/builds/${buildId}/approvals/${approvalId}/decide`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
 };

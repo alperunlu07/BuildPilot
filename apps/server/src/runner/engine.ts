@@ -103,10 +103,15 @@ import { runSteamUpload } from './steps/steamUpload';
 import { runSteamSetLive } from './steps/steamSetLive';
 import { runSteamWorkshopUpload } from './steps/steamWorkshopUpload';
 import { runIosDeviceLog } from './steps/iosDeviceLog';
+import { runManualApproval } from './steps/manualApproval';
 
 export interface StepContext {
   project: Project;
   build: Build;
+  // The DAG node id of the step currently executing. Most steps don't need
+  // this, but manualApproval (Cluster 11.D) stores it on the approval row
+  // so the UI can highlight the pending node.
+  nodeId: string;
   // Emit a single structured log line associated with the current step.
   log(message: string, level?: BuildLogLevel): void;
   // Wire a child_process so its stdout/stderr stream into the log table
@@ -206,6 +211,7 @@ const RUNNERS: Record<StepType, StepRunner> = {
   steamSetLive: runSteamSetLive,
   steamWorkshopUpload: runSteamWorkshopUpload,
   iosDeviceLog: runIosDeviceLog,
+  manualApproval: runManualApproval,
 };
 
 interface DagNode {
@@ -870,6 +876,7 @@ function makeStepContext(
   return {
     project,
     build,
+    nodeId: node.id,
     log(message, level = 'info') {
       persistWithPoke(level, message, node.id, node.type);
     },

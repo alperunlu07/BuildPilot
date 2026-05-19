@@ -26,6 +26,7 @@ afterEach(() => {
 function ctx(build: ReturnType<typeof createBuild>): StepContext {
   return {
     build,
+    nodeId: 'test-node',
     project: { id: build.projectId } as never,
     log: () => undefined,
     attachProcess: () => undefined,

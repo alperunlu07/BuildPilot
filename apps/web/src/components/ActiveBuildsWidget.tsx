@@ -14,7 +14,12 @@ import { statusLabel } from '../lib/statusIcon';
 // itself, so no props are needed. It auto-hides when no builds are
 // in-flight so it never gets in the way during idle periods.
 
-const ACTIVE_STATUSES = new Set<Build['status']>(['pending', 'running']);
+const ACTIVE_STATUSES = new Set<Build['status']>([
+  'pending',
+  'running',
+  // Cluster 11.D — parked on manual approval but still in-flight.
+  'awaiting_approval',
+]);
 
 function formatElapsed(ms: number): string {
   if (ms < 1000) return '<1s';

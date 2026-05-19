@@ -4513,6 +4513,49 @@ export const STEP_DEFINITIONS: Record<StepType, StepDefinition> = {
       },
     ],
   },
+  manualApproval: {
+    type: 'manualApproval',
+    label: 'Manual Approval',
+    description:
+      'Pause the build mid-run and wait for an in-app decision. Renders an approval card on BuildDetailPage with custom inputs; approve continues, reject fails the step (downstream conditional edges apply).',
+    color: '#eab308',
+    icon: 'ShieldCheck',
+    fields: [
+      {
+        name: 'message',
+        label: 'Message (markdown)',
+        type: 'textarea',
+        required: true,
+        placeholder: '## Ready to ship?\n\nRelease notes:\n- …',
+      },
+      {
+        name: 'inputs',
+        label: 'Inputs (JSON array)',
+        type: 'textarea',
+        placeholder:
+          '[{"name":"releaseNotes","label":"Release notes","type":"text","required":true}]',
+        help: 'Array of { name, label, type: text|select|checkbox, options?, required? }',
+      },
+      {
+        name: 'requiredApprovers',
+        label: 'Required distinct approvers',
+        type: 'number',
+        defaultValue: 1,
+      },
+      {
+        name: 'requiredRoles',
+        label: 'Required roles (comma-separated; soft hint until auth lands)',
+        type: 'text',
+        placeholder: 'release-manager, qa-lead',
+      },
+      {
+        name: 'timeoutMinutes',
+        label: 'Timeout (minutes; 0 = wait forever)',
+        type: 'number',
+        defaultValue: 1440,
+      },
+    ],
+  },
 };
 
 export const STEP_TYPES: readonly StepType[] = Object.keys(STEP_DEFINITIONS) as StepType[];
@@ -4524,6 +4567,7 @@ export function getStepDefinition(type: StepType): StepDefinition {
 export type StepCategory =
   | 'git'
   | 'build'
+  | 'workflow'
   | 'notify'
   | 'upload'
   | 'remote'
@@ -4556,6 +4600,11 @@ export const STEP_CATEGORIES: readonly StepCategoryGroup[] = [
     key: 'build',
     label: 'Build',
     types: ['shell', 'unityBatch', 'aiPrompt'],
+  },
+  {
+    key: 'workflow',
+    label: 'Workflow',
+    types: ['manualApproval'],
   },
   {
     key: 'notify',

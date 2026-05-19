@@ -120,7 +120,8 @@ export type StepType =
   | 'steamUpload'
   | 'steamSetLive'
   | 'steamWorkshopUpload'
-  | 'iosDeviceLog';
+  | 'iosDeviceLog'
+  | 'manualApproval';
 
 export type AiTool = 'claude' | 'codex' | 'aider' | 'gemini' | 'custom';
 
@@ -198,7 +199,16 @@ export interface Pipeline {
 }
 
 // ── Build ───────────────────────────────────────────────────────────────────
-export type BuildStatus = 'pending' | 'running' | 'success' | 'failed' | 'cancelled';
+export type BuildStatus =
+  | 'pending'
+  | 'running'
+  | 'success'
+  | 'failed'
+  | 'cancelled'
+  // Cluster 11.D — set while a `manualApproval` step is waiting on an
+  // in-app decision. The runner remains alive but parks until the
+  // approval is resolved (approve / reject / timeout).
+  | 'awaiting_approval';
 
 export interface Build {
   id: string;
@@ -1805,7 +1815,15 @@ export type ServerEvent =
   | { type: 'projectRemoved'; projectId: string }
   | { type: 'pipelineChanged'; pipelineId: string; action: 'created' | 'updated' | 'deleted' }
   | { type: 'nodeTemplateChanged'; templateId: string; action: 'created' | 'updated' | 'deleted' }
-  | { type: 'hostChanged'; hostId: string; action: 'created' | 'updated' | 'deleted' };
+  | { type: 'hostChanged'; hostId: string; action: 'created' | 'updated' | 'deleted' }
+  // Cluster 11.D — manual approval lifecycle.
+  | { type: 'buildAwaitingApproval'; buildId: string; approval: BuildApproval }
+  | {
+      type: 'buildApprovalDecided';
+      buildId: string;
+      approvalId: string;
+      decision: ApprovalDecision;
+    };
 
 // ── Server config ───────────────────────────────────────────────────────────
 export interface TelegramConfig {
@@ -2362,31 +2380,19 @@ export interface AuthConfig {
 export type ApprovalInputType = 'text' | 'select' | 'checkbox';
 
 export interface ApprovalInputSpec {
-  // Machine name used as the key in `inputValues` on decide. Required.
   name: string;
-  // Human-friendly label shown next to the input.
   label: string;
   type: ApprovalInputType;
-  // Only meaningful when `type === 'select'`.
   options?: string[];
   required?: boolean;
 }
 
 // Per-step data for the `manualApproval` node.
 export interface ManualApprovalStepData {
-  // Markdown rendered above the input form. Required.
   message: string;
-  // Form fields collected from the approver alongside their decision.
   inputs?: ApprovalInputSpec[];
-  // How many distinct approvers must say "approve" before the step
-  // completes. Defaults to 1.
   requiredApprovers?: number;
-  // Soft role hint — once Cluster A (auth) lands we filter the inbox by
-  // these. Until then we record a log line when the actor's role (if any)
-  // doesn't match but still let the decision through.
   requiredRoles?: string[];
-  // Minutes to wait before auto-rejecting via `decision='timeout'`. 0 =
-  // no timeout. Defaults to 1440 (24h).
   timeoutMinutes?: number;
 }
 
@@ -2405,16 +2411,9 @@ export interface BuildApproval {
   timeoutMinutes: number;
   requestedAt: number;
   decision: ApprovalDecision | null;
-  // Userspace identifier(s) of the deciders. Comma-separated list once
-  // multi-approver requirements are in play. `null` until first decision.
   decidedBy: string | null;
   decidedAt: number | null;
-  // The aggregated inputValues last submitted by an approver (the most
-  // recent submission wins). Stored as JSON on the row.
   inputsValues: Record<string, string | boolean> | null;
-  // Individual decisions accumulated so far (when requiredApprovers > 1).
-  // Each entry records who said what; the final `decision` is set when
-  // either threshold is reached, anyone rejects, or the timer fires.
   approvers: Array<{
     actor: string;
     decision: 'approve' | 'reject';
@@ -2422,15 +2421,9 @@ export interface BuildApproval {
   }>;
 }
 
-// `POST /api/builds/:buildId/approvals/:approvalId/decide` body.
 export interface ApprovalDecideRequest {
   decision: 'approve' | 'reject';
-  // Keyed by ApprovalInputSpec.name. Captured on every approve/reject so
-  // the audit trail records what the approver saw.
   inputValues?: Record<string, string | boolean>;
-  // Optional explicit actor id; in dev / when no auth middleware is wired
-  // we fall back to "anonymous" so multi-approver requirements still
-  // require N distinct identifiers.
   actor?: string;
 }
 
