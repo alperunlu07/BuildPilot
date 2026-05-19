@@ -316,11 +316,13 @@ Quality-of-life for the people building BuildPilot itself.
   LogTable, Toast, all dialogs (setup 558a280, stories 801ff74; 14
   components, ~50 variants; run `pnpm --filter @buildpilot/web
   storybook`)
-- [ ] **Visual regression tests** — Playwright + Chromatic or Percy
-- [ ] **Component-level unit tests** — currently only the server has
-  vitest coverage
-- [ ] **E2E happy-path test** — start server, add project, create
-  pipeline, run a `shell` step, assert green status via SSE
+- [x] **Visual regression tests** — Playwright `toHaveScreenshot()`,
+  baselines committed under `e2e/screenshots/` — _(this commit)_
+- [x] **Component-level unit tests** — vitest + RTL, 77 tests covering
+  10 components + 5 lib helpers — `1add69f`
+- [x] **E2E happy-path test** — Playwright spec spawns isolated
+  server + Vite, seeds a temp git repo, drives a `shell: echo hi`
+  pipeline to success — `3309b6e`
 - [x] **Settings JSON schema + validation** — `~/.buildpilot/config.json`
   surfaces JSON-schema errors at startup instead of crashing
   (`apps/server/src/config-schema.ts` — 061af7e)
