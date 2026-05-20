@@ -946,7 +946,14 @@ function AiIntegrationsSection() {
                     type="text"
                     value={cfg.path ?? ''}
                     onChange={(e) => updateTool(tool.key, { path: e.target.value })}
-                    placeholder={`/usr/local/bin/${tool.key}`}
+                    placeholder={
+                      // Cross-platform — the server validator accepts either
+                      // a POSIX or Windows absolute path, so the placeholder
+                      // hints both forms.
+                      navigator.platform.startsWith('Win')
+                        ? `C:\\Program Files\\${tool.key}\\${tool.key}.exe`
+                        : `/usr/local/bin/${tool.key}`
+                    }
                     className="mt-0.5 w-full rounded-md border border-border-subtle bg-bg-elevated px-2 py-1 text-[12px] font-mono text-text-primary placeholder:text-text-faint focus:border-accent focus:outline-none transition-colors"
                   />
                 </label>

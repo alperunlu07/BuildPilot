@@ -1,4 +1,11 @@
 import type { FastifyInstance } from 'fastify';
+// Both POSIX and Win32 path modules so we can validate Windows-style
+// absolute paths (C:\...) even when the server runs on Linux/macOS, and
+// vice versa. The host platform's `node:path` import alone would reject
+// the other family — which would break the dashboard's cross-platform
+// edit flow for shops that point a remote dashboard at a worker on a
+// different OS.
+import { win32 as winPath, posix as posixPath } from 'node:path';
 import { z } from 'zod';
 import type {
   AiIntegrationsConfig,
@@ -94,20 +101,69 @@ const discordUpdateSchema = z.object({
 // tool override without round-tripping the entire block. Empty string is
 // treated as "clear this override" — saves a separate clear-flag per field.
 // Security — the `path` we accept here is fed straight to spawn() as the
-// command argument in aiPrompt.ts. Without constraints any caller able
-// to reach this endpoint can pivot from "edit AI tool overrides" to
-// arbitrary code execution by pointing path at /bin/sh or similar.
+// command argument in aiPrompt.ts; `model` is appended to argv. Without
+// constraints any caller able to reach this endpoint can pivot from
+// "edit AI tool overrides" to arbitrary code execution (path) or to
+// passing destructive flags to the CLI (model).
 //
-// Two guards (defence in depth):
-//   1. Absolute path required — no PATH lookup of relative names that
-//      might shadow legitimate binaries via $PATH manipulation
-//   2. Basename must equal the expected CLI name — so an attacker can't
-//      point claude.path at /bin/bash; they could only point it at a
-//      binary literally named `claude` somewhere on disk
+// path guards (defence in depth, cross-platform):
+//   1. Absolute path required via node:path's isAbsolute() — handles
+//      POSIX (/usr/local/bin/claude) AND Windows
+//      (C:\Program Files\Claude\claude.exe) without each platform's
+//      callers needing a fork
+//   2. Basename must equal the expected CLI name, with Windows binary
+//      extensions (.exe / .cmd / .bat / .ps1) stripped before
+//      comparison. So an attacker can't point claude.path at
+//      /bin/bash; they could only point it at a binary literally
+//      named `claude` (or claude.exe on Windows) somewhere on disk
 //
-// The basename check is the load-bearing part: empty string still
-// clears (so the override slot becomes a no-op), undefined still
-// keeps the existing value (per-tool PATCH semantics).
+// model guard:
+//   • Restricted to [A-Za-z0-9._:/-] up to 128 chars. Blocks
+//     argv-injection (--dangerously-skip-permissions etc.) — the most
+//     permissive set that still admits real model identifiers like
+//     "claude-opus-4-7", "gpt-4o:latest", "vendor/model:v1.2"
+//
+// Empty string still clears (override slot becomes a no-op), undefined
+// still keeps the existing value (per-tool PATCH semantics preserved).
+const WINDOWS_BINARY_EXTS = ['.exe', '.cmd', '.bat', '.ps1'];
+function stripBinaryExt(name: string): string {
+  const lower = name.toLowerCase();
+  for (const ext of WINDOWS_BINARY_EXTS) {
+    if (lower.endsWith(ext)) return name.slice(0, -ext.length);
+  }
+  return name;
+}
+
+// `model` allowlist: alnum + . _ : / -, length 1-128.
+//
+// Two guards baked into one regex:
+//   • Character set blocks shell metacharacters and whitespace (so
+//     "claude --verbose" or "claude $(touch /tmp/x)" never matches)
+//   • The leading character class excludes `-`, so an argv-flag like
+//     "--dangerously-skip-permissions" never matches even though `-`
+//     is allowed mid-string for real identifiers ("claude-opus-4-7")
+//
+// The lookahead-style "no leading -" is done by splitting the regex
+// into a single-char prefix + the rest, rather than a negative
+// lookahead, to keep the pattern obvious to readers.
+const MODEL_RE = /^[A-Za-z0-9._:/][A-Za-z0-9._:/-]{0,127}$/;
+
+function isAbsoluteCrossPlatform(p: string): boolean {
+  // posixPath.isAbsolute("/usr/bin/x") → true
+  // winPath.isAbsolute("C:\\Program Files\\x.exe") → true
+  // winPath.isAbsolute("/usr/bin/x") → false (no drive)
+  // Accepting either side keeps the dashboard usable from any host OS.
+  return posixPath.isAbsolute(p) || winPath.isAbsolute(p);
+}
+
+function crossPlatformBasename(p: string): string {
+  // Win32 basename handles both / and \ separators; POSIX basename
+  // splits on / only. Use win32 for Windows-style inputs and POSIX
+  // for the rest so we never miss a separator. Detected by isAbsolute
+  // since paths are already guaranteed absolute by the refine above.
+  return winPath.isAbsolute(p) ? winPath.basename(p) : posixPath.basename(p);
+}
+
 function aiToolUpdateSchemaForTool(expectedBasename: string) {
   return z.object({
     path: z
@@ -118,17 +174,28 @@ function aiToolUpdateSchemaForTool(expectedBasename: string) {
           if (value === undefined) return true;
           const trimmed = value.trim();
           if (trimmed.length === 0) return true; // clear override
-          if (!trimmed.startsWith('/')) return false;
-          // basename = last path segment; reject trailing slashes too
-          const segments = trimmed.split('/').filter((s) => s.length > 0);
-          const basename = segments[segments.length - 1] ?? '';
-          return basename === expectedBasename;
+          if (!isAbsoluteCrossPlatform(trimmed)) return false;
+          const raw = crossPlatformBasename(trimmed);
+          return stripBinaryExt(raw) === expectedBasename;
         },
         {
-          message: `path must be empty or an absolute path whose basename is "${expectedBasename}"`,
+          message: `path must be empty or an absolute path whose basename is "${expectedBasename}" (with optional .exe/.cmd/.bat/.ps1)`,
         },
       ),
-    model: z.string().optional(),
+    model: z
+      .string()
+      .optional()
+      .refine(
+        (value) => {
+          if (value === undefined) return true;
+          if (value.trim().length === 0) return true; // clear override
+          return MODEL_RE.test(value);
+        },
+        {
+          message:
+            'model must be empty or 1-128 chars from [A-Za-z0-9._:/-] starting with alphanumeric/./_/:; flags + shell metacharacters are rejected to prevent argv injection',
+        },
+      ),
   });
 }
 
