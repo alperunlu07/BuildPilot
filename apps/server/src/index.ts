@@ -14,6 +14,7 @@ import { configRoutes } from './api/config';
 import { metricsRoutes } from './api/metrics';
 import { testReportsRoutes } from './api/test-reports';
 import { annotationsRoutes } from './api/annotations';
+import { systemRoutes } from './api/system';
 import { flakyTestsRoutes } from './api/flaky-tests';
 import { secretsRoutes } from './api/secrets';
 import { vaultFilesRoutes } from './api/vault-files';
@@ -112,6 +113,7 @@ async function main(): Promise<void> {
   await testNotifyRoutes(app);
   await testReportsRoutes(app);
   await annotationsRoutes(app);
+  await systemRoutes(app);
   await flakyTestsRoutes(app);
   await secretsRoutes(app);
   await vaultFilesRoutes(app);
