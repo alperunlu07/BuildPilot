@@ -184,6 +184,18 @@ function Editor({ pipeline }: Props) {
       ? s.activeBuild
       : null,
   );
+  // UI v2 Faz 5.B.1 — most recent finished build for the header meta
+  // line ("last built X ago"). Pulled from the global builds list; we
+  // filter to this pipeline + a terminal status so a stuck pending row
+  // doesn't claim the slot.
+  const lastFinishedBuild = useStore((s) =>
+    s.builds.find(
+      (b) =>
+        b.pipelineId === pipeline.id &&
+        (b.status === 'success' || b.status === 'failed' || b.status === 'cancelled'),
+    ),
+  );
+
 
   const [nodes, setNodes] = useState<Node[]>(() => pipelineNodesToReactFlow(pipeline.nodes));
   const [edges, setEdges] = useState<Edge[]>(() => pipelineEdgesToReactFlow(pipeline.edges));
@@ -199,6 +211,11 @@ function Editor({ pipeline }: Props) {
   const [dirty, setDirty] = useState(false);
   const [branches, setBranches] = useState<string[]>([]);
   const [triggersOpen, setTriggersOpen] = useState(false);
+  // UI v2 Faz 5.B.3 — Triggers panel split into focused tabs so users
+  // don't scan a 2-col grid to find one knob.
+  const [triggersTab, setTriggersTab] = useState<
+    'lane' | 'branch' | 'tag' | 'cron' | 'paths' | 'webhook'
+  >('lane');
   // Cluster 11.C — matrix editor panel toggle. Lives alongside the
   // existing "Triggers" disclosure so the header stays uncluttered.
   const [matrixOpen, setMatrixOpen] = useState(false);
@@ -601,6 +618,41 @@ function Editor({ pipeline }: Props) {
       const position = screenToFlowPosition({ x: event.clientX, y: event.clientY });
       const id = `n_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 5)}`;
 
+      // UI v2 Faz 5.A.3 — Recipe: drop N nodes laid out vertically + N-1
+      // edges connecting them. Reuses the same dropPayload contract as
+      // copy-paste so positioning + history work the same way.
+      const recipeId = event.dataTransfer.getData('application/buildpilot-recipe');
+      if (recipeId) {
+        const recipe = RECIPES.find((r) => r.id === recipeId);
+        if (!recipe) return;
+        recordHistory();
+        const newNodes: Node[] = [];
+        const newEdges: Edge[] = [];
+        const stepVerticalGap = 90;
+        recipe.steps.forEach((stepType, i) => {
+          if (!STEP_DEFINITIONS[stepType]) return;
+          const nid = `n_${Date.now().toString(36)}_${i}_${Math.random().toString(36).slice(2, 5)}`;
+          newNodes.push({
+            id: nid,
+            type: stepType,
+            position: { x: position.x, y: position.y + i * stepVerticalGap },
+            data: defaultData(stepType),
+          });
+          const prev = newNodes[i - 1];
+          if (prev) {
+            newEdges.push({
+              id: `e_${prev.id}_${nid}`,
+              source: prev.id,
+              target: nid,
+            });
+          }
+        });
+        setNodes((nds) => [...nds, ...newNodes]);
+        setEdges((eds) => [...eds, ...newEdges]);
+        setDirty(true);
+        return;
+      }
+
       // Templates take precedence — the dragged item carries the template id.
       const templateId = event.dataTransfer.getData('application/buildpilot-template');
       if (templateId) {
@@ -801,15 +853,40 @@ function Editor({ pipeline }: Props) {
           option (tag pattern, cron, path filter, etc.) is configured. */}
       <header className="flex items-center justify-between border-b border-border-subtle bg-bg-panel px-4 py-2">
         <div className="flex items-center gap-2 min-w-0">
-          <input
-            value={name}
-            onChange={(e) => {
-              setName(e.target.value);
-              setDirty(true);
-            }}
-            className="bg-transparent text-[15px] font-semibold text-text-primary outline-none min-w-0 max-w-[260px] truncate focus:bg-bg-hover rounded px-1 -mx-1 transition-colors"
-            aria-label="Pipeline name"
-          />
+          <div className="flex flex-col gap-0.5 min-w-0 mr-1">
+            <input
+              value={name}
+              onChange={(e) => {
+                setName(e.target.value);
+                setDirty(true);
+              }}
+              className="bg-transparent text-[15px] font-semibold text-text-primary outline-none min-w-0 max-w-[260px] truncate focus:bg-bg-hover rounded px-1 -mx-1 transition-colors"
+              aria-label="Pipeline name"
+            />
+            {/* UI v2 Faz 5.B.1 — meta line: step + edge counts + last-build
+                timing. Hidden when the pipeline is brand-new (no builds yet)
+                so a fresh editor doesn't show "last built —" noise. */}
+            <span className="text-[10.5px] text-text-faint font-mono leading-tight">
+              {nodes.length} step{nodes.length === 1 ? '' : 's'} · {edges.length} edge
+              {edges.length === 1 ? '' : 's'}
+              {activeBuild && (
+                <>
+                  {' · '}
+                  <span className="text-status-running">
+                    running #{activeBuild.id.slice(0, 7)}
+                  </span>
+                </>
+              )}
+              {!activeBuild && lastFinishedBuild && (
+                <>
+                  {' · last built '}
+                  <span className="text-text-muted">
+                    {formatRelative(lastFinishedBuild.finishedAt ?? lastFinishedBuild.startedAt)}
+                  </span>
+                </>
+              )}
+            </span>
+          </div>
           <span className="inline-flex items-center gap-1.5 rounded-btn bg-bg-elevated border border-border-subtle px-2 py-0.5 text-[11px] text-text-muted">
             <span className="uppercase tracking-wider text-text-faint font-semibold">Watch:</span>
             <BranchSelect
@@ -1015,115 +1092,210 @@ function Editor({ pipeline }: Props) {
       )}
 
       {triggersOpen && (
-        <div className="border-b border-border-subtle bg-bg-panel px-4 py-3">
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-            <label className="block text-xs text-text-secondary">
-              <span className="mb-1 block text-[11px] uppercase tracking-wide text-text-faint">
-                Execution Lane
-              </span>
-              {lanes.length === 0 ? (
-                <select
-                  disabled
-                  className="w-full rounded-md border border-border-subtle bg-bg-base px-2 py-1.5 text-xs text-text-faint"
-                >
-                  <option>Loading lanes…</option>
-                </select>
-              ) : (
-                <select
-                  value={laneId}
-                  onChange={(e) => {
-                    setLaneId(e.target.value);
+        <div className="border-b border-border-subtle bg-bg-panel">
+          {/* UI v2 Faz 5.B.3 — tabbed Triggers panel. Each tab is a single
+              concern so the user can focus instead of scanning a flat 6-row
+              grid. Filled dot next to a tab signals that the underlying
+              field is configured (so a user opening Triggers fresh sees
+              which knobs already have values). */}
+          <nav
+            className="flex items-center gap-0.5 px-3 border-b border-border-subtle"
+            role="tablist"
+            aria-label="Trigger configuration"
+          >
+            <TriggerTabBtn
+              active={triggersTab === 'lane'}
+              configured={laneId !== 'default' || priority !== 100}
+              onClick={() => setTriggersTab('lane')}
+            >
+              Lane &amp; Priority
+            </TriggerTabBtn>
+            <TriggerTabBtn
+              active={triggersTab === 'branch'}
+              configured={watch.cancelInProgressOnNewCommit === true}
+              onClick={() => setTriggersTab('branch')}
+            >
+              Branch
+            </TriggerTabBtn>
+            <TriggerTabBtn
+              active={triggersTab === 'tag'}
+              configured={!!watch.tagPattern}
+              onClick={() => setTriggersTab('tag')}
+            >
+              Tag
+            </TriggerTabBtn>
+            <TriggerTabBtn
+              active={triggersTab === 'cron'}
+              configured={!!watch.cronExpr}
+              onClick={() => setTriggersTab('cron')}
+            >
+              Cron
+            </TriggerTabBtn>
+            <TriggerTabBtn
+              active={triggersTab === 'paths'}
+              configured={!!watch.pathFilter}
+              onClick={() => setTriggersTab('paths')}
+            >
+              Paths
+            </TriggerTabBtn>
+            <TriggerTabBtn
+              active={triggersTab === 'webhook'}
+              configured={!!watch.prCommands}
+              onClick={() => setTriggersTab('webhook')}
+            >
+              PR commands
+            </TriggerTabBtn>
+          </nav>
+
+          <div className="px-4 py-3">
+            {triggersTab === 'lane' && (
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                <label className="block text-xs text-text-secondary">
+                  <span className="mb-1 block text-[11px] uppercase tracking-wide text-text-faint">
+                    Execution Lane
+                  </span>
+                  {lanes.length === 0 ? (
+                    <select
+                      disabled
+                      className="w-full rounded-md border border-border-subtle bg-bg-base px-2 py-1.5 text-xs text-text-faint"
+                    >
+                      <option>Loading lanes…</option>
+                    </select>
+                  ) : (
+                    <select
+                      value={laneId}
+                      onChange={(e) => {
+                        setLaneId(e.target.value);
+                        setDirty(true);
+                      }}
+                      className="w-full rounded-md border border-border-subtle bg-bg-base px-2 py-1.5 text-xs text-text-primary focus:border-accent focus:outline-none"
+                    >
+                      {!lanes.some((l) => l.id === laneId) && (
+                        <option value={laneId}>(orphan: {laneId})</option>
+                      )}
+                      {lanes.map((l) => (
+                        <option key={l.id} value={l.id}>
+                          {l.name} (max {l.maxConcurrency})
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                  <span className="mt-1 block text-[10px] text-text-faint">
+                    Lanes cap concurrency for a pool of pipelines.
+                  </span>
+                </label>
+                <label className="block text-xs text-text-secondary">
+                  <span className="mb-1 block text-[11px] uppercase tracking-wide text-text-faint">
+                    Priority
+                  </span>
+                  <input
+                    type="number"
+                    min={0}
+                    max={10000}
+                    value={priority}
+                    onChange={(e) => {
+                      setPriority(Number(e.target.value));
+                      setDirty(true);
+                    }}
+                    className="w-full rounded-md border border-border-subtle bg-bg-base px-2 py-1.5 text-xs text-text-primary focus:border-accent focus:outline-none"
+                  />
+                  <span className="mt-1 block text-[10px] text-text-faint">
+                    Lower runs first within the lane. Default 100.
+                  </span>
+                </label>
+              </div>
+            )}
+
+            {triggersTab === 'branch' && (
+              <div className="space-y-3">
+                <p className="text-[11px] text-text-muted">
+                  The branch + poll interval live in the header chip. This tab
+                  controls how the branch trigger behaves when a new commit
+                  arrives while a build is still running.
+                </p>
+                <label className="inline-flex items-start gap-2 text-xs text-text-secondary">
+                  <input
+                    type="checkbox"
+                    checked={watch.cancelInProgressOnNewCommit ?? false}
+                    onChange={(e) => {
+                      setWatch({ ...watch, cancelInProgressOnNewCommit: e.target.checked });
+                      setDirty(true);
+                    }}
+                    className="mt-0.5 h-3 w-3 accent-accent"
+                  />
+                  <span>
+                    <span className="block text-text-primary">Rolling builds</span>
+                    <span className="block text-[10.5px] text-text-faint">
+                      Cancel previous in-flight build when a new commit / trigger arrives.
+                      Saves builder cycles on a busy branch.
+                    </span>
+                  </span>
+                </label>
+              </div>
+            )}
+
+            {triggersTab === 'tag' && (
+              <div className="space-y-2">
+                <span className="block text-[11px] uppercase tracking-wide text-text-muted">
+                  Tag pattern (glob)
+                </span>
+                <TagPatternPreview
+                  projectId={pipeline.projectId}
+                  value={watch.tagPattern ?? ''}
+                  onChange={(pattern) => {
+                    setWatch({ ...watch, tagPattern: pattern });
                     setDirty(true);
                   }}
-                  className="w-full rounded-md border border-border-subtle bg-bg-base px-2 py-1.5 text-xs text-text-primary focus:border-accent focus:outline-none"
-                >
-                  {/* If the pipeline's current laneId no longer exists in the
-                      lanes list (e.g. lane was deleted out-of-band), surface
-                      it as an orphan placeholder so the user notices and can
-                      reassign. The server's DELETE 409 normally prevents this. */}
-                  {!lanes.some((l) => l.id === laneId) && (
-                    <option value={laneId}>(orphan: {laneId})</option>
-                  )}
-                  {lanes.map((l) => (
-                    <option key={l.id} value={l.id}>
-                      {l.name} (max {l.maxConcurrency})
-                    </option>
-                  ))}
-                </select>
-              )}
-            </label>
-            <label className="block text-xs text-text-secondary">
-              <span className="mb-1 block text-[11px] uppercase tracking-wide text-text-faint">
-                Priority
-              </span>
-              <input
-                type="number"
-                min={0}
-                max={10000}
-                value={priority}
-                onChange={(e) => {
-                  setPriority(Number(e.target.value));
-                  setDirty(true);
-                }}
-                className="w-full rounded-md border border-border-subtle bg-bg-base px-2 py-1.5 text-xs text-text-primary focus:border-accent focus:outline-none"
-              />
-              <span className="mt-1 block text-[10px] text-text-faint">
-                Lower runs first within the lane. Default 100.
-              </span>
-            </label>
-            <div className="block text-xs text-text-secondary">
-              <span className="mb-1 block text-[11px] uppercase tracking-wide text-text-muted">
-                Tag pattern (glob)
-              </span>
-              <TagPatternPreview
-                projectId={pipeline.projectId}
-                value={watch.tagPattern ?? ''}
-                onChange={(pattern) => {
-                  setWatch({ ...watch, tagPattern: pattern });
-                  setDirty(true);
-                }}
-              />
-            </div>
-            <div className="block text-xs text-text-secondary">
-              <span className="mb-1 block text-[11px] uppercase tracking-wide text-text-muted">
-                Cron (5-field, UTC)
-              </span>
-              <CronBuilder
-                value={watch.cronExpr ?? ''}
-                onChange={(expr) => {
-                  setWatch({ ...watch, cronExpr: expr });
-                  setDirty(true);
-                }}
-              />
-            </div>
-            <div className="block text-xs text-text-secondary md:col-span-2">
-              <span className="mb-1 block text-[11px] uppercase tracking-wide text-text-muted">
-                Path filter globs (one per line — empty = build on every commit)
-              </span>
-              <PathFilterPreview
-                projectId={pipeline.projectId}
-                branch={watch.branch}
-                value={watch.pathFilter ?? ''}
-                onChange={(spec) => {
-                  setWatch({ ...watch, pathFilter: spec });
-                  setDirty(true);
-                }}
-              />
-            </div>
-            <label className="inline-flex items-center gap-2 text-xs text-text-secondary md:col-span-2">
-              <input
-                type="checkbox"
-                checked={watch.cancelInProgressOnNewCommit ?? false}
-                onChange={(e) => {
-                  setWatch({ ...watch, cancelInProgressOnNewCommit: e.target.checked });
-                  setDirty(true);
-                }}
-                className="h-3 w-3"
-              />
-              Cancel previous in-flight build when a new commit / trigger arrives
-              (rolling-build mode)
-            </label>
-            <div className="md:col-span-2 border-t border-border-subtle pt-3">
+                />
+                <p className="text-[10.5px] text-text-faint">
+                  Builds fire when a tag matching the glob lands. e.g.{' '}
+                  <code className="font-mono text-text-secondary">v*</code> matches
+                  any v-prefixed release tag.
+                </p>
+              </div>
+            )}
+
+            {triggersTab === 'cron' && (
+              <div className="space-y-2">
+                <span className="block text-[11px] uppercase tracking-wide text-text-muted">
+                  Cron (5-field, UTC)
+                </span>
+                <CronBuilder
+                  value={watch.cronExpr ?? ''}
+                  onChange={(expr) => {
+                    setWatch({ ...watch, cronExpr: expr });
+                    setDirty(true);
+                  }}
+                />
+                <p className="text-[10.5px] text-text-faint">
+                  Scheduled trigger. Independent of branch polling — fires on its
+                  own clock.
+                </p>
+              </div>
+            )}
+
+            {triggersTab === 'paths' && (
+              <div className="space-y-2">
+                <span className="block text-[11px] uppercase tracking-wide text-text-muted">
+                  Path filter globs (one per line)
+                </span>
+                <PathFilterPreview
+                  projectId={pipeline.projectId}
+                  branch={watch.branch}
+                  value={watch.pathFilter ?? ''}
+                  onChange={(spec) => {
+                    setWatch({ ...watch, pathFilter: spec });
+                    setDirty(true);
+                  }}
+                />
+                <p className="text-[10.5px] text-text-faint">
+                  Empty = build on every commit. With a filter set, builds only
+                  fire when at least one changed file matches.
+                </p>
+              </div>
+            )}
+
+            {triggersTab === 'webhook' && (
               <SlashCommandConfig
                 commands={watch.prCommands ?? ''}
                 onCommandsChange={(value) => {
@@ -1136,7 +1308,7 @@ function Editor({ pipeline }: Props) {
                   setDirty(true);
                 }}
               />
-            </div>
+            )}
           </div>
         </div>
       )}
@@ -1461,6 +1633,44 @@ function Editor({ pipeline }: Props) {
   );
 }
 
+// UI v2 Faz 5.A.3 — Recipes. Pre-built step chains the user can drop in
+// as a starting point. Each entry produces N nodes + N-1 edges via the
+// existing dropPayload path so the editor handles them like any other
+// drag-drop. Keep the list short — these are quick-starts, not a
+// full template gallery.
+interface Recipe {
+  id: string;
+  name: string;
+  description: string;
+  steps: ReadonlyArray<StepType>;
+}
+const RECIPES: ReadonlyArray<Recipe> = [
+  {
+    id: 'git-build-notify',
+    name: 'Git → Shell → Notify',
+    description: 'Checkout, run a shell command, ping Slack on outcome.',
+    steps: ['checkout', 'shell', 'slackNotify'],
+  },
+  {
+    id: 'ios-test-flight',
+    name: 'iOS → TestFlight',
+    description: 'Checkout → xcodebuild archive → TestFlight upload.',
+    steps: ['checkout', 'xcodebuild', 'testflightUpload'],
+  },
+  {
+    id: 'ios-quality-gate',
+    name: 'iOS quality gate',
+    description: 'SwiftLint + xcodebuild analyze + coverage gate.',
+    steps: ['checkout', 'swiftlint', 'xcodebuildAnalyze', 'slatherCoverage', 'xcovGate'],
+  },
+  {
+    id: 'http-webhook-fan-out',
+    name: 'Webhook fan-out',
+    description: 'POST one HTTP call, then notify two channels.',
+    steps: ['httpRequest', 'slackNotify', 'discordNotify'],
+  },
+];
+
 // UI v2 Faz 5.A — palette "Recently used" tracking. Stored as a string[]
 // of step types, MRU at index 0, capped at 6 entries.
 const RECENTLY_USED_KEY = 'buildpilot.pipeline.palette.recentlyUsed';
@@ -1490,6 +1700,44 @@ export function trackPaletteUse(type: StepType): void {
   }
 }
 
+// UI v2 Faz 5.B.3 — Triggers panel tab button. Configured dot signals
+// the underlying field has a value so users see at-a-glance which knobs
+// have been touched.
+function TriggerTabBtn({
+  active,
+  configured,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  configured: boolean;
+  onClick(): void;
+  children: React.ReactNode;
+}): JSX.Element {
+  return (
+    <button
+      type="button"
+      role="tab"
+      aria-selected={active}
+      onClick={onClick}
+      className={cn(
+        'relative px-3 h-8 text-[12px] font-medium transition-colors inline-flex items-center gap-1.5',
+        active
+          ? 'text-text-primary'
+          : 'text-text-muted hover:text-text-secondary',
+      )}
+    >
+      {children}
+      {configured && !active && (
+        <span className="inline-block w-1 h-1 rounded-full bg-accent" aria-hidden />
+      )}
+      {active && (
+        <span className="absolute inset-x-2 bottom-0 h-[2px] bg-accent rounded-t-sm" aria-hidden />
+      )}
+    </button>
+  );
+}
+
 function Palette({
   templates,
   onDeleteTemplate,
@@ -1504,6 +1752,27 @@ function Palette({
   // Recently used types — refreshed on a custom event fired by
   // PaletteItem.onDragStart so multi-palette views stay in sync.
   const [recentlyUsed, setRecentlyUsed] = useState<StepType[]>(() => readRecentlyUsed());
+  // UI v2 Faz 8.6 — Catalog → Pipeline handoff. When the user clicks
+  // "Insert into pipeline" on the catalog detail panel, the step type
+  // lands in sessionStorage; on mount we read it and pre-fill the search
+  // so the step is immediately findable.
+  const [pendingInsert, setPendingInsert] = useState<StepType | null>(null);
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem('buildpilot.catalog.pendingInsert');
+      if (!raw) return;
+      sessionStorage.removeItem('buildpilot.catalog.pendingInsert');
+      if (raw in STEP_DEFINITIONS) {
+        setPendingInsert(raw as StepType);
+        setQuery(STEP_DEFINITIONS[raw as StepType].label);
+        // Clear the highlight after 4s so it stops competing for attention.
+        const timeout = setTimeout(() => setPendingInsert(null), 4000);
+        return () => clearTimeout(timeout);
+      }
+    } catch {
+      /* ignore */
+    }
+  }, []);
   useEffect(() => {
     const onChange = () => setRecentlyUsed(readRecentlyUsed());
     window.addEventListener('buildpilot:palette-recently-used', onChange);
@@ -1541,6 +1810,21 @@ function Palette({
         className="w-full rounded-btn border border-border-subtle bg-bg-base px-2 py-1.5 text-[12px] text-text-primary placeholder:text-text-faint focus:border-accent focus:ring-2 focus:ring-accent-soft focus:outline-none transition-colors"
       />
 
+      {/* UI v2 Faz 5.A.3 — Recipes: drop a preset chain in one drag. Each
+          recipe shows its step types as a 3-dot icon row so users can see
+          the shape before they drop. Hidden during search since recipes
+          aren't searchable. */}
+      {q === '' && (
+        <div className="flex flex-col gap-1 pt-1">
+          <div className="px-1 text-[9px] font-semibold uppercase tracking-wider text-text-muted">
+            Recipes
+          </div>
+          {RECIPES.map((recipe) => (
+            <RecipeItem key={recipe.id} recipe={recipe} />
+          ))}
+        </div>
+      )}
+
       {/* Recently used — last 6 dragged types, persisted to localStorage.
           Hidden while searching since the search hit-list is more useful. */}
       {q === '' && recentlyUsed.length > 0 && (
@@ -1576,7 +1860,12 @@ function Palette({
             </button>
             {isOpen &&
               items.map(({ type, def }) => (
-                <PaletteItem key={type} type={type} def={def} />
+                <PaletteItem
+                  key={type}
+                  type={type}
+                  def={def}
+                  highlight={pendingInsert === type}
+                />
               ))}
           </div>
         );
@@ -1626,12 +1915,55 @@ function Palette({
   );
 }
 
+// UI v2 Faz 5.A.3 — recipe palette tile. Carries a dragstart payload on a
+// dedicated mime type so the canvas's onDrop handler can branch on it.
+function RecipeItem({ recipe }: { recipe: Recipe }): JSX.Element {
+  return (
+    <div
+      draggable
+      onDragStart={(e) => {
+        e.dataTransfer.setData('application/buildpilot-recipe', recipe.id);
+        e.dataTransfer.effectAllowed = 'move';
+      }}
+      className="group cursor-grab rounded-btn border border-border-subtle bg-bg-elevated px-2.5 py-1.5 hover:border-border transition-colors"
+      title={recipe.description}
+    >
+      <div className="text-[12px] font-medium text-text-primary truncate">
+        {recipe.name}
+      </div>
+      <div className="mt-1 flex items-center gap-0.5">
+        {recipe.steps.map((stepType, i) => {
+          const def = STEP_DEFINITIONS[stepType];
+          if (!def) return null;
+          return (
+            <span key={`${stepType}-${i}`} className="inline-flex items-center">
+              <span
+                className="block w-1.5 h-1.5 rounded-sm shrink-0"
+                style={{ backgroundColor: def.color }}
+                aria-hidden
+              />
+              {i < recipe.steps.length - 1 && (
+                <span className="block w-1.5 h-px bg-border-subtle" aria-hidden />
+              )}
+            </span>
+          );
+        })}
+        <span className="ml-1.5 text-[10px] text-text-faint">
+          {recipe.steps.length} step{recipe.steps.length === 1 ? '' : 's'}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 function PaletteItem({
   type,
   def,
+  highlight = false,
 }: {
   type: StepType;
   def: (typeof STEP_DEFINITIONS)[StepType];
+  highlight?: boolean;
 }) {
   const [hover, setHover] = useState(false);
   const required = def.fields.filter((f) => f.required);
@@ -1656,7 +1988,13 @@ function PaletteItem({
         // touch-target so palette tiles stay comfortably tappable on touch
         // devices — drag-from-palette still works because we listen for
         // dragstart, not pointerdown.
-        className="touch-target cursor-grab rounded-btn border bg-bg-elevated px-2.5 py-1.5 text-[12px] text-text-primary hover:border-border transition-colors"
+        className={cn(
+          'touch-target cursor-grab rounded-btn border bg-bg-elevated px-2.5 py-1.5 text-[12px] text-text-primary hover:border-border transition-colors',
+          // UI v2 Faz 8.6 — soft accent halo when this tile is the
+          // pending insert from the catalog. Drops automatically after
+          // a few seconds so it stops competing for attention.
+          highlight && 'ring-2 ring-accent/60 ring-offset-2 ring-offset-bg-panel',
+        )}
         style={{ borderColor: def.color }}
       >
         {def.label}

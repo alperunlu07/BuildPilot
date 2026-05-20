@@ -12,7 +12,12 @@ import {
   Trash2,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import type { Lane, TelegramConfigPublic } from '@buildpilot/shared-types';
+import type {
+  AiIntegrationsConfig,
+  AiToolConfig,
+  Lane,
+  TelegramConfigPublic,
+} from '@buildpilot/shared-types';
 import { api, LaneInUseError } from '../lib/api';
 import { useStore } from '../store/store';
 import type { Density, ThemeChoice } from '../lib/theme';
@@ -156,6 +161,11 @@ export function SettingsPage() {
             <SettingsNavLink href="#appearance" label="Appearance" />
             <SettingsNavLink href="#lanes" label="Lanes & Concurrency" />
             <SettingsNavLink href="#telegram" label="Telegram" />
+            <SettingsNavLink href="#ai-integrations" label="AI Integrations" />
+            <SettingsNavLink href="#security" label="Security" />
+            <SettingsNavLink href="#retention" label="Retention" />
+            <SettingsNavLink href="#vault" label="Vault" />
+            <SettingsNavLink href="#users" label="Users & Access" />
             <SettingsNavLink href="#about" label="About" />
           </nav>
         </div>
@@ -296,6 +306,68 @@ export function SettingsPage() {
             </button>
           </div>
         </div>
+      </section>
+
+      <section id="ai-integrations" className="scroll-mt-4 mt-6">
+        <AiIntegrationsSection />
+      </section>
+
+      <section id="security" className="scroll-mt-4 mt-6">
+        <SecuritySection />
+      </section>
+
+      <section id="retention" className="scroll-mt-4 mt-6">
+        <RetentionSection />
+      </section>
+
+      <section
+        id="vault"
+        className="scroll-mt-4 mt-6 rounded-lg border border-border-subtle bg-bg-panel/60 p-5"
+      >
+        <h2 className="text-base font-semibold text-text-primary">Vault</h2>
+        <p className="mt-1 text-xs text-text-muted">
+          Encrypted secret + file storage referenced from pipeline steps via{' '}
+          <code className="font-mono text-text-secondary">{'${{ secrets.X }}'}</code>
+          {' '}and{' '}
+          <code className="font-mono text-text-secondary">{'${{ files.X }}'}</code>
+          .
+        </p>
+        <p className="mt-3 text-[11px] text-text-faint">
+          Manage entries on the{' '}
+          <a href="/secrets" className="text-accent hover:underline">
+            /secrets
+          </a>{' '}
+          and{' '}
+          <a href="/vault-files" className="text-accent hover:underline">
+            /vault-files
+          </a>{' '}
+          pages. An inline mini-manager is planned for a follow-up PR.
+        </p>
+      </section>
+
+      <section
+        id="users"
+        className="scroll-mt-4 mt-6 rounded-lg border border-border-subtle bg-bg-panel/60 p-5"
+      >
+        <h2 className="text-base font-semibold text-text-primary">Users &amp; Access</h2>
+        <p className="mt-1 text-xs text-text-muted">
+          Local user accounts, roles, API tokens, and audit log.
+        </p>
+        <p className="mt-3 text-[11px] text-text-faint">
+          Manage on{' '}
+          <a href="/users" className="text-accent hover:underline">
+            /users
+          </a>
+          ,{' '}
+          <a href="/api-tokens" className="text-accent hover:underline">
+            /api-tokens
+          </a>
+          , and{' '}
+          <a href="/audit" className="text-accent hover:underline">
+            /audit
+          </a>
+          . An inline overview card lands in a follow-up PR.
+        </p>
       </section>
 
       <section
@@ -796,6 +868,213 @@ function LaneRow({
       >
         <Trash2 size={13} />
       </button>
+    </div>
+  );
+}
+
+// UI v2 Faz 10.3 — AI Integrations. Per-tool path + model overrides for
+// the four built-in AI CLIs (claude / codex / aider / gemini). Backed by
+// GET/PUT /api/config/ai-integrations.
+function AiIntegrationsSection() {
+  const [config, setConfig] = useState<AiIntegrationsConfig>({});
+  const [dirty, setDirty] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [savedAt, setSavedAt] = useState<number | null>(null);
+
+  useEffect(() => {
+    api.getAiIntegrations().then(setConfig).catch((e) => setError(String(e)));
+  }, []);
+
+  const TOOLS: Array<{ key: keyof AiIntegrationsConfig; label: string; modelHint: string }> = [
+    { key: 'claude', label: 'Claude (claude-code)', modelHint: 'claude-opus-4-7' },
+    { key: 'codex', label: 'Codex CLI', modelHint: 'gpt-4o' },
+    { key: 'aider', label: 'Aider', modelHint: 'gpt-4o' },
+    { key: 'gemini', label: 'Gemini CLI', modelHint: 'gemini-1.5-pro' },
+  ];
+
+  function updateTool(key: keyof AiIntegrationsConfig, patch: Partial<AiToolConfig>) {
+    setConfig((prev) => ({ ...prev, [key]: { ...prev[key], ...patch } }));
+    setDirty(true);
+  }
+
+  async function save() {
+    setSaving(true);
+    setError(null);
+    try {
+      const next = await api.updateAiIntegrations(config);
+      setConfig(next);
+      setDirty(false);
+      setSavedAt(Date.now());
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="rounded-lg border border-border-subtle bg-bg-panel/60 p-5">
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <div>
+          <h2 className="text-base font-semibold text-text-primary">AI Integrations</h2>
+          <p className="mt-1 text-xs text-text-muted">
+            Override the binary path + default model for each AI CLI used by the{' '}
+            <code className="font-mono text-text-secondary">aiPrompt</code> step.
+            Empty = look up on PATH + let the CLI pick its own default.
+          </p>
+        </div>
+        {savedAt && !dirty && (
+          <span className="text-[11px] text-status-success">Saved</span>
+        )}
+      </div>
+      <div className="space-y-3">
+        {TOOLS.map((tool) => {
+          const cfg = config[tool.key] ?? {};
+          return (
+            <div
+              key={tool.key}
+              className="rounded-md border border-border-subtle bg-bg-base p-3"
+            >
+              <div className="mb-2 text-[12.5px] font-medium text-text-primary">
+                {tool.label}
+              </div>
+              <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+                <label className="block text-[11px] text-text-muted">
+                  Path override
+                  <input
+                    type="text"
+                    value={cfg.path ?? ''}
+                    onChange={(e) => updateTool(tool.key, { path: e.target.value })}
+                    placeholder={`/usr/local/bin/${tool.key}`}
+                    className="mt-0.5 w-full rounded-md border border-border-subtle bg-bg-elevated px-2 py-1 text-[12px] font-mono text-text-primary placeholder:text-text-faint focus:border-accent focus:outline-none transition-colors"
+                  />
+                </label>
+                <label className="block text-[11px] text-text-muted">
+                  Default model
+                  <input
+                    type="text"
+                    value={cfg.model ?? ''}
+                    onChange={(e) => updateTool(tool.key, { model: e.target.value })}
+                    placeholder={tool.modelHint}
+                    className="mt-0.5 w-full rounded-md border border-border-subtle bg-bg-elevated px-2 py-1 text-[12px] font-mono text-text-primary placeholder:text-text-faint focus:border-accent focus:outline-none transition-colors"
+                  />
+                </label>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      {error && (
+        <div className="mt-3 rounded border border-rose-500/40 bg-rose-500/10 px-3 py-2 text-[12px] text-rose-300">
+          {error}
+        </div>
+      )}
+      <div className="mt-4 flex items-center justify-end gap-2">
+        <button
+          type="button"
+          onClick={save}
+          disabled={!dirty || saving}
+          className="rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-white hover:bg-accent-hover disabled:opacity-50 transition-colors"
+        >
+          {saving ? 'Saving…' : 'Save'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// UI v2 Faz 10.4 — Security. Master key visibility + a short summary of
+// what gets encrypted at rest. The master key itself never leaves the
+// server; this panel just shows whether it's been initialised and where
+// to rotate it.
+function SecuritySection() {
+  return (
+    <div className="rounded-lg border border-border-subtle bg-bg-panel/60 p-5">
+      <h2 className="flex items-center gap-2 text-base font-semibold text-text-primary">
+        <Lock size={16} className="text-amber-400" /> Security
+      </h2>
+      <p className="mt-1 text-xs text-text-muted">
+        Sensitive config is encrypted at rest with a master key derived from{' '}
+        <code className="font-mono text-text-secondary">~/.buildpilot/config.json</code>
+        's owner. The key never leaves the server.
+      </p>
+      <div className="mt-4 rounded-md border border-border-subtle bg-bg-base overflow-hidden">
+        <table className="w-full text-[12.5px]">
+          <thead>
+            <tr className="border-b border-border-subtle bg-bg-elevated text-[10px] uppercase tracking-wider text-text-muted">
+              <th className="text-left px-3 py-1.5">Field</th>
+              <th className="text-left px-3 py-1.5">Encrypted</th>
+            </tr>
+          </thead>
+          <tbody className="text-text-secondary">
+            <tr className="border-b border-border-subtle">
+              <td className="px-3 py-1.5 font-mono">telegram.botToken</td>
+              <td className="px-3 py-1.5 text-status-success">yes</td>
+            </tr>
+            <tr className="border-b border-border-subtle">
+              <td className="px-3 py-1.5 font-mono">secrets.*</td>
+              <td className="px-3 py-1.5 text-status-success">yes</td>
+            </tr>
+            <tr className="border-b border-border-subtle">
+              <td className="px-3 py-1.5 font-mono">vaultFiles.*</td>
+              <td className="px-3 py-1.5 text-status-success">yes</td>
+            </tr>
+            <tr className="border-b border-border-subtle">
+              <td className="px-3 py-1.5 font-mono">vcsCredentials.*</td>
+              <td className="px-3 py-1.5 text-status-success">yes</td>
+            </tr>
+            <tr>
+              <td className="px-3 py-1.5 font-mono">slack.webhookUrl / discord.webhookUrl</td>
+              <td className="px-3 py-1.5 text-status-success">yes</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p className="mt-3 text-[11px] text-text-faint">
+        To rotate the master key, stop BuildPilot, run{' '}
+        <code className="font-mono text-text-secondary">buildpilot encryption rotate-key</code>
+        , and restart. All encrypted fields are re-wrapped in place.
+      </p>
+    </div>
+  );
+}
+
+// UI v2 Faz 10.5 — Retention. Hard-coded read-only view of the
+// retention config; live editing wires to PUT /api/config/retention in
+// a follow-up PR (no backend yet for the dashboard mutator).
+function RetentionSection() {
+  return (
+    <div className="rounded-lg border border-border-subtle bg-bg-panel/60 p-5">
+      <h2 className="text-base font-semibold text-text-primary">Retention</h2>
+      <p className="mt-1 text-xs text-text-muted">
+        How long BuildPilot keeps build rows, log entries, and artifacts on disk.
+        Configured in{' '}
+        <code className="font-mono text-text-secondary">~/.buildpilot/config.json</code>
+        ; restart to apply.
+      </p>
+      <ul className="mt-3 text-[12.5px] text-text-secondary space-y-1.5">
+        <li>
+          <span className="text-text-muted">Build rows:</span>{' '}
+          retained indefinitely by default; the{' '}
+          <code className="font-mono text-text-secondary">pruneOldBuilds</code> sweep
+          fires nightly when{' '}
+          <code className="font-mono text-text-secondary">retention.buildDays</code> is
+          set.
+        </li>
+        <li>
+          <span className="text-text-muted">Log entries:</span>{' '}
+          capped at 5000 in-memory per build; full log lives in{' '}
+          <code className="font-mono text-text-secondary">~/.buildpilot/buildpilot.db</code>
+          .
+        </li>
+        <li>
+          <span className="text-text-muted">Artifacts:</span>{' '}
+          on-disk in{' '}
+          <code className="font-mono text-text-secondary">~/.buildpilot/artifacts/</code>
+          ; swept alongside their build row.
+        </li>
+      </ul>
     </div>
   );
 }

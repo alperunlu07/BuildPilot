@@ -4,7 +4,6 @@ import { Topbar } from './components/shell/Topbar';
 import { AddProjectDialog } from './components/AddProjectDialog';
 import { BuildLogPanel } from './components/BuildLogPanel';
 import { ConfirmDialog } from './components/ConfirmDialog';
-import { HostsDialog } from './components/HostsDialog';
 import { ToastContainer } from './components/ToastContainer';
 import { UndoToast } from './components/UndoToast';
 import { ActiveBuildsWidget } from './components/ActiveBuildsWidget';
@@ -61,7 +60,6 @@ export function App() {
   const authChecked = useStore((s) => s.authChecked);
 
   const [openAdd, setOpenAdd] = useState(false);
-  const [openHosts, setOpenHosts] = useState(false);
   const [openChangelog, setOpenChangelog] = useState(false);
   const [openCreatePipeline, setOpenCreatePipeline] = useState<string | null>(null);
   // Mobile drawer open state — only consumed below md. Auto-close whenever
@@ -256,11 +254,13 @@ export function App() {
       <ActiveBuildsWidget />
       <CommandPalette
         onAddProject={() => setOpenAdd(true)}
-        onManageHosts={() => setOpenHosts(true)}
+        // UI v2 Faz 9.4 — modal HostsDialog removed; the "manage hosts"
+        // quick-action lands the user on the full /hosts page where the
+        // add form is the right-hand pane.
+        onManageHosts={() => useStore.getState().setView({ type: 'hosts' })}
       />
       <KeyboardShortcutsHelp />
       <AddProjectDialog open={openAdd} onClose={() => setOpenAdd(false)} />
-      <HostsDialog open={openHosts} onClose={() => setOpenHosts(false)} />
       <ChangelogDrawer open={openChangelog} onClose={() => setOpenChangelog(false)} />
       {openCreatePipeline && (() => {
         const proj = useStore.getState().projects.find((p) => p.id === openCreatePipeline);
