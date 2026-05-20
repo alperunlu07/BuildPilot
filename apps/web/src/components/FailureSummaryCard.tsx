@@ -76,7 +76,7 @@ export function FailureSummaryCard({ entries, nodeLabel, onRetry, onJumpToNode }
             <button
               type="button"
               onClick={() => onJumpToNode?.(summary.nodeId)}
-              className="font-mono text-sm text-bp-text-primary hover:text-sky-300"
+              className="font-mono text-sm text-bp-text-primary hover:text-accent-hover"
               title="Filter log to this step"
             >
               {label}
@@ -106,7 +106,7 @@ export function FailureSummaryCard({ entries, nodeLabel, onRetry, onJumpToNode }
 
           {summary.aiFix && (
             <div className="mt-2 rounded-md border border-sky-900/40 bg-sky-950/30 p-2 text-[11px] text-sky-200">
-              <div className="mb-1 inline-flex items-center gap-1.5 font-semibold uppercase tracking-wider text-sky-300">
+              <div className="mb-1 inline-flex items-center gap-1.5 font-semibold uppercase tracking-wider text-accent-hover">
                 <Sparkles size={12} /> AI auto-fix
               </div>
               <ul className="space-y-0.5 font-mono">

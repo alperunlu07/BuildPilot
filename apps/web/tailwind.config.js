@@ -1,49 +1,95 @@
 /** @type {import('tailwindcss').Config} */
 //
-// BuildPilot design tokens live here under `theme.extend.colors.bp`.
-// Components should prefer semantic tokens (`bg-bp-surface-0`,
-// `text-bp-text-primary`) over raw palette utilities (`bg-slate-950`,
-// `text-slate-100`) so a future light theme or palette tweak can flow
-// through a single config change instead of a 70-component find-and-
-// replace. The token catalog is documented in apps/web/DESIGN_TOKENS.md.
+// BuildPilot design tokens. Two generations coexist while components
+// migrate:
 //
-// We deliberately alias to the existing slate/sky/amber/emerald/rose
-// shades the codebase already uses so this rollout is a pure additive
-// — every existing utility class still works untouched. Components
-// migrate to tokens as they're naturally touched.
+//   - bp.*  (legacy): hardcoded slate/sky/amber/emerald/rose hex values.
+//                     Stays in place so existing utility classes keep
+//                     painting until each component is touched.
+//   - bg.* / text.* / border.* / accent.* / status.* (UI v2):
+//                     resolve to CSS custom properties declared in
+//                     src/styles/tokens.css, so swapping data-theme,
+//                     data-density, or the runtime accent paints the
+//                     whole UI without a rebuild.
+//
+// Once every component migrates to the v2 namespace we delete the bp.*
+// aliases (Faz 12 polish PR).
 export default {
   content: ['./index.html', './src/**/*.{ts,tsx}'],
   darkMode: 'class',
   theme: {
     extend: {
       colors: {
-        bp: {
-          // Primary brand / call-to-action accent. Used for primary
-          // buttons, active states, links. Matches the existing sky-500
-          // used by the focus ring helper.
-          brand: '#0ea5e9', // tailwind sky-500
-          // Surface layers — 0 is the deepest background (app shell),
-          // 3 is the highest "card on top of dialog" surface.
-          surface: {
-            0: '#020617', // slate-950 — app background
-            1: '#0f172a', // slate-900 — primary content card
-            2: '#1e293b', // slate-800 — hover row, borders
-            3: '#334155', // slate-700 — inputs, raised borders
-          },
-          // Text hierarchy — keep three steps so components don't reach
-          // for ad-hoc slate-200 / 300 / 400 / 500 mid-greys.
-          text: {
-            primary:   '#f1f5f9', // slate-100 — body copy on dark surfaces
-            secondary: '#cbd5e1', // slate-300 — secondary labels
-            muted:     '#94a3b8', // slate-400 — timestamps, hints
-          },
-          // Status palette — matches the per-build status legend used
-          // by BuildSparkline / FailureSummaryCard / status icons.
-          success: '#34d399', // emerald-400
-          warning: '#fbbf24', // amber-400
-          error:   '#f87171', // rose-400
-          info:    '#38bdf8', // sky-400
+        // UI v2 token namespaces — back tokens.css custom properties.
+        // Utility examples:
+        //   bg-bg-panel       → background-color: var(--bg-panel)
+        //   text-text-primary → color: var(--text-primary)
+        //   border-border     → border-color: var(--border-default)
+        //   bg-accent-soft    → background-color: var(--accent-soft)
+        //   text-status-failed → color: var(--st-failed)
+        bg: {
+          base: 'var(--bg-base)',
+          canvas: 'var(--bg-canvas)',
+          panel: 'var(--bg-panel)',
+          elevated: 'var(--bg-elevated)',
+          hover: 'var(--bg-hover)',
+          overlay: 'var(--bg-overlay)',
         },
+        border: {
+          subtle: 'var(--border-subtle)',
+          DEFAULT: 'var(--border-default)',
+          emphasis: 'var(--border-emphasis)',
+          strong: 'var(--border-strong)',
+        },
+        text: {
+          primary: 'var(--text-primary)',
+          secondary: 'var(--text-secondary)',
+          muted: 'var(--text-muted)',
+          faint: 'var(--text-faint)',
+          disabled: 'var(--text-disabled)',
+        },
+        accent: {
+          DEFAULT: 'var(--accent)',
+          soft: 'var(--accent-soft)',
+          glow: 'var(--accent-glow)',
+          hover: 'var(--accent-hover)',
+        },
+        status: {
+          pending: 'var(--st-pending)',
+          running: 'var(--st-running)',
+          success: 'var(--st-success)',
+          failed: 'var(--st-failed)',
+          cancel: 'var(--st-cancel)',
+          skipped: 'var(--st-skipped)',
+        },
+        // Legacy bp.* namespace — see header. Removed in Faz 12.
+        bp: {
+          brand: '#0ea5e9',
+          surface: {
+            0: '#020617',
+            1: '#0f172a',
+            2: '#1e293b',
+            3: '#334155',
+          },
+          text: {
+            primary: '#f1f5f9',
+            secondary: '#cbd5e1',
+            muted: '#94a3b8',
+          },
+          success: '#34d399',
+          warning: '#fbbf24',
+          error: '#f87171',
+          info: '#38bdf8',
+        },
+      },
+      fontFamily: {
+        sans: ['Inter', 'Inter Variable', 'system-ui', 'sans-serif'],
+        mono: ['JetBrains Mono', 'JetBrains Mono Variable', 'ui-monospace', 'monospace'],
+      },
+      borderRadius: {
+        btn: '6px',
+        card: '8px',
+        pill: '999px',
       },
     },
   },

@@ -54,16 +54,16 @@ export function ActiveBuildsWidget() {
   return (
     <div className="pointer-events-auto fixed bottom-4 right-4 z-40">
       {expanded ? (
-        <div className="w-80 overflow-hidden rounded-md border border-slate-700 bg-slate-900 shadow-xl">
-          <div className="flex items-center justify-between border-b border-slate-800 px-3 py-2">
-            <div className="flex items-center gap-2 text-xs font-medium text-slate-200">
+        <div className="w-80 overflow-hidden rounded-md border border-border-subtle bg-bg-panel shadow-xl">
+          <div className="flex items-center justify-between border-b border-border-subtle px-3 py-2">
+            <div className="flex items-center gap-2 text-xs font-medium text-text-primary">
               <Activity size={12} className="motion-safe:animate-pulse text-amber-400" aria-hidden="true" />
               {active.length} active build{active.length === 1 ? '' : 's'}
             </div>
             <button
               type="button"
               onClick={() => setExpanded(false)}
-              className="focusable rounded p-0.5 text-slate-400 hover:text-slate-100"
+              className="focusable rounded p-0.5 text-text-muted hover:text-text-primary"
               title="Collapse"
               aria-label="Collapse active builds widget"
             >
@@ -74,7 +74,7 @@ export function ActiveBuildsWidget() {
             {active.map((b) => {
               const elapsed = Date.now() - b.startedAt;
               return (
-                <li key={b.id} className="border-b border-slate-800/60 px-3 py-2 last:border-b-0">
+                <li key={b.id} className="border-b border-border-subtle/60 px-3 py-2 last:border-b-0">
                   <div className="flex items-center justify-between gap-2">
                     <button
                       type="button"
@@ -84,17 +84,17 @@ export function ActiveBuildsWidget() {
                       }}
                       className="min-w-0 flex-1 text-left"
                     >
-                      <div className="truncate text-xs text-slate-200">
+                      <div className="truncate text-xs text-text-primary">
                         {projectNameFor(b.projectId)}{' '}
-                        <span className="text-slate-400">/</span>{' '}
-                        <span className="text-slate-300">{pipelineNameFor(b.pipelineId)}</span>
+                        <span className="text-text-muted">/</span>{' '}
+                        <span className="text-text-secondary">{pipelineNameFor(b.pipelineId)}</span>
                       </div>
                       <div className="mt-0.5 flex items-center gap-2 text-[11px]">
                         <span
                           className={cn(
                             'inline-flex items-center gap-1 rounded px-1.5 py-0.5',
                             b.status === 'running' && 'bg-amber-950/50 text-amber-300',
-                            b.status === 'pending' && 'bg-slate-800 text-slate-400',
+                            b.status === 'pending' && 'bg-bg-elevated text-text-muted',
                           )}
                           role="status"
                           aria-label={statusLabel(b.status)}
@@ -106,12 +106,12 @@ export function ActiveBuildsWidget() {
                               aria-hidden="true"
                             />
                           ) : (
-                            <Circle size={8} className="text-slate-400" aria-hidden="true" />
+                            <Circle size={8} className="text-text-muted" aria-hidden="true" />
                           )}
                           {b.status}
                         </span>
                         <span className="font-mono text-emerald-400">{b.triggerBranch}</span>
-                        <span className="text-slate-400">{formatElapsed(elapsed)}</span>
+                        <span className="text-text-muted">{formatElapsed(elapsed)}</span>
                       </div>
                     </button>
                     <button
@@ -126,7 +126,7 @@ export function ActiveBuildsWidget() {
                           onConfirm: () => cancelBuild(b.id),
                         })
                       }
-                      className="focusable rounded-md border border-slate-700 p-1 text-slate-300 hover:border-rose-700 hover:text-rose-400"
+                      className="focusable rounded-md border border-border-subtle p-1 text-text-secondary hover:border-rose-700 hover:text-rose-400"
                       title="Cancel this build"
                       aria-label="Cancel this build"
                     >

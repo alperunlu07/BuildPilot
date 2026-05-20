@@ -168,25 +168,25 @@ export function CommitItem({ row, width, isFirst, isLast, highlight, isHead }: P
         >
           {hasBody ? (
             open ? (
-              <ChevronDown size={13} className="mt-1 shrink-0 text-slate-400" />
+              <ChevronDown size={13} className="mt-1 shrink-0 text-text-muted" />
             ) : (
-              <ChevronRight size={13} className="mt-1 shrink-0 text-slate-400" />
+              <ChevronRight size={13} className="mt-1 shrink-0 text-text-muted" />
             )
           ) : (
             <span className="w-3 shrink-0" />
           )}
           <div className="min-w-0 flex-1">
             <div className="flex items-baseline gap-2">
-              <code className="font-mono text-[11px] text-sky-400">{row.shortSha}</code>
+              <code className="font-mono text-[11px] text-accent">{row.shortSha}</code>
               {isHead && (
-                <span className="rounded-sm bg-sky-500/20 px-1.5 py-0 text-[9px] font-semibold uppercase tracking-wider text-sky-300">
+                <span className="rounded-sm bg-sky-500/20 px-1.5 py-0 text-[9px] font-semibold uppercase tracking-wider text-accent-hover">
                   HEAD
                 </span>
               )}
               {isMerge && <GitMerge size={11} className="text-amber-400" />}
-              <span className="truncate text-sm text-slate-100">{row.subject}</span>
+              <span className="truncate text-sm text-text-primary">{row.subject}</span>
             </div>
-            <div className="mt-0.5 flex items-baseline gap-2 whitespace-nowrap text-[11px] text-slate-400">
+            <div className="mt-0.5 flex items-baseline gap-2 whitespace-nowrap text-[11px] text-text-muted">
               <span className="truncate">{row.author}</span>
               <span>·</span>
               <span>{formatDistanceToNow(row.date, { addSuffix: true })}</span>
@@ -200,7 +200,7 @@ export function CommitItem({ row, width, isFirst, isLast, highlight, isHead }: P
           </div>
         </button>
         {open && hasBody && (
-          <pre className="mt-1.5 ml-4 overflow-x-auto whitespace-pre-wrap rounded-md border border-slate-800 bg-slate-950 px-3 py-2 text-[12px] text-slate-300">
+          <pre className="mt-1.5 ml-4 overflow-x-auto whitespace-pre-wrap rounded-md border border-border-subtle bg-bg-base px-3 py-2 text-[12px] text-text-secondary">
 {row.body}
           </pre>
         )}

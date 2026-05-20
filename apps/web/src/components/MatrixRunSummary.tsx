@@ -80,11 +80,11 @@ function statusBg(status: BuildStatus): string {
     case 'running':
       return 'border-amber-700 bg-amber-950/40 text-amber-200 hover:border-amber-500';
     case 'pending':
-      return 'border-slate-700 bg-slate-900 text-slate-300 hover:border-slate-500';
+      return 'border-border-subtle bg-bg-panel text-text-secondary hover:border-text-faint';
     case 'cancelled':
-      return 'border-slate-700 bg-slate-900 text-slate-400 hover:border-slate-500';
+      return 'border-border-subtle bg-bg-panel text-text-muted hover:border-text-faint';
     default:
-      return 'border-slate-700 bg-slate-900 text-slate-300 hover:border-slate-500';
+      return 'border-border-subtle bg-bg-panel text-text-secondary hover:border-text-faint';
   }
 }
 
@@ -166,16 +166,16 @@ export function MatrixRunSummary({
 
   if (children.length === 0) {
     return (
-      <div className="border-b border-slate-800 bg-slate-900/40 px-3 py-4 text-sm text-slate-400 sm:px-6">
+      <div className="border-b border-border-subtle bg-bg-panel/60 px-3 py-4 text-sm text-text-muted sm:px-6">
         Matrix has no children yet — children may still be queueing.
       </div>
     );
   }
 
   return (
-    <div className="border-b border-slate-800 bg-slate-900/40 px-3 py-3 sm:px-6">
+    <div className="border-b border-border-subtle bg-bg-panel/60 px-3 py-3 sm:px-6">
       <div className="mb-3 flex flex-wrap items-center gap-3">
-        <h2 className="text-sm font-semibold text-slate-200">
+        <h2 className="text-sm font-semibold text-text-primary">
           Matrix run · {children.length} cell{children.length === 1 ? '' : 's'}
         </h2>
         <div className="flex items-center gap-1.5 text-[11px]">
@@ -195,12 +195,12 @@ export function MatrixRunSummary({
             </span>
           )}
           {tally.pending > 0 && (
-            <span className="rounded-md bg-slate-800 px-1.5 py-0.5 text-slate-300">
+            <span className="rounded-md bg-bg-elevated px-1.5 py-0.5 text-text-secondary">
               {tally.pending} pending
             </span>
           )}
           {tally.cancelled > 0 && (
-            <span className="rounded-md bg-slate-800 px-1.5 py-0.5 text-slate-400">
+            <span className="rounded-md bg-bg-elevated px-1.5 py-0.5 text-text-muted">
               {tally.cancelled} cancelled
             </span>
           )}
@@ -210,7 +210,7 @@ export function MatrixRunSummary({
             type="button"
             onClick={onRerunFailed}
             disabled={!hasFailures || rerunning || parent.status === 'running'}
-            className="focusable inline-flex items-center gap-1 rounded-md border border-amber-700/60 px-2 py-1 text-xs text-amber-300 hover:border-amber-500 hover:text-amber-200 disabled:cursor-not-allowed disabled:border-slate-700 disabled:text-slate-500"
+            className="focusable inline-flex items-center gap-1 rounded-md border border-amber-700/60 px-2 py-1 text-xs text-amber-300 hover:border-amber-500 hover:text-amber-200 disabled:cursor-not-allowed disabled:border-border-subtle disabled:text-text-faint"
             title={
               hasFailures
                 ? 'Rerun only the cells that failed or were cancelled'
@@ -234,15 +234,15 @@ export function MatrixRunSummary({
           <table className="min-w-full border-separate border-spacing-1 text-xs">
             <thead>
               <tr>
-                <th className="text-left text-[10px] uppercase tracking-wider text-slate-500">
-                  <span className="font-mono text-slate-400">{grid.rowAxis}</span>
+                <th className="text-left text-[10px] uppercase tracking-wider text-text-faint">
+                  <span className="font-mono text-text-muted">{grid.rowAxis}</span>
                   {' / '}
-                  <span className="font-mono text-slate-400">{grid.colAxis}</span>
+                  <span className="font-mono text-text-muted">{grid.colAxis}</span>
                 </th>
                 {colValues.map((cv) => (
                   <th
                     key={cv}
-                    className="px-1 text-center text-[10px] uppercase tracking-wider text-slate-400"
+                    className="px-1 text-center text-[10px] uppercase tracking-wider text-text-muted"
                   >
                     {cv}
                   </th>
@@ -254,7 +254,7 @@ export function MatrixRunSummary({
                 <tr key={rv}>
                   <th
                     scope="row"
-                    className="px-1 text-left text-[11px] font-mono text-slate-300"
+                    className="px-1 text-left text-[11px] font-mono text-text-secondary"
                   >
                     {rv}
                   </th>
@@ -269,7 +269,7 @@ export function MatrixRunSummary({
                     if (cellChildren.length === 0) {
                       return (
                         <td key={cv} className="min-w-[140px]">
-                          <span className="block rounded-md border border-dashed border-slate-800 px-2 py-2 text-center text-[10px] text-slate-500">
+                          <span className="block rounded-md border border-dashed border-border-subtle px-2 py-2 text-center text-[10px] text-text-faint">
                             —
                           </span>
                         </td>

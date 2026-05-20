@@ -53,14 +53,14 @@ export function QueuePage() {
     <div className="mx-auto max-w-6xl p-6">
       <div className="mb-5 flex items-baseline justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-slate-100">Execution Queue</h1>
-          <p className="mt-1 text-sm text-slate-400">
+          <h1 className="text-xl font-semibold text-text-primary">Execution Queue</h1>
+          <p className="mt-1 text-sm text-text-muted">
             Pending and running builds, grouped by lane. Polled every {POLL_MS / 1000}s.
           </p>
         </div>
         <div className="flex items-center gap-3 text-xs">
           {queue && (
-            <span className="text-slate-500" title={new Date(queue.generatedAt).toLocaleString()}>
+            <span className="text-text-faint" title={new Date(queue.generatedAt).toLocaleString()}>
               Updated {formatRelative(now - queue.generatedAt)} ago
             </span>
           )}
@@ -68,7 +68,7 @@ export function QueuePage() {
             type="button"
             onClick={() => void reload()}
             disabled={loading}
-            className="inline-flex items-center gap-1 rounded-md border border-slate-700 px-2.5 py-1 text-slate-200 hover:border-sky-500 hover:text-sky-400 disabled:opacity-50"
+            className="inline-flex items-center gap-1 rounded-md border border-border-subtle px-2.5 py-1 text-text-primary hover:border-accent hover:text-accent disabled:opacity-50"
           >
             <RefreshCw size={12} className={loading ? 'animate-spin' : ''} /> Refresh
           </button>
@@ -76,11 +76,11 @@ export function QueuePage() {
       </div>
 
       {queue === null ? (
-        <div className="rounded-md border border-dashed border-slate-800 bg-slate-900/40 p-10 text-center text-sm text-slate-500">
+        <div className="rounded-md border border-dashed border-border-subtle bg-bg-panel/60 p-10 text-center text-sm text-text-faint">
           Loading queue…
         </div>
       ) : lanes.length === 0 ? (
-        <div className="rounded-md border border-dashed border-slate-800 bg-slate-900/40 p-10 text-center text-sm text-slate-500">
+        <div className="rounded-md border border-dashed border-border-subtle bg-bg-panel/60 p-10 text-center text-sm text-text-faint">
           No lanes configured.
         </div>
       ) : (
@@ -125,27 +125,27 @@ function LaneCard({
 }: LaneCardProps) {
   const { lane, running, pending } = snap;
   return (
-    <section className="overflow-hidden rounded-md border border-slate-800 bg-slate-900/40">
-      <header className="flex items-center justify-between border-b border-slate-800 bg-slate-900/60 px-4 py-3">
+    <section className="overflow-hidden rounded-md border border-border-subtle bg-bg-panel/60">
+      <header className="flex items-center justify-between border-b border-border-subtle bg-bg-panel px-4 py-3">
         <div className="flex items-center gap-2">
-          <Layers size={16} className="text-sky-400" />
-          <h2 className="text-base font-semibold text-slate-100">{lane.name}</h2>
+          <Layers size={16} className="text-accent" />
+          <h2 className="text-base font-semibold text-text-primary">{lane.name}</h2>
         </div>
-        <span className="rounded-md border border-slate-700 bg-slate-950/50 px-2 py-0.5 text-[11px] font-medium text-slate-300">
+        <span className="rounded-md border border-border-subtle bg-bg-base/50 px-2 py-0.5 text-[11px] font-medium text-text-secondary">
           max concurrency: {lane.maxConcurrency}
         </span>
       </header>
 
-      <div className="grid grid-cols-1 divide-y divide-slate-800 md:grid-cols-2 md:divide-x md:divide-y-0">
+      <div className="grid grid-cols-1 divide-y divide-border-subtle md:grid-cols-2 md:divide-x md:divide-y-0">
         <div className="p-4">
           <div className="mb-2 flex items-center justify-between">
             <h3 className="text-[11px] uppercase tracking-wider text-amber-400">Running</h3>
-            <span className="text-[11px] text-slate-500">
+            <span className="text-[11px] text-text-faint">
               {running.length}/{lane.maxConcurrency}
             </span>
           </div>
           {running.length === 0 ? (
-            <div className="rounded-md border border-dashed border-slate-800 px-3 py-4 text-center text-xs text-slate-500">
+            <div className="rounded-md border border-dashed border-border-subtle px-3 py-4 text-center text-xs text-text-faint">
               Idle
             </div>
           ) : (
@@ -173,11 +173,11 @@ function LaneCard({
 
         <div className="p-4">
           <div className="mb-2 flex items-center justify-between">
-            <h3 className="text-[11px] uppercase tracking-wider text-slate-400">Pending</h3>
-            <span className="text-[11px] text-slate-500">{pending.length}</span>
+            <h3 className="text-[11px] uppercase tracking-wider text-text-muted">Pending</h3>
+            <span className="text-[11px] text-text-faint">{pending.length}</span>
           </div>
           {pending.length === 0 ? (
-            <div className="rounded-md border border-dashed border-slate-800 px-3 py-4 text-center text-xs text-slate-500">
+            <div className="rounded-md border border-dashed border-border-subtle px-3 py-4 text-center text-xs text-text-faint">
               No pending builds
             </div>
           ) : (
@@ -187,7 +187,7 @@ function LaneCard({
                   <button
                     type="button"
                     onClick={() => onBuildClick(b.id)}
-                    className="block w-full rounded-md border border-slate-800 bg-slate-950/40 px-3 py-2 text-left text-xs hover:border-sky-700"
+                    className="block w-full rounded-md border border-border-subtle bg-bg-base/40 px-3 py-2 text-left text-xs hover:border-sky-700"
                   >
                     <BuildLine
                       build={b}
@@ -223,12 +223,12 @@ function BuildLine({ build, now, pipelineName, projectName, priority, label }: B
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
       {priority !== undefined && <PriorityBadge value={priority} />}
-      <span className="font-medium text-slate-100">{pipelineName}</span>
-      <span className="text-slate-500">·</span>
-      <span className="text-slate-400">{projectName}</span>
+      <span className="font-medium text-text-primary">{pipelineName}</span>
+      <span className="text-text-faint">·</span>
+      <span className="text-text-muted">{projectName}</span>
       <span className="font-mono text-emerald-400">{build.triggerBranch}</span>
-      <span className="font-mono text-sky-400">{sha}</span>
-      <span className="ml-auto text-[11px] text-slate-500">
+      <span className="font-mono text-accent">{sha}</span>
+      <span className="ml-auto text-[11px] text-text-faint">
         {label} {formatDuration(elapsed)}
       </span>
     </div>
@@ -243,8 +243,8 @@ function PriorityBadge({ value }: { value: number }) {
     value < 100
       ? 'border-rose-700/60 bg-rose-950/40 text-rose-300'
       : value > 100
-        ? 'border-slate-700 bg-slate-800/60 text-slate-400'
-        : 'border-sky-700/60 bg-sky-950/40 text-sky-300';
+        ? 'border-border-subtle bg-bg-hover/60 text-text-muted'
+        : 'border-sky-700/60 bg-sky-950/40 text-accent-hover';
   return (
     <span
       className={cn(

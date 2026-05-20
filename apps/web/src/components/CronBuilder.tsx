@@ -296,7 +296,7 @@ export function CronBuilder({ value, onChange }: Props) {
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2">
-        <Clock size={12} className="text-slate-400" />
+        <Clock size={12} className="text-text-muted" />
         <input
           type="text"
           value={rawValue}
@@ -313,8 +313,8 @@ export function CronBuilder({ value, onChange }: Props) {
           }}
           placeholder="0 9 * * *"
           spellCheck={false}
-          className={`w-full rounded-md border bg-slate-950 px-2 py-1.5 font-mono text-xs text-slate-100 focus:outline-none ${
-            valid ? 'border-slate-700 focus:border-sky-500' : 'border-rose-700 focus:border-rose-500'
+          className={`w-full rounded-md border bg-bg-base px-2 py-1.5 font-mono text-xs text-text-primary focus:outline-none ${
+            valid ? 'border-border-subtle focus:border-accent' : 'border-rose-700 focus:border-rose-500'
           }`}
         />
       </div>
@@ -344,8 +344,8 @@ export function CronBuilder({ value, onChange }: Props) {
             onClick={() => commit(p.expr)}
             className={`rounded border px-1.5 py-0.5 text-[10px] ${
               rawValue.trim() === p.expr
-                ? 'border-sky-500 bg-sky-950/40 text-sky-300'
-                : 'border-slate-700 text-slate-400 hover:border-sky-500 hover:text-sky-300'
+                ? 'border-accent bg-sky-950/40 text-accent-hover'
+                : 'border-border-subtle text-text-muted hover:border-accent hover:text-accent-hover'
             }`}
           >
             {p.label}
@@ -354,7 +354,7 @@ export function CronBuilder({ value, onChange }: Props) {
       </div>
 
       {!inCustomMode && (
-        <div className="rounded border border-slate-800 bg-slate-950/40 p-2">
+        <div className="rounded border border-border-subtle bg-bg-base/40 p-2">
           <div className="mb-2 flex gap-1">
             {(['hourly', 'daily', 'weekly', 'monthly'] as Mode[]).map((m) => (
               <button
@@ -364,7 +364,7 @@ export function CronBuilder({ value, onChange }: Props) {
                 className={`rounded px-1.5 py-0.5 text-[10px] capitalize ${
                   form.mode === m
                     ? 'bg-sky-700 text-white'
-                    : 'bg-slate-800 text-slate-400 hover:text-slate-200'
+                    : 'bg-bg-elevated text-text-muted hover:text-text-primary'
                 }`}
               >
                 {m}
@@ -373,7 +373,7 @@ export function CronBuilder({ value, onChange }: Props) {
           </div>
 
           {form.mode === 'hourly' && (
-            <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-300">
+            <div className="flex flex-wrap items-center gap-2 text-[11px] text-text-secondary">
               <span>Every</span>
               <input
                 type="number"
@@ -383,7 +383,7 @@ export function CronBuilder({ value, onChange }: Props) {
                 onChange={(e) =>
                   applyForm({ ...form, everyHours: Math.min(23, Math.max(1, Number(e.target.value))) })
                 }
-                className="w-12 rounded border border-slate-700 bg-slate-950 px-1 py-0.5 text-center text-slate-100"
+                className="w-12 rounded border border-border-subtle bg-bg-base px-1 py-0.5 text-center text-text-primary"
               />
               <span>hour(s) at minute</span>
               <input
@@ -394,13 +394,13 @@ export function CronBuilder({ value, onChange }: Props) {
                 onChange={(e) =>
                   applyForm({ ...form, minuteOfHour: Math.min(59, Math.max(0, Number(e.target.value))) })
                 }
-                className="w-12 rounded border border-slate-700 bg-slate-950 px-1 py-0.5 text-center text-slate-100"
+                className="w-12 rounded border border-border-subtle bg-bg-base px-1 py-0.5 text-center text-text-primary"
               />
             </div>
           )}
 
           {form.mode === 'daily' && (
-            <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-300">
+            <div className="flex flex-wrap items-center gap-2 text-[11px] text-text-secondary">
               <span>At</span>
               <input
                 type="number"
@@ -410,7 +410,7 @@ export function CronBuilder({ value, onChange }: Props) {
                 onChange={(e) =>
                   applyForm({ ...form, dailyHour: Math.min(23, Math.max(0, Number(e.target.value))) })
                 }
-                className="w-12 rounded border border-slate-700 bg-slate-950 px-1 py-0.5 text-center text-slate-100"
+                className="w-12 rounded border border-border-subtle bg-bg-base px-1 py-0.5 text-center text-text-primary"
               />
               <span>:</span>
               <input
@@ -421,14 +421,14 @@ export function CronBuilder({ value, onChange }: Props) {
                 onChange={(e) =>
                   applyForm({ ...form, dailyMinute: Math.min(59, Math.max(0, Number(e.target.value))) })
                 }
-                className="w-12 rounded border border-slate-700 bg-slate-950 px-1 py-0.5 text-center text-slate-100"
+                className="w-12 rounded border border-border-subtle bg-bg-base px-1 py-0.5 text-center text-text-primary"
               />
               <span>UTC, every day</span>
             </div>
           )}
 
           {form.mode === 'weekly' && (
-            <div className="space-y-2 text-[11px] text-slate-300">
+            <div className="space-y-2 text-[11px] text-text-secondary">
               <div className="flex flex-wrap items-center gap-2">
                 <span>At</span>
                 <input
@@ -439,7 +439,7 @@ export function CronBuilder({ value, onChange }: Props) {
                   onChange={(e) =>
                     applyForm({ ...form, weeklyHour: Math.min(23, Math.max(0, Number(e.target.value))) })
                   }
-                  className="w-12 rounded border border-slate-700 bg-slate-950 px-1 py-0.5 text-center text-slate-100"
+                  className="w-12 rounded border border-border-subtle bg-bg-base px-1 py-0.5 text-center text-text-primary"
                 />
                 <span>:</span>
                 <input
@@ -450,7 +450,7 @@ export function CronBuilder({ value, onChange }: Props) {
                   onChange={(e) =>
                     applyForm({ ...form, weeklyMinute: Math.min(59, Math.max(0, Number(e.target.value))) })
                   }
-                  className="w-12 rounded border border-slate-700 bg-slate-950 px-1 py-0.5 text-center text-slate-100"
+                  className="w-12 rounded border border-border-subtle bg-bg-base px-1 py-0.5 text-center text-text-primary"
                 />
                 <span>UTC, on:</span>
               </div>
@@ -470,7 +470,7 @@ export function CronBuilder({ value, onChange }: Props) {
                       className={`rounded px-1.5 py-0.5 text-[10px] ${
                         active
                           ? 'bg-sky-700 text-white'
-                          : 'bg-slate-800 text-slate-400 hover:text-slate-200'
+                          : 'bg-bg-elevated text-text-muted hover:text-text-primary'
                       }`}
                     >
                       {name}
@@ -482,7 +482,7 @@ export function CronBuilder({ value, onChange }: Props) {
           )}
 
           {form.mode === 'monthly' && (
-            <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-300">
+            <div className="flex flex-wrap items-center gap-2 text-[11px] text-text-secondary">
               <span>On day</span>
               <input
                 type="number"
@@ -492,7 +492,7 @@ export function CronBuilder({ value, onChange }: Props) {
                 onChange={(e) =>
                   applyForm({ ...form, monthlyDay: Math.min(31, Math.max(1, Number(e.target.value))) })
                 }
-                className="w-12 rounded border border-slate-700 bg-slate-950 px-1 py-0.5 text-center text-slate-100"
+                className="w-12 rounded border border-border-subtle bg-bg-base px-1 py-0.5 text-center text-text-primary"
               />
               <span>at</span>
               <input
@@ -503,7 +503,7 @@ export function CronBuilder({ value, onChange }: Props) {
                 onChange={(e) =>
                   applyForm({ ...form, monthlyHour: Math.min(23, Math.max(0, Number(e.target.value))) })
                 }
-                className="w-12 rounded border border-slate-700 bg-slate-950 px-1 py-0.5 text-center text-slate-100"
+                className="w-12 rounded border border-border-subtle bg-bg-base px-1 py-0.5 text-center text-text-primary"
               />
               <span>:</span>
               <input
@@ -514,7 +514,7 @@ export function CronBuilder({ value, onChange }: Props) {
                 onChange={(e) =>
                   applyForm({ ...form, monthlyMinute: Math.min(59, Math.max(0, Number(e.target.value))) })
                 }
-                className="w-12 rounded border border-slate-700 bg-slate-950 px-1 py-0.5 text-center text-slate-100"
+                className="w-12 rounded border border-border-subtle bg-bg-base px-1 py-0.5 text-center text-text-primary"
               />
               <span>UTC</span>
             </div>
@@ -523,7 +523,7 @@ export function CronBuilder({ value, onChange }: Props) {
       )}
 
       {inCustomMode && (
-        <div className="rounded border border-slate-800 bg-slate-950/40 px-2 py-1.5 text-[11px] text-slate-400">
+        <div className="rounded border border-border-subtle bg-bg-base/40 px-2 py-1.5 text-[11px] text-text-muted">
           Custom expression — form editor doesn't represent this exact shape. Use the raw input
           above or pick a preset.
         </div>

@@ -96,20 +96,20 @@ export function FlakyTestsPage() {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <header className="border-b border-slate-800 bg-slate-900/40 px-3 py-3 sm:px-6">
+      <header className="border-b border-border-subtle bg-bg-panel/60 px-3 py-3 sm:px-6">
         <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
-          <h1 className="text-lg font-semibold text-slate-100">Flaky tests</h1>
-          <span className="text-xs text-slate-400">
+          <h1 className="text-lg font-semibold text-text-primary">Flaky tests</h1>
+          <span className="text-xs text-text-muted">
             Aggregates pass/fail history across recent builds. Quarantined tests
             still run; the engine ignoring their failure is a follow-up.
           </span>
         </div>
         <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-          <label className="text-slate-400">Pipeline:</label>
+          <label className="text-text-muted">Pipeline:</label>
           <select
             value={pipelineId}
             onChange={(e) => setPipelineId(e.target.value)}
-            className="focusable rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-slate-100"
+            className="focusable rounded-md border border-border-subtle bg-bg-panel px-2 py-1 text-text-primary"
           >
             <option value="">— Select pipeline —</option>
             {pipelines.map((p) => (
@@ -121,11 +121,11 @@ export function FlakyTestsPage() {
               </option>
             ))}
           </select>
-          <label className="ml-2 text-slate-400">Window:</label>
+          <label className="ml-2 text-text-muted">Window:</label>
           <select
             value={buildCount}
             onChange={(e) => setBuildCount(Number(e.target.value))}
-            className="focusable rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-slate-100"
+            className="focusable rounded-md border border-border-subtle bg-bg-panel px-2 py-1 text-text-primary"
           >
             {BUILD_COUNT_OPTIONS.map((n) => (
               <option key={n} value={n}>
@@ -136,20 +136,20 @@ export function FlakyTestsPage() {
           <button
             type="button"
             onClick={load}
-            className="focusable inline-flex items-center gap-1 rounded-md border border-slate-700 px-2 py-1 text-slate-300 hover:border-sky-500 hover:text-sky-400"
+            className="focusable inline-flex items-center gap-1 rounded-md border border-border-subtle px-2 py-1 text-text-secondary hover:border-accent hover:text-accent"
             title="Reload"
           >
             <RefreshCw size={11} className={loading ? 'animate-spin' : ''} /> Refresh
           </button>
           {projectName && (
-            <span className="ml-auto text-slate-400">{projectName}</span>
+            <span className="ml-auto text-text-muted">{projectName}</span>
           )}
         </div>
       </header>
 
       <div className="flex-1 overflow-y-auto px-3 py-4 sm:px-6">
         {!pipelineId && (
-          <div className="text-sm text-slate-400">Pick a pipeline to analyze.</div>
+          <div className="text-sm text-text-muted">Pick a pipeline to analyze.</div>
         )}
         {error && (
           <div className="mb-3 rounded-md border border-rose-900 bg-rose-950/40 px-3 py-2 text-xs text-rose-300">
@@ -158,16 +158,16 @@ export function FlakyTestsPage() {
         )}
         {pipelineId && report && (
           <>
-            <div className="mb-3 flex flex-wrap items-center gap-3 rounded-md border border-slate-800 bg-slate-900/40 px-3 py-2 text-xs">
-              <span className="text-slate-400">Analyzed</span>
-              <span className="text-slate-100">{report.buildsAnalyzed} builds</span>
-              <span className="text-slate-400">·</span>
-              <span className="text-slate-100">{report.flaky.length} flaky / quarantined test(s)</span>
+            <div className="mb-3 flex flex-wrap items-center gap-3 rounded-md border border-border-subtle bg-bg-panel/60 px-3 py-2 text-xs">
+              <span className="text-text-muted">Analyzed</span>
+              <span className="text-text-primary">{report.buildsAnalyzed} builds</span>
+              <span className="text-text-muted">·</span>
+              <span className="text-text-primary">{report.flaky.length} flaky / quarantined test(s)</span>
             </div>
             {report.flaky.length === 0 ? (
-              <div className="rounded-md border border-dashed border-slate-800 px-4 py-12 text-center text-sm text-slate-400">
+              <div className="rounded-md border border-dashed border-border-subtle px-4 py-12 text-center text-sm text-text-muted">
                 No flaky tests detected over the last {report.buildsAnalyzed} builds.
-                <div className="mt-1 text-xs text-slate-500">
+                <div className="mt-1 text-xs text-text-faint">
                   This needs JUnit XML or .xcresult artifacts on each build; if your
                   pipeline doesn't produce these, the analyzer won't see anything.
                 </div>
@@ -202,10 +202,10 @@ function FlakyRow({
   return (
     <li
       className={cn(
-        'rounded-md border bg-slate-900/30 px-3 py-2',
+        'rounded-md border bg-bg-panel/30 px-3 py-2',
         entry.quarantined
           ? 'border-amber-900/60 bg-amber-950/20'
-          : 'border-slate-800',
+          : 'border-border-subtle',
       )}
     >
       <div className="flex items-center gap-2">
@@ -216,11 +216,11 @@ function FlakyRow({
           }
         />
         <div className="min-w-0 flex-1">
-          <div className="truncate font-mono text-sm text-slate-100" title={entry.testKey}>
+          <div className="truncate font-mono text-sm text-text-primary" title={entry.testKey}>
             {entry.name}
           </div>
           {entry.classname && (
-            <div className="truncate text-[10px] text-slate-500" title={entry.classname}>
+            <div className="truncate text-[10px] text-text-faint" title={entry.classname}>
               {entry.classname}
             </div>
           )}
@@ -229,7 +229,7 @@ function FlakyRow({
           <span className="text-emerald-400">{entry.passes}P</span>
           <span className="text-rose-400">{entry.failures}F</span>
           {entry.skips > 0 && <span className="text-amber-400">{entry.skips}S</span>}
-          <span className="rounded-md border border-slate-700 px-1.5 py-0.5 text-slate-300">
+          <span className="rounded-md border border-border-subtle px-1.5 py-0.5 text-text-secondary">
             {rateLabel} fail
           </span>
           <button
@@ -239,7 +239,7 @@ function FlakyRow({
               'focusable inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[11px]',
               entry.quarantined
                 ? 'border-amber-700 bg-amber-950/40 text-amber-200 hover:border-amber-500'
-                : 'border-slate-700 text-slate-300 hover:border-amber-500 hover:text-amber-300',
+                : 'border-border-subtle text-text-secondary hover:border-amber-500 hover:text-amber-300',
             )}
             title={
               entry.quarantined

@@ -1,6 +1,7 @@
 import { spawn } from 'node:child_process';
 import { join } from 'node:path';
 import type { AiPromptStepData, AiTool } from '@buildpilot/shared-types';
+import { getAiIntegrationsRuntime } from '../../config';
 import type { StepContext } from '../engine';
 
 // Default invocation for each known CLI. Claude Code, Codex, Aider, and
@@ -14,6 +15,16 @@ const DEFAULTS: Record<Exclude<AiTool, 'custom'>, { command: string; args: strin
   codex:  { command: 'codex',   args: ['exec'] },
   aider:  { command: 'aider',   args: ['--yes-always', '--message'] },
   gemini: { command: 'gemini',  args: ['-p'] },
+};
+
+// Flag used by each CLI to pin a specific model. Surfaced separately from
+// DEFAULTS because the model override slots in *before* the prompt positional
+// argument, not at the end.
+const MODEL_FLAG: Record<Exclude<AiTool, 'custom'>, string> = {
+  claude: '--model',
+  codex: '--model',
+  aider: '--model',
+  gemini: '-m',
 };
 
 function asBool(v: unknown): boolean {
@@ -44,9 +55,16 @@ export async function runAiPrompt(
     command = parts[0]!;
     args = parts.slice(1);
   } else {
+    // Per-tool path/model overrides from ~/.buildpilot/config.json
+    // (PATCH /api/config/ai-integrations). Empty / undefined falls back to
+    // the hardcoded DEFAULTS — keeps existing installs working unchanged.
+    const override = getAiIntegrationsRuntime()[tool];
     const def = DEFAULTS[tool];
-    command = def.command;
+    command = override?.path && override.path.length > 0 ? override.path : def.command;
     args = [...def.args];
+    if (override?.model && override.model.length > 0) {
+      args.push(MODEL_FLAG[tool], override.model);
+    }
   }
   args.push(d.prompt);
 

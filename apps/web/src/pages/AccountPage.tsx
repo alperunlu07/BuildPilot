@@ -21,13 +21,13 @@ export function AccountPage() {
   if (!authEnabled) {
     return (
       <div className="mx-auto max-w-2xl space-y-4 p-6">
-        <h1 className="text-xl font-semibold text-slate-100">Account</h1>
-        <div className="rounded-md border border-slate-800 bg-slate-900/40 p-4 text-sm text-slate-300">
+        <h1 className="text-xl font-semibold text-text-primary">Account</h1>
+        <div className="rounded-md border border-border-subtle bg-bg-panel/60 p-4 text-sm text-text-secondary">
           Auth is disabled on this BuildPilot instance, so per-user account
           settings don't apply yet. Flip{' '}
-          <code className="rounded bg-slate-800 px-1 py-0.5 text-xs">auth.enabled</code>{' '}
-          to <code className="rounded bg-slate-800 px-1 py-0.5 text-xs">true</code>{' '}
-          in <code className="rounded bg-slate-800 px-1 py-0.5 text-xs">~/.buildpilot/config.json</code>{' '}
+          <code className="rounded bg-bg-elevated px-1 py-0.5 text-xs">auth.enabled</code>{' '}
+          to <code className="rounded bg-bg-elevated px-1 py-0.5 text-xs">true</code>{' '}
+          in <code className="rounded bg-bg-elevated px-1 py-0.5 text-xs">~/.buildpilot/config.json</code>{' '}
           to activate.
         </div>
       </div>
@@ -37,8 +37,8 @@ export function AccountPage() {
   if (!currentUser) {
     return (
       <div className="mx-auto max-w-2xl space-y-4 p-6">
-        <h1 className="text-xl font-semibold text-slate-100">Account</h1>
-        <div className="text-sm text-slate-400">Not signed in.</div>
+        <h1 className="text-xl font-semibold text-text-primary">Account</h1>
+        <div className="text-sm text-text-muted">Not signed in.</div>
       </div>
     );
   }
@@ -46,8 +46,8 @@ export function AccountPage() {
   return (
     <div className="mx-auto max-w-2xl space-y-6 p-6">
       <header>
-        <h1 className="text-xl font-semibold text-slate-100">Account</h1>
-        <p className="text-xs text-slate-400">Update your profile and notification routing.</p>
+        <h1 className="text-xl font-semibold text-text-primary">Account</h1>
+        <p className="text-xs text-text-muted">Update your profile and notification routing.</p>
       </header>
 
       <ProfileCard
@@ -112,43 +112,43 @@ function ProfileCard({
   return (
     <form
       onSubmit={onSubmit}
-      className="density-card space-y-3 rounded-md border border-slate-800 bg-slate-900/40 p-5"
+      className="density-card space-y-3 rounded-md border border-border-subtle bg-bg-panel/60 p-5"
     >
       <div className="flex items-center gap-2">
-        <UserIcon size={16} className="text-sky-400" />
-        <h2 className="text-sm font-semibold text-slate-100">Profile</h2>
+        <UserIcon size={16} className="text-accent" />
+        <h2 className="text-sm font-semibold text-text-primary">Profile</h2>
       </div>
 
       <div className="space-y-1">
-        <label className="text-xs font-medium text-slate-300">Display name</label>
+        <label className="text-xs font-medium text-text-secondary">Display name</label>
         <input
           type="text"
           value={displayName}
           onChange={(e) => setDisplayName(e.target.value)}
-          className="focusable w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1.5 text-sm text-slate-100 outline-none focus:border-sky-500"
+          className="focusable w-full rounded-md border border-border-subtle bg-bg-base px-2 py-1.5 text-sm text-text-primary outline-none focus:border-accent"
         />
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div className="space-y-1">
-          <label className="text-xs font-medium text-slate-300">New password</label>
+          <label className="text-xs font-medium text-text-secondary">New password</label>
           <input
             type="password"
             value={password}
             autoComplete="new-password"
             onChange={(e) => setPassword(e.target.value)}
-            className="focusable w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1.5 text-sm text-slate-100 outline-none focus:border-sky-500"
+            className="focusable w-full rounded-md border border-border-subtle bg-bg-base px-2 py-1.5 text-sm text-text-primary outline-none focus:border-accent"
             placeholder="Leave blank to keep current"
           />
         </div>
         <div className="space-y-1">
-          <label className="text-xs font-medium text-slate-300">Confirm new password</label>
+          <label className="text-xs font-medium text-text-secondary">Confirm new password</label>
           <input
             type="password"
             value={confirm}
             autoComplete="new-password"
             onChange={(e) => setConfirm(e.target.value)}
-            className="focusable w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1.5 text-sm text-slate-100 outline-none focus:border-sky-500"
+            className="focusable w-full rounded-md border border-border-subtle bg-bg-base px-2 py-1.5 text-sm text-text-primary outline-none focus:border-accent"
           />
         </div>
       </div>
@@ -169,7 +169,7 @@ function ProfileCard({
         <button
           type="submit"
           disabled={saving}
-          className="focusable rounded-md bg-sky-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-sky-500 disabled:opacity-50"
+          className="focusable rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:bg-accent-hover disabled:opacity-50"
         >
           {saving ? 'Saving…' : 'Save changes'}
         </button>
@@ -221,12 +221,12 @@ function NotificationPrefsCard({
   ];
 
   return (
-    <div className="density-card space-y-3 rounded-md border border-slate-800 bg-slate-900/40 p-5">
+    <div className="density-card space-y-3 rounded-md border border-border-subtle bg-bg-panel/60 p-5">
       <div className="flex items-center gap-2">
         <Bell size={16} className="text-amber-400" />
-        <h2 className="text-sm font-semibold text-slate-100">Notification preferences</h2>
+        <h2 className="text-sm font-semibold text-text-primary">Notification preferences</h2>
       </div>
-      <p className="text-xs text-slate-400">
+      <p className="text-xs text-text-muted">
         Controls which channels deliver mentions and approval prompts to you specifically.
         Channel-level configuration (bot tokens, default chat IDs) still lives on the
         Settings page.
@@ -235,20 +235,20 @@ function NotificationPrefsCard({
         {channels.map((c) => (
           <li
             key={c.key}
-            className="flex items-center justify-between rounded-md border border-slate-800 bg-slate-950/40 px-3 py-2"
+            className="flex items-center justify-between rounded-md border border-border-subtle bg-bg-base/40 px-3 py-2"
           >
             <div>
-              <div className="text-sm text-slate-200">{c.label}</div>
-              <div className="text-[11px] text-slate-400">{c.hint}</div>
+              <div className="text-sm text-text-primary">{c.label}</div>
+              <div className="text-[11px] text-text-muted">{c.hint}</div>
             </div>
             <label className="inline-flex cursor-pointer items-center gap-2">
               <input
                 type="checkbox"
                 checked={prefs[c.key]}
                 onChange={() => toggle(c.key)}
-                className="h-4 w-4 rounded border-slate-600 bg-slate-900 text-sky-500 focus:ring-sky-500"
+                className="h-4 w-4 rounded border-border bg-bg-panel text-sky-500 focus:ring-sky-500"
               />
-              <span className="text-xs text-slate-300">{prefs[c.key] ? 'On' : 'Off'}</span>
+              <span className="text-xs text-text-secondary">{prefs[c.key] ? 'On' : 'Off'}</span>
             </label>
           </li>
         ))}
@@ -268,7 +268,7 @@ function NotificationPrefsCard({
           type="button"
           onClick={() => void save()}
           disabled={saving}
-          className="focusable rounded-md bg-sky-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-sky-500 disabled:opacity-50"
+          className="focusable rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:bg-accent-hover disabled:opacity-50"
         >
           {saving ? 'Saving…' : 'Save preferences'}
         </button>

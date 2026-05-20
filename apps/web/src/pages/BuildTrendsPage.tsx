@@ -13,7 +13,7 @@ import { api } from '../lib/api';
 // touching the embedded component's behavior.
 
 const STATUS_COLOUR: Record<string, string> = {
-  pending: 'bg-slate-700',
+  pending: 'bg-border-subtle',
   running: 'bg-sky-500/80',
   success: 'bg-emerald-500/80',
   failed: 'bg-rose-500/80',
@@ -83,20 +83,20 @@ export function BuildTrendsPage() {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <header className="border-b border-slate-800 bg-slate-900/40 px-3 py-3 sm:px-6">
+      <header className="border-b border-border-subtle bg-bg-panel/60 px-3 py-3 sm:px-6">
         <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
-          <h1 className="text-lg font-semibold text-slate-100">Build trends</h1>
-          <span className="text-xs text-slate-400">
+          <h1 className="text-lg font-semibold text-text-primary">Build trends</h1>
+          <span className="text-xs text-text-muted">
             P50/P95 duration + success-rate trend with regression alert when
             current P95 spikes 2× over the older-half baseline.
           </span>
         </div>
         <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-          <label className="text-slate-400">Pipeline:</label>
+          <label className="text-text-muted">Pipeline:</label>
           <select
             value={pipelineId}
             onChange={(e) => setPipelineId(e.target.value)}
-            className="focusable rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-slate-100"
+            className="focusable rounded-md border border-border-subtle bg-bg-panel px-2 py-1 text-text-primary"
           >
             <option value="">— Select pipeline —</option>
             {pipelines.map((p) => (
@@ -108,11 +108,11 @@ export function BuildTrendsPage() {
               </option>
             ))}
           </select>
-          <label className="ml-2 text-slate-400">Window:</label>
+          <label className="ml-2 text-text-muted">Window:</label>
           <select
             value={buildCount}
             onChange={(e) => setBuildCount(Number(e.target.value))}
-            className="focusable rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-slate-100"
+            className="focusable rounded-md border border-border-subtle bg-bg-panel px-2 py-1 text-text-primary"
           >
             {BUILD_COUNT_OPTIONS.map((n) => (
               <option key={n} value={n}>
@@ -123,7 +123,7 @@ export function BuildTrendsPage() {
           <button
             type="button"
             onClick={load}
-            className="focusable inline-flex items-center gap-1 rounded-md border border-slate-700 px-2 py-1 text-slate-300 hover:border-sky-500 hover:text-sky-400"
+            className="focusable inline-flex items-center gap-1 rounded-md border border-border-subtle px-2 py-1 text-text-secondary hover:border-accent hover:text-accent"
             title="Reload"
           >
             <RefreshCw size={11} className={loading ? 'animate-spin' : ''} /> Refresh
@@ -138,7 +138,7 @@ export function BuildTrendsPage() {
           </div>
         )}
         {!pipelineId && (
-          <div className="text-sm text-slate-400">Pick a pipeline to chart.</div>
+          <div className="text-sm text-text-muted">Pick a pipeline to chart.</div>
         )}
         {pipelineId && report && <TrendBody report={report} />}
       </div>
@@ -187,18 +187,18 @@ function TrendBody({ report }: { report: BuildTrendsReport }) {
       </div>
 
       <div>
-        <div className="mb-1 flex items-center gap-1.5 text-[11px] uppercase tracking-wider text-slate-400">
+        <div className="mb-1 flex items-center gap-1.5 text-[11px] uppercase tracking-wider text-text-muted">
           <BarChart3 size={12} /> Duration · {report.buildsAnalyzed} builds (oldest → newest)
         </div>
         {report.builds.length === 0 ? (
-          <div className="rounded-md border border-dashed border-slate-800 px-3 py-6 text-center text-[11px] text-slate-400">
+          <div className="rounded-md border border-dashed border-border-subtle px-3 py-6 text-center text-[11px] text-text-muted">
             No build history yet.
           </div>
         ) : (
-          <div className="flex h-24 items-end gap-[2px] rounded-md border border-slate-800 bg-slate-900/40 px-2 py-1">
+          <div className="flex h-24 items-end gap-[2px] rounded-md border border-border-subtle bg-bg-panel/60 px-2 py-1">
             {report.builds.map((b) => {
               const h = b.durationMs ? Math.max(4, (b.durationMs / maxMs) * 88) : 4;
-              const colour = STATUS_COLOUR[b.status] ?? 'bg-slate-700';
+              const colour = STATUS_COLOUR[b.status] ?? 'bg-border-subtle';
               return (
                 <span
                   key={b.id}
@@ -214,20 +214,20 @@ function TrendBody({ report }: { report: BuildTrendsReport }) {
       </div>
 
       <div>
-        <div className="mb-1 text-[11px] uppercase tracking-wider text-slate-400">
+        <div className="mb-1 text-[11px] uppercase tracking-wider text-text-muted">
           Status timeline
         </div>
         {report.builds.length === 0 ? (
-          <div className="rounded-md border border-dashed border-slate-800 px-3 py-4 text-center text-[11px] text-slate-400">
+          <div className="rounded-md border border-dashed border-border-subtle px-3 py-4 text-center text-[11px] text-text-muted">
             —
           </div>
         ) : (
-          <div className="flex flex-wrap gap-[2px] rounded-md border border-slate-800 bg-slate-900/40 p-2">
+          <div className="flex flex-wrap gap-[2px] rounded-md border border-border-subtle bg-bg-panel/60 p-2">
             {report.builds.map((b) => (
               <span
                 key={`s-${b.id}`}
                 title={`${b.status} · ${new Date(b.startedAt).toLocaleString()}`}
-                className={`h-2.5 w-2.5 rounded-sm ${STATUS_COLOUR[b.status] ?? 'bg-slate-700'}`}
+                className={`h-2.5 w-2.5 rounded-sm ${STATUS_COLOUR[b.status] ?? 'bg-border-subtle'}`}
               />
             ))}
           </div>
@@ -254,17 +254,17 @@ function Stat({
         'rounded-md border px-2 py-1.5 ' +
         (tone === 'warning'
           ? 'border-amber-800 bg-amber-950/30'
-          : 'border-slate-800 bg-slate-900/40')
+          : 'border-border-subtle bg-bg-panel/60')
       }
     >
-      <div className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-slate-400">
+      <div className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-text-muted">
         {icon}
         {label}
       </div>
       <div
         className={
           'text-sm font-semibold ' +
-          (tone === 'warning' ? 'text-amber-200' : 'text-slate-100')
+          (tone === 'warning' ? 'text-amber-200' : 'text-text-primary')
         }
       >
         {value}

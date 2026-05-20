@@ -1,0 +1,125 @@
+/* ---------------------------------------------------------------------------
+ * BuildPilot UI v2 — design tokens
+ *
+ * Ported from docs/designs/styles.css :root + [data-theme="light"] blocks.
+ * Loaded ahead of Tailwind so utilities like bg-bg-base / text-text-primary
+ * resolve via these custom properties at paint time.
+ *
+ * Three switch axes:
+ *   - data-theme="dark"|"light"     theme palette (default: dark)
+ *   - data-density="comfortable"|"compact"   row height + padding scale
+ *   - --accent / --accent-soft / --accent-glow / --accent-hover are
+ *     overridable at runtime via lib/theme.ts → applyAccent() so a future
+ *     "brand colour" picker in Settings can repaint the whole UI without
+ *     rebuilding Tailwind.
+ *
+ * Components do NOT consume these vars directly except in edge cases —
+ * tailwind.config.js exposes them as `colors.bg.*`, `colors.text.*`, etc.,
+ * so most components stay in tailwind-utility land.
+ * --------------------------------------------------------------------------- */
+
+:root {
+  /* Surface */
+  --bg-base: #08090c;
+  --bg-canvas: #0b0e15;
+  --bg-panel: #10141d;
+  --bg-elevated: #141925;
+  --bg-hover: #1a1f2e;
+  --bg-overlay: rgba(8, 9, 12, 0.78);
+
+  /* Borders */
+  --border-subtle: #1a2030;
+  --border-default: #232a3b;
+  --border-emphasis: #344056;
+  --border-strong: #475569;
+
+  /* Text */
+  --text-primary: #f1f5f9;
+  --text-secondary: #cbd5e1;
+  --text-muted: #8a94a6;
+  --text-faint: #5d6577;
+  --text-disabled: #475063;
+
+  /* Brand — overridable from JS via lib/theme.ts applyAccent() */
+  --accent: #0ea5e9;
+  --accent-hover: #0284c7;
+  --accent-glow: rgba(14, 165, 233, 0.22);
+  --accent-soft: rgba(14, 165, 233, 0.12);
+
+  /* Status — drive the StatusDot, build-row dots, pipeline node halos */
+  --st-pending: #6b7484;
+  --st-running: #fbbf24;
+  --st-success: #34d399;
+  --st-failed: #fb7185;
+  --st-cancel: #94a3b8;
+  --st-skipped: #475569;
+
+  /* Step categories — used by pipeline node accent stripe */
+  --cat-git: #0ea5e9;
+  --cat-build: #f59e0b;
+  --cat-unity: #a855f7;
+  --cat-notify: #ec4899;
+  --cat-artifact: #14b8a6;
+  --cat-remote: #6366f1;
+  --cat-ios-build: #3b82f6;
+  --cat-ios-sign: #f43f5e;
+  --cat-ios-dist: #06b6d4;
+  --cat-android: #84cc16;
+  --cat-steam: #4a90c0;
+
+  /* Density — overridden by [data-density="compact"] below. Comfortable is
+     the default so existing screens keep their current breathing room. */
+  --row-h: 32px;
+  --pad-x: 16px;
+  --pad-y: 12px;
+
+  /* Type */
+  --font-sans: "Inter", "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", "JetBrains Mono Variable", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+/* UI v2 Faz 12.8 — smooth theme + accent transitions for the surfaces
+   most users notice when they flip dark↔light. Capped at 150ms so the
+   theme switch still feels instant. */
+html {
+  transition: background-color 150ms ease, color 150ms ease;
+}
+body {
+  transition: background-color 150ms ease, color 150ms ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  html, body {
+    transition: none;
+  }
+}
+
+[data-theme="light"] {
+  --bg-base: #fbfbfc;
+  --bg-canvas: #f4f5f8;
+  --bg-panel: #ffffff;
+  --bg-elevated: #ffffff;
+  --bg-hover: #f1f3f7;
+  --bg-overlay: rgba(15, 23, 42, 0.4);
+
+  --border-subtle: #e8eaf0;
+  --border-default: #d8dce4;
+  --border-emphasis: #c2c8d2;
+  --border-strong: #8b94a3;
+
+  --text-primary: #0d1424;
+  --text-secondary: #2f3848;
+  --text-muted: #5a6578;
+  --text-faint: #8893a4;
+  --text-disabled: #b1b9c4;
+}
+
+[data-density="compact"] {
+  --row-h: 28px;
+  --pad-x: 12px;
+  --pad-y: 8px;
+}
+[data-density="comfortable"] {
+  --row-h: 32px;
+  --pad-x: 16px;
+  --pad-y: 12px;
+}

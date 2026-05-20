@@ -24,7 +24,7 @@ function formatDurationMs(ms: number | null): string {
 }
 
 const STATUS_COLOUR: Record<string, string> = {
-  pending: 'bg-slate-700',
+  pending: 'bg-border-subtle',
   running: 'bg-sky-500/80',
   success: 'bg-emerald-500/80',
   failed: 'bg-rose-500/80',
@@ -81,19 +81,19 @@ export function PipelineMetricsPanel({ pipelineId, compact }: Props) {
       </div>
 
       <div className="mb-3">
-        <div className="mb-1 flex items-center gap-1.5 text-[11px] uppercase tracking-wider text-slate-400">
+        <div className="mb-1 flex items-center gap-1.5 text-[11px] uppercase tracking-wider text-text-muted">
           <BarChart3 size={12} />
           Duration · last {data.recentBuilds.length} builds
         </div>
         {data.recentBuilds.length === 0 ? (
-          <div className="rounded-md border border-dashed border-slate-800 px-3 py-4 text-center text-[11px] text-slate-400">
+          <div className="rounded-md border border-dashed border-border-subtle px-3 py-4 text-center text-[11px] text-text-muted">
             No build history yet.
           </div>
         ) : (
-          <div className="flex h-12 items-end gap-[2px] rounded-md border border-slate-800 bg-slate-900/40 px-2 py-1">
+          <div className="flex h-12 items-end gap-[2px] rounded-md border border-border-subtle bg-bg-panel/60 px-2 py-1">
             {data.recentBuilds.map((b) => {
               const h = b.durationMs ? Math.max(4, (b.durationMs / maxMs) * 40) : 4;
-              const colour = STATUS_COLOUR[b.status] ?? 'bg-slate-700';
+              const colour = STATUS_COLOUR[b.status] ?? 'bg-border-subtle';
               return (
                 <span
                   key={b.id}
@@ -109,12 +109,12 @@ export function PipelineMetricsPanel({ pipelineId, compact }: Props) {
       </div>
 
       <div>
-        <div className="mb-1 flex items-center gap-1.5 text-[11px] uppercase tracking-wider text-slate-400">
+        <div className="mb-1 flex items-center gap-1.5 text-[11px] uppercase tracking-wider text-text-muted">
           <Timer size={12} />
           Slowest steps
         </div>
         {data.slowestSteps.length === 0 ? (
-          <div className="rounded-md border border-dashed border-slate-800 px-3 py-4 text-center text-[11px] text-slate-400">
+          <div className="rounded-md border border-dashed border-border-subtle px-3 py-4 text-center text-[11px] text-text-muted">
             Step durations appear after the first finished build.
           </div>
         ) : (
@@ -126,11 +126,11 @@ export function PipelineMetricsPanel({ pipelineId, compact }: Props) {
               return (
                 <li
                   key={s.nodeId}
-                  className="grid grid-cols-[1fr_60px_60px] items-center gap-2 rounded-md bg-slate-900/40 px-2 py-1"
+                  className="grid grid-cols-[1fr_60px_60px] items-center gap-2 rounded-md bg-bg-panel/60 px-2 py-1"
                 >
                   <div className="min-w-0">
-                    <div className="truncate text-slate-200">{s.stepType}</div>
-                    <div className="mt-0.5 h-1 w-full rounded-full bg-slate-800">
+                    <div className="truncate text-text-primary">{s.stepType}</div>
+                    <div className="mt-0.5 h-1 w-full rounded-full bg-bg-elevated">
                       <div
                         className="h-1 rounded-full bg-amber-500/70"
                         style={{ width: `${pct}%` }}
@@ -140,7 +140,7 @@ export function PipelineMetricsPanel({ pipelineId, compact }: Props) {
                   <span className="text-right text-amber-300">
                     {formatDurationMs(s.avgDurationMs)}
                   </span>
-                  <span className="text-right text-[10px] text-slate-400">
+                  <span className="text-right text-[10px] text-text-muted">
                     n={s.sampleCount}
                   </span>
                 </li>
@@ -155,9 +155,9 @@ export function PipelineMetricsPanel({ pipelineId, compact }: Props) {
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-md border border-slate-800 bg-slate-900/40 px-2 py-1.5">
-      <div className="text-[10px] uppercase tracking-wider text-slate-400">{label}</div>
-      <div className="text-sm font-semibold text-slate-100">{value}</div>
+    <div className="rounded-md border border-border-subtle bg-bg-panel/60 px-2 py-1.5">
+      <div className="text-[10px] uppercase tracking-wider text-text-muted">{label}</div>
+      <div className="text-sm font-semibold text-text-primary">{value}</div>
     </div>
   );
 }

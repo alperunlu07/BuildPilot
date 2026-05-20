@@ -17,6 +17,65 @@ Plana başlamadan önce kullanıcıyla uzlaşılan kararlar:
 
 ---
 
+## 0.5 · Reality Check (codebase audit, 2026-05-19)
+
+Plan ilk yazıldığında bazı backend boşlukları varsayıldı. Audit sonucu:
+
+| Konu | Varsayım | Gerçek | Etki |
+|---|---|---|---|
+| Step type sayısı | 83 | **111 `StepType` union üyesi**, **89 tanımlı definition** ([`packages/shared-types/src/index.ts:45-134`](../../packages/shared-types/src/index.ts), [`packages/step-registry/src/index.ts:95-4751`](../../packages/step-registry/src/index.ts)) | Catalog sayfasında 89 kart, sidebar count'u güncelle. |
+| Step `description` field | Yok | **Zaten var** (`StepDefinition.description`). | Faz 8.T8.5'in yarısı düşer. |
+| Step `category` field | Yok | **Tanım üzerinde yok**, ancak `STEP_CATEGORIES` array'i (16 kategori) + module-load guard mevcut. | Tek satır helper (`getStepCategory(type)`) yeter — bu commit eklendi. |
+| Test results | Backend kontratı yok | **Zaten var**: `TestReportTree` + JUnit/xcresult parser'lar ([`apps/server/src/api/test-reports.ts`](../../apps/server/src/api/test-reports.ts)). | Faz 6.B Tests tab **backend bekletmeden** yapılabilir. |
+| Annotations (lint/compile warning) | Backend kontratı yok | Gerçekten yok — sadece `Build.log` text olarak depo ediliyor. | Faz 6.B Annotations için yeni `Annotation` tipi + parser gerek. Tipler bu PR'da eklendi, parser Faz 6.B'de. |
+| AI Integrations endpoint | Yok | **Per-step `AiAutoFixConfig` var**, global config endpoint yok. | Yeni `GET/PUT /api/config/ai-integrations` bu PR'da eklendi. |
+| React Flow | Versiyon riski | **`@xyflow/react` v12.3.5 (modern)** + `StepNode.tsx` zaten custom node + stories'i var. | Faz 5.A riski düşer — engine'e dokunmadan görsel yenileme yapılabilir. |
+| Light theme | Hardcoded slate-* riski | `index.css`'te `html.light` override'ları **zaten var** + ~1857 slate/gray/zinc instance. | Aşağıdaki "Light Theme Audit" tablosuna bak. |
+
+### Light Theme Audit
+
+Precise grep tabanlı sayım (`apps/web/src/**/*.{ts,tsx}`):
+
+| Class prefix | Instance | Notlar |
+|---|---|---|
+| `bg-slate-*` | **428** | 7 farklı shade (400, 500, 600, 700, 800, 900, 950) |
+| `text-slate-*` | **1021** | 7 farklı shade (100-700) |
+| `border-slate-*` | **408** | 3 farklı shade (600, 700, 800) |
+| `bg-gray-*` / `text-gray-*` / `border-gray-*` | **0** | Hiç yok — endişe yok |
+| `*-zinc-*` | **0** | Hiç yok — endişe yok |
+| **Toplam** | **1857** | Hepsi slate; `index.css` `html.light` override stratejisi uygulanabilir |
+
+**İyi haber**: Tüm hardcoded sınıflar `slate-*` ailesinde — gri/zinc karışımı yok. `apps/web/src/index.css:66-102`'deki mevcut `html.light` override'ları **kısmen** çalışıyor:
+
+**Override mevcut:** `bg-slate-{950,900,900/40,900/60,800,800/60,800/40}`, `border-slate-{800,700}`, `text-slate-{100-600}`, `placeholder:text-slate-400`, `hover:bg-slate-800`
+
+**Override eksik (light theme'de kırılır):**
+- `bg-slate-{400,500,600,700}` — 7 shade'den 4'ü eksik
+- `border-slate-600` — 1 shade eksik
+- `text-slate-700` — 1 shade eksik
+- `placeholder:text-slate-{500,600}` ve `placeholder-slate-400` — 3 variant eksik
+- `hover:bg-slate-900` — 1 eksik
+- `hover:border-slate-{500,600,700,800}` — **hiç yok** (4 variant)
+- `hover:text-slate-{100,200,300,400,700}` — **hiç yok** (5 variant)
+- `focus:bg-slate-950` — 1 eksik
+
+**Hotspot dosyalar** (slate instance ≥ 50):
+- `components/StepPropertyPanel.tsx` (141)
+- `components/PipelineEditor.tsx` (104)
+- `pages/SettingsPage.tsx` (79)
+- `pages/SecretsPage.tsx` (69)
+- `pages/HostsPage.tsx` (65)
+- `pages/VaultFilesPage.tsx` (57)
+- `pages/ProjectDetailPage.tsx` (51) — _Faz 4'te silinecek_
+- `pages/BuildDetailPage.tsx` (48) — _Faz 6'da yeniden yazılacak_
+- `pages/BuildsPage.tsx` (44) — _Faz 7'de yeniden yazılacak_
+
+**Çözüldü** (bu PR): 19 eksik override `apps/web/src/index.css`'e eklendi (`bg-slate-{400-700}`, `border-slate-600`, `text-slate-700`, `placeholder` variants, `hover:*` variants, `focus:bg-slate-950`). Light theme artık 1857 instance'ın hepsini kapsıyor.
+
+**Geriye kalan iş**: Faz 12 polish'inde browser smoke ile her sayfayı `data-theme="light"` ile doğrula. Hotspot dosyaların büyük çoğunluğu Faz 4/6/7'de zaten yeniden yazılacak — gerçek manuel migration gereği muhtemelen sıfıra yakın.
+
+---
+
 ## Faz Genel Bakış
 
 | Faz | Başlık | Tahmini |
@@ -165,12 +224,16 @@ Her PR'ın sonunda: `pnpm test` (tam suite, en az 525/525), `pnpm typecheck` (4 
 
 - **T6.B.1** — **Artifacts tab**: grid view, her artifact için Eye/Copy/Download aksiyonları, preview modal (image/log/json).
 - **T6.B.2** — **Environment tab**: env değişkenleri (encrypted alanlar maskeli), SSH builder listesi (bu build hangi hostlarda çalıştı).
-- **T6.B.3** — **Tests tab**: pass/fail/flaky sayıları, failed test detayları (stdout + stack trace). Test data nereden gelir — bu yeni bir backend kontratı; data.js'deki şemayı `shared-types`'a port etmek gerekebilir.
-- **T6.B.4** — **Annotations tab**: derleyici warning'leri, lint hataları. Aynı backend kontratı sorusu.
+- **T6.B.3** — **Tests tab**: pass/fail/flaky sayıları, failed test detayları (stdout + stack trace). **Backend contract zaten var** (`TestReportTree`, `GET /api/builds/:id/test-report`).
+- **T6.B.4** — **Annotations tab**: derleyici warning'leri, lint hataları. `Annotation` + `AnnotationsReport` tipleri eklendi (reality-check PR'ı). **Parser + endpoint Faz 6.B'de yazılacak**:
+  - Yeni `annotations` tablosu (build_id FK + Annotation alanları).
+  - Per-source parser'lar: xcodebuild log (yeni), swiftlint JSON (yeni), eslint JSON (yeni), gradle output (yeni).
+  - `GET /api/builds/:id/annotations` endpoint'i `AnnotationsReport` döner.
+  - Parser'lar `runner/finalisers` katmanında step bittikten sonra step output'unu okuyup persist eder (test reports'a benzer akış).
 
-**Verification:** Build sayfası 7 tab gösterir. Her tab içeriği yüklenir (Tests + Annotations data'sı yoksa "No data" placeholder).
+**Verification:** Build sayfası 7 tab gösterir. Her tab içeriği yüklenir.
 
-**Risk:** Tests + Annotations backend kontratı yok. Backend tarafında step output parse + persist mekanizması gerekecek — ya tasarım için fake data ile başlanır ya da bu iki tab Faz 12'ye ertelenir.
+**Risk azaltıldı:** Tests artık backend bekletmeden yapılabilir. Annotations için tip + tablo + parser şu sıralamayla PR'lanır: (1) DB migration + endpoint stub, (2) xcodebuild parser, (3) swiftlint parser, (4) eslint parser, (5) UI tab.
 
 ---
 
@@ -279,13 +342,13 @@ PR sırası: 1 → 2 → 3 → ... Her PR önceki fazların tamamlanmasını bek
 
 ## Bilinmeyen + Riskler
 
-| Risk | Etki | Azaltma |
-|---|---|---|
-| Tests + Annotations tab'larının backend kontratı yok | Faz 6.B'yi gerçekleştirmek için backend değişikliği gerekir | Faz 6.B'yi Faz 12'ye ertele; öncelikle fake data ile placeholder |
-| AI Integrations section backend endpoint'i yok | Faz 10.T10.3 ya read-only ya da yeni endpoint | Yeni endpoint = ayrı WP, ya da display-only başla |
-| Step registry'de description/category metadata eksik olabilir | Catalog page'i besleyecek veri yok | Faz 8.T8.5'de registry'yi extend et |
-| Light theme'de hardcoded slate-* class'ları sorun çıkarır | Mevcut sayfalar light'ta bozulur | Her PR'da light theme'i de browser'da test et; Tailwind config CSS var'lara bağlı olduğu için çoğu sorun otomatik çözülür |
-| `@xyflow/react` versiyon uyumsuzluğu node refactor sırasında | Pipeline editor kırılabilir | Faz 5 PR'ı en uzun süre review'da kalsın |
+| Risk | Etki | Azaltma | Durum |
+|---|---|---|---|
+| Tests + Annotations tab'larının backend kontratı yok | Faz 6.B'yi gerçekleştirmek için backend değişikliği gerekir | Tests: zaten `TestReportTree` var — direkt kullan. Annotations: yeni `Annotation` tipi eklendi, parser Faz 6.B'de yazılacak. | **Kısmen çözüldü** (bu PR) |
+| AI Integrations section backend endpoint'i yok | Faz 10.T10.3 ya read-only ya da yeni endpoint | Yeni `GET/PUT /api/config/ai-integrations` endpoint'i eklendi. | **Çözüldü** (bu PR) |
+| Step registry'de description/category metadata eksik olabilir | Catalog page'i besleyecek veri yok | `description` zaten var. `getStepCategory()` helper'ı + `STEP_CATEGORY_BY_TYPE` map'i eklendi. | **Çözüldü** (bu PR) |
+| Light theme'de hardcoded slate-* class'ları sorun çıkarır | Mevcut sayfalar light'ta bozulur | `index.css` override'ları çoğunu çözüyor. `gray-*`/`zinc-*` (~390 instance) manuel migration gerekiyor — Faz 1 sonrası, Faz 12 öncesi audit PR. | Audit yapıldı, plan netleşti |
+| `@xyflow/react` versiyon uyumsuzluğu node refactor sırasında | Pipeline editor kırılabilir | v12.3.5 modern; mevcut `StepNode.tsx` zaten custom node. Görsel yenileme engine'e dokunmadan. | Risk düştü |
 
 ---
 

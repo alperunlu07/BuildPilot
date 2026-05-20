@@ -154,7 +154,7 @@ export function ApprovalsInboxPage() {
       <header className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <ShieldCheck size={18} className="text-amber-400" />
-          <h1 className="text-lg font-semibold text-slate-100">Approvals</h1>
+          <h1 className="text-lg font-semibold text-text-primary">Approvals</h1>
           {visible.length > 0 && (
             <span className="rounded-full bg-amber-900/40 px-2 py-0.5 text-[11px] font-semibold text-amber-200">
               {visible.length}
@@ -165,18 +165,18 @@ export function ApprovalsInboxPage() {
           type="button"
           onClick={() => void load()}
           disabled={loading}
-          className="focusable inline-flex items-center gap-1 rounded-md border border-slate-700 px-2 py-1 text-[12px] text-slate-300 hover:border-sky-500 hover:text-sky-300 disabled:opacity-50"
+          className="focusable inline-flex items-center gap-1 rounded-md border border-border-subtle px-2 py-1 text-[12px] text-text-secondary hover:border-accent hover:text-accent-hover disabled:opacity-50"
           aria-label="Refresh"
         >
           <RefreshCw size={12} className={cn(loading && 'animate-spin')} />
           Refresh
         </button>
       </header>
-      <p className="text-[12px] text-slate-400">
+      <p className="text-[12px] text-text-muted">
         Every build currently waiting on a manual approval. Click a row to
         open the build, or use the inline buttons to record a decision.
         {currentUser?.role && (
-          <> Showing rows that accept role <code className="rounded bg-slate-800 px-1">{currentUser.role}</code>.</>
+          <> Showing rows that accept role <code className="rounded bg-bg-elevated px-1">{currentUser.role}</code>.</>
         )}
       </p>
 
@@ -187,15 +187,15 @@ export function ApprovalsInboxPage() {
       )}
 
       {items === null ? (
-        <div className="text-[12px] text-slate-400">Loading…</div>
+        <div className="text-[12px] text-text-muted">Loading…</div>
       ) : visible.length === 0 ? (
-        <div className="rounded-md border border-slate-800 bg-slate-900/40 px-4 py-8 text-center text-[13px] text-slate-400">
-          No approvals waiting. Builds that hit a <code className="rounded bg-slate-800 px-1">manualApproval</code> step will appear here.
+        <div className="rounded-md border border-border-subtle bg-bg-panel/60 px-4 py-8 text-center text-[13px] text-text-muted">
+          No approvals waiting. Builds that hit a <code className="rounded bg-bg-elevated px-1">manualApproval</code> step will appear here.
         </div>
       ) : (
-        <div className="overflow-hidden rounded-md border border-slate-800">
+        <div className="overflow-hidden rounded-md border border-border-subtle">
           <table className="w-full text-left text-[12px]">
-            <thead className="bg-slate-900 text-[11px] uppercase tracking-wider text-slate-400">
+            <thead className="bg-bg-panel text-[11px] uppercase tracking-wider text-text-muted">
               <tr>
                 <th className="px-3 py-2">Pipeline</th>
                 <th className="px-3 py-2">Build</th>
@@ -223,40 +223,40 @@ export function ApprovalsInboxPage() {
                 return (
                   <tr
                     key={a.id}
-                    className="cursor-pointer border-t border-slate-800 hover:bg-slate-900/60"
+                    className="cursor-pointer border-t border-border-subtle hover:bg-bg-panel"
                     onClick={() => setView({ type: 'build', id: a.buildId })}
                   >
                     <td className="px-3 py-2">
-                      <div className="font-semibold text-slate-100">
-                        {pl?.name ?? <em className="text-slate-500">unknown</em>}
+                      <div className="font-semibold text-text-primary">
+                        {pl?.name ?? <em className="text-text-faint">unknown</em>}
                       </div>
                       {projectName && (
-                        <div className="text-[11px] text-slate-500">
+                        <div className="text-[11px] text-text-faint">
                           {projectName}
                         </div>
                       )}
                     </td>
-                    <td className="px-3 py-2 font-mono text-[11px] text-slate-300">
+                    <td className="px-3 py-2 font-mono text-[11px] text-text-secondary">
                       {shortId(a.buildId)}
                     </td>
                     <td
-                      className="max-w-[320px] truncate px-3 py-2 text-slate-200"
+                      className="max-w-[320px] truncate px-3 py-2 text-text-primary"
                       title={preview}
                     >
-                      {previewShort || <em className="text-slate-500">(no message)</em>}
+                      {previewShort || <em className="text-text-faint">(no message)</em>}
                     </td>
                     <td
-                      className="px-3 py-2 text-slate-300"
+                      className="px-3 py-2 text-text-secondary"
                       title={new Date(a.requestedAt).toLocaleString()}
                     >
                       {relativeTime(a.requestedAt)}
                     </td>
-                    <td className="px-3 py-2 text-slate-300">
+                    <td className="px-3 py-2 text-text-secondary">
                       <span className="font-mono">
                         {approvedCount}/{a.requiredApprovers}
                       </span>
                       {a.requiredRoles.length > 0 && (
-                        <span className="ml-2 text-[10px] text-slate-500">
+                        <span className="ml-2 text-[10px] text-text-faint">
                           {a.requiredRoles.join(',')}
                         </span>
                       )}

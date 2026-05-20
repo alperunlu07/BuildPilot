@@ -18,6 +18,16 @@
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <!-- UI v2 Faz 1: Inter (sans) + JetBrains Mono (mono). preconnect cuts
+         ~80ms off the initial font-fetch RTT vs. linking the stylesheet
+         alone. display=swap keeps the page from flashing invisible while
+         the variable fonts download. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+    />
     <title>BuildPilot</title>
   </head>
   <body class="bg-slate-950 text-slate-100">

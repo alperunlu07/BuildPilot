@@ -1,4 +1,6 @@
 import type {
+  AiIntegrationsConfig,
+  AnnotationsReport,
   ApiToken,
   AuditEventsResponse,
   AuditAction,
@@ -352,6 +354,21 @@ export const api = {
     }),
 
   // ── Observability — test reports + coverage (Cluster 11.F) ───────────
+  // UI v2 Faz 6.B — annotations report (compiler warnings / lint
+  // diagnostics / etc.). Empty `annotations: []` + a `note` when the
+  // build has nothing to report.
+  buildAnnotations: (buildId: string) =>
+    http<AnnotationsReport>(`/builds/${buildId}/annotations`),
+  // UI v2 Faz 10.3 — AI Integrations CRUD. Per-tool path + model
+  // overrides; per-tool empty string clears, undefined keeps existing.
+  getAiIntegrations: () =>
+    http<AiIntegrationsConfig>(`/config/ai-integrations`),
+  updateAiIntegrations: (cfg: AiIntegrationsConfig) =>
+    http<AiIntegrationsConfig>(`/config/ai-integrations`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(cfg),
+    }),
   testReport: (
     buildId: string,
     opts: { kind?: TestReportKind; artifactId?: number } = {},

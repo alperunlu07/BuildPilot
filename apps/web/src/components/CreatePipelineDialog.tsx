@@ -69,34 +69,34 @@ export function CreatePipelineDialog({ open, projectId, defaultBranch, onClose, 
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-bg-base/60 backdrop-blur-sm"
       onClick={onClose}
     >
       <form
         onClick={(e) => e.stopPropagation()}
         onSubmit={submit}
-        className="w-[460px] rounded-lg border border-slate-700 bg-slate-900 p-5 shadow-xl"
+        className="w-[460px] rounded-lg border border-border-subtle bg-bg-panel p-5 shadow-xl"
       >
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-base font-semibold text-slate-100">New pipeline</h2>
-          <button type="button" onClick={onClose} className="text-slate-400 hover:text-slate-200">
+          <h2 className="text-base font-semibold text-text-primary">New pipeline</h2>
+          <button type="button" onClick={onClose} className="text-text-muted hover:text-text-primary">
             <X size={16} />
           </button>
         </div>
 
         <label className="mb-3 block">
-          <span className="mb-1 block text-xs uppercase tracking-wide text-slate-400">Name</span>
+          <span className="mb-1 block text-xs uppercase tracking-wide text-text-muted">Name</span>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
-            className="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100"
+            className="w-full rounded-md border border-border-subtle bg-bg-base px-3 py-2 text-sm text-text-primary"
           />
         </label>
 
         <div className="mb-3 grid grid-cols-2 gap-3">
           <label className="block">
-            <span className="mb-1 block text-xs uppercase tracking-wide text-slate-400">
+            <span className="mb-1 block text-xs uppercase tracking-wide text-text-muted">
               Watch branch
             </span>
             <BranchSelect
@@ -108,7 +108,7 @@ export function CreatePipelineDialog({ open, projectId, defaultBranch, onClose, 
             />
           </label>
           <label className="block">
-            <span className="mb-1 block text-xs uppercase tracking-wide text-slate-400">
+            <span className="mb-1 block text-xs uppercase tracking-wide text-text-muted">
               Poll interval (s)
             </span>
             <input
@@ -116,17 +116,17 @@ export function CreatePipelineDialog({ open, projectId, defaultBranch, onClose, 
               min={5}
               value={intervalSec}
               onChange={(e) => setIntervalSec(Math.max(5, Number(e.target.value)))}
-              className="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100"
+              className="w-full rounded-md border border-border-subtle bg-bg-base px-3 py-2 text-sm text-text-primary"
             />
           </label>
         </div>
 
-        <label className="mb-4 flex items-center gap-2 text-sm text-slate-300">
+        <label className="mb-4 flex items-center gap-2 text-sm text-text-secondary">
           <input
             type="checkbox"
             checked={includeUnity}
             onChange={(e) => setIncludeUnity(e.target.checked)}
-            className="rounded border-slate-700 bg-slate-950"
+            className="rounded border-border-subtle bg-bg-base"
           />
           Seed graph with checkout → pull → unity batch (you can edit later)
         </label>
@@ -141,14 +141,14 @@ export function CreatePipelineDialog({ open, projectId, defaultBranch, onClose, 
           <button
             type="button"
             onClick={onClose}
-            className="rounded-md px-3 py-1.5 text-sm text-slate-400 hover:text-slate-200"
+            className="rounded-md px-3 py-1.5 text-sm text-text-muted hover:text-text-primary"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={busy || !name.trim() || !branch.trim()}
-            className="rounded-md bg-sky-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-sky-500 disabled:cursor-not-allowed disabled:bg-slate-700"
+            className="rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-white hover:bg-accent-hover disabled:cursor-not-allowed disabled:bg-bg-elevated"
           >
             {busy ? 'Creating…' : 'Create pipeline'}
           </button>

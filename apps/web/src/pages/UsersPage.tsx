@@ -58,8 +58,8 @@ export function UsersPage() {
     <div className="mx-auto max-w-4xl space-y-4 p-6">
       <header className="flex items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold text-slate-100">Users</h1>
-          <p className="text-xs text-slate-400">
+          <h1 className="text-xl font-semibold text-text-primary">Users</h1>
+          <p className="text-xs text-text-muted">
             {authEnabled
               ? 'Manage accounts that can sign into this BuildPilot instance.'
               : 'Auth is disabled — users you create here become active once you flip auth.enabled in config.json.'}
@@ -69,7 +69,7 @@ export function UsersPage() {
           <button
             type="button"
             onClick={() => setShowCreate(true)}
-            className="focusable flex items-center gap-1 rounded-md bg-sky-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-sky-500"
+            className="focusable flex items-center gap-1 rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:bg-accent-hover"
           >
             <UserPlus size={14} />
             New user
@@ -85,14 +85,14 @@ export function UsersPage() {
       )}
 
       {loading ? (
-        <div className="text-sm text-slate-400">Loading…</div>
+        <div className="text-sm text-text-muted">Loading…</div>
       ) : users.length === 0 ? (
-        <div className="rounded-md border border-slate-800 bg-slate-900/40 p-6 text-sm text-slate-400">
+        <div className="rounded-md border border-border-subtle bg-bg-panel/60 p-6 text-sm text-text-muted">
           No users yet. Create the first one to enable login.
         </div>
       ) : (
-        <table className="w-full overflow-hidden rounded-md border border-slate-800 text-sm">
-          <thead className="bg-slate-900 text-xs uppercase tracking-wider text-slate-400">
+        <table className="w-full overflow-hidden rounded-md border border-border-subtle text-sm">
+          <thead className="bg-bg-panel text-xs uppercase tracking-wider text-text-muted">
             <tr>
               <th className="px-3 py-2 text-left">Username</th>
               <th className="px-3 py-2 text-left">Display name</th>
@@ -103,15 +103,15 @@ export function UsersPage() {
           </thead>
           <tbody>
             {users.map((u) => (
-              <tr key={u.id} className="border-t border-slate-800 hover:bg-slate-900/50">
-                <td className="px-3 py-2 font-mono text-xs text-slate-200">{u.username}</td>
-                <td className="px-3 py-2 text-slate-200">{u.displayName}</td>
+              <tr key={u.id} className="border-t border-border-subtle hover:bg-bg-panel/80">
+                <td className="px-3 py-2 font-mono text-xs text-text-primary">{u.username}</td>
+                <td className="px-3 py-2 text-text-primary">{u.displayName}</td>
                 <td className="px-3 py-2">
                   {isAdmin ? (
                     <select
                       value={u.role}
                       onChange={(e) => void setRole(u, e.target.value as UserRole)}
-                      className="focusable rounded border border-slate-700 bg-slate-950 px-2 py-1 text-xs text-slate-200"
+                      className="focusable rounded border border-border-subtle bg-bg-base px-2 py-1 text-xs text-text-primary"
                     >
                       {ROLES.map((r) => (
                         <option key={r} value={r}>
@@ -120,20 +120,20 @@ export function UsersPage() {
                       ))}
                     </select>
                   ) : (
-                    <span className="text-xs uppercase text-slate-300">{u.role}</span>
+                    <span className="text-xs uppercase text-text-secondary">{u.role}</span>
                   )}
                 </td>
-                <td className="px-3 py-2 text-xs text-slate-400">
+                <td className="px-3 py-2 text-xs text-text-muted">
                   {u.lastLoginAt
                     ? new Date(u.lastLoginAt).toLocaleString()
-                    : <span className="text-slate-500">never</span>}
+                    : <span className="text-text-faint">never</span>}
                 </td>
                 <td className="px-3 py-2 text-right">
                   {isAdmin && currentUser?.id !== u.id && (
                     <button
                       type="button"
                       onClick={() => void remove(u)}
-                      className="focusable rounded p-1 text-slate-400 hover:text-rose-400"
+                      className="focusable rounded p-1 text-text-muted hover:text-rose-400"
                       aria-label="Delete user"
                       title="Delete user"
                     >
@@ -197,17 +197,17 @@ function CreateUserDialog({
     <div
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 px-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-bg-base/70 px-4"
       onClick={onClose}
     >
       <form
         onClick={(e) => e.stopPropagation()}
         onSubmit={submit}
-        className="density-card w-full max-w-md space-y-3 rounded-lg border border-slate-700 bg-slate-900 p-5 shadow-2xl"
+        className="density-card w-full max-w-md space-y-3 rounded-lg border border-border-subtle bg-bg-panel p-5 shadow-2xl"
       >
         <div className="flex items-center gap-2">
-          <Plus size={16} className="text-sky-400" />
-          <h2 className="text-base font-semibold text-slate-100">Create user</h2>
+          <Plus size={16} className="text-accent" />
+          <h2 className="text-base font-semibold text-text-primary">Create user</h2>
         </div>
         <Field label="Username" value={username} onChange={setUsername} autoComplete="off" />
         <Field
@@ -224,11 +224,11 @@ function CreateUserDialog({
           autoComplete="new-password"
         />
         <div className="space-y-1">
-          <label className="text-xs font-medium text-slate-300">Role</label>
+          <label className="text-xs font-medium text-text-secondary">Role</label>
           <select
             value={role}
             onChange={(e) => setRole(e.target.value as UserRole)}
-            className="focusable w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1.5 text-sm text-slate-200"
+            className="focusable w-full rounded-md border border-border-subtle bg-bg-base px-2 py-1.5 text-sm text-text-primary"
           >
             {ROLES.map((r) => (
               <option key={r} value={r}>
@@ -246,14 +246,14 @@ function CreateUserDialog({
           <button
             type="button"
             onClick={onClose}
-            className="focusable rounded-md border border-slate-700 px-3 py-1.5 text-xs text-slate-300 hover:border-slate-500"
+            className="focusable rounded-md border border-border-subtle px-3 py-1.5 text-xs text-text-secondary hover:border-text-faint"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={submitting || !username || !password}
-            className="focusable rounded-md bg-sky-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-sky-500 disabled:opacity-50"
+            className="focusable rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:bg-accent-hover disabled:opacity-50"
           >
             {submitting ? 'Creating…' : 'Create user'}
           </button>
@@ -278,13 +278,13 @@ function Field({
 }) {
   return (
     <div className="space-y-1">
-      <label className="text-xs font-medium text-slate-300">{label}</label>
+      <label className="text-xs font-medium text-text-secondary">{label}</label>
       <input
         type={type}
         value={value}
         autoComplete={autoComplete}
         onChange={(e) => onChange(e.target.value)}
-        className="focusable w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1.5 text-sm text-slate-100 outline-none placeholder:text-slate-500 focus:border-sky-500"
+        className="focusable w-full rounded-md border border-border-subtle bg-bg-base px-2 py-1.5 text-sm text-text-primary outline-none placeholder:text-text-faint focus:border-accent"
       />
     </div>
   );

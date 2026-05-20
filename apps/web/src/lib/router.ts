@@ -10,8 +10,6 @@ export function viewToPath(view: View): string {
       return '/';
     case 'projects':
       return '/projects';
-    case 'project':
-      return `/projects/${encodeURIComponent(view.id)}`;
     case 'pipeline':
       return `/pipelines/${encodeURIComponent(view.id)}`;
     case 'builds':
@@ -56,6 +54,8 @@ export function viewToPath(view: View): string {
       return '/approvals';
     case 'queue':
       return '/queue';
+    case 'catalog':
+      return '/catalog';
   }
 }
 
@@ -90,9 +90,13 @@ export function pathToView(path: string): View {
   if (clean === '/vault-files') return { type: 'vaultFiles' };
   if (clean === '/approvals') return { type: 'approvals' };
   if (clean === '/queue') return { type: 'queue' };
+  if (clean === '/catalog') return { type: 'catalog' };
 
+  // Faz 4 — `/projects/:id` no longer maps to a `project` view. Falls
+  // back to the projects list; the user re-enters via the sidebar tree
+  // or the home dashboard.
   const projectMatch = clean.match(/^\/projects\/([^/]+)$/);
-  if (projectMatch) return { type: 'project', id: decodeURIComponent(projectMatch[1]!) };
+  if (projectMatch) return { type: 'projects' };
   const pipelineMatch = clean.match(/^\/pipelines\/([^/]+)$/);
   if (pipelineMatch) return { type: 'pipeline', id: decodeURIComponent(pipelineMatch[1]!) };
   // `/builds/:id/tests` must be checked before the generic /builds/:id.
@@ -107,7 +111,6 @@ export function pathToView(path: string): View {
 export function viewsEqual(a: View, b: View): boolean {
   if (a.type !== b.type) return false;
   if (
-    (a.type === 'project' && b.type === 'project') ||
     (a.type === 'pipeline' && b.type === 'pipeline') ||
     (a.type === 'build' && b.type === 'build')
   ) {

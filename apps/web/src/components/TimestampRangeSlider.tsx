@@ -70,12 +70,12 @@ export function TimestampRangeSlider({ min, max, value, onChange, compact = fals
   const trackHeight = compact ? 'h-1.5' : 'h-2';
 
   return (
-    <div className="flex items-center gap-2 text-[10px] text-slate-400">
-      <span className="font-mono text-slate-400">{fmtClock(value[0])}</span>
+    <div className="flex items-center gap-2 text-[10px] text-text-muted">
+      <span className="font-mono text-text-muted">{fmtClock(value[0])}</span>
       <div className="relative flex-1">
         <div
           ref={trackRef}
-          className={cn('relative w-full rounded-full bg-slate-800', trackHeight)}
+          className={cn('relative w-full rounded-full bg-bg-elevated', trackHeight)}
         >
           <div
             className="absolute inset-y-0 rounded-full bg-sky-700/70"
@@ -109,12 +109,12 @@ export function TimestampRangeSlider({ min, max, value, onChange, compact = fals
           />
         </div>
       </div>
-      <span className="font-mono text-slate-400">{fmtClock(value[1])}</span>
+      <span className="font-mono text-text-muted">{fmtClock(value[1])}</span>
       <button
         type="button"
         onClick={reset}
         disabled={isFull}
-        className="rounded border border-slate-700 px-1.5 py-0.5 text-slate-400 hover:border-sky-500 hover:text-sky-300 disabled:opacity-40"
+        className="rounded border border-border-subtle px-1.5 py-0.5 text-text-muted hover:border-accent hover:text-accent-hover disabled:opacity-40"
         title="Reset to full build duration"
       >
         reset
@@ -146,7 +146,7 @@ function Handle({
       onPointerDown={onPointerDown}
       onKeyDown={onKeyDown}
       className={cn(
-        'absolute top-1/2 -translate-x-1/2 -translate-y-1/2 cursor-grab rounded-full border border-sky-300 bg-sky-500 shadow ring-offset-1 ring-offset-slate-950 focus:outline-none focus:ring-2 focus:ring-sky-400 active:cursor-grabbing',
+        'absolute top-1/2 -translate-x-1/2 -translate-y-1/2 cursor-grab rounded-full border border-sky-300 bg-sky-500 shadow ring-offset-1 ring-offset-bg-base focus:outline-none focus:ring-2 focus:ring-sky-400 active:cursor-grabbing',
         size,
       )}
       style={{ left: `${pct}%` }}

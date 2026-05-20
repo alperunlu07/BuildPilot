@@ -32,21 +32,21 @@ export function LoginPage() {
   }
 
   return (
-    <div className="flex h-full items-center justify-center bg-slate-950 px-4">
+    <div className="flex h-full items-center justify-center bg-bg-base px-4">
       <form
         onSubmit={onSubmit}
-        className="density-card w-full max-w-sm space-y-4 rounded-lg border border-slate-800 bg-slate-900 p-6 shadow-xl"
+        className="density-card w-full max-w-sm space-y-4 rounded-lg border border-border-subtle bg-bg-panel p-6 shadow-xl"
       >
         <div className="flex items-center gap-2">
-          <Lock size={18} className="text-sky-400" />
-          <h1 className="text-lg font-semibold text-slate-100">Sign in to BuildPilot</h1>
+          <Lock size={18} className="text-accent" />
+          <h1 className="text-lg font-semibold text-text-primary">Sign in to BuildPilot</h1>
         </div>
-        <p className="text-xs text-slate-400">
+        <p className="text-xs text-text-muted">
           Enter your username and password. Sessions remain valid for 30 days.
         </p>
 
         <div className="space-y-1">
-          <label htmlFor="login-username" className="text-xs font-medium text-slate-300">
+          <label htmlFor="login-username" className="text-xs font-medium text-text-secondary">
             Username
           </label>
           <input
@@ -55,13 +55,13 @@ export function LoginPage() {
             autoComplete="username"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
-            className="focusable w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none placeholder:text-slate-500 focus:border-sky-500"
+            className="focusable w-full rounded-md border border-border-subtle bg-bg-base px-3 py-2 text-sm text-text-primary outline-none placeholder:text-text-faint focus:border-accent"
             required
           />
         </div>
 
         <div className="space-y-1">
-          <label htmlFor="login-password" className="text-xs font-medium text-slate-300">
+          <label htmlFor="login-password" className="text-xs font-medium text-text-secondary">
             Password
           </label>
           <input
@@ -70,7 +70,7 @@ export function LoginPage() {
             autoComplete="current-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="focusable w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none placeholder:text-slate-500 focus:border-sky-500"
+            className="focusable w-full rounded-md border border-border-subtle bg-bg-base px-3 py-2 text-sm text-text-primary outline-none placeholder:text-text-faint focus:border-accent"
             required
           />
         </div>
@@ -85,7 +85,7 @@ export function LoginPage() {
         <button
           type="submit"
           disabled={submitting || !username || !password}
-          className="focusable flex w-full items-center justify-center gap-2 rounded-md bg-sky-600 px-3 py-2 text-sm font-medium text-white hover:bg-sky-500 disabled:cursor-not-allowed disabled:opacity-50"
+          className="focusable flex w-full items-center justify-center gap-2 rounded-md bg-accent px-3 py-2 text-sm font-medium text-white hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
         >
           <LogIn size={14} />
           {submitting ? 'Signing in…' : 'Sign in'}

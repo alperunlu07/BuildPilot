@@ -61,7 +61,7 @@ function renderMd(body: string): JSX.Element[] {
   const flushBullets = () => {
     if (bullets.length === 0) return;
     out.push(
-      <ul key={`ul-${out.length}`} className="mb-3 ml-4 list-disc space-y-1 text-sm text-slate-300">
+      <ul key={`ul-${out.length}`} className="mb-3 ml-4 list-disc space-y-1 text-sm text-text-secondary">
         {bullets.map((b, i) => (
           <li key={i} dangerouslySetInnerHTML={{ __html: inline(b) }} />
         ))}
@@ -78,7 +78,7 @@ function renderMd(body: string): JSX.Element[] {
     if (line.startsWith('### ')) {
       flushBullets();
       out.push(
-        <h4 key={`h-${out.length}`} className="mb-2 mt-3 text-xs font-semibold uppercase tracking-wider text-sky-300">
+        <h4 key={`h-${out.length}`} className="mb-2 mt-3 text-xs font-semibold uppercase tracking-wider text-accent-hover">
           {line.slice(4)}
         </h4>,
       );
@@ -93,7 +93,7 @@ function renderMd(body: string): JSX.Element[] {
     out.push(
       <p
         key={`p-${out.length}`}
-        className="mb-3 text-sm text-slate-300"
+        className="mb-3 text-sm text-text-secondary"
         dangerouslySetInnerHTML={{ __html: inline(line) }}
       />,
     );
@@ -110,8 +110,8 @@ function inline(s: string): string {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
   return esc
-    .replace(/\*\*(.+?)\*\*/g, '<strong class="font-semibold text-slate-100">$1</strong>')
-    .replace(/`([^`]+)`/g, '<code class="rounded bg-slate-800 px-1 py-0.5 font-mono text-[12px] text-slate-200">$1</code>');
+    .replace(/\*\*(.+?)\*\*/g, '<strong class="font-semibold text-text-primary">$1</strong>')
+    .replace(/`([^`]+)`/g, '<code class="rounded bg-bg-elevated px-1 py-0.5 font-mono text-[12px] text-text-primary">$1</code>');
 }
 
 // True if `a` is a strictly newer semver than `b`. Falls back to
@@ -162,48 +162,48 @@ export function ChangelogDrawer({ open, onClose }: Props) {
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex justify-end bg-slate-950/60 backdrop-blur-sm"
+      className="fixed inset-0 z-[60] flex justify-end bg-bg-base/60 backdrop-blur-sm"
       onClick={onClose}
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="flex h-full w-[480px] flex-col border-l border-slate-700 bg-slate-900 shadow-2xl"
+        className="flex h-full w-[480px] flex-col border-l border-border-subtle bg-bg-panel shadow-2xl"
       >
-        <div className="flex items-center justify-between border-b border-slate-800 px-5 py-3">
+        <div className="flex items-center justify-between border-b border-border-subtle px-5 py-3">
           <div className="flex items-center gap-2">
-            <Sparkles size={16} className="text-sky-400" />
-            <h2 className="text-base font-semibold text-slate-100">What's new</h2>
+            <Sparkles size={16} className="text-accent" />
+            <h2 className="text-base font-semibold text-text-primary">What's new</h2>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-200"
+            className="text-text-muted hover:text-text-primary"
             aria-label="Close"
           >
             <X size={16} />
           </button>
         </div>
         <div className="flex-1 overflow-y-auto px-5 py-4">
-          {loading && <div className="text-sm text-slate-400">Loading…</div>}
+          {loading && <div className="text-sm text-text-muted">Loading…</div>}
           {error && (
             <div className="rounded-md border border-rose-800 bg-rose-950/40 px-3 py-2 text-sm text-rose-200">
               Couldn't load CHANGELOG.md — {error}
             </div>
           )}
           {!loading && !error && entries.length === 0 && (
-            <div className="text-sm text-slate-400">No changelog entries.</div>
+            <div className="text-sm text-text-muted">No changelog entries.</div>
           )}
           {entries.map((entry, idx) => (
             <section key={entry.version} className="mb-6">
-              <div className="mb-2 flex items-baseline gap-2 border-b border-slate-800 pb-1.5">
-                <h3 className="text-sm font-semibold text-slate-100">{entry.version}</h3>
+              <div className="mb-2 flex items-baseline gap-2 border-b border-border-subtle pb-1.5">
+                <h3 className="text-sm font-semibold text-text-primary">{entry.version}</h3>
                 {entry.date && (
-                  <span className="text-[11px] uppercase tracking-wider text-slate-400">
+                  <span className="text-[11px] uppercase tracking-wider text-text-muted">
                     {entry.date}
                   </span>
                 )}
                 {idx === 0 && (
-                  <span className="ml-auto rounded-md bg-sky-500/20 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-sky-300">
+                  <span className="ml-auto rounded-md bg-sky-500/20 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-accent-hover">
                     Latest
                   </span>
                 )}

@@ -21,7 +21,7 @@ import { cn } from '../lib/cn';
 // Deterministic color per username so the avatar bubble stays consistent.
 function colorFor(name: string): string {
   const palette = [
-    'bg-sky-600',
+    'bg-accent',
     'bg-emerald-600',
     'bg-amber-600',
     'bg-violet-600',
@@ -72,7 +72,7 @@ export function UserMenu() {
       <button
         type="button"
         onClick={() => setView({ type: 'login' })}
-        className="focusable flex items-center gap-1 rounded-md border border-slate-700 px-2 py-1 text-xs text-slate-300 hover:border-sky-500 hover:text-sky-300"
+        className="focusable flex items-center gap-1 rounded-md border border-border-subtle px-2 py-1 text-xs text-text-secondary hover:border-accent hover:text-accent-hover"
         title="Sign in"
       >
         <LogIn size={12} />
@@ -88,7 +88,7 @@ export function UserMenu() {
         type="button"
         onClick={() => setOpen((o) => !o)}
         className={cn(
-          'focusable flex items-center gap-2 rounded-md border border-slate-700 px-1.5 py-1 text-left hover:border-sky-500',
+          'focusable flex items-center gap-2 rounded-md border border-border-subtle px-1.5 py-1 text-left hover:border-accent',
         )}
         title={`Signed in as ${label}`}
         aria-haspopup="menu"
@@ -103,8 +103,8 @@ export function UserMenu() {
           {initial(label)}
         </span>
         <span className="hidden min-w-0 flex-col text-left sm:flex">
-          <span className="truncate text-xs font-medium text-slate-200">{label}</span>
-          <span className="truncate text-[10px] uppercase tracking-wide text-slate-400">
+          <span className="truncate text-xs font-medium text-text-primary">{label}</span>
+          <span className="truncate text-[10px] uppercase tracking-wide text-text-muted">
             {currentUser.role}
           </span>
         </span>
@@ -112,12 +112,12 @@ export function UserMenu() {
       {open && (
         <div
           role="menu"
-          className="absolute right-0 z-40 mt-1 w-56 overflow-hidden rounded-md border border-slate-700 bg-slate-900 shadow-2xl"
+          className="absolute right-0 z-40 mt-1 w-56 overflow-hidden rounded-md border border-border-subtle bg-bg-panel shadow-2xl"
         >
-          <div className="border-b border-slate-700 px-3 py-2">
-            <div className="truncate text-sm font-medium text-slate-100">{label}</div>
-            <div className="truncate text-[11px] text-slate-400">@{currentUser.username}</div>
-            <div className="mt-1 text-[10px] uppercase tracking-wider text-slate-500">
+          <div className="border-b border-border-subtle px-3 py-2">
+            <div className="truncate text-sm font-medium text-text-primary">{label}</div>
+            <div className="truncate text-[11px] text-text-muted">@{currentUser.username}</div>
+            <div className="mt-1 text-[10px] uppercase tracking-wider text-text-faint">
               {currentUser.role}
             </div>
           </div>
@@ -157,7 +157,7 @@ export function UserMenu() {
               }}
             />
           )}
-          <div className="border-t border-slate-800" />
+          <div className="border-t border-border-subtle" />
           <MenuItem
             icon={<LogOut size={13} />}
             label="Sign out"
@@ -186,9 +186,9 @@ function MenuItem({
       type="button"
       role="menuitem"
       onClick={onClick}
-      className="focusable flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-slate-200 hover:bg-slate-800"
+      className="focusable flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-text-primary hover:bg-bg-elevated"
     >
-      <span className="shrink-0 text-slate-400">{icon}</span>
+      <span className="shrink-0 text-text-muted">{icon}</span>
       <span>{label}</span>
     </button>
   );

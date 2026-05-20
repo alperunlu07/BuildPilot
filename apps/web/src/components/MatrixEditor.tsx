@@ -110,31 +110,31 @@ export function MatrixEditor({ value, onChange }: Props) {
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-sm font-semibold text-slate-200">Build matrix</h3>
-          <p className="text-[11px] text-slate-400">
+          <h3 className="text-sm font-semibold text-text-primary">Build matrix</h3>
+          <p className="text-[11px] text-text-muted">
             Each axis fans the build out into one run per value combination.
-            Use <code className="rounded bg-slate-800 px-1">{'${{ matrix.<axis> }}'}</code> inside any step field to interpolate.
+            Use <code className="rounded bg-bg-elevated px-1">{'${{ matrix.<axis> }}'}</code> inside any step field to interpolate.
           </p>
         </div>
         <button
           type="button"
           onClick={addRow}
-          className="focusable inline-flex items-center gap-1 rounded-md border border-slate-700 px-2 py-1 text-xs text-slate-200 hover:border-sky-500 hover:text-sky-400"
+          className="focusable inline-flex items-center gap-1 rounded-md border border-border-subtle px-2 py-1 text-xs text-text-primary hover:border-accent hover:text-accent"
         >
           <Plus size={12} /> Axis
         </button>
       </div>
 
       {rows.length === 0 ? (
-        <div className="rounded-md border border-dashed border-slate-700 bg-slate-900/40 px-3 py-4 text-center text-[11px] text-slate-400">
+        <div className="rounded-md border border-dashed border-border-subtle bg-bg-panel/60 px-3 py-4 text-center text-[11px] text-text-muted">
           No matrix declared — this pipeline runs as a single build per trigger.
           Click <strong>Axis</strong> to fan out (e.g.{' '}
-          <code className="rounded bg-slate-800 px-1">xcode</code> = 15, 16).
+          <code className="rounded bg-bg-elevated px-1">xcode</code> = 15, 16).
         </div>
       ) : (
         <table className="w-full table-fixed text-xs">
           <thead>
-            <tr className="text-left text-[10px] uppercase tracking-wider text-slate-500">
+            <tr className="text-left text-[10px] uppercase tracking-wider text-text-faint">
               <th className="w-1/3 pb-1 pr-2">Axis name</th>
               <th className="pb-1 pr-2">Values (comma-separated)</th>
               <th className="w-7 pb-1" />
@@ -151,7 +151,7 @@ export function MatrixEditor({ value, onChange }: Props) {
                     placeholder="xcode"
                     spellCheck={false}
                     aria-label="Axis name"
-                    className="focusable w-full rounded-md border border-slate-700 bg-slate-900 px-2 py-1 font-mono text-slate-100 focus:border-sky-500 focus:outline-none"
+                    className="focusable w-full rounded-md border border-border-subtle bg-bg-panel px-2 py-1 font-mono text-text-primary focus:border-accent focus:outline-none"
                   />
                 </td>
                 <td className="pb-1 pr-2">
@@ -162,7 +162,7 @@ export function MatrixEditor({ value, onChange }: Props) {
                     placeholder="15, 16"
                     spellCheck={false}
                     aria-label="Axis values"
-                    className="focusable w-full rounded-md border border-slate-700 bg-slate-900 px-2 py-1 font-mono text-slate-100 focus:border-sky-500 focus:outline-none"
+                    className="focusable w-full rounded-md border border-border-subtle bg-bg-panel px-2 py-1 font-mono text-text-primary focus:border-accent focus:outline-none"
                   />
                 </td>
                 <td className="pb-1">
@@ -170,7 +170,7 @@ export function MatrixEditor({ value, onChange }: Props) {
                     type="button"
                     onClick={() => removeRow(idx)}
                     aria-label={`Remove axis ${row.name || idx + 1}`}
-                    className="focusable inline-flex h-7 w-7 items-center justify-center rounded-md border border-slate-700 text-slate-400 hover:border-rose-500 hover:text-rose-300"
+                    className="focusable inline-flex h-7 w-7 items-center justify-center rounded-md border border-border-subtle text-text-muted hover:border-rose-500 hover:text-rose-300"
                   >
                     <Trash2 size={11} />
                   </button>
@@ -183,22 +183,22 @@ export function MatrixEditor({ value, onChange }: Props) {
 
       {/* Preview block — empty axes collapse cleanly to "no matrix". */}
       {combos.length > 0 && (
-        <div className="rounded-md border border-slate-700 bg-slate-900/40 p-2">
-          <div className="mb-1 text-[10px] uppercase tracking-wider text-slate-400">
+        <div className="rounded-md border border-border-subtle bg-bg-panel/60 p-2">
+          <div className="mb-1 text-[10px] uppercase tracking-wider text-text-muted">
             Generates {combos.length} run{combos.length === 1 ? '' : 's'}
           </div>
           <ul className="space-y-0.5">
             {combos.slice(0, PREVIEW_LIMIT).map((c, i) => (
               <li
                 key={i}
-                className="font-mono text-[11px] text-slate-300"
+                className="font-mono text-[11px] text-text-secondary"
                 title={labelOf(c)}
               >
                 {labelOf(c)}
               </li>
             ))}
             {combos.length > PREVIEW_LIMIT && (
-              <li className="text-[10px] italic text-slate-500">
+              <li className="text-[10px] italic text-text-faint">
                 …and {combos.length - PREVIEW_LIMIT} more
               </li>
             )}

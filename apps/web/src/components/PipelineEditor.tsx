@@ -31,6 +31,7 @@ import { api } from '../lib/api';
 import { usePipelineClipboard } from '../lib/usePipelineClipboard';
 import { usePipelineHistory } from '../lib/usePipelineHistory';
 import { useStore } from '../store/store';
+import { cn } from '../lib/cn';
 import {
   clearDraft,
   draftDiffersFromPipeline,
@@ -183,6 +184,18 @@ function Editor({ pipeline }: Props) {
       ? s.activeBuild
       : null,
   );
+  // UI v2 Faz 5.B.1 — most recent finished build for the header meta
+  // line ("last built X ago"). Pulled from the global builds list; we
+  // filter to this pipeline + a terminal status so a stuck pending row
+  // doesn't claim the slot.
+  const lastFinishedBuild = useStore((s) =>
+    s.builds.find(
+      (b) =>
+        b.pipelineId === pipeline.id &&
+        (b.status === 'success' || b.status === 'failed' || b.status === 'cancelled'),
+    ),
+  );
+
 
   const [nodes, setNodes] = useState<Node[]>(() => pipelineNodesToReactFlow(pipeline.nodes));
   const [edges, setEdges] = useState<Edge[]>(() => pipelineEdgesToReactFlow(pipeline.edges));
@@ -198,6 +211,11 @@ function Editor({ pipeline }: Props) {
   const [dirty, setDirty] = useState(false);
   const [branches, setBranches] = useState<string[]>([]);
   const [triggersOpen, setTriggersOpen] = useState(false);
+  // UI v2 Faz 5.B.3 — Triggers panel split into focused tabs so users
+  // don't scan a 2-col grid to find one knob.
+  const [triggersTab, setTriggersTab] = useState<
+    'lane' | 'branch' | 'tag' | 'cron' | 'paths' | 'webhook'
+  >('lane');
   // Cluster 11.C — matrix editor panel toggle. Lives alongside the
   // existing "Triggers" disclosure so the header stays uncluttered.
   const [matrixOpen, setMatrixOpen] = useState(false);
@@ -600,6 +618,41 @@ function Editor({ pipeline }: Props) {
       const position = screenToFlowPosition({ x: event.clientX, y: event.clientY });
       const id = `n_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 5)}`;
 
+      // UI v2 Faz 5.A.3 — Recipe: drop N nodes laid out vertically + N-1
+      // edges connecting them. Reuses the same dropPayload contract as
+      // copy-paste so positioning + history work the same way.
+      const recipeId = event.dataTransfer.getData('application/buildpilot-recipe');
+      if (recipeId) {
+        const recipe = RECIPES.find((r) => r.id === recipeId);
+        if (!recipe) return;
+        recordHistory();
+        const newNodes: Node[] = [];
+        const newEdges: Edge[] = [];
+        const stepVerticalGap = 90;
+        recipe.steps.forEach((stepType, i) => {
+          if (!STEP_DEFINITIONS[stepType]) return;
+          const nid = `n_${Date.now().toString(36)}_${i}_${Math.random().toString(36).slice(2, 5)}`;
+          newNodes.push({
+            id: nid,
+            type: stepType,
+            position: { x: position.x, y: position.y + i * stepVerticalGap },
+            data: defaultData(stepType),
+          });
+          const prev = newNodes[i - 1];
+          if (prev) {
+            newEdges.push({
+              id: `e_${prev.id}_${nid}`,
+              source: prev.id,
+              target: nid,
+            });
+          }
+        });
+        setNodes((nds) => [...nds, ...newNodes]);
+        setEdges((eds) => [...eds, ...newEdges]);
+        setDirty(true);
+        return;
+      }
+
       // Templates take precedence — the dragged item carries the template id.
       const templateId = event.dataTransfer.getData('application/buildpilot-template');
       if (templateId) {
@@ -701,20 +754,141 @@ function Editor({ pipeline }: Props) {
     await triggerBuild(pipeline.id);
   };
 
+  // UI v2 Faz 5.A.4 — graph validation overlay. Walks the current
+  // nodes + edges to surface two classes of issue:
+  //   1. Orphan nodes (no incoming AND no outgoing edge) — unreachable
+  //      branches the user probably forgot to wire up
+  //   2. Cycles — DFS that records the recursion stack and flags edges
+  //      that close back into it. Reported as the node where the cycle
+  //      closes so the user can locate it on the canvas
+  // We recompute on every nodes/edges change, but the walk is O(N+E)
+  // and N is bounded at ~hundreds, so this stays cheap.
+  const validationIssues = useMemo(() => {
+    const issues: Array<{ kind: 'orphan' | 'cycle'; nodeId: string; label: string }> = [];
+    if (nodes.length <= 1) return issues;
+    const inEdges = new Map<string, number>();
+    const outEdges = new Map<string, string[]>();
+    for (const n of nodes) {
+      inEdges.set(n.id, 0);
+      outEdges.set(n.id, []);
+    }
+    for (const e of edges) {
+      inEdges.set(e.target, (inEdges.get(e.target) ?? 0) + 1);
+      outEdges.get(e.source)?.push(e.target);
+    }
+    const labelFor = (id: string): string => {
+      const n = nodes.find((x) => x.id === id);
+      if (!n) return id.slice(0, 8);
+      const data = n.data as { templateLabel?: string };
+      const def = n.type ? STEP_DEFINITIONS[n.type as StepType] : undefined;
+      return data?.templateLabel ?? def?.label ?? n.type ?? id.slice(0, 8);
+    };
+    // Orphans
+    for (const n of nodes) {
+      if ((inEdges.get(n.id) ?? 0) === 0 && (outEdges.get(n.id) ?? []).length === 0) {
+        issues.push({ kind: 'orphan', nodeId: n.id, label: labelFor(n.id) });
+      }
+    }
+    // Cycles via DFS
+    const WHITE = 0;
+    const GREY = 1;
+    const BLACK = 2;
+    const color = new Map<string, number>();
+    for (const n of nodes) color.set(n.id, WHITE);
+    const cyclesFound = new Set<string>();
+    const dfs = (id: string) => {
+      color.set(id, GREY);
+      for (const next of outEdges.get(id) ?? []) {
+        const c = color.get(next) ?? WHITE;
+        if (c === GREY) cyclesFound.add(next);
+        else if (c === WHITE) dfs(next);
+      }
+      color.set(id, BLACK);
+    };
+    for (const n of nodes) {
+      if ((color.get(n.id) ?? WHITE) === WHITE) dfs(n.id);
+    }
+    for (const id of cyclesFound) {
+      issues.push({ kind: 'cycle', nodeId: id, label: labelFor(id) });
+    }
+    return issues;
+  }, [nodes, edges]);
+  // UI v2 Faz 5.A.2 — decorate edges with a runtime-status class so the
+  // CSS rules in index.css can paint them (animated dash for running,
+  // status-coloured stroke for success/failed). The decoration is
+  // derived, not stored, so React Flow's internal edge changes never
+  // race with our paint.
+  const decoratedEdges = useMemo(
+    () =>
+      edges.map((e) => {
+        const target = nodes.find((n) => n.id === e.target);
+        const status = (target?.data as { runtimeStatus?: string } | undefined)?.runtimeStatus;
+        const cls =
+          status === 'running'
+            ? 'edge-running'
+            : status === 'failed'
+              ? 'edge-failed'
+              : status === 'success'
+                ? 'edge-success'
+                : undefined;
+        return cls ? { ...e, className: cls } : e;
+      }),
+    [edges, nodes],
+  );
+  const [validationOpen, setValidationOpen] = useState(false);
+  const focusOnNode = useCallback(
+    (id: string) => {
+      setNodes((nds) => nds.map((n) => ({ ...n, selected: n.id === id })));
+      setValidationOpen(false);
+    },
+    [setNodes],
+  );
+
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <header className="flex items-center justify-between border-b border-slate-800 bg-slate-900/50 px-4 py-2">
-        <div className="flex items-center gap-3">
-          <input
-            value={name}
-            onChange={(e) => {
-              setName(e.target.value);
-              setDirty(true);
-            }}
-            className="bg-transparent text-base font-semibold text-slate-100 outline-none"
-          />
-          <span className="inline-flex items-center gap-1.5 rounded-md bg-slate-800 px-2 py-0.5 text-[11px] uppercase tracking-wider text-slate-400">
-            Watch:
+      {/* UI v2 Faz 5.B — pipeline editor header. Watch / interval / Telegram
+          / Triggers / Matrix render as chips on the left; undo/redo/save
+          actions sit on the right. Chips use bg-bg-elevated so the active
+          dot stands out, and a filled "●" marker shows when an advanced
+          option (tag pattern, cron, path filter, etc.) is configured. */}
+      <header className="flex items-center justify-between border-b border-border-subtle bg-bg-panel px-4 py-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="flex flex-col gap-0.5 min-w-0 mr-1">
+            <input
+              value={name}
+              onChange={(e) => {
+                setName(e.target.value);
+                setDirty(true);
+              }}
+              className="bg-transparent text-[15px] font-semibold text-text-primary outline-none min-w-0 max-w-[260px] truncate focus:bg-bg-hover rounded px-1 -mx-1 transition-colors"
+              aria-label="Pipeline name"
+            />
+            {/* UI v2 Faz 5.B.1 — meta line: step + edge counts + last-build
+                timing. Hidden when the pipeline is brand-new (no builds yet)
+                so a fresh editor doesn't show "last built —" noise. */}
+            <span className="text-[10.5px] text-text-faint font-mono leading-tight">
+              {nodes.length} step{nodes.length === 1 ? '' : 's'} · {edges.length} edge
+              {edges.length === 1 ? '' : 's'}
+              {activeBuild && (
+                <>
+                  {' · '}
+                  <span className="text-status-running">
+                    running #{activeBuild.id.slice(0, 7)}
+                  </span>
+                </>
+              )}
+              {!activeBuild && lastFinishedBuild && (
+                <>
+                  {' · last built '}
+                  <span className="text-text-muted">
+                    {formatRelative(lastFinishedBuild.finishedAt ?? lastFinishedBuild.startedAt)}
+                  </span>
+                </>
+              )}
+            </span>
+          </div>
+          <span className="inline-flex items-center gap-1.5 rounded-btn bg-bg-elevated border border-border-subtle px-2 py-0.5 text-[11px] text-text-muted">
+            <span className="uppercase tracking-wider text-text-faint font-semibold">Watch:</span>
             <BranchSelect
               value={watch.branch}
               onChange={(b) => {
@@ -724,7 +898,7 @@ function Editor({ pipeline }: Props) {
               branches={branches}
             />
           </span>
-          <span className="rounded-md bg-slate-800 px-2 py-0.5 text-[11px] text-slate-400">
+          <span className="rounded-btn bg-bg-elevated border border-border-subtle px-2 py-0.5 text-[11px] text-text-muted">
             every{' '}
             <input
               type="number"
@@ -734,12 +908,12 @@ function Editor({ pipeline }: Props) {
                 setWatch({ ...watch, intervalSec: Math.max(5, Number(e.target.value)) });
                 setDirty(true);
               }}
-              className="w-12 bg-transparent text-center text-slate-100 outline-none"
+              className="w-12 bg-transparent text-center text-text-primary outline-none"
             />
             s
           </span>
           <label
-            className="inline-flex items-center gap-1 rounded-md bg-slate-800 px-2 py-0.5 text-[11px] text-slate-400"
+            className="inline-flex items-center gap-1 rounded-btn bg-bg-elevated border border-border-subtle px-2 py-0.5 text-[11px] text-text-muted hover:text-text-secondary cursor-pointer transition-colors"
             title="When the watched branch advances, send a Telegram message asking whether to build (requires bot configured in ~/.buildpilot/config.json)"
           >
             <input
@@ -749,42 +923,63 @@ function Editor({ pipeline }: Props) {
                 setWatch({ ...watch, telegramApprovals: e.target.checked });
                 setDirty(true);
               }}
-              className="h-3 w-3"
+              className="h-3 w-3 accent-accent"
             />
             Telegram ask
           </label>
           <button
             type="button"
             onClick={() => setTriggersOpen((v) => !v)}
-            className="inline-flex items-center gap-1 rounded-md bg-slate-800 px-2 py-0.5 text-[11px] text-slate-300 hover:text-slate-100"
+            className={cn(
+              'inline-flex items-center gap-1 rounded-btn border px-2 py-0.5 text-[11px] transition-colors',
+              triggersOpen
+                ? 'bg-accent-soft border-accent text-accent'
+                : 'bg-bg-elevated border-border-subtle text-text-secondary hover:text-text-primary',
+            )}
             title="Advanced trigger options (tag pattern, cron schedule, path filter, rolling builds)"
+            aria-expanded={triggersOpen}
           >
-            Triggers{' '}
-            {watch.tagPattern ||
-            watch.cronExpr ||
-            watch.pathFilter ||
-            watch.cancelInProgressOnNewCommit ||
-            watch.prCommands
-              ? '●'
-              : '…'}
+            Triggers
+            <span aria-hidden>
+              {watch.tagPattern ||
+              watch.cronExpr ||
+              watch.pathFilter ||
+              watch.cancelInProgressOnNewCommit ||
+              watch.prCommands
+                ? '●'
+                : '…'}
+            </span>
           </button>
           <button
             type="button"
             onClick={() => setMatrixOpen((v) => !v)}
-            className="inline-flex items-center gap-1 rounded-md bg-slate-800 px-2 py-0.5 text-[11px] text-slate-300 hover:text-slate-100"
+            className={cn(
+              'inline-flex items-center gap-1 rounded-btn border px-2 py-0.5 text-[11px] transition-colors',
+              matrixOpen
+                ? 'bg-accent-soft border-accent text-accent'
+                : 'bg-bg-elevated border-border-subtle text-text-secondary hover:text-text-primary',
+            )}
             title="Declarative build matrix — fan one trigger out into N parallel builds"
+            aria-expanded={matrixOpen}
           >
-            Matrix {matrix && Object.keys(matrix.axes).length > 0 ? '●' : '…'}
+            Matrix
+            <span aria-hidden>{matrix && Object.keys(matrix.axes).length > 0 ? '●' : '…'}</span>
           </button>
         </div>
 
-        <div className="flex items-center gap-2">
-          {dirty && <span className="text-[11px] text-amber-400">unsaved</span>}
+        <div className="flex items-center gap-2 shrink-0">
+          {dirty && <span className="text-[11px] text-status-running font-medium">unsaved</span>}
+          {!dirty && !saving && (
+            <span className="text-[11px] text-text-faint inline-flex items-center gap-1">
+              <span className="inline-block size-1.5 rounded-full bg-status-success" aria-hidden />
+              saved
+            </span>
+          )}
           <button
             type="button"
             onClick={doUndo}
             disabled={!history.canUndo}
-            className="focusable inline-flex items-center gap-1 rounded-md border border-slate-700 px-2 py-1 text-xs text-slate-300 hover:border-sky-500 hover:text-sky-400 disabled:cursor-not-allowed disabled:opacity-40"
+            className="inline-flex items-center gap-1 rounded-btn border border-border-subtle bg-bg-elevated px-2 py-1 text-xs text-text-secondary hover:text-text-primary hover:border-border disabled:cursor-not-allowed disabled:opacity-40 transition-colors"
             title="Undo (Cmd/Ctrl+Z)"
             aria-label="Undo last edit"
           >
@@ -794,7 +989,7 @@ function Editor({ pipeline }: Props) {
             type="button"
             onClick={doRedo}
             disabled={!history.canRedo}
-            className="focusable inline-flex items-center gap-1 rounded-md border border-slate-700 px-2 py-1 text-xs text-slate-300 hover:border-sky-500 hover:text-sky-400 disabled:cursor-not-allowed disabled:opacity-40"
+            className="inline-flex items-center gap-1 rounded-btn border border-border-subtle bg-bg-elevated px-2 py-1 text-xs text-text-secondary hover:text-text-primary hover:border-border disabled:cursor-not-allowed disabled:opacity-40 transition-colors"
             title="Redo (Cmd/Ctrl+Shift+Z)"
             aria-label="Redo edit"
           >
@@ -803,7 +998,7 @@ function Editor({ pipeline }: Props) {
           <button
             type="button"
             onClick={autoLayout}
-            className="focusable inline-flex items-center gap-1 rounded-md border border-slate-700 px-2 py-1 text-xs text-slate-300 hover:border-sky-500 hover:text-sky-400"
+            className="inline-flex items-center gap-1 rounded-btn border border-border-subtle bg-bg-elevated px-2 py-1 text-xs text-text-secondary hover:text-text-primary hover:border-border transition-colors"
             title="Auto-layout graph"
             aria-label="Auto-layout graph"
           >
@@ -820,11 +1015,12 @@ function Editor({ pipeline }: Props) {
                 return next;
               });
             }}
-            className={`focusable inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs ${
+            className={cn(
+              'inline-flex items-center gap-1 rounded-btn border px-2 py-1 text-xs transition-colors',
               showMinimap
-                ? 'border-sky-500 bg-sky-950/40 text-sky-300'
-                : 'border-slate-700 text-slate-300 hover:border-sky-500 hover:text-sky-400'
-            }`}
+                ? 'border-accent bg-accent-soft text-accent'
+                : 'border-border-subtle bg-bg-elevated text-text-secondary hover:text-text-primary hover:border-border',
+            )}
             title="Toggle minimap"
             aria-label="Toggle minimap"
             aria-pressed={showMinimap}
@@ -835,7 +1031,7 @@ function Editor({ pipeline }: Props) {
             type="button"
             onClick={save}
             disabled={!dirty || saving}
-            className="focusable inline-flex items-center gap-1 rounded-md border border-slate-700 px-2.5 py-1 text-xs text-slate-200 hover:border-sky-500 hover:text-sky-400 disabled:cursor-not-allowed disabled:opacity-40"
+            className="inline-flex items-center gap-1.5 rounded-btn bg-accent px-2.5 py-1 text-xs font-medium text-white hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-40 transition-colors"
           >
             <Save size={12} /> {saving ? 'Saving…' : 'Save'}
           </button>
@@ -852,7 +1048,7 @@ function Editor({ pipeline }: Props) {
             <button
               type="button"
               onClick={runNow}
-              className="focusable inline-flex items-center gap-1 rounded-md bg-sky-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-sky-500"
+              className="focusable inline-flex items-center gap-1 rounded-md bg-accent px-2.5 py-1 text-xs font-medium text-white hover:bg-accent-hover"
             >
               <Hammer size={12} /> Run
             </button>
@@ -860,7 +1056,7 @@ function Editor({ pipeline }: Props) {
           <button
             type="button"
             onClick={() => softDeletePipeline(pipeline.id)}
-            className="focusable inline-flex items-center gap-1 rounded-md border border-slate-700 px-2 py-1 text-xs text-rose-400 hover:border-rose-500 hover:text-rose-300"
+            className="focusable inline-flex items-center gap-1 rounded-md border border-border-subtle px-2 py-1 text-xs text-rose-400 hover:border-rose-500 hover:text-rose-300"
             title="Delete this pipeline"
             aria-label="Delete this pipeline"
           >
@@ -887,7 +1083,7 @@ function Editor({ pipeline }: Props) {
             <button
               type="button"
               onClick={discardDraft}
-              className="rounded-md border border-slate-700 px-2.5 py-0.5 text-slate-300 hover:border-rose-500 hover:text-rose-300"
+              className="rounded-md border border-border-subtle px-2.5 py-0.5 text-text-secondary hover:border-rose-500 hover:text-rose-300"
             >
               Discard
             </button>
@@ -896,115 +1092,210 @@ function Editor({ pipeline }: Props) {
       )}
 
       {triggersOpen && (
-        <div className="border-b border-slate-800 bg-slate-900/60 px-4 py-3">
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-            <label className="block text-xs text-slate-300">
-              <span className="mb-1 block text-[11px] uppercase tracking-wide text-slate-500">
-                Execution Lane
-              </span>
-              {lanes.length === 0 ? (
-                <select
-                  disabled
-                  className="w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1.5 text-xs text-slate-500"
-                >
-                  <option>Loading lanes…</option>
-                </select>
-              ) : (
-                <select
-                  value={laneId}
-                  onChange={(e) => {
-                    setLaneId(e.target.value);
+        <div className="border-b border-border-subtle bg-bg-panel">
+          {/* UI v2 Faz 5.B.3 — tabbed Triggers panel. Each tab is a single
+              concern so the user can focus instead of scanning a flat 6-row
+              grid. Filled dot next to a tab signals that the underlying
+              field is configured (so a user opening Triggers fresh sees
+              which knobs already have values). */}
+          <nav
+            className="flex items-center gap-0.5 px-3 border-b border-border-subtle"
+            role="tablist"
+            aria-label="Trigger configuration"
+          >
+            <TriggerTabBtn
+              active={triggersTab === 'lane'}
+              configured={laneId !== 'default' || priority !== 100}
+              onClick={() => setTriggersTab('lane')}
+            >
+              Lane &amp; Priority
+            </TriggerTabBtn>
+            <TriggerTabBtn
+              active={triggersTab === 'branch'}
+              configured={watch.cancelInProgressOnNewCommit === true}
+              onClick={() => setTriggersTab('branch')}
+            >
+              Branch
+            </TriggerTabBtn>
+            <TriggerTabBtn
+              active={triggersTab === 'tag'}
+              configured={!!watch.tagPattern}
+              onClick={() => setTriggersTab('tag')}
+            >
+              Tag
+            </TriggerTabBtn>
+            <TriggerTabBtn
+              active={triggersTab === 'cron'}
+              configured={!!watch.cronExpr}
+              onClick={() => setTriggersTab('cron')}
+            >
+              Cron
+            </TriggerTabBtn>
+            <TriggerTabBtn
+              active={triggersTab === 'paths'}
+              configured={!!watch.pathFilter}
+              onClick={() => setTriggersTab('paths')}
+            >
+              Paths
+            </TriggerTabBtn>
+            <TriggerTabBtn
+              active={triggersTab === 'webhook'}
+              configured={!!watch.prCommands}
+              onClick={() => setTriggersTab('webhook')}
+            >
+              PR commands
+            </TriggerTabBtn>
+          </nav>
+
+          <div className="px-4 py-3">
+            {triggersTab === 'lane' && (
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                <label className="block text-xs text-text-secondary">
+                  <span className="mb-1 block text-[11px] uppercase tracking-wide text-text-faint">
+                    Execution Lane
+                  </span>
+                  {lanes.length === 0 ? (
+                    <select
+                      disabled
+                      className="w-full rounded-md border border-border-subtle bg-bg-base px-2 py-1.5 text-xs text-text-faint"
+                    >
+                      <option>Loading lanes…</option>
+                    </select>
+                  ) : (
+                    <select
+                      value={laneId}
+                      onChange={(e) => {
+                        setLaneId(e.target.value);
+                        setDirty(true);
+                      }}
+                      className="w-full rounded-md border border-border-subtle bg-bg-base px-2 py-1.5 text-xs text-text-primary focus:border-accent focus:outline-none"
+                    >
+                      {!lanes.some((l) => l.id === laneId) && (
+                        <option value={laneId}>(orphan: {laneId})</option>
+                      )}
+                      {lanes.map((l) => (
+                        <option key={l.id} value={l.id}>
+                          {l.name} (max {l.maxConcurrency})
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                  <span className="mt-1 block text-[10px] text-text-faint">
+                    Lanes cap concurrency for a pool of pipelines.
+                  </span>
+                </label>
+                <label className="block text-xs text-text-secondary">
+                  <span className="mb-1 block text-[11px] uppercase tracking-wide text-text-faint">
+                    Priority
+                  </span>
+                  <input
+                    type="number"
+                    min={0}
+                    max={10000}
+                    value={priority}
+                    onChange={(e) => {
+                      setPriority(Number(e.target.value));
+                      setDirty(true);
+                    }}
+                    className="w-full rounded-md border border-border-subtle bg-bg-base px-2 py-1.5 text-xs text-text-primary focus:border-accent focus:outline-none"
+                  />
+                  <span className="mt-1 block text-[10px] text-text-faint">
+                    Lower runs first within the lane. Default 100.
+                  </span>
+                </label>
+              </div>
+            )}
+
+            {triggersTab === 'branch' && (
+              <div className="space-y-3">
+                <p className="text-[11px] text-text-muted">
+                  The branch + poll interval live in the header chip. This tab
+                  controls how the branch trigger behaves when a new commit
+                  arrives while a build is still running.
+                </p>
+                <label className="inline-flex items-start gap-2 text-xs text-text-secondary">
+                  <input
+                    type="checkbox"
+                    checked={watch.cancelInProgressOnNewCommit ?? false}
+                    onChange={(e) => {
+                      setWatch({ ...watch, cancelInProgressOnNewCommit: e.target.checked });
+                      setDirty(true);
+                    }}
+                    className="mt-0.5 h-3 w-3 accent-accent"
+                  />
+                  <span>
+                    <span className="block text-text-primary">Rolling builds</span>
+                    <span className="block text-[10.5px] text-text-faint">
+                      Cancel previous in-flight build when a new commit / trigger arrives.
+                      Saves builder cycles on a busy branch.
+                    </span>
+                  </span>
+                </label>
+              </div>
+            )}
+
+            {triggersTab === 'tag' && (
+              <div className="space-y-2">
+                <span className="block text-[11px] uppercase tracking-wide text-text-muted">
+                  Tag pattern (glob)
+                </span>
+                <TagPatternPreview
+                  projectId={pipeline.projectId}
+                  value={watch.tagPattern ?? ''}
+                  onChange={(pattern) => {
+                    setWatch({ ...watch, tagPattern: pattern });
                     setDirty(true);
                   }}
-                  className="w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1.5 text-xs text-slate-100 focus:border-sky-500 focus:outline-none"
-                >
-                  {/* If the pipeline's current laneId no longer exists in the
-                      lanes list (e.g. lane was deleted out-of-band), surface
-                      it as an orphan placeholder so the user notices and can
-                      reassign. The server's DELETE 409 normally prevents this. */}
-                  {!lanes.some((l) => l.id === laneId) && (
-                    <option value={laneId}>(orphan: {laneId})</option>
-                  )}
-                  {lanes.map((l) => (
-                    <option key={l.id} value={l.id}>
-                      {l.name} (max {l.maxConcurrency})
-                    </option>
-                  ))}
-                </select>
-              )}
-            </label>
-            <label className="block text-xs text-slate-300">
-              <span className="mb-1 block text-[11px] uppercase tracking-wide text-slate-500">
-                Priority
-              </span>
-              <input
-                type="number"
-                min={0}
-                max={10000}
-                value={priority}
-                onChange={(e) => {
-                  setPriority(Number(e.target.value));
-                  setDirty(true);
-                }}
-                className="w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1.5 text-xs text-slate-100 focus:border-sky-500 focus:outline-none"
-              />
-              <span className="mt-1 block text-[10px] text-slate-500">
-                Lower runs first within the lane. Default 100.
-              </span>
-            </label>
-            <div className="block text-xs text-slate-300">
-              <span className="mb-1 block text-[11px] uppercase tracking-wide text-slate-400">
-                Tag pattern (glob)
-              </span>
-              <TagPatternPreview
-                projectId={pipeline.projectId}
-                value={watch.tagPattern ?? ''}
-                onChange={(pattern) => {
-                  setWatch({ ...watch, tagPattern: pattern });
-                  setDirty(true);
-                }}
-              />
-            </div>
-            <div className="block text-xs text-slate-300">
-              <span className="mb-1 block text-[11px] uppercase tracking-wide text-slate-400">
-                Cron (5-field, UTC)
-              </span>
-              <CronBuilder
-                value={watch.cronExpr ?? ''}
-                onChange={(expr) => {
-                  setWatch({ ...watch, cronExpr: expr });
-                  setDirty(true);
-                }}
-              />
-            </div>
-            <div className="block text-xs text-slate-300 md:col-span-2">
-              <span className="mb-1 block text-[11px] uppercase tracking-wide text-slate-400">
-                Path filter globs (one per line — empty = build on every commit)
-              </span>
-              <PathFilterPreview
-                projectId={pipeline.projectId}
-                branch={watch.branch}
-                value={watch.pathFilter ?? ''}
-                onChange={(spec) => {
-                  setWatch({ ...watch, pathFilter: spec });
-                  setDirty(true);
-                }}
-              />
-            </div>
-            <label className="inline-flex items-center gap-2 text-xs text-slate-300 md:col-span-2">
-              <input
-                type="checkbox"
-                checked={watch.cancelInProgressOnNewCommit ?? false}
-                onChange={(e) => {
-                  setWatch({ ...watch, cancelInProgressOnNewCommit: e.target.checked });
-                  setDirty(true);
-                }}
-                className="h-3 w-3"
-              />
-              Cancel previous in-flight build when a new commit / trigger arrives
-              (rolling-build mode)
-            </label>
-            <div className="md:col-span-2 border-t border-slate-800 pt-3">
+                />
+                <p className="text-[10.5px] text-text-faint">
+                  Builds fire when a tag matching the glob lands. e.g.{' '}
+                  <code className="font-mono text-text-secondary">v*</code> matches
+                  any v-prefixed release tag.
+                </p>
+              </div>
+            )}
+
+            {triggersTab === 'cron' && (
+              <div className="space-y-2">
+                <span className="block text-[11px] uppercase tracking-wide text-text-muted">
+                  Cron (5-field, UTC)
+                </span>
+                <CronBuilder
+                  value={watch.cronExpr ?? ''}
+                  onChange={(expr) => {
+                    setWatch({ ...watch, cronExpr: expr });
+                    setDirty(true);
+                  }}
+                />
+                <p className="text-[10.5px] text-text-faint">
+                  Scheduled trigger. Independent of branch polling — fires on its
+                  own clock.
+                </p>
+              </div>
+            )}
+
+            {triggersTab === 'paths' && (
+              <div className="space-y-2">
+                <span className="block text-[11px] uppercase tracking-wide text-text-muted">
+                  Path filter globs (one per line)
+                </span>
+                <PathFilterPreview
+                  projectId={pipeline.projectId}
+                  branch={watch.branch}
+                  value={watch.pathFilter ?? ''}
+                  onChange={(spec) => {
+                    setWatch({ ...watch, pathFilter: spec });
+                    setDirty(true);
+                  }}
+                />
+                <p className="text-[10.5px] text-text-faint">
+                  Empty = build on every commit. With a filter set, builds only
+                  fire when at least one changed file matches.
+                </p>
+              </div>
+            )}
+
+            {triggersTab === 'webhook' && (
               <SlashCommandConfig
                 commands={watch.prCommands ?? ''}
                 onCommandsChange={(value) => {
@@ -1017,13 +1308,13 @@ function Editor({ pipeline }: Props) {
                   setDirty(true);
                 }}
               />
-            </div>
+            )}
           </div>
         </div>
       )}
 
       {matrixOpen && (
-        <div className="border-b border-slate-800 bg-slate-900/60 px-4 py-3">
+        <div className="border-b border-border-subtle bg-bg-panel px-4 py-3">
           <MatrixEditor
             value={matrix}
             onChange={(next) => {
@@ -1032,7 +1323,7 @@ function Editor({ pipeline }: Props) {
             }}
           />
           <label
-            className="mt-3 inline-flex items-center gap-2 text-[11px] text-slate-300"
+            className="mt-3 inline-flex items-center gap-2 text-[11px] text-text-secondary"
             title="When on, child cells skip their notify steps; the parent build emits one rolled-up notification when all cells finish."
           >
             <input
@@ -1107,10 +1398,67 @@ function Editor({ pipeline }: Props) {
         />
 
         <div ref={wrapperRef} className="relative min-h-0 flex-1" onDragOver={onDragOver} onDrop={onDrop}>
+          {/* UI v2 Faz 5.A.4 — validation overlay. Floats top-left so it
+              doesn't clash with the find dialog (top-right) or the canvas
+              controls (bottom-right). */}
+          {validationIssues.length > 0 && (
+            <div className="absolute left-3 top-3 z-30">
+              {validationOpen ? (
+                <div className="w-72 rounded-card border border-status-warn/40 bg-bg-panel/95 shadow-xl backdrop-blur">
+                  <div className="flex items-center justify-between border-b border-border-subtle px-3 py-2">
+                    <span className="text-[11px] uppercase tracking-wider font-semibold text-status-warn">
+                      {validationIssues.length} issue{validationIssues.length === 1 ? '' : 's'}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setValidationOpen(false)}
+                      className="rounded p-0.5 text-text-muted hover:text-text-primary"
+                      aria-label="Close validation panel"
+                    >
+                      <X size={12} />
+                    </button>
+                  </div>
+                  <ul className="max-h-64 overflow-y-auto p-2 space-y-1">
+                    {validationIssues.map((iss, idx) => (
+                      <li key={`${iss.kind}-${iss.nodeId}-${idx}`}>
+                        <button
+                          type="button"
+                          onClick={() => focusOnNode(iss.nodeId)}
+                          className="w-full text-left rounded px-2 py-1 text-[12px] text-text-secondary hover:bg-bg-hover hover:text-text-primary transition-colors"
+                        >
+                          <span
+                            className={cn(
+                              'inline-block w-1.5 h-1.5 rounded-full mr-2',
+                              iss.kind === 'cycle' ? 'bg-status-failed' : 'bg-status-warn',
+                            )}
+                            aria-hidden
+                          />
+                          <span className="font-medium">
+                            {iss.kind === 'cycle' ? 'Cycle' : 'Orphan'}
+                          </span>
+                          <span className="ml-1 text-text-muted">{iss.label}</span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setValidationOpen(true)}
+                  className="inline-flex items-center gap-1.5 rounded-pill border border-status-warn/40 bg-bg-panel/95 px-2.5 h-7 text-[11px] font-medium text-status-warn shadow-md backdrop-blur hover:border-status-warn transition-colors"
+                  title="Pipeline validation issues — click to inspect"
+                >
+                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-status-warn animate-pulse-dot" aria-hidden />
+                  {validationIssues.length} issue{validationIssues.length === 1 ? '' : 's'}
+                </button>
+              )}
+            </div>
+          )}
           {findOpen && (
-            <div className="absolute right-3 top-3 z-30 w-80 rounded-md border border-slate-700 bg-slate-900/95 p-2 shadow-xl backdrop-blur">
+            <div className="absolute right-3 top-3 z-30 w-80 rounded-md border border-border-subtle bg-bg-panel/95 p-2 shadow-xl backdrop-blur">
               <div className="flex items-center gap-2">
-                <Search size={12} className="text-slate-400" />
+                <Search size={12} className="text-text-muted" />
                 <input
                   autoFocus
                   type="text"
@@ -1128,9 +1476,9 @@ function Editor({ pipeline }: Props) {
                     }
                   }}
                   placeholder="Find in node ids, types, field values…"
-                  className="flex-1 rounded border border-slate-700 bg-slate-950 px-2 py-1 text-[12px] text-slate-100 focus:border-sky-500 focus:outline-none"
+                  className="flex-1 rounded border border-border-subtle bg-bg-base px-2 py-1 text-[12px] text-text-primary focus:border-accent focus:outline-none"
                 />
-                <span className="font-mono text-[10px] text-slate-400">
+                <span className="font-mono text-[10px] text-text-muted">
                   {findMatches.length === 0
                     ? '0/0'
                     : `${(findIndex % findMatches.length) + 1}/${findMatches.length}`}
@@ -1138,7 +1486,7 @@ function Editor({ pipeline }: Props) {
                 <button
                   type="button"
                   onClick={() => setFindOpen(false)}
-                  className="focusable rounded p-0.5 text-slate-400 hover:text-slate-300"
+                  className="focusable rounded p-0.5 text-text-muted hover:text-text-secondary"
                   title="Close"
                   aria-label="Close find/replace"
                 >
@@ -1151,13 +1499,13 @@ function Editor({ pipeline }: Props) {
                   value={replaceQuery}
                   onChange={(e) => setReplaceQuery(e.target.value)}
                   placeholder="Replace with…"
-                  className="flex-1 rounded border border-slate-700 bg-slate-950 px-2 py-1 text-[12px] text-slate-100 focus:border-sky-500 focus:outline-none"
+                  className="flex-1 rounded border border-border-subtle bg-bg-base px-2 py-1 text-[12px] text-text-primary focus:border-accent focus:outline-none"
                 />
                 <button
                   type="button"
                   onClick={replaceCurrent}
                   disabled={findMatches.length === 0 || findQuery === ''}
-                  className="rounded border border-slate-700 px-2 py-1 text-[11px] text-slate-200 hover:border-sky-500 disabled:opacity-40"
+                  className="rounded border border-border-subtle px-2 py-1 text-[11px] text-text-primary hover:border-accent disabled:opacity-40"
                 >
                   Replace
                 </button>
@@ -1165,7 +1513,7 @@ function Editor({ pipeline }: Props) {
                   type="button"
                   onClick={replaceAll}
                   disabled={findMatches.length === 0 || findQuery === ''}
-                  className="rounded border border-slate-700 px-2 py-1 text-[11px] text-slate-200 hover:border-sky-500 disabled:opacity-40"
+                  className="rounded border border-border-subtle px-2 py-1 text-[11px] text-text-primary hover:border-accent disabled:opacity-40"
                 >
                   All
                 </button>
@@ -1174,7 +1522,7 @@ function Editor({ pipeline }: Props) {
           )}
           <ReactFlow
             nodes={nodes}
-            edges={edges}
+            edges={decoratedEdges}
             nodeTypes={nodeTypes}
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
@@ -1220,11 +1568,11 @@ function Editor({ pipeline }: Props) {
             <Controls position="bottom-right" showInteractive={false} />
             {edgeTooltip && (
               <div
-                className="pointer-events-none fixed z-50 rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-[11px] text-slate-200 shadow-lg"
+                className="pointer-events-none fixed z-50 rounded-md border border-border-subtle bg-bg-panel px-2 py-1 text-[11px] text-text-primary shadow-lg"
                 style={{ left: edgeTooltip.x + 12, top: edgeTooltip.y + 12 }}
               >
                 {edgeTooltip.text}
-                <div className="text-[9px] text-slate-400">click to cycle</div>
+                <div className="text-[9px] text-text-muted">click to cycle</div>
               </div>
             )}
             {showMinimap && (
@@ -1285,6 +1633,111 @@ function Editor({ pipeline }: Props) {
   );
 }
 
+// UI v2 Faz 5.A.3 — Recipes. Pre-built step chains the user can drop in
+// as a starting point. Each entry produces N nodes + N-1 edges via the
+// existing dropPayload path so the editor handles them like any other
+// drag-drop. Keep the list short — these are quick-starts, not a
+// full template gallery.
+interface Recipe {
+  id: string;
+  name: string;
+  description: string;
+  steps: ReadonlyArray<StepType>;
+}
+const RECIPES: ReadonlyArray<Recipe> = [
+  {
+    id: 'git-build-notify',
+    name: 'Git → Shell → Notify',
+    description: 'Checkout, run a shell command, ping Slack on outcome.',
+    steps: ['checkout', 'shell', 'slackNotify'],
+  },
+  {
+    id: 'ios-test-flight',
+    name: 'iOS → TestFlight',
+    description: 'Checkout → xcodebuild archive → TestFlight upload.',
+    steps: ['checkout', 'xcodebuild', 'testflightUpload'],
+  },
+  {
+    id: 'ios-quality-gate',
+    name: 'iOS quality gate',
+    description: 'SwiftLint + xcodebuild analyze + coverage gate.',
+    steps: ['checkout', 'swiftlint', 'xcodebuildAnalyze', 'slatherCoverage', 'xcovGate'],
+  },
+  {
+    id: 'http-webhook-fan-out',
+    name: 'Webhook fan-out',
+    description: 'POST one HTTP call, then notify two channels.',
+    steps: ['httpRequest', 'slackNotify', 'discordNotify'],
+  },
+];
+
+// UI v2 Faz 5.A — palette "Recently used" tracking. Stored as a string[]
+// of step types, MRU at index 0, capped at 6 entries.
+const RECENTLY_USED_KEY = 'buildpilot.pipeline.palette.recentlyUsed';
+const RECENTLY_USED_LIMIT = 6;
+function readRecentlyUsed(): StepType[] {
+  try {
+    const raw = localStorage.getItem(RECENTLY_USED_KEY);
+    if (!raw) return [];
+    const arr = JSON.parse(raw);
+    if (!Array.isArray(arr)) return [];
+    return arr
+      .filter((v): v is string => typeof v === 'string')
+      .filter((v): v is StepType => v in STEP_DEFINITIONS)
+      .slice(0, RECENTLY_USED_LIMIT);
+  } catch {
+    return [];
+  }
+}
+export function trackPaletteUse(type: StepType): void {
+  try {
+    const current = readRecentlyUsed().filter((t) => t !== type);
+    const next = [type, ...current].slice(0, RECENTLY_USED_LIMIT);
+    localStorage.setItem(RECENTLY_USED_KEY, JSON.stringify(next));
+    window.dispatchEvent(new CustomEvent('buildpilot:palette-recently-used'));
+  } catch {
+    /* ignore */
+  }
+}
+
+// UI v2 Faz 5.B.3 — Triggers panel tab button. Configured dot signals
+// the underlying field has a value so users see at-a-glance which knobs
+// have been touched.
+function TriggerTabBtn({
+  active,
+  configured,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  configured: boolean;
+  onClick(): void;
+  children: React.ReactNode;
+}): JSX.Element {
+  return (
+    <button
+      type="button"
+      role="tab"
+      aria-selected={active}
+      onClick={onClick}
+      className={cn(
+        'relative px-3 h-8 text-[12px] font-medium transition-colors inline-flex items-center gap-1.5',
+        active
+          ? 'text-text-primary'
+          : 'text-text-muted hover:text-text-secondary',
+      )}
+    >
+      {children}
+      {configured && !active && (
+        <span className="inline-block w-1 h-1 rounded-full bg-accent" aria-hidden />
+      )}
+      {active && (
+        <span className="absolute inset-x-2 bottom-0 h-[2px] bg-accent rounded-t-sm" aria-hidden />
+      )}
+    </button>
+  );
+}
+
 function Palette({
   templates,
   onDeleteTemplate,
@@ -1296,6 +1749,35 @@ function Palette({
   // Track which groups are collapsed. Empty Set = all open. Persists for the
   // editor's lifetime; resets on page reload.
   const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set());
+  // Recently used types — refreshed on a custom event fired by
+  // PaletteItem.onDragStart so multi-palette views stay in sync.
+  const [recentlyUsed, setRecentlyUsed] = useState<StepType[]>(() => readRecentlyUsed());
+  // UI v2 Faz 8.6 — Catalog → Pipeline handoff. When the user clicks
+  // "Insert into pipeline" on the catalog detail panel, the step type
+  // lands in sessionStorage; on mount we read it and pre-fill the search
+  // so the step is immediately findable.
+  const [pendingInsert, setPendingInsert] = useState<StepType | null>(null);
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem('buildpilot.catalog.pendingInsert');
+      if (!raw) return;
+      sessionStorage.removeItem('buildpilot.catalog.pendingInsert');
+      if (raw in STEP_DEFINITIONS) {
+        setPendingInsert(raw as StepType);
+        setQuery(STEP_DEFINITIONS[raw as StepType].label);
+        // Clear the highlight after 4s so it stops competing for attention.
+        const timeout = setTimeout(() => setPendingInsert(null), 4000);
+        return () => clearTimeout(timeout);
+      }
+    } catch {
+      /* ignore */
+    }
+  }, []);
+  useEffect(() => {
+    const onChange = () => setRecentlyUsed(readRecentlyUsed());
+    window.addEventListener('buildpilot:palette-recently-used', onChange);
+    return () => window.removeEventListener('buildpilot:palette-recently-used', onChange);
+  }, []);
 
   const q = query.trim().toLowerCase();
   const matches = (label: string, description: string) =>
@@ -1319,15 +1801,44 @@ function Palette({
         });
 
   return (
-    <div className="scrollbar-thin flex w-52 shrink-0 flex-col gap-2 overflow-y-auto border-r border-slate-800 bg-slate-950 p-3">
+    <div className="scrollbar-thin flex w-56 shrink-0 flex-col gap-2 overflow-y-auto border-r border-border-subtle bg-bg-panel p-2.5">
       <input
         type="text"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         placeholder="Search nodes…"
-        className="w-full rounded-md border border-slate-800 bg-slate-900 px-2 py-1 text-[12px] text-slate-200 placeholder:text-slate-400 focus:border-sky-500 focus:outline-none"
+        className="w-full rounded-btn border border-border-subtle bg-bg-base px-2 py-1.5 text-[12px] text-text-primary placeholder:text-text-faint focus:border-accent focus:ring-2 focus:ring-accent-soft focus:outline-none transition-colors"
       />
-      <div className="text-[11px] uppercase tracking-wider text-slate-400">Drag to canvas</div>
+
+      {/* UI v2 Faz 5.A.3 — Recipes: drop a preset chain in one drag. Each
+          recipe shows its step types as a 3-dot icon row so users can see
+          the shape before they drop. Hidden during search since recipes
+          aren't searchable. */}
+      {q === '' && (
+        <div className="flex flex-col gap-1 pt-1">
+          <div className="px-1 text-[9px] font-semibold uppercase tracking-wider text-text-muted">
+            Recipes
+          </div>
+          {RECIPES.map((recipe) => (
+            <RecipeItem key={recipe.id} recipe={recipe} />
+          ))}
+        </div>
+      )}
+
+      {/* Recently used — last 6 dragged types, persisted to localStorage.
+          Hidden while searching since the search hit-list is more useful. */}
+      {q === '' && recentlyUsed.length > 0 && (
+        <div className="flex flex-col gap-1 pt-1">
+          <div className="px-1 text-[9px] font-semibold uppercase tracking-wider text-text-muted">
+            Recently used
+          </div>
+          {recentlyUsed.map((type) => {
+            const def = STEP_DEFINITIONS[type];
+            if (!def) return null;
+            return <PaletteItem key={`recent-${type}`} type={type} def={def} />;
+          })}
+        </div>
+      )}
 
       {STEP_CATEGORIES.map((group) => {
         const items = group.types
@@ -1337,27 +1848,32 @@ function Palette({
         // While searching, force-expand groups so matches are always visible.
         const isOpen = q !== '' || !collapsed.has(group.key);
         return (
-          <div key={group.key} className="flex flex-col gap-1">
+          <div key={group.key} className="flex flex-col gap-1 pt-1">
             <button
               type="button"
               onClick={() => toggleGroup(group.key)}
-              className="flex items-center gap-1 rounded px-1 py-0.5 text-left text-[10px] font-semibold uppercase tracking-wider text-slate-400 hover:text-slate-200"
+              className="flex items-center gap-1 rounded px-1 py-0.5 text-left text-[9px] font-semibold uppercase tracking-wider text-text-muted hover:text-text-primary"
             >
               {isOpen ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
               <span className="flex-1 truncate">{group.label}</span>
-              <span className="text-slate-400">{items.length}</span>
+              <span className="font-mono text-text-faint">{items.length}</span>
             </button>
             {isOpen &&
               items.map(({ type, def }) => (
-                <PaletteItem key={type} type={type} def={def} />
+                <PaletteItem
+                  key={type}
+                  type={type}
+                  def={def}
+                  highlight={pendingInsert === type}
+                />
               ))}
           </div>
         );
       })}
 
       {filteredTemplates.length > 0 && (
-        <div className="flex flex-col gap-1">
-          <div className="mt-2 px-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+        <div className="flex flex-col gap-1 pt-2 mt-1 border-t border-border-subtle">
+          <div className="px-1 text-[9px] font-semibold uppercase tracking-wider text-text-muted">
             Custom templates
           </div>
           {filteredTemplates.map((t) => {
@@ -1370,12 +1886,12 @@ function Palette({
                   e.dataTransfer.setData('application/buildpilot-template', t.id);
                   e.dataTransfer.effectAllowed = 'move';
                 }}
-                className="group relative touch-target cursor-grab rounded-md border bg-slate-900 px-2.5 py-1.5 text-[12px] text-slate-200 hover:border-slate-500"
-                style={{ borderColor: def.color, borderStyle: 'dashed' }}
+                className="group relative touch-target cursor-grab rounded-btn border border-dashed bg-bg-elevated px-2.5 py-1.5 text-[12px] text-text-primary hover:border-border transition-colors"
+                style={{ borderColor: def.color }}
                 title={t.description ?? `${def.label} preset`}
               >
                 <div className="truncate">{t.name}</div>
-                <div className="text-[9px] uppercase tracking-wider text-slate-400">
+                <div className="text-[9px] uppercase tracking-wider text-text-muted">
                   {def.label}
                 </div>
                 <button
@@ -1384,7 +1900,7 @@ function Palette({
                     e.stopPropagation();
                     onDeleteTemplate(t);
                   }}
-                  className="focusable touch-target absolute right-1 top-1 rounded p-0.5 text-slate-400 opacity-0 hover:text-rose-400 group-hover:opacity-100 [@media(pointer:coarse)]:opacity-100"
+                  className="touch-target absolute right-1 top-1 rounded p-0.5 text-text-muted opacity-0 hover:text-rose-300 group-hover:opacity-100 [@media(pointer:coarse)]:opacity-100"
                   title="Delete this template"
                   aria-label={`Delete template ${t.name}`}
                 >
@@ -1399,12 +1915,55 @@ function Palette({
   );
 }
 
+// UI v2 Faz 5.A.3 — recipe palette tile. Carries a dragstart payload on a
+// dedicated mime type so the canvas's onDrop handler can branch on it.
+function RecipeItem({ recipe }: { recipe: Recipe }): JSX.Element {
+  return (
+    <div
+      draggable
+      onDragStart={(e) => {
+        e.dataTransfer.setData('application/buildpilot-recipe', recipe.id);
+        e.dataTransfer.effectAllowed = 'move';
+      }}
+      className="group cursor-grab rounded-btn border border-border-subtle bg-bg-elevated px-2.5 py-1.5 hover:border-border transition-colors"
+      title={recipe.description}
+    >
+      <div className="text-[12px] font-medium text-text-primary truncate">
+        {recipe.name}
+      </div>
+      <div className="mt-1 flex items-center gap-0.5">
+        {recipe.steps.map((stepType, i) => {
+          const def = STEP_DEFINITIONS[stepType];
+          if (!def) return null;
+          return (
+            <span key={`${stepType}-${i}`} className="inline-flex items-center">
+              <span
+                className="block w-1.5 h-1.5 rounded-sm shrink-0"
+                style={{ backgroundColor: def.color }}
+                aria-hidden
+              />
+              {i < recipe.steps.length - 1 && (
+                <span className="block w-1.5 h-px bg-border-subtle" aria-hidden />
+              )}
+            </span>
+          );
+        })}
+        <span className="ml-1.5 text-[10px] text-text-faint">
+          {recipe.steps.length} step{recipe.steps.length === 1 ? '' : 's'}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 function PaletteItem({
   type,
   def,
+  highlight = false,
 }: {
   type: StepType;
   def: (typeof STEP_DEFINITIONS)[StepType];
+  highlight?: boolean;
 }) {
   const [hover, setHover] = useState(false);
   const required = def.fields.filter((f) => f.required);
@@ -1421,25 +1980,35 @@ function PaletteItem({
           e.dataTransfer.setData('application/buildpilot-step', type);
           e.dataTransfer.effectAllowed = 'move';
           setHover(false);
+          // UI v2 Faz 5.A — feed the "Recently used" rail when the user
+          // actually grabs a tile (not on hover) so the list reflects real
+          // intent.
+          trackPaletteUse(type);
         }}
         // touch-target so palette tiles stay comfortably tappable on touch
         // devices — drag-from-palette still works because we listen for
         // dragstart, not pointerdown.
-        className="touch-target cursor-grab rounded-md border bg-slate-900 px-2.5 py-1.5 text-[12px] text-slate-200 hover:border-slate-500"
+        className={cn(
+          'touch-target cursor-grab rounded-btn border bg-bg-elevated px-2.5 py-1.5 text-[12px] text-text-primary hover:border-border transition-colors',
+          // UI v2 Faz 8.6 — soft accent halo when this tile is the
+          // pending insert from the catalog. Drops automatically after
+          // a few seconds so it stops competing for attention.
+          highlight && 'ring-2 ring-accent/60 ring-offset-2 ring-offset-bg-panel',
+        )}
         style={{ borderColor: def.color }}
       >
         {def.label}
       </div>
       {hover && (
-        <div className="pointer-events-none absolute left-full top-0 z-50 ml-2 w-72 rounded-md border border-slate-700 bg-slate-900 p-3 text-[11px] text-slate-200 shadow-xl">
+        <div className="pointer-events-none absolute left-full top-0 z-50 ml-2 w-72 rounded-card border border-border bg-bg-panel p-3 text-[11px] text-text-primary shadow-xl">
           <div className="flex items-center gap-2">
             <span
               className="inline-block h-2 w-2 rounded-full"
               style={{ backgroundColor: def.color }}
             />
-            <span className="font-semibold text-slate-100">{def.label}</span>
+            <span className="font-semibold text-text-primary">{def.label}</span>
           </div>
-          <p className="mt-1 text-[10.5px] text-slate-400">{def.description}</p>
+          <p className="mt-1 text-[10.5px] text-text-muted">{def.description}</p>
           {required.length > 0 && (
             <div className="mt-2">
               <div className="text-[9px] font-semibold uppercase tracking-wider text-rose-400">
@@ -1452,24 +2021,24 @@ function PaletteItem({
                   </li>
                 ))}
                 {required.length > 8 && (
-                  <li className="text-slate-400">+{required.length - 8} more…</li>
+                  <li className="text-text-muted">+{required.length - 8} more…</li>
                 )}
               </ul>
             </div>
           )}
           {optional.length > 0 && (
             <div className="mt-2">
-              <div className="text-[9px] font-semibold uppercase tracking-wider text-slate-400">
+              <div className="text-[9px] font-semibold uppercase tracking-wider text-text-muted">
                 Optional ({optional.length})
               </div>
-              <ul className="mt-0.5 space-y-0.5 text-slate-400">
+              <ul className="mt-0.5 space-y-0.5 text-text-muted">
                 {optional.slice(0, 6).map((f) => (
                   <li key={f.name} className="truncate">
                     · {f.label}
                   </li>
                 ))}
                 {optional.length > 6 && (
-                  <li className="text-slate-400">+{optional.length - 6} more…</li>
+                  <li className="text-text-muted">+{optional.length - 6} more…</li>
                 )}
               </ul>
             </div>

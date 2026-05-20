@@ -26,16 +26,16 @@ export function UndoToast() {
       {errors.map((e) => (
         <div
           key={e.id}
-          className="pointer-events-auto flex w-[420px] items-start gap-3 rounded-lg border border-rose-700/60 bg-slate-900 px-4 py-3 shadow-xl ring-1 ring-rose-500/10"
+          className="pointer-events-auto flex w-[420px] items-start gap-3 rounded-lg border border-rose-700/60 bg-bg-panel px-4 py-3 shadow-xl ring-1 ring-rose-500/10"
         >
           <div className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-rose-500/15 text-rose-300">
             <AlertTriangle size={13} />
           </div>
-          <div className="min-w-0 flex-1 text-sm text-slate-100">{e.message}</div>
+          <div className="min-w-0 flex-1 text-sm text-text-primary">{e.message}</div>
           <button
             type="button"
             onClick={() => dismissError(e.id)}
-            className="focusable rounded text-slate-400 hover:text-slate-300"
+            className="focusable rounded text-text-muted hover:text-text-secondary"
             aria-label="Dismiss error toast"
           >
             <X size={13} />
@@ -50,31 +50,31 @@ export function UndoToast() {
         return (
           <div
             key={d.id}
-            className="pointer-events-auto w-[420px] overflow-hidden rounded-lg border border-rose-700/60 bg-slate-900 shadow-xl ring-1 ring-rose-500/10"
+            className="pointer-events-auto w-[420px] overflow-hidden rounded-lg border border-rose-700/60 bg-bg-panel shadow-xl ring-1 ring-rose-500/10"
           >
             <div className="flex items-center gap-3 px-4 py-3">
               <div className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-rose-500/15 text-rose-300">
                 <Trash2 size={14} />
               </div>
               <div className="min-w-0 flex-1">
-                <div className="text-sm font-medium text-slate-100">
+                <div className="text-sm font-medium text-text-primary">
                   {d.kind === 'project' ? 'Project' : 'Pipeline'} deleted
                 </div>
-                <div className="truncate text-xs text-slate-400">
-                  <span className="text-slate-200">{d.label}</span>
-                  <span className="mx-1 text-slate-400">·</span>
+                <div className="truncate text-xs text-text-muted">
+                  <span className="text-text-primary">{d.label}</span>
+                  <span className="mx-1 text-text-muted">·</span>
                   <span>removing in {seconds}s</span>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => undoDeletion(d.id)}
-                className="focusable inline-flex items-center gap-1.5 rounded-md border border-slate-700 px-2.5 py-1 text-xs font-medium text-slate-100 hover:border-emerald-500 hover:text-emerald-300"
+                className="focusable inline-flex items-center gap-1.5 rounded-md border border-border-subtle px-2.5 py-1 text-xs font-medium text-text-primary hover:border-emerald-500 hover:text-emerald-300"
               >
                 <Undo2 size={12} /> Undo
               </button>
             </div>
-            <div className="h-0.5 bg-slate-800">
+            <div className="h-0.5 bg-bg-elevated">
               <div
                 className="h-full bg-rose-500/70 motion-safe:transition-[width] motion-safe:duration-100 motion-safe:ease-linear"
                 style={{ width: `${pct}%` }}

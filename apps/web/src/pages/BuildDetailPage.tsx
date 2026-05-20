@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Check, ChevronLeft, Download, FileBarChart, Filter, GitCompareArrows, Grid3X3, Link2, RotateCcw, Square } from 'lucide-react';
 import type {
+  AnnotationsReport,
   Build,
   BuildApproval,
   BuildArtifact,
   BuildLogEntry,
   BuildLogLevel,
   StepType,
+  TestReportTree,
 } from '@buildpilot/shared-types';
 import { useStore } from '../store/store';
 import { api } from '../lib/api';
@@ -75,6 +77,38 @@ interface Props {
   buildId: string;
 }
 
+// UI v2 Faz 6.A — the 7-tab navigation outlined in MIGRATION_TODO.
+// `overview` and `logs` carry real content today; the remaining four
+// render placeholders until the respective 6.B sub-PRs land.
+type BuildDetailTab =
+  | 'overview'
+  | 'logs'
+  | 'pipeline'
+  | 'artifacts'
+  | 'environment'
+  | 'tests'
+  | 'annotations';
+
+const TAB_ORDER: ReadonlyArray<BuildDetailTab> = [
+  'overview',
+  'logs',
+  'pipeline',
+  'artifacts',
+  'environment',
+  'tests',
+  'annotations',
+];
+
+const TAB_META: Record<BuildDetailTab, { label: string; disabled?: boolean; placeholder?: string }> = {
+  overview: { label: 'Overview' },
+  logs: { label: 'Logs' },
+  pipeline: { label: 'Pipeline' },
+  artifacts: { label: 'Artifacts' },
+  environment: { label: 'Environment' },
+  tests: { label: 'Tests' },
+  annotations: { label: 'Annotations' },
+};
+
 const ALL_LEVELS: BuildLogLevel[] = [
   'system',
   'info',
@@ -97,6 +131,12 @@ export function BuildDetailPage({ buildId }: Props) {
   const [loading, setLoading] = useState(true);
   const [artifacts, setArtifacts] = useState<BuildArtifact[]>([]);
   const [approvals, setApprovals] = useState<BuildApproval[]>([]);
+  // UI v2 Faz 6.A — tab shell for the build detail page. Default lands on
+  // Overview (the legacy single-page experience). Logs lifts the bottom
+  // section out of the scroll so users can jump straight to the table.
+  // Pipeline / Artifacts / Environment / Tests / Annotations stay as
+  // placeholders here; their content is wired up in 6.B sub-PRs.
+  const [activeTab, setActiveTab] = useState<BuildDetailTab>('overview');
   // Selected artifact for the inline log viewer modal. null = closed.
   const [previewArtifact, setPreviewArtifact] = useState<BuildArtifact | null>(null);
   // Cluster 11.C — matrix children. Populated only when this build is the
@@ -318,15 +358,15 @@ export function BuildDetailPage({ buildId }: Props) {
   };
 
   if (loading && !build) {
-    return <div className="p-8 text-sm text-slate-400">Loading build…</div>;
+    return <div className="p-8 text-sm text-text-muted">Loading build…</div>;
   }
   if (!build) {
     return (
-      <div className="p-8 text-sm text-slate-400">
+      <div className="p-8 text-sm text-text-muted">
         Build not found.{' '}
         <button
           type="button"
-          className="text-sky-400 hover:underline"
+          className="text-accent hover:underline"
           onClick={() => setView({ type: 'builds' })}
         >
           Back to builds
@@ -349,12 +389,12 @@ export function BuildDetailPage({ buildId }: Props) {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <header className="border-b border-slate-800 bg-slate-900/40 px-3 py-3 sm:px-6">
+      <header className="border-b border-border-subtle bg-bg-panel px-3 py-3 sm:px-6">
         {isMatrixChild && build.parentBuildId ? (
           <button
             type="button"
             onClick={() => setView({ type: 'build', id: build.parentBuildId! })}
-            className="focusable inline-flex items-center gap-1 rounded text-[11px] uppercase tracking-wider text-sky-400 hover:text-sky-300"
+            className="inline-flex items-center gap-1 rounded text-[11px] uppercase tracking-wider text-accent hover:text-accent-hover transition-colors"
             aria-label="Back to parent matrix build"
           >
             <ChevronLeft size={12} /> Matrix
@@ -363,14 +403,14 @@ export function BuildDetailPage({ buildId }: Props) {
           <button
             type="button"
             onClick={() => setView({ type: 'builds' })}
-            className="focusable inline-flex items-center gap-1 rounded text-[11px] uppercase tracking-wider text-slate-400 hover:text-slate-300"
+            className="inline-flex items-center gap-1 rounded text-[11px] uppercase tracking-wider text-text-muted hover:text-text-primary transition-colors"
             aria-label="Back to builds list"
           >
             <ChevronLeft size={12} /> Builds
           </button>
         )}
         <div className="mt-1 flex flex-wrap items-baseline gap-x-4 gap-y-1">
-          <h1 className="text-lg font-semibold text-slate-100">
+          <h1 className="text-lg font-semibold text-text-primary tracking-tight">
             {pipe?.name ?? 'Unknown pipeline'}
           </h1>
           {(() => {
@@ -382,8 +422,8 @@ export function BuildDetailPage({ buildId }: Props) {
                   build.status === 'running' && 'bg-amber-950/50 text-amber-300',
                   build.status === 'success' && 'bg-emerald-950/50 text-emerald-300',
                   build.status === 'failed' && 'bg-rose-950/50 text-rose-300',
-                  build.status === 'pending' && 'bg-slate-800 text-slate-400',
-                  build.status === 'cancelled' && 'bg-slate-800 text-slate-400',
+                  build.status === 'pending' && 'bg-bg-elevated text-text-muted',
+                  build.status === 'cancelled' && 'bg-bg-elevated text-text-muted',
                 )}
                 role="status"
                 aria-label={statusLabel(build.status)}
@@ -397,8 +437,8 @@ export function BuildDetailPage({ buildId }: Props) {
               </span>
             );
           })()}
-          <span className="text-xs text-slate-400">
-            in <span className="text-slate-300">{proj?.name ?? '—'}</span>
+          <span className="text-xs text-text-muted">
+            in <span className="text-text-secondary">{proj?.name ?? '—'}</span>
           </span>
           {isMatrixParent && (
             <span
@@ -418,7 +458,7 @@ export function BuildDetailPage({ buildId }: Props) {
             </span>
           )}
         </div>
-        <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[11px] text-slate-400">
+        <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[11px] text-text-muted">
           <span className="font-mono">{build.id}</span>
           <span>·</span>
           <span>
@@ -428,7 +468,7 @@ export function BuildDetailPage({ buildId }: Props) {
           <span>·</span>
           <span>
             commit{' '}
-            <span className="font-mono text-sky-400">
+            <span className="font-mono text-accent">
               {build.triggerSha ? build.triggerSha.slice(0, 7) : '—'}
             </span>
           </span>
@@ -485,7 +525,7 @@ export function BuildDetailPage({ buildId }: Props) {
                 }
                 setDiffOpen(true);
               }}
-              className="focusable inline-flex items-center gap-1 rounded-md border border-slate-700 px-2 py-0.5 text-slate-300 hover:border-sky-500 hover:text-sky-400"
+              className="focusable inline-flex items-center gap-1 rounded-md border border-border-subtle px-2 py-0.5 text-text-secondary hover:border-accent hover:text-accent"
               title="Compare with another build"
             >
               <GitCompareArrows size={11} /> Compare
@@ -503,7 +543,7 @@ export function BuildDetailPage({ buildId }: Props) {
                 setLinkCopied(true);
                 window.setTimeout(() => setLinkCopied(false), 1500);
               }}
-              className="focusable inline-flex items-center gap-1 rounded-md border border-slate-700 px-2 py-0.5 text-slate-300 hover:border-sky-500 hover:text-sky-400"
+              className="focusable inline-flex items-center gap-1 rounded-md border border-border-subtle px-2 py-0.5 text-text-secondary hover:border-accent hover:text-accent"
               title="Copy a shareable link to this build"
             >
               {linkCopied ? <Check size={11} className="text-emerald-400" /> : <Link2 size={11} />}{' '}
@@ -512,7 +552,7 @@ export function BuildDetailPage({ buildId }: Props) {
             <button
               type="button"
               onClick={downloadLog}
-              className="focusable inline-flex items-center gap-1 rounded-md border border-slate-700 px-2 py-0.5 text-slate-300 hover:border-sky-500 hover:text-sky-400"
+              className="focusable inline-flex items-center gap-1 rounded-md border border-border-subtle px-2 py-0.5 text-text-secondary hover:border-accent hover:text-accent"
               title="Download log as .txt"
             >
               <Download size={11} /> Download
@@ -521,6 +561,55 @@ export function BuildDetailPage({ buildId }: Props) {
         </div>
       </header>
 
+      {/* UI v2 Faz 6.A — tab nav. Underline-style row matching v2 Tabs
+          primitive but rendered inline so it can reach into the page's
+          activeTab state without lifting it. */}
+      <nav
+        className="flex items-center gap-1 border-b border-border-subtle bg-bg-panel px-2 sm:px-4"
+        role="tablist"
+        aria-label="Build sections"
+      >
+        {TAB_ORDER.map((tab) => {
+          const active = activeTab === tab;
+          const meta = TAB_META[tab];
+          const disabled = meta.disabled;
+          return (
+            <button
+              key={tab}
+              type="button"
+              role="tab"
+              aria-selected={active}
+              aria-disabled={disabled}
+              onClick={() => !disabled && setActiveTab(tab)}
+              className={cn(
+                'relative flex items-center gap-1.5 px-3 h-9 text-[12.5px] font-medium transition-colors',
+                active
+                  ? 'text-text-primary'
+                  : disabled
+                    ? 'text-text-faint cursor-not-allowed'
+                    : 'text-text-muted hover:text-text-secondary',
+              )}
+              title={disabled ? `${meta.label} — coming soon` : meta.label}
+            >
+              {meta.label}
+              {disabled && (
+                <span className="rounded bg-bg-elevated border border-border-subtle px-1 text-[9px] uppercase tracking-wider text-text-faint">
+                  soon
+                </span>
+              )}
+              {active && (
+                <span
+                  className="absolute inset-x-2 bottom-0 h-[2px] bg-accent rounded-t-sm"
+                  aria-hidden
+                />
+              )}
+            </button>
+          );
+        })}
+      </nav>
+
+      {activeTab === 'overview' && (
+        <>
       <PrSummaryCard buildId={build.id} />
 
       {(() => {
@@ -586,12 +675,12 @@ export function BuildDetailPage({ buildId }: Props) {
       )}
 
       {artifacts.length > 0 && (
-        <div className="border-b border-slate-800 bg-slate-900/30 px-3 py-3 sm:px-6">
+        <div className="border-b border-border-subtle bg-bg-panel/30 px-3 py-3 sm:px-6">
           <div className="mb-2 flex items-baseline justify-between">
-            <span className="text-[10px] uppercase tracking-wider text-slate-400">
+            <span className="text-[10px] uppercase tracking-wider text-text-muted">
               Artifacts ({artifacts.length})
             </span>
-            <span className="text-[10px] text-slate-400">
+            <span className="text-[10px] text-text-muted">
               {formatBytes(artifacts.reduce((acc, a) => acc + a.size, 0))} total
             </span>
           </div>
@@ -608,23 +697,23 @@ export function BuildDetailPage({ buildId }: Props) {
               return (
                 <li
                   key={a.id}
-                  className="group flex items-center justify-between gap-2 rounded-md border border-slate-800 bg-slate-950 px-2 py-1 text-[11px] hover:border-slate-700"
+                  className="group flex items-center justify-between gap-2 rounded-md border border-border-subtle bg-bg-base px-2 py-1 text-[11px] hover:border-border-subtle"
                 >
                   <button
                     type="button"
                     onClick={onPathClick}
-                    className="min-w-0 flex-1 truncate text-left font-mono text-slate-200 hover:text-sky-300"
+                    className="min-w-0 flex-1 truncate text-left font-mono text-text-primary hover:text-accent-hover"
                     title={binary ? `Reveal ${a.path} in file manager` : `Preview ${a.path}`}
                   >
                     {a.path}
                   </button>
                   <span className="flex shrink-0 items-center gap-2">
-                    <span className="text-slate-400">{formatBytes(a.size)}</span>
+                    <span className="text-text-muted">{formatBytes(a.size)}</span>
                     {!binary && (
                       <button
                         type="button"
                         onClick={() => setPreviewArtifact(a)}
-                        className="text-sky-400 hover:text-sky-300"
+                        className="text-accent hover:text-accent-hover"
                       >
                         preview
                       </button>
@@ -632,14 +721,14 @@ export function BuildDetailPage({ buildId }: Props) {
                     <button
                       type="button"
                       onClick={() => api.revealArtifact(a.id).catch(() => undefined)}
-                      className="text-sky-400 hover:text-sky-300"
+                      className="text-accent hover:text-accent-hover"
                       title="Open the containing folder in the OS file manager"
                     >
                       open location
                     </button>
                     <a
                       href={api.artifactDownloadUrl(a.id)}
-                      className="text-sky-400 hover:text-sky-300"
+                      className="text-accent hover:text-accent-hover"
                       download
                     >
                       download
@@ -670,10 +759,14 @@ export function BuildDetailPage({ buildId }: Props) {
           `${nodeLabelMap.get(id) ?? type ?? '?'} · ${id.slice(0, 8)}`
         }
       />
+        </>
+      )}
 
-      <div className="flex flex-wrap items-center gap-3 border-b border-t border-slate-800 bg-slate-900/30 px-3 py-2 text-xs sm:px-6">
-        <Filter size={12} className="text-slate-400" />
-        <span className="text-slate-400">Levels</span>
+      {activeTab === 'logs' && (
+        <>
+      <div className="flex flex-wrap items-center gap-3 border-b border-t border-border-subtle bg-bg-panel/30 px-3 py-2 text-xs sm:px-6">
+        <Filter size={12} className="text-text-muted" />
+        <span className="text-text-muted">Levels</span>
         <div className="flex flex-wrap gap-1">
           {ALL_LEVELS.map((lvl) => {
             const on = activeLevels.has(lvl);
@@ -685,8 +778,8 @@ export function BuildDetailPage({ buildId }: Props) {
                 className={cn(
                   'rounded-md border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider transition-colors',
                   on
-                    ? 'border-slate-600 bg-slate-800 text-slate-100'
-                    : 'border-slate-800 bg-slate-950 text-slate-400 hover:text-slate-400',
+                    ? 'border-border bg-bg-elevated text-text-primary'
+                    : 'border-border-subtle bg-bg-base text-text-muted hover:text-text-muted',
                 )}
               >
                 {lvl}
@@ -694,11 +787,11 @@ export function BuildDetailPage({ buildId }: Props) {
             );
           })}
         </div>
-        <span className="ml-2 text-slate-400">Node</span>
+        <span className="ml-2 text-text-muted">Node</span>
         <select
           value={activeNodeId}
           onChange={(e) => setActiveNodeId(e.target.value as typeof activeNodeId)}
-          className="focusable rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-slate-100 focus:border-sky-500 focus:outline-none"
+          className="focusable rounded-md border border-border-subtle bg-bg-panel px-2 py-1 text-text-primary focus:border-accent focus:outline-none"
         >
           <option value="all">(all)</option>
           <option value="__pipeline__">pipeline-level</option>
@@ -708,7 +801,7 @@ export function BuildDetailPage({ buildId }: Props) {
             </option>
           ))}
         </select>
-        <span className="text-slate-400">
+        <span className="text-text-muted">
           {filtered.length} / {entries.length} rows
           {entries.length >= 5000 && ' (capped at 5000 in memory)'}
         </span>
@@ -761,8 +854,8 @@ export function BuildDetailPage({ buildId }: Props) {
       />
 
       {tsBounds && (
-        <div className="flex items-center gap-3 border-b border-slate-800 bg-slate-900/20 px-3 py-2 sm:px-6">
-          <span className="shrink-0 text-[10px] uppercase tracking-wider text-slate-400">
+        <div className="flex items-center gap-3 border-b border-border-subtle bg-bg-panel/20 px-3 py-2 sm:px-6">
+          <span className="shrink-0 text-[10px] uppercase tracking-wider text-text-muted">
             Time range
           </span>
           <div className="flex-1">
@@ -790,6 +883,26 @@ export function BuildDetailPage({ buildId }: Props) {
           emptyMessage={entries.length === 0 ? 'Build queued / no output yet.' : 'No rows match these filters.'}
         />
       </div>
+        </>
+      )}
+
+      {activeTab === 'artifacts' && (
+        <BuildArtifactsTab
+          artifacts={artifacts}
+          onPreview={setPreviewArtifact}
+          isBinary={isBinaryArtifact}
+        />
+      )}
+
+      {activeTab === 'tests' && <BuildTestsTab buildId={build.id} />}
+
+      {activeTab === 'annotations' && <BuildAnnotationsTab buildId={build.id} />}
+
+      {activeTab === 'environment' && <BuildEnvironmentTab build={build} entries={entries} />}
+
+      {activeTab === 'pipeline' && <BuildPipelineTab build={build} />}
+
+      {/* All 7 tabs now render real content — no placeholder branch. */}
 
       {/* Inline artifact log viewer — opens when user clicks an artifact row. */}
       <ArtifactPreviewModal
@@ -807,6 +920,520 @@ export function BuildDetailPage({ buildId }: Props) {
           onClose={() => setDiffOpen(false)}
         />
       )}
+    </div>
+  );
+}
+
+// UI v2 Faz 6.B — Artifacts tab. Same data source as the Overview's
+// inline artifact list, rendered as a v2 token-aligned grid with the
+// design's per-artifact action chips.
+function BuildArtifactsTab({
+  artifacts,
+  onPreview,
+  isBinary,
+}: {
+  artifacts: BuildArtifact[];
+  onPreview(a: BuildArtifact): void;
+  isBinary(path: string): boolean;
+}): JSX.Element {
+  if (artifacts.length === 0) {
+    return (
+      <div className="flex-1 flex items-center justify-center text-[12.5px] text-text-muted p-12 text-center">
+        This build produced no artifacts. Add an{' '}
+        <code className="ml-1 mr-1 font-mono text-text-secondary">artifact</code> step to a
+        pipeline to capture build outputs.
+      </div>
+    );
+  }
+  const totalSize = artifacts.reduce((acc, a) => acc + a.size, 0);
+  return (
+    <div className="flex-1 overflow-y-auto px-3 py-4 sm:px-6">
+      <div className="mb-3 flex items-baseline justify-between">
+        <div className="text-[10px] uppercase tracking-wider text-text-muted font-semibold">
+          {artifacts.length} artifact{artifacts.length === 1 ? '' : 's'}
+        </div>
+        <div className="text-[11px] font-mono text-text-faint">
+          {formatBytes(totalSize)} total
+        </div>
+      </div>
+      <ul className="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-3">
+        {artifacts.map((a) => {
+          const binary = isBinary(a.path);
+          return (
+            <li
+              key={a.id}
+              className="group rounded-card border border-border-subtle bg-bg-panel p-3 hover:border-border transition-colors"
+            >
+              <button
+                type="button"
+                onClick={() => (binary ? api.revealArtifact(a.id).catch(() => undefined) : onPreview(a))}
+                className="block w-full truncate text-left font-mono text-[12px] text-text-primary hover:text-accent transition-colors"
+                title={binary ? `Reveal ${a.path}` : `Preview ${a.path}`}
+              >
+                {a.path}
+              </button>
+              <div className="mt-2 flex items-center justify-between text-[11px]">
+                <span className="text-text-muted">{formatBytes(a.size)}</span>
+                <div className="flex items-center gap-2">
+                  {!binary && (
+                    <button
+                      type="button"
+                      onClick={() => onPreview(a)}
+                      className="text-accent hover:text-accent-hover transition-colors"
+                    >
+                      preview
+                    </button>
+                  )}
+                  <a
+                    href={api.artifactDownloadUrl(a.id)}
+                    className="text-accent hover:text-accent-hover transition-colors"
+                  >
+                    download
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => navigator.clipboard.writeText(a.path).catch(() => undefined)}
+                    className="text-text-muted hover:text-text-primary transition-colors"
+                    title="Copy path"
+                  >
+                    copy
+                  </button>
+                </div>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
+// UI v2 Faz 6.B — Tests tab. Wires the existing test-report endpoint
+// (xcresult / JUnit parser already shipped) into the build detail tab
+// shell so users don't have to bounce out to /test-report.
+function BuildTestsTab({ buildId }: { buildId: string }): JSX.Element {
+  const [report, setReport] = useState<TestReportTree | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    setLoading(true);
+    setError(null);
+    api
+      .testReport(buildId)
+      .then((r) => {
+        if (!alive) return;
+        setReport(r);
+        setLoading(false);
+      })
+      .catch((e) => {
+        if (!alive) return;
+        setError(e instanceof Error ? e.message : String(e));
+        setLoading(false);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [buildId]);
+
+  if (loading) {
+    return (
+      <div className="flex-1 flex items-center justify-center text-[12.5px] text-text-muted p-12">
+        Loading test report…
+      </div>
+    );
+  }
+  if (error || !report) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center gap-2 p-12 text-center">
+        <div className="text-[13px] text-text-primary">No test report yet</div>
+        <p className="max-w-md text-[12px] text-text-muted">
+          {error
+            ? `Couldn't load the test report: ${error}`
+            : 'Add an xcresultParse or junitParse step downstream of your test runner to capture results.'}
+        </p>
+      </div>
+    );
+  }
+  return (
+    <div className="flex-1 overflow-y-auto px-3 py-4 sm:px-6">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+        <SummaryCard label="Total" value={report.totalTests} tone="neutral" />
+        <SummaryCard label="Passed" value={report.totalPassed} tone="success" />
+        <SummaryCard label="Failed" value={report.totalFailed} tone="failed" />
+        <SummaryCard label="Skipped" value={report.totalSkipped} tone="muted" />
+      </div>
+      {report.note && (
+        <div className="mb-3 rounded-card border border-border-subtle bg-bg-elevated px-3 py-2 text-[12px] text-text-muted">
+          {report.note}
+        </div>
+      )}
+      {report.suites.length === 0 ? (
+        <div className="text-[12.5px] text-text-muted text-center py-8">
+          No test suites in this report.
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {report.suites.map((suite, suiteIdx) => {
+            const failedInSuite = suite.tests.filter((t) => t.status === 'failed');
+            return (
+              <div
+                key={`${suite.name}-${suiteIdx}`}
+                className="rounded-card border border-border-subtle bg-bg-panel overflow-hidden"
+              >
+                <div className="flex items-baseline justify-between px-3 py-2 border-b border-border-subtle bg-bg-elevated">
+                  <span className="font-mono text-[12.5px] text-text-primary truncate">
+                    {suite.name}
+                  </span>
+                  <span className="text-[11px] text-text-muted">
+                    {suite.tests.length} test{suite.tests.length === 1 ? '' : 's'}
+                    {failedInSuite.length > 0 && (
+                      <span className="ml-2 text-status-failed">
+                        {failedInSuite.length} failed
+                      </span>
+                    )}
+                  </span>
+                </div>
+                {failedInSuite.length > 0 && (
+                  <ul className="divide-y divide-border-subtle">
+                    {failedInSuite.map((tc, tcIdx) => (
+                      <li key={`${tc.name}-${tcIdx}`} className="px-3 py-2">
+                        <div className="flex items-baseline gap-2">
+                          <span className="inline-block size-1.5 rounded-full bg-status-failed shrink-0" aria-hidden />
+                          <span className="font-mono text-[12px] text-text-primary truncate">
+                            {tc.name}
+                          </span>
+                          {tc.classname && (
+                            <span className="font-mono text-[10.5px] text-text-faint truncate">
+                              · {tc.classname}
+                            </span>
+                          )}
+                        </div>
+                        {tc.message && (
+                          <pre className="mt-1 ml-3.5 max-h-32 overflow-y-auto rounded bg-bg-base px-2 py-1.5 text-[11px] font-mono text-text-secondary whitespace-pre-wrap">
+                            {tc.message}
+                          </pre>
+                        )}
+                        {tc.file && (
+                          <div className="mt-1 ml-3.5 text-[10.5px] font-mono text-text-faint">
+                            {tc.file}
+                            {tc.line ? `:${tc.line}` : ''}
+                          </div>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SummaryCard({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: number;
+  tone: 'neutral' | 'success' | 'failed' | 'muted';
+}): JSX.Element {
+  const toneClass =
+    tone === 'success'
+      ? 'text-status-success'
+      : tone === 'failed'
+        ? 'text-status-failed'
+        : tone === 'muted'
+          ? 'text-text-muted'
+          : 'text-text-primary';
+  return (
+    <div className="rounded-card border border-border-subtle bg-bg-panel px-3 py-2">
+      <div className={`font-mono text-[20px] leading-tight ${toneClass}`}>{value}</div>
+      <div className="text-[10px] uppercase tracking-wider text-text-muted font-semibold mt-0.5">
+        {label}
+      </div>
+    </div>
+  );
+}
+
+// UI v2 Faz 6.A — Pipeline tab. There's no pipeline-snapshot table yet
+// (the build references the current pipeline by id), so this tab links
+// out to the live editor rather than rendering a stale fork.
+function BuildPipelineTab({ build }: { build: Build }): JSX.Element {
+  const setView = useStore((s) => s.setView);
+  const pipelines = useStore((s) => s.pipelines);
+  const pipeline = pipelines.find((p) => p.id === build.pipelineId);
+  const nodeCount = ((pipeline as unknown as { nodes?: unknown[] })?.nodes?.length) ?? 0;
+  const edgeCount = ((pipeline as unknown as { edges?: unknown[] })?.edges?.length) ?? 0;
+  return (
+    <div className="flex-1 flex flex-col items-center justify-center gap-3 p-12 text-center">
+      <div className="text-[14px] font-semibold text-text-primary">Pipeline structure</div>
+      <p className="max-w-md text-[12px] text-text-muted">
+        {pipeline
+          ? `This build ran against ${pipeline.name} (${nodeCount} step${nodeCount === 1 ? '' : 's'} · ${edgeCount} edge${edgeCount === 1 ? '' : 's'}).`
+          : 'The pipeline this build ran against has been deleted.'}
+      </p>
+      <p className="max-w-md text-[11px] text-text-faint">
+        A read-only snapshot canvas is planned for a follow-up PR (needs a
+        pipeline_snapshots table so deletions/edits don't rewrite history).
+      </p>
+      {pipeline && (
+        <button
+          type="button"
+          onClick={() => setView({ type: 'pipeline', id: pipeline.id })}
+          className="mt-2 rounded-btn bg-accent px-3 py-1.5 text-[12px] font-medium text-white hover:bg-accent-hover transition-colors"
+        >
+          Open in editor
+        </button>
+      )}
+    </div>
+  );
+}
+
+// UI v2 Faz 6.B — Environment tab. We don't have an engine-side env
+// capture step yet, so this tab surfaces what we DO know from the build
+// row + log entries: trigger metadata, the lane snapshot, and the list
+// of SSH builder hosts each step landed on (distilled from log entries
+// that carry a hostId).
+function BuildEnvironmentTab({
+  build,
+  entries: _entries,
+}: {
+  build: Build;
+  entries: ReadonlyArray<BuildLogEntry>;
+}): JSX.Element {
+  const hosts = useStore((s) => s.hosts);
+  const pipelines = useStore((s) => s.pipelines);
+
+  // Derive host ids from the pipeline's saved nodes — each step that
+  // pinned a host carries it in node.data.hostId. The live snapshot
+  // approximates "which builders did this build use" without needing
+  // a separate engine-side capture step.
+  const hostIds = useMemo(() => {
+    const pl = pipelines.find((p) => p.id === build.pipelineId);
+    if (!pl) return [] as string[];
+    const ids = new Set<string>();
+    const nodes = (pl as unknown as { nodes?: Array<{ data?: { hostId?: string } }> }).nodes ?? [];
+    for (const n of nodes) {
+      const hid = n.data?.hostId;
+      if (typeof hid === 'string' && hid) ids.add(hid);
+    }
+    return [...ids];
+  }, [pipelines, build.pipelineId]);
+
+  const facts: Array<{ key: string; value: string }> = [
+    { key: 'Build id', value: build.id },
+    { key: 'Lane', value: build.laneId },
+    { key: 'Trigger branch', value: build.triggerBranch || '(none)' },
+    { key: 'Trigger commit', value: build.triggerSha || '(none)' },
+    { key: 'Started at', value: new Date(build.startedAt).toISOString() },
+    {
+      key: 'Finished at',
+      value: build.finishedAt ? new Date(build.finishedAt).toISOString() : '(running / pending)',
+    },
+    { key: 'Status', value: build.status },
+    {
+      key: 'Matrix label',
+      value: build.matrixLabel ?? '(not a matrix build)',
+    },
+  ];
+
+  return (
+    <div className="flex-1 overflow-y-auto px-3 py-4 sm:px-6">
+      <div className="mb-4">
+        <div className="text-[10px] uppercase tracking-wider text-text-muted font-semibold mb-2">
+          Build environment
+        </div>
+        <div className="rounded-card border border-border-subtle bg-bg-panel overflow-hidden">
+          <table className="w-full text-[12.5px]">
+            <tbody>
+              {facts.map((f) => (
+                <tr key={f.key} className="border-b border-border-subtle last:border-b-0">
+                  <td className="px-3 py-1.5 text-text-muted w-[180px]">{f.key}</td>
+                  <td className="px-3 py-1.5 font-mono text-text-primary truncate">{f.value}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div>
+        <div className="text-[10px] uppercase tracking-wider text-text-muted font-semibold mb-2">
+          Builder hosts ({hostIds.length})
+        </div>
+        {hostIds.length === 0 ? (
+          <div className="rounded-card border border-border-subtle bg-bg-panel p-4 text-[12px] text-text-muted">
+            All steps ran on the local builder. Add a host via Settings → Hosts and
+            assign it on a step's Advanced tab to fan steps out across machines.
+          </div>
+        ) : (
+          <ul className="rounded-card border border-border-subtle bg-bg-panel overflow-hidden divide-y divide-border-subtle">
+            {hostIds.map((id) => {
+              const h = hosts.find((x) => x.id === id);
+              return (
+                <li key={id} className="px-3 py-2 flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="text-[12.5px] text-text-primary truncate">
+                      {h?.name ?? id}
+                    </div>
+                    {h && (
+                      <div className="font-mono text-[10.5px] text-text-faint truncate">
+                        {h.host}
+                      </div>
+                    )}
+                  </div>
+                  {h?.capabilities && (
+                    <div className="flex items-center gap-1.5 shrink-0 text-[10.5px] text-text-muted">
+                      {h.capabilities.macosVersion && (
+                        <span className="rounded bg-bg-elevated border border-border-subtle px-1.5 font-mono">
+                          macOS {h.capabilities.macosVersion}
+                        </span>
+                      )}
+                      {h.capabilities.arch && (
+                        <span className="rounded bg-bg-elevated border border-border-subtle px-1.5 font-mono">
+                          {h.capabilities.arch}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
+
+      <p className="mt-4 text-[11px] text-text-faint">
+        Environment variables resolved at build time aren't captured yet. When the
+        engine ships an env-capture step they'll show up here alongside the host
+        list.
+      </p>
+    </div>
+  );
+}
+
+// UI v2 Faz 6.B — Annotations tab. Fetches GET /api/builds/:id/annotations
+// (parsers persist to the build_annotations table; the endpoint just
+// reads them out sorted by file/line). Groups by file so users can scan
+// "this build's diagnostics" rather than scrolling a flat list.
+function BuildAnnotationsTab({ buildId }: { buildId: string }): JSX.Element {
+  const [report, setReport] = useState<AnnotationsReport | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    setLoading(true);
+    setError(null);
+    api
+      .buildAnnotations(buildId)
+      .then((r) => {
+        if (!alive) return;
+        setReport(r);
+        setLoading(false);
+      })
+      .catch((e) => {
+        if (!alive) return;
+        setError(e instanceof Error ? e.message : String(e));
+        setLoading(false);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [buildId]);
+
+  const grouped = useMemo(() => {
+    if (!report) return [];
+    const m = new Map<string, AnnotationsReport['annotations']>();
+    for (const a of report.annotations) {
+      const list = m.get(a.file) ?? [];
+      list.push(a);
+      m.set(a.file, list);
+    }
+    return [...m.entries()];
+  }, [report]);
+
+  if (loading) {
+    return (
+      <div className="flex-1 flex items-center justify-center text-[12.5px] text-text-muted p-12">
+        Loading annotations…
+      </div>
+    );
+  }
+  if (error) {
+    return (
+      <div className="flex-1 flex items-center justify-center text-[12.5px] text-text-muted p-12 text-center">
+        Couldn't load annotations: {error}
+      </div>
+    );
+  }
+  if (!report || report.totalCount === 0) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center gap-2 p-12 text-center">
+        <div className="text-[13px] text-text-primary">No annotations</div>
+        <p className="max-w-md text-[12px] text-text-muted">
+          {report?.note ??
+            'No compiler warnings or lint diagnostics were captured for this build.'}
+        </p>
+      </div>
+    );
+  }
+  return (
+    <div className="flex-1 overflow-y-auto px-3 py-4 sm:px-6">
+      <div className="grid grid-cols-3 gap-3 mb-4">
+        <SummaryCard label="Errors" value={report.errorCount} tone="failed" />
+        <SummaryCard label="Warnings" value={report.warningCount} tone="muted" />
+        <SummaryCard label="Info" value={report.infoCount} tone="neutral" />
+      </div>
+      <div className="space-y-3">
+        {grouped.map(([file, items]) => (
+          <div
+            key={file}
+            className="rounded-card border border-border-subtle bg-bg-panel overflow-hidden"
+          >
+            <div className="flex items-baseline justify-between px-3 py-2 border-b border-border-subtle bg-bg-elevated">
+              <span className="font-mono text-[12px] text-text-primary truncate">{file}</span>
+              <span className="text-[11px] text-text-muted">
+                {items.length} entr{items.length === 1 ? 'y' : 'ies'}
+              </span>
+            </div>
+            <ul className="divide-y divide-border-subtle">
+              {items.map((a, i) => (
+                <li key={`${a.file}-${a.line}-${i}`} className="px-3 py-2">
+                  <div className="flex items-baseline gap-2">
+                    <span
+                      className={`inline-block size-1.5 rounded-full shrink-0 ${
+                        a.level === 'error'
+                          ? 'bg-status-failed'
+                          : a.level === 'warning'
+                            ? 'bg-status-warn'
+                            : 'bg-text-muted'
+                      }`}
+                      aria-hidden
+                    />
+                    <span className="font-mono text-[11.5px] text-text-faint shrink-0">
+                      L{a.line}
+                      {a.column ? `:${a.column}` : ''}
+                    </span>
+                    {a.ruleId && (
+                      <span className="rounded bg-bg-elevated border border-border-subtle px-1.5 font-mono text-[10px] text-text-muted shrink-0">
+                        {a.ruleId}
+                      </span>
+                    )}
+                    <span className="text-[12px] text-text-primary">{a.message}</span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

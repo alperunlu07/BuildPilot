@@ -16,8 +16,8 @@ export function LogGroupBar({ groups, collapsed, onToggle, onToggleAll }: Props)
   if (groups.length === 0) return null;
   const allCollapsed = groups.every((g) => collapsed.has(g.id));
   return (
-    <div className="flex flex-wrap items-center gap-1.5 border-b border-slate-800 bg-slate-900/30 px-6 py-2 text-xs">
-      <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider text-slate-400">
+    <div className="flex flex-wrap items-center gap-1.5 border-b border-border-subtle bg-bg-panel/30 px-6 py-2 text-xs">
+      <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider text-text-muted">
         <FolderOpen size={11} /> Sections ({groups.length})
       </span>
       {groups.map((g) => {
@@ -30,14 +30,14 @@ export function LogGroupBar({ groups, collapsed, onToggle, onToggleAll }: Props)
             className={cn(
               'group inline-flex max-w-xs items-center gap-1 rounded border px-1.5 py-0.5 text-[11px]',
               isCollapsed
-                ? 'border-slate-800 bg-slate-900 text-slate-400 hover:text-slate-200'
-                : 'border-slate-700 bg-slate-800 text-slate-100',
+                ? 'border-border-subtle bg-bg-panel text-text-muted hover:text-text-primary'
+                : 'border-border-subtle bg-bg-elevated text-text-primary',
             )}
             title={`${g.count} lines${g.failureCount ? ` · ${g.failureCount} failure${g.failureCount === 1 ? '' : 's'}` : ''}${g.stderrCount ? ` · ${g.stderrCount} stderr` : ''}`}
           >
             {isCollapsed ? <ChevronRight size={11} /> : <ChevronDown size={11} />}
             <span className="min-w-0 truncate">{g.name}</span>
-            <span className="shrink-0 text-[10px] text-slate-400">{g.count}</span>
+            <span className="shrink-0 text-[10px] text-text-muted">{g.count}</span>
             {g.failureCount > 0 && (
               <span className="shrink-0 text-[10px] text-rose-400">
                 ✕{g.failureCount}
@@ -49,7 +49,7 @@ export function LogGroupBar({ groups, collapsed, onToggle, onToggleAll }: Props)
       <button
         type="button"
         onClick={() => onToggleAll(allCollapsed)}
-        className="ml-auto rounded border border-slate-700 px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-slate-400 hover:border-sky-500 hover:text-sky-300"
+        className="ml-auto rounded border border-border-subtle px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-text-muted hover:border-accent hover:text-accent-hover"
         title={allCollapsed ? 'Expand all sections' : 'Collapse all sections'}
       >
         {allCollapsed ? 'Expand all' : 'Collapse all'}

@@ -31,10 +31,13 @@ import {
 // balloon the store. Older rows still live in SQLite and can be re-fetched.
 const MAX_LIVE_ENTRIES_PER_BUILD = 5000;
 
+// UI v2 Faz 4 — `project` view type removed. Projects list (`projects`)
+// + pipeline editor (`pipeline`) cover the navigation; a project click
+// resolves to its first pipeline via setProjectView (below) so existing
+// callers don't need to thread project state themselves.
 export type View =
   | { type: 'home' }
   | { type: 'projects' }
-  | { type: 'project'; id: string }
   | { type: 'pipeline'; id: string }
   | { type: 'builds' }
   | { type: 'build'; id: string }
@@ -53,7 +56,8 @@ export type View =
   | { type: 'vaultFiles' }
   | { type: 'vcsCredentials' }
   | { type: 'approvals' }
-  | { type: 'queue' };
+  | { type: 'queue' }
+  | { type: 'catalog' };
 
 export interface CommitToast {
   id: string;
@@ -254,6 +258,10 @@ interface State {
   addProject(input: { path: string; name?: string }): Promise<void>;
   removeProject(id: string): Promise<void>;
   setView(view: View): void;
+  // Faz 4 helper — kept on the store so callers don't need to import a
+  // separate util + bind `pipelines` themselves. Resolves a project id to
+  // its first pipeline (if any) or falls back to the projects list.
+  setProjectView(projectId: string): void;
   upsertPipeline(p: Pipeline): void;
   removePipeline(id: string): void;
   deletePipeline(id: string): Promise<void>;
@@ -405,10 +413,7 @@ export const useStore = create<State>((set, get) => ({
     // label lazily here so callers don't need to pass one through.
     const state = get();
     let recent: Omit<RecentItem, 'at'> | null = null;
-    if (view.type === 'project') {
-      const p = state.projects.find((x) => x.id === view.id);
-      if (p) recent = { kind: 'project', id: p.id, label: p.name };
-    } else if (view.type === 'pipeline') {
+    if (view.type === 'pipeline') {
       const pl = state.pipelines.find((x) => x.id === view.id);
       if (pl) recent = { kind: 'pipeline', id: pl.id, label: pl.name };
     } else if (view.type === 'build') {
@@ -423,6 +428,19 @@ export const useStore = create<State>((set, get) => ({
       }
     }
     if (recent) get().pushRecent(recent);
+  },
+  setProjectView(projectId) {
+    const state = get();
+    const project = state.projects.find((p) => p.id === projectId);
+    const firstPipeline = state.pipelines.find((pl) => pl.projectId === projectId);
+    if (firstPipeline) {
+      get().setView({ type: 'pipeline', id: firstPipeline.id });
+    } else {
+      get().setView({ type: 'projects' });
+    }
+    if (project) {
+      get().pushRecent({ kind: 'project', id: project.id, label: project.name });
+    }
   },
   upsertPipeline(p) {
     const idx = get().pipelines.findIndex((x) => x.id === p.id);
@@ -445,7 +463,15 @@ export const useStore = create<State>((set, get) => ({
     // If the editor was open on this pipeline, hop back to its project.
     const view = get().view;
     if (view.type === 'pipeline' && view.id === id) {
-      set({ view: target ? { type: 'project', id: target.projectId } : { type: 'projects' } });
+      // Faz 4 — `project` view removed; fall through to projects list.
+      // The user can re-enter their next pipeline from there.
+      if (target) {
+        // Find a sibling pipeline if any; otherwise the projects list.
+        const sibling = get().pipelines.find((pl) => pl.projectId === target.projectId);
+        set({ view: sibling ? { type: 'pipeline', id: sibling.id } : { type: 'projects' } });
+      } else {
+        set({ view: { type: 'projects' } });
+      }
     }
   },
   async triggerBuild(pipelineId, fromNodeId) {
@@ -649,9 +675,10 @@ export const useStore = create<State>((set, get) => ({
     set({
       projects: projects.filter((p) => p.id !== id),
       pendingDeletions: [...state.pendingDeletions, pending],
-      view: state.view.type === 'project' && state.view.id === id
-        ? { type: 'projects' }
-        : state.view,
+      // Faz 4 — `project` view removed; pipelines under this project
+      // also vanish via the SSE reconciler, so any open pipeline editor
+      // for this project will fall back via deletePipeline's handler.
+      view: state.view,
     });
   },
   softDeletePipeline(id) {
@@ -683,9 +710,17 @@ export const useStore = create<State>((set, get) => ({
       timeoutHandle: handle,
       expiresAt,
     };
-    const nextView =
+    // Faz 4 — fall back to the next sibling pipeline (or projects list)
+    // since the `project` view type no longer exists.
+    const sibling =
       state.view.type === 'pipeline' && state.view.id === id
-        ? ({ type: 'project', id: snapshot.projectId } as View)
+        ? state.pipelines.find((pl) => pl.projectId === snapshot.projectId && pl.id !== id)
+        : null;
+    const nextView: View =
+      state.view.type === 'pipeline' && state.view.id === id
+        ? sibling
+          ? { type: 'pipeline', id: sibling.id }
+          : { type: 'projects' }
         : state.view;
     set({
       pipelines: pipelines.filter((p) => p.id !== id),
@@ -796,7 +831,7 @@ export const useStore = create<State>((set, get) => ({
           title: `${projectName} · ${event.commits.length} new commit${event.commits.length === 1 ? '' : 's'} on ${event.branch}`,
           body: head ? `${head.shortSha} ${head.subject}${more}` : `branch ${event.branch} advanced`,
           tag: `newCommit:${event.projectId}:${event.branch}`,
-          onClick: () => get().setView({ type: 'project', id: event.projectId }),
+          onClick: () => get().setProjectView(event.projectId),
         });
         break;
       }

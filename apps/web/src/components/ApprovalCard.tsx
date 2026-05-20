@@ -27,12 +27,12 @@ function renderMarkdown(src: string): string {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
   return esc
-    .replace(/^### (.+)$/gm, '<h3 class="mt-2 text-sm font-semibold text-slate-100">$1</h3>')
-    .replace(/^## (.+)$/gm, '<h2 class="mt-2 text-base font-semibold text-slate-100">$1</h2>')
-    .replace(/^# (.+)$/gm, '<h1 class="mt-2 text-lg font-semibold text-slate-100">$1</h1>')
+    .replace(/^### (.+)$/gm, '<h3 class="mt-2 text-sm font-semibold text-text-primary">$1</h3>')
+    .replace(/^## (.+)$/gm, '<h2 class="mt-2 text-base font-semibold text-text-primary">$1</h2>')
+    .replace(/^# (.+)$/gm, '<h1 class="mt-2 text-lg font-semibold text-text-primary">$1</h1>')
     .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
     .replace(/\*([^*]+)\*/g, '<em>$1</em>')
-    .replace(/`([^`]+)`/g, '<code class="rounded bg-slate-800 px-1 py-0.5 text-[11px]">$1</code>')
+    .replace(/`([^`]+)`/g, '<code class="rounded bg-bg-elevated px-1 py-0.5 text-[11px]">$1</code>')
     .replace(/\n/g, '<br />');
 }
 
@@ -159,7 +159,7 @@ export function ApprovalCard({ approval, onDecided, readOnly = false }: Props) {
       )}
 
       <div
-        className="prose prose-invert mb-3 max-w-none text-sm leading-relaxed text-slate-100"
+        className="prose prose-invert mb-3 max-w-none text-sm leading-relaxed text-text-primary"
         dangerouslySetInnerHTML={{ __html: renderMarkdown(approval.message) }}
       />
 
@@ -171,7 +171,7 @@ export function ApprovalCard({ approval, onDecided, readOnly = false }: Props) {
               return (
                 <label
                   key={spec.name}
-                  className="flex items-center gap-2 text-[12px] text-slate-200"
+                  className="flex items-center gap-2 text-[12px] text-text-primary"
                 >
                   <input
                     type="checkbox"
@@ -188,7 +188,7 @@ export function ApprovalCard({ approval, onDecided, readOnly = false }: Props) {
             }
             if (spec.type === 'select') {
               return (
-                <label key={spec.name} className="block text-[12px] text-slate-200">
+                <label key={spec.name} className="block text-[12px] text-text-primary">
                   <span className="mb-1 block">
                     {spec.label}
                     {spec.required && <span className="text-amber-300"> *</span>}
@@ -199,7 +199,7 @@ export function ApprovalCard({ approval, onDecided, readOnly = false }: Props) {
                     onChange={(e) =>
                       setValues((cur) => ({ ...cur, [spec.name]: e.target.value }))
                     }
-                    className="focusable w-full rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-slate-100 focus:border-sky-500 focus:outline-none"
+                    className="focusable w-full rounded-md border border-border-subtle bg-bg-panel px-2 py-1 text-text-primary focus:border-accent focus:outline-none"
                   >
                     <option value="">— select —</option>
                     {(spec.options ?? []).map((opt) => (
@@ -212,7 +212,7 @@ export function ApprovalCard({ approval, onDecided, readOnly = false }: Props) {
               );
             }
             return (
-              <label key={spec.name} className="block text-[12px] text-slate-200">
+              <label key={spec.name} className="block text-[12px] text-text-primary">
                 <span className="mb-1 block">
                   {spec.label}
                   {spec.required && <span className="text-amber-300"> *</span>}
@@ -224,7 +224,7 @@ export function ApprovalCard({ approval, onDecided, readOnly = false }: Props) {
                   onChange={(e) =>
                     setValues((cur) => ({ ...cur, [spec.name]: e.target.value }))
                   }
-                  className="focusable w-full rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-slate-100 focus:border-sky-500 focus:outline-none"
+                  className="focusable w-full rounded-md border border-border-subtle bg-bg-panel px-2 py-1 text-text-primary focus:border-accent focus:outline-none"
                 />
               </label>
             );
@@ -234,7 +234,7 @@ export function ApprovalCard({ approval, onDecided, readOnly = false }: Props) {
 
       {showActions && (
         <div className="mb-2">
-          <label className="block text-[11px] uppercase tracking-wider text-slate-400">
+          <label className="block text-[11px] uppercase tracking-wider text-text-muted">
             Your name (audit trail)
           </label>
           <input
@@ -242,7 +242,7 @@ export function ApprovalCard({ approval, onDecided, readOnly = false }: Props) {
             value={actor}
             onChange={(e) => setActor(e.target.value)}
             placeholder="anonymous"
-            className="focusable w-full max-w-xs rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-[12px] text-slate-100 focus:border-sky-500 focus:outline-none"
+            className="focusable w-full max-w-xs rounded-md border border-border-subtle bg-bg-panel px-2 py-1 text-[12px] text-text-primary focus:border-accent focus:outline-none"
           />
         </div>
       )}
@@ -273,9 +273,9 @@ export function ApprovalCard({ approval, onDecided, readOnly = false }: Props) {
       )}
 
       {settled && (
-        <div className="text-[11px] text-slate-300">
+        <div className="text-[11px] text-text-secondary">
           Decided by{' '}
-          <span className="font-mono text-slate-100">{approval.decidedBy ?? 'system'}</span>
+          <span className="font-mono text-text-primary">{approval.decidedBy ?? 'system'}</span>
           {approval.decidedAt && (
             <> at {new Date(approval.decidedAt).toLocaleString()}</>
           )}
@@ -283,8 +283,8 @@ export function ApprovalCard({ approval, onDecided, readOnly = false }: Props) {
       )}
 
       {approval.approvers.length > 0 && (
-        <div className="mt-2 text-[11px] text-slate-400">
-          <span className="font-semibold uppercase tracking-wider text-slate-500">
+        <div className="mt-2 text-[11px] text-text-muted">
+          <span className="font-semibold uppercase tracking-wider text-text-faint">
             Decisions so far
           </span>
           <ul className="mt-0.5 space-y-0.5">
@@ -304,8 +304,8 @@ export function ApprovalCard({ approval, onDecided, readOnly = false }: Props) {
                   )}
                   {a.decision}
                 </span>
-                <span className="font-mono text-slate-300">{a.actor}</span>
-                <span className="text-slate-500">
+                <span className="font-mono text-text-secondary">{a.actor}</span>
+                <span className="text-text-faint">
                   {new Date(a.at).toLocaleTimeString()}
                 </span>
               </li>

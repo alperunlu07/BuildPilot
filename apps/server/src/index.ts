@@ -13,6 +13,7 @@ import { triggerRoutes } from './api/triggers';
 import { configRoutes } from './api/config';
 import { metricsRoutes } from './api/metrics';
 import { testReportsRoutes } from './api/test-reports';
+import { annotationsRoutes } from './api/annotations';
 import { flakyTestsRoutes } from './api/flaky-tests';
 import { secretsRoutes } from './api/secrets';
 import { vaultFilesRoutes } from './api/vault-files';
@@ -110,6 +111,7 @@ async function main(): Promise<void> {
   await discordBotRoutes(app);
   await testNotifyRoutes(app);
   await testReportsRoutes(app);
+  await annotationsRoutes(app);
   await flakyTestsRoutes(app);
   await secretsRoutes(app);
   await vaultFilesRoutes(app);

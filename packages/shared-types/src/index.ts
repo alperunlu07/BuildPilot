@@ -1885,6 +1885,9 @@ export interface ServerConfig {
   auth?: AuthConfig;
   // Cluster 11.E — GitHub OAuth app credentials.
   githubOAuth?: GithubOAuthConfig;
+  // UI-v2 Faz 10 — per-tool AI CLI overrides. Optional everywhere; empty
+  // block keeps the legacy hardcoded defaults.
+  aiIntegrations?: AiIntegrationsConfig;
 }
 
 // ── Slack (Cluster 11.I) ────────────────────────────────────────────────────
@@ -1960,6 +1963,32 @@ export interface TelegramConfigPublic {
   botTokenPreview: string; // e.g. "••••1234" or ""
   hasChatId: boolean;
   chatIdPreview: string; // e.g. "@channel" or "••••5678" or ""
+}
+
+// ── AI Integrations ────────────────────────────────────────────────────────
+// Per-tool overrides for the four built-in AI CLIs used by aiPrompt steps
+// and the AI auto-fix loop. Empty / undefined fields fall back to the
+// hardcoded defaults in apps/server/src/runner/steps/aiPrompt.ts, so an
+// empty AiIntegrationsConfig is a valid "use defaults everywhere" state.
+//
+// None of these values are secrets — they're paths and model names — so
+// the public shape is identical to the runtime shape (no preview/redaction).
+export interface AiToolConfig {
+  // Override the binary the runner spawns. Empty = look up the tool name
+  // on PATH (the legacy behaviour). Useful when the user has Claude Code
+  // installed at a non-standard prefix or wants to point at a wrapper.
+  path?: string;
+  // Override the model passed to the CLI when it supports a --model flag.
+  // Empty = let the CLI pick its own default. Surface in the dashboard so
+  // users can pin a specific snapshot (e.g. "claude-opus-4-7") per project.
+  model?: string;
+}
+
+export interface AiIntegrationsConfig {
+  claude?: AiToolConfig;
+  codex?: AiToolConfig;
+  aider?: AiToolConfig;
+  gemini?: AiToolConfig;
 }
 
 // Body accepted by PUT /api/config/telegram. Any string field left as the
@@ -2160,6 +2189,69 @@ export interface TestReportTree {
   suites: TestSuite[];
   // Filled in when parsing was skipped — e.g. xcresult bundle on a Linux
   // host. Empty suites + a note lets the UI explain the situation cleanly.
+  note?: string;
+}
+
+// ── UI-v2 Faz 6.B · Annotations ────────────────────────────────────────────
+// Compiler warnings, lint diagnostics, and other "this build produced N
+// issues" output collapse to this shape. The Annotations tab in the build
+// detail screen renders the same component regardless of which tool emitted
+// them — xcodebuild warnings, swiftlint, eslint, gradle, etc. all map to
+// AnnotationsReport via per-source parsers.
+//
+// Storage: parsers run during step finalisation and persist the report
+// alongside the build (similar to test_reports). Empty list + `note` is the
+// "nothing matched" state — distinct from "no annotations" so the UI can
+// explain why a tool ran but produced no output.
+export type AnnotationLevel = 'error' | 'warning' | 'info';
+
+export type AnnotationSource =
+  | 'xcodebuild'
+  | 'swiftlint'
+  | 'swiftFormat'
+  | 'eslint'
+  | 'gradle'
+  | 'clang'
+  | 'gcc'
+  | 'unknown';
+
+export interface Annotation {
+  // Originating tool. Drives the icon + colour in the UI grouping header.
+  source: AnnotationSource;
+  level: AnnotationLevel;
+  // Project-relative path when the parser can resolve it; absolute path
+  // when the warning references a file outside the project root.
+  file: string;
+  // 1-based line / column. Column is optional because many warning formats
+  // (e.g. older xcodebuild) emit a file:line without a column.
+  line: number;
+  column?: number;
+  message: string;
+  // Optional rule / diagnostic id ("trailing_whitespace", "-Wunused-variable",
+  // "no-unused-vars"). Lets the UI render a chip + dedupe across builds.
+  ruleId?: string;
+  // Optional fingerprint for deterministic "same warning across N builds"
+  // grouping. Parsers compose this from file+line+ruleId+message-hash; null
+  // when the source can't produce a stable id (e.g. position-only warnings).
+  fingerprint?: string;
+}
+
+export interface AnnotationsReport {
+  // Origin step id when the report came from a specific node (parsers wire
+  // this up so the UI can deep-link back to the step). Null when the report
+  // is a merge across multiple steps.
+  stepId: string | null;
+  // Pre-computed counts so the UI doesn't have to walk the array for the
+  // tab badge + per-level summary cards.
+  totalCount: number;
+  errorCount: number;
+  warningCount: number;
+  infoCount: number;
+  // Sorted by file → line → column so the default rendering is stable.
+  annotations: Annotation[];
+  // Mirrors TestReportTree.note semantics: filled in when the parser ran
+  // but produced no rows (or skipped for a platform reason); empty when
+  // there's just nothing to report.
   note?: string;
 }
 

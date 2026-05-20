@@ -4734,6 +4734,10 @@ export const STEP_CATEGORIES: readonly StepCategoryGroup[] = [
 // Build-time guard: every StepType must be assigned to exactly one category.
 // Throws at module load if a step is missing or duplicated, so palette UI
 // never silently hides a node type.
+//
+// Side-effect: populates STEP_CATEGORY_BY_TYPE so the reverse lookup (used
+// by the Step Catalog screen) is O(1) without walking STEP_CATEGORIES.
+const STEP_CATEGORY_BY_TYPE_MUT: Partial<Record<StepType, StepCategory>> = {};
 {
   const seen = new Set<StepType>();
   for (const group of STEP_CATEGORIES) {
@@ -4742,10 +4746,27 @@ export const STEP_CATEGORIES: readonly StepCategoryGroup[] = [
         throw new Error(`STEP_CATEGORIES: step "${t}" appears in more than one group`);
       }
       seen.add(t);
+      STEP_CATEGORY_BY_TYPE_MUT[t] = group.key;
     }
   }
   const missing = STEP_TYPES.filter((t) => !seen.has(t));
   if (missing.length > 0) {
     throw new Error(`STEP_CATEGORIES: missing groups for: ${missing.join(', ')}`);
   }
+}
+
+export const STEP_CATEGORY_BY_TYPE: Readonly<Record<StepType, StepCategory>> =
+  STEP_CATEGORY_BY_TYPE_MUT as Record<StepType, StepCategory>;
+
+export function getStepCategory(type: StepType): StepCategory {
+  return STEP_CATEGORY_BY_TYPE[type];
+}
+
+export function getStepCategoryGroup(type: StepType): StepCategoryGroup {
+  const key = STEP_CATEGORY_BY_TYPE[type];
+  const group = STEP_CATEGORIES.find((g) => g.key === key);
+  if (!group) {
+    throw new Error(`getStepCategoryGroup: no group for "${type}"`);
+  }
+  return group;
 }

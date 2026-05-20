@@ -7,7 +7,6 @@ describe('router', () => {
     const cases: View[] = [
       { type: 'home' },
       { type: 'projects' },
-      { type: 'project', id: 'abc-123' },
       { type: 'pipeline', id: 'pl-9' },
       { type: 'builds' },
       { type: 'build', id: 'build-1' },
@@ -38,11 +37,17 @@ describe('router', () => {
     }
   });
 
-  it('decodes URL-encoded project ids', () => {
-    const path = viewToPath({ type: 'project', id: 'space/path' });
-    expect(path).toBe('/projects/space%2Fpath');
+  it('decodes URL-encoded pipeline ids', () => {
+    const path = viewToPath({ type: 'pipeline', id: 'space/path' });
+    expect(path).toBe('/pipelines/space%2Fpath');
     const back = pathToView(path);
-    expect(back).toEqual({ type: 'project', id: 'space/path' });
+    expect(back).toEqual({ type: 'pipeline', id: 'space/path' });
+  });
+
+  it('falls back to projects list for legacy /projects/:id URLs', () => {
+    // Faz 4 — `project` view type removed. Old shareable links to a
+    // project detail page now land users on the projects list.
+    expect(pathToView('/projects/anything')).toEqual({ type: 'projects' });
   });
 
   it('strips trailing slashes', () => {

@@ -103,17 +103,17 @@ export function VcsCredentialsPage() {
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
-      <header className="flex items-center justify-between border-b border-slate-800 px-4 py-3 sm:px-6">
+      <header className="flex items-center justify-between border-b border-border-subtle px-4 py-3 sm:px-6">
         <div>
-          <h1 className="text-base font-semibold text-slate-100">VCS credentials</h1>
-          <p className="text-xs text-slate-400">
+          <h1 className="text-base font-semibold text-text-primary">VCS credentials</h1>
+          <p className="text-xs text-text-muted">
             Tokens used to POST check-runs / commit statuses back to GitHub, GitLab, and Gitea.
           </p>
         </div>
         <div className="flex items-center gap-2">
           <a
             href="/api/vcs/github/oauth/start"
-            className="focusable inline-flex items-center gap-1 rounded-md border border-slate-700 px-2 py-1 text-xs text-slate-200 hover:border-sky-500 hover:text-sky-400"
+            className="focusable inline-flex items-center gap-1 rounded-md border border-border-subtle px-2 py-1 text-xs text-text-primary hover:border-accent hover:text-accent"
             title="Start GitHub OAuth flow (requires githubOAuth configured in config.json)"
           >
             <GhIcon size={12} /> GitHub OAuth
@@ -125,7 +125,7 @@ export function VcsCredentialsPage() {
               setDraft(EMPTY_DRAFT);
               setError(null);
             }}
-            className="focusable inline-flex items-center gap-1 rounded-md bg-sky-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-sky-500"
+            className="focusable inline-flex items-center gap-1 rounded-md bg-accent px-2.5 py-1 text-xs font-medium text-white hover:bg-accent-hover"
           >
             <Plus size={12} /> Add credential
           </button>
@@ -139,34 +139,34 @@ export function VcsCredentialsPage() {
       )}
 
       {showEditor && (
-        <div className="border-b border-slate-800 bg-slate-900/40 px-4 py-3 sm:px-6">
+        <div className="border-b border-border-subtle bg-bg-panel/60 px-4 py-3 sm:px-6">
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-            <label className="block text-xs text-slate-300">
-              <span className="mb-1 block text-[11px] uppercase tracking-wide text-slate-400">Name</span>
+            <label className="block text-xs text-text-secondary">
+              <span className="mb-1 block text-[11px] uppercase tracking-wide text-text-muted">Name</span>
               <input
                 type="text"
                 value={draft.name}
                 onChange={(e) => setDraft({ ...draft, name: e.target.value })}
                 placeholder="e.g. GitHub PAT (alperunlu07)"
-                className="w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1 text-slate-200 focus:border-sky-500 focus:outline-none"
+                className="w-full rounded-md border border-border-subtle bg-bg-base px-2 py-1 text-text-primary focus:border-accent focus:outline-none"
               />
             </label>
-            <label className="block text-xs text-slate-300">
-              <span className="mb-1 block text-[11px] uppercase tracking-wide text-slate-400">Provider</span>
+            <label className="block text-xs text-text-secondary">
+              <span className="mb-1 block text-[11px] uppercase tracking-wide text-text-muted">Provider</span>
               <select
                 value={draft.provider}
                 onChange={(e) => setDraft({ ...draft, provider: e.target.value as VcsProvider })}
-                className="w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1 text-slate-200 focus:border-sky-500 focus:outline-none"
+                className="w-full rounded-md border border-border-subtle bg-bg-base px-2 py-1 text-text-primary focus:border-accent focus:outline-none"
               >
                 <option value="github">GitHub</option>
                 <option value="gitlab">GitLab</option>
                 <option value="gitea">Gitea</option>
               </select>
             </label>
-            <label className="block text-xs text-slate-300 md:col-span-2">
-              <span className="mb-1 block text-[11px] uppercase tracking-wide text-slate-400">
+            <label className="block text-xs text-text-secondary md:col-span-2">
+              <span className="mb-1 block text-[11px] uppercase tracking-wide text-text-muted">
                 Base URL{' '}
-                <span className="text-slate-500">
+                <span className="text-text-faint">
                   (optional for github.com / gitlab.com; required for self-hosted + Gitea)
                 </span>
               </span>
@@ -175,11 +175,11 @@ export function VcsCredentialsPage() {
                 value={draft.baseUrl}
                 onChange={(e) => setDraft({ ...draft, baseUrl: e.target.value })}
                 placeholder="https://gitea.example.com"
-                className="w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1 text-slate-200 focus:border-sky-500 focus:outline-none"
+                className="w-full rounded-md border border-border-subtle bg-bg-base px-2 py-1 text-text-primary focus:border-accent focus:outline-none"
               />
             </label>
-            <label className="block text-xs text-slate-300 md:col-span-2">
-              <span className="mb-1 block text-[11px] uppercase tracking-wide text-slate-400">
+            <label className="block text-xs text-text-secondary md:col-span-2">
+              <span className="mb-1 block text-[11px] uppercase tracking-wide text-text-muted">
                 Personal access token / OAuth bearer
               </span>
               <input
@@ -187,7 +187,7 @@ export function VcsCredentialsPage() {
                 value={draft.vcsToken}
                 onChange={(e) => setDraft({ ...draft, vcsToken: e.target.value })}
                 placeholder="ghp_… / glpat_… / gita_…"
-                className="w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1 font-mono text-slate-200 focus:border-sky-500 focus:outline-none"
+                className="w-full rounded-md border border-border-subtle bg-bg-base px-2 py-1 font-mono text-text-primary focus:border-accent focus:outline-none"
               />
             </label>
           </div>
@@ -195,7 +195,7 @@ export function VcsCredentialsPage() {
             <button
               type="button"
               onClick={() => setShowEditor(false)}
-              className="focusable rounded-md border border-slate-700 px-2.5 py-1 text-xs text-slate-300 hover:border-slate-500"
+              className="focusable rounded-md border border-border-subtle px-2.5 py-1 text-xs text-text-secondary hover:border-text-faint"
             >
               Cancel
             </button>
@@ -203,7 +203,7 @@ export function VcsCredentialsPage() {
               type="button"
               disabled={busy}
               onClick={onCreate}
-              className="focusable rounded-md bg-sky-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-sky-500 disabled:opacity-50"
+              className="focusable rounded-md bg-accent px-2.5 py-1 text-xs font-medium text-white hover:bg-accent-hover disabled:opacity-50"
             >
               {busy ? 'Saving…' : 'Save credential'}
             </button>
@@ -212,9 +212,9 @@ export function VcsCredentialsPage() {
       )}
 
       <div className="flex-1 overflow-auto px-4 py-3 sm:px-6">
-        {loading && <div className="text-xs text-slate-400">Loading…</div>}
+        {loading && <div className="text-xs text-text-muted">Loading…</div>}
         {!loading && sorted.length === 0 && (
-          <div className="rounded-md border border-dashed border-slate-700 px-4 py-6 text-center text-xs text-slate-400">
+          <div className="rounded-md border border-dashed border-border-subtle px-4 py-6 text-center text-xs text-text-muted">
             No credentials yet. Add one above, or start the GitHub OAuth flow.
           </div>
         )}
@@ -225,21 +225,21 @@ export function VcsCredentialsPage() {
                 key={c.id}
                 className={`rounded-md border px-3 py-2 ${
                   c.id === highlightedId
-                    ? 'border-sky-500 bg-sky-950/30'
-                    : 'border-slate-800 bg-slate-900/40'
+                    ? 'border-accent bg-sky-950/30'
+                    : 'border-border-subtle bg-bg-panel/60'
                 }`}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 text-sm">
-                      {c.provider === 'github' && <Github size={12} className="text-slate-300" />}
+                      {c.provider === 'github' && <Github size={12} className="text-text-secondary" />}
                       {c.provider !== 'github' && <GitBranch size={12} className="text-emerald-400" />}
-                      <span className="font-medium text-slate-100">{c.name}</span>
-                      <span className="rounded bg-slate-800 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-slate-300">
+                      <span className="font-medium text-text-primary">{c.name}</span>
+                      <span className="rounded bg-bg-elevated px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-text-secondary">
                         {c.provider}
                       </span>
                     </div>
-                    <div className="mt-1 flex flex-wrap items-center gap-3 text-[11px] text-slate-400">
+                    <div className="mt-1 flex flex-wrap items-center gap-3 text-[11px] text-text-muted">
                       {c.baseUrl && <span>at {c.baseUrl}</span>}
                       <span>
                         token: <span className="font-mono">{c.tokenPreview || '(empty)'}</span>
@@ -252,7 +252,7 @@ export function VcsCredentialsPage() {
                   <button
                     type="button"
                     onClick={() => onDelete(c.id)}
-                    className="focusable rounded-md p-1 text-slate-400 hover:text-rose-400"
+                    className="focusable rounded-md p-1 text-text-muted hover:text-rose-400"
                     aria-label="Delete credential"
                     title="Delete credential"
                   >

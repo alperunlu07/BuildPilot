@@ -1,24 +1,23 @@
 import { useEffect, useState } from 'react';
-import { Sidebar } from './components/Sidebar';
+import { Sidebar } from './components/shell/Sidebar';
+import { Topbar } from './components/shell/Topbar';
 import { AddProjectDialog } from './components/AddProjectDialog';
 import { BuildLogPanel } from './components/BuildLogPanel';
 import { ConfirmDialog } from './components/ConfirmDialog';
-import { HostsDialog } from './components/HostsDialog';
 import { ToastContainer } from './components/ToastContainer';
 import { UndoToast } from './components/UndoToast';
 import { ActiveBuildsWidget } from './components/ActiveBuildsWidget';
-import { Breadcrumb } from './components/Breadcrumb';
 import { CommandPalette } from './components/CommandPalette';
 import { ChangelogDrawer, useUnreadChangelog } from './components/ChangelogDrawer';
 import { KeyboardShortcutsHelp } from './components/KeyboardShortcutsHelp';
 import { CreatePipelineDialog } from './components/CreatePipelineDialog';
 import { HomePage } from './pages/HomePage';
 import { ProjectsPage } from './pages/ProjectsPage';
-import { ProjectDetailPage } from './pages/ProjectDetailPage';
 import { PipelinePage } from './pages/PipelinePage';
 import { BuildsPage } from './pages/BuildsPage';
 import { BuildDetailPage } from './pages/BuildDetailPage';
 import { QueuePage } from './pages/QueuePage';
+import { CatalogPage } from './pages/CatalogPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { DiskUsagePage } from './pages/DiskUsagePage';
 import { HostsPage } from './pages/HostsPage';
@@ -61,7 +60,6 @@ export function App() {
   const authChecked = useStore((s) => s.authChecked);
 
   const [openAdd, setOpenAdd] = useState(false);
-  const [openHosts, setOpenHosts] = useState(false);
   const [openChangelog, setOpenChangelog] = useState(false);
   const [openCreatePipeline, setOpenCreatePipeline] = useState<string | null>(null);
   // Mobile drawer open state — only consumed below md. Auto-close whenever
@@ -183,8 +181,10 @@ export function App() {
   useGlobalShortcuts({
     onNewPipeline: () => {
       const current = useStore.getState().view;
-      if (current.type === 'project') setOpenCreatePipeline(current.id);
-      else if (current.type === 'pipeline') {
+      // Faz 4 — `project` view removed; "new pipeline" only triggers
+      // from inside an existing pipeline (its projectId tells us where
+      // the new pipeline should live).
+      if (current.type === 'pipeline') {
         const pl = useStore.getState().pipelines.find((p) => p.id === current.id);
         if (pl) setOpenCreatePipeline(pl.projectId);
       }
@@ -192,53 +192,75 @@ export function App() {
   });
 
   return (
-    <div className="flex h-full bg-slate-950 text-slate-100">
-      <Sidebar
-        onAddProject={() => setOpenAdd(true)}
-        onShowChangelog={() => setOpenChangelog(true)}
-        changelogHasUnread={hasUnread}
-        mobileOpen={mobileNavOpen}
-        onMobileClose={() => setMobileNavOpen(false)}
-      />
-      <main className="flex min-w-0 flex-1 flex-col">
-        <Breadcrumb onOpenMobileNav={() => setMobileNavOpen(true)} />
-        <div className="min-h-0 flex-1 overflow-y-auto">
-          {view.type === 'home' && <HomePage />}
-          {view.type === 'projects' && <ProjectsPage onAdd={() => setOpenAdd(true)} />}
-          {view.type === 'project' && <ProjectDetailPage projectId={view.id} />}
-          {view.type === 'pipeline' && <PipelinePage pipelineId={view.id} />}
-          {view.type === 'builds' && <BuildsPage />}
-          {view.type === 'build' && <BuildDetailPage buildId={view.id} />}
-          {view.type === 'queue' && <QueuePage />}
-          {view.type === 'settings' && <SettingsPage />}
-          {view.type === 'diskUsage' && <DiskUsagePage />}
-          {view.type === 'hosts' && <HostsPage />}
-          {view.type === 'testReport' && <TestReportPage buildId={view.buildId} />}
-          {view.type === 'flakyTests' && <FlakyTestsPage />}
-          {view.type === 'trends' && <BuildTrendsPage />}
-          {view.type === 'login' && <LoginPage />}
-          {view.type === 'users' && <UsersPage />}
-          {view.type === 'account' && <AccountPage />}
-          {view.type === 'audit' && <AuditLogPage />}
-          {view.type === 'apiTokens' && <ApiTokensPage />}
-          {view.type === 'secrets' && <SecretsPage />}
-          {view.type === 'vaultFiles' && <VaultFilesPage />}
-          {view.type === 'vcsCredentials' && <VcsCredentialsPage />}
-          {view.type === 'approvals' && <ApprovalsInboxPage />}
-        </div>
-        <BuildLogPanel />
+    // UI v2 Faz 3 — design's app-grid template. Sidebar (variable width)
+    // spans both rows on the left; Topbar + main + BottomLogPanel stack
+    // vertically on the right. Grid rows: 44px topbar / 1fr main / auto
+    // log panel (collapses when no active build).
+    <div
+      className="grid h-full bg-bg-base text-text-primary"
+      style={{
+        gridTemplateColumns: 'auto minmax(0, 1fr)',
+        gridTemplateRows: '44px minmax(0, 1fr) auto',
+        gridTemplateAreas: '"sidebar topbar" "sidebar main" "sidebar logpanel"',
+      }}
+    >
+      <div style={{ gridArea: 'sidebar' }} className="contents md:block">
+        <Sidebar
+          onAddProject={() => setOpenAdd(true)}
+          onShowChangelog={() => setOpenChangelog(true)}
+          changelogHasUnread={hasUnread}
+          mobileOpen={mobileNavOpen}
+          onMobileClose={() => setMobileNavOpen(false)}
+        />
+      </div>
+      <div style={{ gridArea: 'topbar' }} className="min-w-0">
+        <Topbar onOpenMobileNav={() => setMobileNavOpen(true)} />
+      </div>
+      <main
+        role="main"
+        aria-label="Main content"
+        style={{ gridArea: 'main' }}
+        className="min-h-0 min-w-0 overflow-y-auto bg-bg-base"
+      >
+        {view.type === 'home' && <HomePage />}
+        {view.type === 'projects' && <ProjectsPage onAdd={() => setOpenAdd(true)} />}
+        {view.type === 'pipeline' && <PipelinePage pipelineId={view.id} />}
+        {view.type === 'builds' && <BuildsPage />}
+        {view.type === 'build' && <BuildDetailPage buildId={view.id} />}
+        {view.type === 'queue' && <QueuePage />}
+        {view.type === 'catalog' && <CatalogPage />}
+        {view.type === 'settings' && <SettingsPage />}
+        {view.type === 'diskUsage' && <DiskUsagePage />}
+        {view.type === 'hosts' && <HostsPage />}
+        {view.type === 'testReport' && <TestReportPage buildId={view.buildId} />}
+        {view.type === 'flakyTests' && <FlakyTestsPage />}
+        {view.type === 'trends' && <BuildTrendsPage />}
+        {view.type === 'login' && <LoginPage />}
+        {view.type === 'users' && <UsersPage />}
+        {view.type === 'account' && <AccountPage />}
+        {view.type === 'audit' && <AuditLogPage />}
+        {view.type === 'apiTokens' && <ApiTokensPage />}
+        {view.type === 'secrets' && <SecretsPage />}
+        {view.type === 'vaultFiles' && <VaultFilesPage />}
+        {view.type === 'vcsCredentials' && <VcsCredentialsPage />}
+        {view.type === 'approvals' && <ApprovalsInboxPage />}
       </main>
+      <div style={{ gridArea: 'logpanel' }} className="min-w-0">
+        <BuildLogPanel />
+      </div>
 
       <ToastContainer />
       <UndoToast />
       <ActiveBuildsWidget />
       <CommandPalette
         onAddProject={() => setOpenAdd(true)}
-        onManageHosts={() => setOpenHosts(true)}
+        // UI v2 Faz 9.4 — modal HostsDialog removed; the "manage hosts"
+        // quick-action lands the user on the full /hosts page where the
+        // add form is the right-hand pane.
+        onManageHosts={() => useStore.getState().setView({ type: 'hosts' })}
       />
       <KeyboardShortcutsHelp />
       <AddProjectDialog open={openAdd} onClose={() => setOpenAdd(false)} />
-      <HostsDialog open={openHosts} onClose={() => setOpenHosts(false)} />
       <ChangelogDrawer open={openChangelog} onClose={() => setOpenChangelog(false)} />
       {openCreatePipeline && (() => {
         const proj = useStore.getState().projects.find((p) => p.id === openCreatePipeline);

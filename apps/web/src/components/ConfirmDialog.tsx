@@ -110,7 +110,7 @@ export function ConfirmDialog({
             className={
               variant === 'destructive'
                 ? 'focusable rounded-md bg-rose-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-rose-500 disabled:cursor-not-allowed disabled:bg-rose-900/40 disabled:text-rose-300/40'
-                : 'focusable rounded-md bg-bp-brand px-3 py-1.5 text-sm font-medium text-white hover:bg-sky-500 disabled:cursor-not-allowed disabled:bg-sky-900/40 disabled:text-sky-300/40'
+                : 'focusable rounded-md bg-bp-brand px-3 py-1.5 text-sm font-medium text-white hover:bg-accent-hover disabled:cursor-not-allowed disabled:bg-sky-900/40 disabled:text-accent-hover/40'
             }
           >
             {confirmLabel}

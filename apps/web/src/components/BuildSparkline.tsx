@@ -17,7 +17,7 @@ interface Props {
 }
 
 const STATUS_COLOUR: Record<Cell['status'], string> = {
-  pending: 'bg-slate-700',
+  pending: 'bg-border-subtle',
   running: 'bg-sky-500/80',
   success: 'bg-emerald-500/80',
   failed: 'bg-rose-500/80',
@@ -61,7 +61,7 @@ export function BuildSparkline({ projectId, cells = 30 }: Props) {
           className={
             cell
               ? `h-3 w-1 rounded-sm ${STATUS_COLOUR[cell.status]}`
-              : 'h-3 w-1 rounded-sm bg-slate-800/60'
+              : 'h-3 w-1 rounded-sm bg-bg-hover/60'
           }
           // No icon — too small to render — but `title` + `aria-label`
           // surface the status so screen readers and color-blind users still

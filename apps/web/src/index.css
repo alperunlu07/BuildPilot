@@ -1,8 +1,49 @@
 @import '@xyflow/react/dist/style.css';
+/* UI v2 Faz 1 — design tokens. Loaded before Tailwind so theme.extend
+   colors that reference var(--bg-base) etc. resolve at first paint. */
+@import './styles/tokens.css';
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* UI v2 Faz 2 — StatusDot running-state pulse. Defined globally so the
+   primitive can hook into it via animate-pulse-dot regardless of where
+   it's rendered. The ring colour matches --st-running so light theme
+   automatically gets a softer pulse without a separate keyframe. */
+@keyframes pulse-dot {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.4); }
+  50% { box-shadow: 0 0 0 5px rgba(251, 191, 36, 0); }
+}
+.animate-pulse-dot {
+  animation: pulse-dot 1.4s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-pulse-dot { animation: none; }
+}
+
+/* UI v2 Faz 5.A — running step animations. `pulse-soft` is a low-amplitude
+   opacity pulse on the entire node so it reads as "active" without the
+   harsh tailwind `animate-pulse` strobe. `progress-slide` drives the 2px
+   gradient bar across the top of running nodes. */
+@keyframes pulse-soft {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.85; }
+}
+.animate-pulse-soft {
+  animation: pulse-soft 2.4s ease-in-out infinite;
+}
+@keyframes progress-slide {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+.animate-progress-slide {
+  animation: progress-slide 1.6s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-pulse-soft,
+  .animate-progress-slide { animation: none; }
+}
 
 html,
 body,
@@ -11,7 +52,7 @@ body,
 }
 
 body {
-  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: var(--font-sans);
 }
 
 /* React Flow tweaks for our dark theme */
@@ -19,11 +60,36 @@ body {
   font-size: 12px;
 }
 .react-flow__edge-path {
-  stroke: #475569;
+  stroke: var(--border);
   stroke-width: 1.75;
+  transition: stroke 140ms;
 }
 .react-flow__edge.selected .react-flow__edge-path {
-  stroke: #38bdf8;
+  stroke: var(--accent);
+  stroke-width: 2;
+}
+/* UI v2 Faz 5.A.2 — running-state edges. The PipelineEditor adds the
+   `edge-running` class to edges whose target node is currently running
+   so the dashed stroke walks along the path while the step runs. */
+.react-flow__edge.edge-running .react-flow__edge-path {
+  stroke: var(--st-running);
+  stroke-width: 2;
+  stroke-dasharray: 5 4;
+  animation: edge-dash 1.2s linear infinite;
+}
+.react-flow__edge.edge-success .react-flow__edge-path {
+  stroke: var(--st-success);
+}
+.react-flow__edge.edge-failed .react-flow__edge-path {
+  stroke: var(--st-failed);
+}
+@keyframes edge-dash {
+  to { stroke-dashoffset: -18; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .react-flow__edge.edge-running .react-flow__edge-path {
+    animation: none;
+  }
 }
 .react-flow__handle {
   background: #475569;
@@ -31,20 +97,40 @@ body {
   width: 10px;
   height: 10px;
 }
+/* UI v2 Faz 5.A.5 — React Flow canvas chrome bound to v2 tokens so the
+   editor's background, controls, and minimap repaint with the theme. */
 .react-flow__background {
-  background-color: #0f172a;
+  background-color: var(--bg-base);
 }
 .react-flow__controls {
-  border: 1px solid #1e293b;
-  background: #0f172a;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-panel);
+  border-radius: 6px;
+  overflow: hidden;
 }
 .react-flow__controls-button {
-  background: #0f172a;
-  color: #cbd5f5;
-  border-bottom: 1px solid #1e293b;
+  background: var(--bg-panel);
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-subtle);
 }
 .react-flow__controls-button:hover {
-  background: #1e293b;
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+.react-flow__minimap {
+  background: var(--bg-panel) !important;
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.react-flow__minimap-mask {
+  fill: var(--bg-overlay);
+}
+.react-flow__minimap-node {
+  fill: var(--accent);
+  fill-opacity: 0.4;
+  stroke: var(--accent);
+  stroke-opacity: 0.6;
 }
 
 /* Custom scrollbar in log panels */
@@ -77,17 +163,37 @@ html.light .bg-slate-900\/60 { background-color: rgba(255,255,255,0.8) !importan
 html.light .bg-slate-800 { background-color: #e2e8f0 !important; }
 html.light .bg-slate-800\/60 { background-color: rgba(226,232,240,0.7) !important; }
 html.light .bg-slate-800\/40 { background-color: rgba(226,232,240,0.5) !important; }
+html.light .bg-slate-700 { background-color: #cbd5e1 !important; }
+html.light .bg-slate-600 { background-color: #94a3b8 !important; }
+html.light .bg-slate-500 { background-color: #64748b !important; }
+html.light .bg-slate-400 { background-color: #475569 !important; }
+html.light .focus\:bg-slate-950:focus { background-color: #f8fafc !important; }
 html.light .border-slate-800 { border-color: #cbd5e1 !important; }
 html.light .border-slate-700 { border-color: #94a3b8 !important; }
+html.light .border-slate-600 { border-color: #64748b !important; }
+html.light .hover\:border-slate-800:hover { border-color: #cbd5e1 !important; }
+html.light .hover\:border-slate-700:hover { border-color: #94a3b8 !important; }
+html.light .hover\:border-slate-600:hover { border-color: #64748b !important; }
+html.light .hover\:border-slate-500:hover { border-color: #475569 !important; }
 html.light .text-slate-100 { color: #0f172a !important; }
 html.light .text-slate-200 { color: #1e293b !important; }
 html.light .text-slate-300 { color: #334155 !important; }
 html.light .text-slate-400 { color: #475569 !important; }
 html.light .text-slate-500 { color: #64748b !important; }
 html.light .text-slate-600 { color: #94a3b8 !important; }
+html.light .text-slate-700 { color: #cbd5e1 !important; }
+html.light .hover\:text-slate-100:hover { color: #0f172a !important; }
+html.light .hover\:text-slate-200:hover { color: #1e293b !important; }
+html.light .hover\:text-slate-300:hover { color: #334155 !important; }
+html.light .hover\:text-slate-400:hover { color: #475569 !important; }
+html.light .hover\:text-slate-700:hover { color: #cbd5e1 !important; }
 html.light .placeholder\:text-slate-400::placeholder { color: #64748b !important; }
+html.light .placeholder\:text-slate-500::placeholder { color: #94a3b8 !important; }
+html.light .placeholder\:text-slate-600::placeholder { color: #cbd5e1 !important; }
+html.light .placeholder-slate-400::placeholder { color: #64748b !important; }
 html.light .hover\:bg-slate-800:hover { background-color: #cbd5e1 !important; }
 html.light .hover\:bg-slate-800\/60:hover { background-color: rgba(203,213,225,0.7) !important; }
+html.light .hover\:bg-slate-900:hover { background-color: #f1f5f9 !important; }
 
 html.light .react-flow__background { background-color: #f1f5f9; }
 html.light .react-flow__controls,
@@ -178,7 +284,8 @@ html[data-density='compact'] .density-gap { gap: 0.25rem !important; }
   }
 }
 
-/* cmdk command palette */
+/* cmdk command palette — uses v2 tokens so dark/light + accent flip
+   without touching component code. Faz 3 refresh. */
 .cmdk-group {
   margin-bottom: 0.25rem;
 }
@@ -188,22 +295,19 @@ html[data-density='compact'] .density-gap { gap: 0.25rem !important; }
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #64748b;
+  color: var(--text-faint);
 }
 .cmdk-item {
   display: flex;
   align-items: center;
   gap: 0.5rem;
   padding: 0.4rem 0.6rem;
-  border-radius: 0.375rem;
-  color: #cbd5f5;
+  border-radius: 6px;
+  color: var(--text-secondary);
   cursor: pointer;
   user-select: none;
 }
 .cmdk-item[data-selected='true'] {
-  background: #1e293b;
-  color: #f1f5f9;
+  background: var(--bg-hover);
+  color: var(--text-primary);
 }
-html.light .cmdk-item { color: #1e293b; }
-html.light .cmdk-item[data-selected='true'] { background: #e2e8f0; color: #0f172a; }
-html.light .cmdk-group [cmdk-group-heading] { color: #94a3b8; }
