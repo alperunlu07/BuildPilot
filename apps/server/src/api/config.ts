@@ -93,16 +93,50 @@ const discordUpdateSchema = z.object({
 // AI Integrations: every field optional so the dashboard can PATCH a single
 // tool override without round-tripping the entire block. Empty string is
 // treated as "clear this override" — saves a separate clear-flag per field.
-const aiToolUpdateSchema = z.object({
-  path: z.string().optional(),
-  model: z.string().optional(),
-});
+// Security — the `path` we accept here is fed straight to spawn() as the
+// command argument in aiPrompt.ts. Without constraints any caller able
+// to reach this endpoint can pivot from "edit AI tool overrides" to
+// arbitrary code execution by pointing path at /bin/sh or similar.
+//
+// Two guards (defence in depth):
+//   1. Absolute path required — no PATH lookup of relative names that
+//      might shadow legitimate binaries via $PATH manipulation
+//   2. Basename must equal the expected CLI name — so an attacker can't
+//      point claude.path at /bin/bash; they could only point it at a
+//      binary literally named `claude` somewhere on disk
+//
+// The basename check is the load-bearing part: empty string still
+// clears (so the override slot becomes a no-op), undefined still
+// keeps the existing value (per-tool PATCH semantics).
+function aiToolUpdateSchemaForTool(expectedBasename: string) {
+  return z.object({
+    path: z
+      .string()
+      .optional()
+      .refine(
+        (value) => {
+          if (value === undefined) return true;
+          const trimmed = value.trim();
+          if (trimmed.length === 0) return true; // clear override
+          if (!trimmed.startsWith('/')) return false;
+          // basename = last path segment; reject trailing slashes too
+          const segments = trimmed.split('/').filter((s) => s.length > 0);
+          const basename = segments[segments.length - 1] ?? '';
+          return basename === expectedBasename;
+        },
+        {
+          message: `path must be empty or an absolute path whose basename is "${expectedBasename}"`,
+        },
+      ),
+    model: z.string().optional(),
+  });
+}
 
 const aiIntegrationsUpdateSchema = z.object({
-  claude: aiToolUpdateSchema.optional(),
-  codex: aiToolUpdateSchema.optional(),
-  aider: aiToolUpdateSchema.optional(),
-  gemini: aiToolUpdateSchema.optional(),
+  claude: aiToolUpdateSchemaForTool('claude').optional(),
+  codex: aiToolUpdateSchemaForTool('codex').optional(),
+  aider: aiToolUpdateSchemaForTool('aider').optional(),
+  gemini: aiToolUpdateSchemaForTool('gemini').optional(),
 });
 
 function toSlackPublic(cfg: SlackConfig | null): SlackConfigPublic {
