@@ -1,5 +1,6 @@
 import type {
   AiIntegrationsConfig,
+  AiIntegrationsProbeResponse,
   AnnotationsReport,
   ApiToken,
   AuditEventsResponse,
@@ -36,6 +37,10 @@ import type {
   QueueSnapshot,
   SshHost,
   StepType,
+  SystemDiskUsage,
+  SystemEncryptedFieldsResponse,
+  SystemInfo,
+  SystemMigrationLog,
   TelegramConfigPublic,
   TelegramConfigUpdate,
   TestReportKind,
@@ -525,5 +530,18 @@ export const api = {
     http<BuildApproval>(`/builds/${buildId}/approvals/${approvalId}/decide`, {
       method: 'POST',
       body: JSON.stringify(body),
+    }),
+
+  // ── System info (Settings redesign) ──────────────────────
+  // Read-only endpoints that surface server / process / paths so the
+  // Settings page doesn't need separate probes per section.
+  systemInfo: () => http<SystemInfo>('/system/info'),
+  systemDiskUsage: () => http<SystemDiskUsage>('/system/disk-usage'),
+  systemEncryptedFields: () =>
+    http<SystemEncryptedFieldsResponse>('/system/encrypted-fields'),
+  systemMigrationLog: () => http<SystemMigrationLog>('/system/migration-log'),
+  probeAiIntegrations: () =>
+    http<AiIntegrationsProbeResponse>('/config/ai-integrations/probe', {
+      method: 'POST',
     }),
 };

@@ -2653,3 +2653,85 @@ export interface GithubOAuthConfigUpdate {
   redirectAfter?: string;
   clearClientSecret?: boolean;
 }
+
+// ── System info / disk usage / encrypted-fields / AI tool probe ─────────────
+// All four endpoints power the redesigned Settings page (docs/designs/settings.jsx).
+// They are read-only — no mutations live here.
+
+export interface SystemInfo {
+  appVersion: string;
+  nodeVersion: string;
+  sqliteVersion: string;
+  license: string;
+  host: string;
+  port: number;
+  webOrigin: string;
+  pollIntervalSec: number;
+  authEnabled: boolean;
+  configDir: string;
+  configPath: string;
+  dbPath: string;
+  masterKeyPath: string;
+}
+
+export interface SystemPathEntry {
+  // Logical name shown in the UI ("Database", "Config", "Artifacts total").
+  label: string;
+  // Filesystem path being measured. For "Artifacts total" this is a
+  // synthetic descriptor (the artifacts live next to each build, not under
+  // a single BuildPilot-owned directory).
+  path: string | null;
+  bytes: number;
+  exists: boolean;
+}
+
+export interface SystemDiskUsage {
+  entries: SystemPathEntry[];
+}
+
+export interface SystemEncryptedField {
+  field: string;
+  // Comma-joined list of step types or surfaces that read/write this field.
+  surfaces: string;
+}
+
+export interface SystemEncryptedFieldsResponse {
+  fields: SystemEncryptedField[];
+  envelope: string; // "enc:1:" — the prefix in use today
+}
+
+export interface SystemMigrationEvent {
+  timestamp: number; // unix ms
+  message: string;
+}
+
+export interface SystemMigrationLog {
+  events: SystemMigrationEvent[];
+  note?: string;
+}
+
+// Concrete tool slot for the probe — excludes `custom` because the
+// probe targets only the four built-in CLIs that have known --version
+// flags.
+export type AiToolBuiltin = Exclude<AiTool, 'custom'>;
+
+export interface AiIntegrationProbeEntry {
+  tool: AiToolBuiltin;
+  // Resolved command that would be spawned — either the user override or
+  // the hardcoded default.
+  command: string;
+  // True if the probe spawned the binary and read a version string back.
+  ok: boolean;
+  // Parsed semver-ish identifier extracted from --version output (e.g.
+  // "0.4.21"). Null when the probe failed.
+  version: string | null;
+  // Configured model override, or null when none is set.
+  model: string | null;
+  // Best-effort error message when the probe failed (ENOENT, timeout,
+  // non-zero exit, unparseable output).
+  error: string | null;
+}
+
+export interface AiIntegrationsProbeResponse {
+  results: AiIntegrationProbeEntry[];
+}
