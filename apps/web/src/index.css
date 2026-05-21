@@ -49,6 +49,46 @@ html,
 body,
 #root {
   height: 100%;
+  /* Responsive overhaul Faz 0 — prefer dynamic-vh so iOS Safari's
+     collapsing URL bar doesn't push the bottom log panel under the
+     chrome. Falls back to 100% for older browsers via the cascade. */
+}
+@supports (height: 100dvh) {
+  html,
+  body,
+  #root {
+    height: 100dvh;
+  }
+}
+
+/* Responsive overhaul Faz 0 — global guard against accidental horizontal
+   scroll on mobile. If a component overflows its viewport the page no
+   longer rubber-bands sideways; instead the offending element clips and
+   shows up in dev. Components that intentionally scroll horizontally
+   (tables, gantt charts) live inside their own .overflow-x-auto wrapper
+   so the inner scroll keeps working. */
+body {
+  overflow-x: hidden;
+}
+
+/* Safe-area utility for iOS notch / Android gesture bar. Apply via
+   className="pb-safe" / "pt-safe" / "px-safe". The fallback to 0 keeps
+   browsers without env() support identical to the no-utility state. */
+.pt-safe {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.pl-safe {
+  padding-left: env(safe-area-inset-left, 0px);
+}
+.pr-safe {
+  padding-right: env(safe-area-inset-right, 0px);
+}
+.px-safe {
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
 }
 
 body {

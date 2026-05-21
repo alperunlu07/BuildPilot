@@ -57,5 +57,19 @@ export default defineConfig({
       testMatch: /visual-regression\.spec\.ts/,
       use: { ...devices['Desktop Chrome'] },
     },
+    // Responsive overhaul Faz 0 — small-screen smoke projects. Run the
+    // dedicated responsive.spec.ts at iPhone 12 and iPad widths so we
+    // catch dialog overflow, sidebar drawer regressions, and grid
+    // collapse failures in CI.
+    {
+      name: 'mobile',
+      testMatch: /responsive\.spec\.ts/,
+      use: { ...devices['iPhone 12'] },
+    },
+    {
+      name: 'tablet',
+      testMatch: /responsive\.spec\.ts/,
+      use: { ...devices['iPad (gen 7)'] },
+    },
   ],
 });

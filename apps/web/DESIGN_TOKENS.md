@@ -109,3 +109,62 @@ reason — no big-bang refactor.
   costs.
 - **Do** prefer the semantic name (`bp-success`) over the literal palette
   (`emerald-400`) in any newly-written component.
+
+## Responsive design rules (Faz 0 — responsive overhaul)
+
+BuildPilot now targets phone (≥320px), tablet (≥768px), and desktop
+(≥1024px) viewports. The following rules keep new code from regressing
+small-screen layouts.
+
+### Breakpoints
+
+Mirror the Tailwind defaults; the JS helper `lib/breakpoint.ts` exports
+the same values so utility classes and runtime media queries agree.
+
+| Tailwind prefix | Min width | Typical device           |
+| --------------- | --------- | ------------------------ |
+| (default)       | 0         | phone portrait           |
+| `sm:`           | 640px     | phone landscape / phablet|
+| `md:`           | 768px     | tablet portrait          |
+| `lg:`           | 1024px    | tablet landscape / laptop|
+| `xl:`           | 1280px    | desktop                  |
+| `2xl:`          | 1536px    | wide desktop             |
+
+### Required patterns
+
+- **Mobile-first**: write base utilities for the smallest viewport and
+  layer `sm:` / `md:` / `lg:` variants up. Never write `lg:hidden`
+  without a matching base class — the desktop styling must always be
+  the additive case, not the baseline.
+- **Dialogs / drawers**: always use `<Dialog>` from
+  `components/ui/Dialog.tsx`. Do not hardcode `w-[XXXpx]` on a modal —
+  the wrapper handles `w-full` on phones and switches to a `sm:w-[...]`
+  cap above the `sm` breakpoint.
+- **Page shells**: wrap top-level page content in `<PageContainer>` from
+  `components/ui/PageContainer.tsx`. It applies `px-3 sm:px-4 md:px-6`
+  plus the 1500px max-width cap consistently.
+- **Tables**: any `<table>` that has more than three columns belongs
+  inside `<div className="overflow-x-auto">` so it can scroll
+  horizontally on phones instead of clipping.
+- **Grids**: never write `grid-cols-3` alone — use
+  `grid-cols-1 sm:grid-cols-2 md:grid-cols-3` so the layout collapses
+  gracefully on phones.
+- **Fixed pixel widths**: avoid `w-[NNNpx]`. Prefer Tailwind's relative
+  scale (`w-64`, `w-72`, `max-w-md`) or `w-full sm:w-[NNNpx]` if a fixed
+  desktop width is genuinely needed.
+- **Heights**: use `h-[100dvh]` rather than `h-[100vh]` for full-viewport
+  layouts so iOS Safari's URL bar doesn't push content under the chrome.
+- **Touch targets**: anything tap-able adds `className="touch-target"`
+  (32px min) or `touch-target-lg` (44px min) so coarse pointers clear
+  the iOS/Material guideline.
+- **Safe area**: footer / bottom-anchored UI uses `className="pb-safe"`
+  to clear iOS gesture bars and Android edge insets.
+
+### Forbidden patterns
+
+- ❌ `style={{ width: '480px' }}` on a modal.
+- ❌ `grid-cols-4` without responsive variants.
+- ❌ `h-72` / `h-96` on a panel that could be the only content on a
+  short viewport. Pair with a `sm:` or `md:` smaller variant.
+- ❌ `min-w-[N]` greater than ~160px on a column that lives inside a
+  table without an `overflow-x-auto` wrapper.
