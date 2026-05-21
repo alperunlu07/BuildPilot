@@ -139,11 +139,11 @@ export function ArtifactPreviewModal({ artifact, onClose }: Props) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-stretch justify-center bg-black/70 p-4"
+      className="fixed inset-0 z-50 flex items-stretch justify-center bg-black/70 p-2 sm:p-4"
       onClick={onClose}
     >
       <div
-        className="flex w-full max-w-6xl flex-col overflow-hidden rounded-lg border border-border-subtle bg-bg-base shadow-2xl"
+        className="flex h-full max-h-[100dvh] w-full max-w-6xl flex-col overflow-hidden rounded-lg border border-border-subtle bg-bg-base shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* ── Header ───────────────────────────────────────────── */}

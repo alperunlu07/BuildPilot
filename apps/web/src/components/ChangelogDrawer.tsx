@@ -167,7 +167,10 @@ export function ChangelogDrawer({ open, onClose }: Props) {
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="flex h-full w-[480px] flex-col border-l border-border-subtle bg-bg-panel shadow-2xl"
+        // Responsive overhaul Faz 2 — drawer is a right-edge sheet; on
+        // phones cap to 90vw so the dim backdrop still has a tappable
+        // area to dismiss the drawer.
+        className="flex h-full w-full max-w-[90vw] sm:w-[480px] sm:max-w-none flex-col border-l border-border-subtle bg-bg-panel shadow-2xl"
       >
         <div className="flex items-center justify-between border-b border-border-subtle px-5 py-3">
           <div className="flex items-center gap-2">

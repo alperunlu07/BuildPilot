@@ -34,13 +34,14 @@ export function AddProjectDialog({ open, onClose }: Props) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-bg-base/60 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-bg-base/60 backdrop-blur-sm p-3 sm:p-4"
       onClick={onClose}
     >
       <form
         onClick={(e) => e.stopPropagation()}
         onSubmit={submit}
-        className="w-[480px] rounded-lg border border-border-subtle bg-bg-panel p-5 shadow-xl"
+        // Responsive overhaul Faz 2 — phone-width fluid, snaps to 480px sm+.
+        className="w-full max-h-[calc(100dvh-24px)] overflow-y-auto sm:w-[480px] rounded-lg border border-border-subtle bg-bg-panel p-5 shadow-xl"
       >
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-base font-semibold text-text-primary">Add project</h2>

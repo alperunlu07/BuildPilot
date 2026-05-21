@@ -82,8 +82,8 @@ export function BuildDiffView({ current, candidates, nodeLabel, onClose }: Props
   }, [curSide, baseSide]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-stretch justify-center bg-bg-base/80 p-4 backdrop-blur-sm">
-      <div className="flex h-full w-full max-w-6xl flex-col overflow-hidden rounded-lg border border-border-subtle bg-bg-panel shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-stretch justify-center bg-bg-base/80 p-2 sm:p-4 backdrop-blur-sm">
+      <div className="flex h-full max-h-[100dvh] w-full max-w-6xl flex-col overflow-hidden rounded-lg border border-border-subtle bg-bg-panel shadow-2xl">
         <header className="flex items-center justify-between border-b border-border-subtle bg-bg-panel px-4 py-2">
           <div className="flex items-center gap-2">
             <GitCompareArrows size={14} className="text-accent" />
@@ -104,7 +104,7 @@ export function BuildDiffView({ current, candidates, nodeLabel, onClose }: Props
           <select
             value={baseId}
             onChange={(e) => setBaseId(e.target.value)}
-            className="min-w-[20rem] rounded-md border border-border-subtle bg-bg-panel px-2 py-1 text-text-primary focus:border-accent focus:outline-none"
+            className="w-full sm:min-w-[20rem] sm:w-auto rounded-md border border-border-subtle bg-bg-panel px-2 py-1 text-text-primary focus:border-accent focus:outline-none"
           >
             <option value="">— pick a build —</option>
             {candidates

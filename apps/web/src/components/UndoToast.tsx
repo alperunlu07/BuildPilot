@@ -22,11 +22,12 @@ export function UndoToast() {
   if (pending.length === 0 && errors.length === 0) return null;
 
   return (
-    <div className="pointer-events-none fixed bottom-4 left-1/2 z-40 flex -translate-x-1/2 flex-col items-center gap-2">
+    <div className="pointer-events-none fixed bottom-2 left-1/2 z-40 flex w-full max-w-[calc(100vw-16px)] -translate-x-1/2 flex-col items-center gap-2 px-2 sm:bottom-4 sm:max-w-none sm:px-0">
       {errors.map((e) => (
         <div
           key={e.id}
-          className="pointer-events-auto flex w-[420px] items-start gap-3 rounded-lg border border-rose-700/60 bg-bg-panel px-4 py-3 shadow-xl ring-1 ring-rose-500/10"
+          // Responsive overhaul Faz 2 — fluid width on phones, 420 sm+.
+          className="pointer-events-auto flex w-full max-w-[420px] items-start gap-3 rounded-lg border border-rose-700/60 bg-bg-panel px-4 py-3 shadow-xl ring-1 ring-rose-500/10 sm:w-[420px]"
         >
           <div className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-rose-500/15 text-rose-300">
             <AlertTriangle size={13} />
@@ -50,7 +51,8 @@ export function UndoToast() {
         return (
           <div
             key={d.id}
-            className="pointer-events-auto w-[420px] overflow-hidden rounded-lg border border-rose-700/60 bg-bg-panel shadow-xl ring-1 ring-rose-500/10"
+            // Responsive overhaul Faz 2 — fluid width on phones, 420 sm+.
+            className="pointer-events-auto w-full max-w-[420px] overflow-hidden rounded-lg border border-rose-700/60 bg-bg-panel shadow-xl ring-1 ring-rose-500/10 sm:w-[420px]"
           >
             <div className="flex items-center gap-3 px-4 py-3">
               <div className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-rose-500/15 text-rose-300">

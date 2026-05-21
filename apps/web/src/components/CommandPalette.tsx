@@ -57,10 +57,13 @@ export function CommandPalette({ onAddProject, onManageHosts }: Props) {
     <div
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 z-[90] flex items-start justify-center bg-bg-overlay pt-[12vh]"
+      className="fixed inset-0 z-[90] flex items-start justify-center bg-bg-overlay px-3 pt-[8vh] sm:pt-[12vh]"
       onClick={close}
     >
       <div
+        // Responsive overhaul Faz 2 — was full-width on phones with no
+        // padding around it; now keeps a 12px gutter via the parent
+        // px-3 and caps at max-w-xl above the px-3 inset.
         className="w-full max-w-xl overflow-hidden rounded-card border border-border-subtle bg-bg-panel shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >

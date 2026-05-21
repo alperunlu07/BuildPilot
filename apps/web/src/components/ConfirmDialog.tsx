@@ -50,13 +50,16 @@ export function ConfirmDialog({
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-center justify-center bg-bp-surface-0/70 backdrop-blur-sm"
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-bp-surface-0/70 backdrop-blur-sm p-3 sm:p-4"
       onClick={onCancel}
       role="presentation"
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-[420px] rounded-lg border border-bp-surface-3 bg-bp-surface-1 p-5 shadow-xl"
+        // Responsive overhaul Faz 2 — was fixed w-[420px] (overflowed
+        // on any viewport < 420px). Now fills the viewport on phones
+        // minus the parent p-3 inset, snapping back to 420px above sm.
+        className="w-full max-h-[calc(100dvh-24px)] overflow-y-auto sm:w-[420px] rounded-lg border border-bp-surface-3 bg-bp-surface-1 p-5 shadow-xl"
         role="alertdialog"
         aria-modal="true"
         aria-labelledby="confirm-dialog-title"
