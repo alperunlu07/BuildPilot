@@ -152,7 +152,7 @@ export function SecretsPage() {
 
   return (
     <div className="flex h-full">
-      <div className="min-w-0 flex-1 overflow-y-auto px-6 py-6">
+      <div className="min-w-0 flex-1 overflow-y-auto px-3 py-4 sm:px-4 md:px-6 md:py-6">
         <div className="mb-4 flex items-center justify-between gap-3">
           <div>
             <h2 className="flex items-center gap-2 text-lg font-semibold text-text-primary">

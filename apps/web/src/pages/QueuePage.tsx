@@ -50,7 +50,7 @@ export function QueuePage() {
   const lanes = queue?.lanes ?? [];
 
   return (
-    <div className="mx-auto max-w-6xl p-6">
+    <div className="mx-auto max-w-6xl p-3 sm:p-4 md:p-6">
       <div className="mb-5 flex items-baseline justify-between">
         <div>
           <h1 className="text-xl font-semibold text-text-primary">Execution Queue</h1>

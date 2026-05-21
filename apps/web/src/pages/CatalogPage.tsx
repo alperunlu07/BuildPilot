@@ -191,7 +191,7 @@ export function CatalogPage() {
   return (
     <div className="grid h-full min-h-0" style={{ gridTemplateColumns: 'minmax(0, 1fr) 380px' }}>
       {/* Left — catalog grid */}
-      <div className="overflow-y-auto px-6 py-6">
+      <div className="overflow-y-auto px-3 py-4 sm:px-4 md:px-6 md:py-6">
         <div className="mb-5">
           <h1 className="text-xl font-semibold text-text-primary tracking-tight">
             Step Catalog

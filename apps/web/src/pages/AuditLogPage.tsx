@@ -101,7 +101,7 @@ export function AuditLogPage() {
   }, [events]);
 
   return (
-    <div className="mx-auto max-w-6xl space-y-4 p-6">
+    <div className="mx-auto max-w-6xl space-y-4 p-3 sm:p-4 md:p-6">
       <header className="flex items-center justify-between gap-3">
         <div>
           <h1 className="flex items-center gap-2 text-xl font-semibold text-text-primary">

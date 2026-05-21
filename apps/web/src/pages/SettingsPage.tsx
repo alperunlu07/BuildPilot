@@ -124,15 +124,25 @@ export function SettingsPage() {
   }
 
   return (
-    <div className="grid h-full min-h-0" style={{ gridTemplateColumns: '220px minmax(0, 1fr)' }}>
-      <aside className="overflow-y-auto border-r border-border-subtle bg-bg-panel">
-        <div className="px-4 py-5">
+    // Responsive overhaul Faz 3 — was a fixed 220px+1fr 2-column grid
+    // that left no room for the content on phones. Below md the layout
+    // stacks: nav strip at top (horizontal scroll), content below.
+    // The aside reclaims its 220px column at md+.
+    <div className="flex h-full min-h-0 flex-col md:grid md:grid-cols-[220px_minmax(0,1fr)]">
+      <aside className="shrink-0 overflow-y-auto border-b border-border-subtle bg-bg-panel md:border-b-0 md:border-r">
+        <div className="px-4 py-4 md:py-5">
           <h1 className="text-base font-semibold tracking-tight text-text-primary">Settings</h1>
-          <p className="mt-1 text-[11px] leading-relaxed text-text-muted">
+          <p className="hidden md:block mt-1 text-[11px] leading-relaxed text-text-muted">
             Configure BuildPilot · stored in{' '}
             <code className="font-mono text-text-secondary">~/.buildpilot/config.json</code>
           </p>
-          <nav className="mt-4 flex flex-col gap-px" aria-label="Settings sections">
+          {/* Below md the nav scrolls horizontally as a tab-strip so all
+              section buttons stay reachable without giving up vertical
+              space to a full vertical list. */}
+          <nav
+            className="mt-3 flex flex-row gap-1 overflow-x-auto pb-1 md:mt-4 md:flex-col md:gap-px md:overflow-visible md:pb-0"
+            aria-label="Settings sections"
+          >
             {SECTIONS.map((s) => {
               const Icon = s.icon;
               const active = s.id === section;
@@ -144,7 +154,10 @@ export function SettingsPage() {
                   disabled={s.soon}
                   aria-current={active ? 'page' : undefined}
                   className={[
-                    'relative flex h-7 w-full items-center gap-2.5 rounded-md px-2.5 text-left text-[12.5px] transition-colors',
+                    // Mobile: shrink-0 keeps each tab compact so the row
+                    // can scroll horizontally. Above md it goes back to
+                    // a full-width vertical button.
+                    'relative flex h-7 shrink-0 items-center gap-2 rounded-md px-2.5 text-left text-[12.5px] transition-colors md:w-full md:gap-2.5',
                     active
                       ? 'bg-bg-hover text-text-primary'
                       : 'text-text-secondary hover:bg-bg-hover hover:text-text-primary',
@@ -153,16 +166,17 @@ export function SettingsPage() {
                     .filter(Boolean)
                     .join(' ')}
                 >
-                  {/* Active stripe sits just outside the row so it lines up
-                      with the nav's left padding. */}
+                  {/* Active stripe — only shown on the vertical nav (md+);
+                      the mobile tab-strip uses bg-bg-hover as the
+                      "selected" indicator. */}
                   {active && (
                     <span
                       aria-hidden
-                      className="absolute -left-[12px] top-[7px] h-3.5 w-[3px] rounded-sm bg-accent"
+                      className="absolute -left-[12px] top-[7px] hidden h-3.5 w-[3px] rounded-sm bg-accent md:block"
                     />
                   )}
                   <Icon size={13} className="shrink-0" />
-                  <span className="flex-1 truncate">{s.label}</span>
+                  <span className="truncate md:flex-1">{s.label}</span>
                   {s.soon && (
                     <span className="rounded bg-bg-elevated px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wider text-text-muted">
                       soon
@@ -174,7 +188,7 @@ export function SettingsPage() {
           </nav>
         </div>
       </aside>
-      <div className="overflow-y-auto px-8 pb-12 pt-6">
+      <div className="flex-1 overflow-y-auto px-4 pb-8 pt-4 sm:px-6 md:px-8 md:pb-12 md:pt-6">
         <div className="mx-auto max-w-[760px]">
           {section === 'general' && <GeneralSection />}
           {section === 'security' && <SecuritySection />}

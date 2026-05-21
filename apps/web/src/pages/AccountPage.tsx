@@ -20,7 +20,7 @@ export function AccountPage() {
 
   if (!authEnabled) {
     return (
-      <div className="mx-auto max-w-2xl space-y-4 p-6">
+      <div className="mx-auto max-w-2xl space-y-4 p-3 sm:p-4 md:p-6">
         <h1 className="text-xl font-semibold text-text-primary">Account</h1>
         <div className="rounded-md border border-border-subtle bg-bg-panel/60 p-4 text-sm text-text-secondary">
           Auth is disabled on this BuildPilot instance, so per-user account
@@ -36,7 +36,7 @@ export function AccountPage() {
 
   if (!currentUser) {
     return (
-      <div className="mx-auto max-w-2xl space-y-4 p-6">
+      <div className="mx-auto max-w-2xl space-y-4 p-3 sm:p-4 md:p-6">
         <h1 className="text-xl font-semibold text-text-primary">Account</h1>
         <div className="text-sm text-text-muted">Not signed in.</div>
       </div>
@@ -44,7 +44,7 @@ export function AccountPage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6 p-6">
+    <div className="mx-auto max-w-2xl space-y-6 p-3 sm:p-4 md:p-6">
       <header>
         <h1 className="text-xl font-semibold text-text-primary">Account</h1>
         <p className="text-xs text-text-muted">Update your profile and notification routing.</p>

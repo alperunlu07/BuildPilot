@@ -161,7 +161,7 @@ export function ProjectsPage({ onAdd }: Props) {
   }
 
   return (
-    <div className="px-6 py-6 max-w-[1400px] mx-auto">
+    <div className="px-3 py-4 sm:px-4 md:px-6 md:py-6 max-w-[1400px] mx-auto">
       {/* Page head */}
       <div className="flex items-start justify-between gap-4 mb-5">
         <div className="min-w-0">
@@ -446,7 +446,10 @@ function ProjectsTable({
 }): JSX.Element {
   return (
     <Card className="overflow-hidden">
-      <div className="grid grid-cols-[minmax(0,2fr)_120px_100px_180px_minmax(0,3fr)_100px_36px] px-3 py-2 text-[10px] uppercase tracking-wider text-text-muted font-semibold border-b border-border-subtle">
+      {/* Responsive overhaul Faz 3 — wrap the 7-column table so phones
+          can horizontally scroll instead of clipping. */}
+      <div className="overflow-x-auto">
+      <div className="min-w-[920px] grid grid-cols-[minmax(0,2fr)_120px_100px_180px_minmax(0,3fr)_100px_36px] px-3 py-2 text-[10px] uppercase tracking-wider text-text-muted font-semibold border-b border-border-subtle">
         <div>Project</div>
         <div>Branch</div>
         <div>Pipelines</div>
@@ -465,6 +468,7 @@ function ProjectsTable({
           onDelete={() => onDelete(p.id)}
         />
       ))}
+      </div>
     </Card>
   );
 }
@@ -493,7 +497,7 @@ function ProjectRow({
 
   return (
     <div
-      className="group grid grid-cols-[minmax(0,2fr)_120px_100px_180px_minmax(0,3fr)_100px_36px] items-center gap-2 px-3 h-10 text-[12.5px] border-b border-border-subtle last:border-b-0 hover:bg-bg-hover cursor-pointer transition-colors"
+      className="group grid min-w-[920px] grid-cols-[minmax(0,2fr)_120px_100px_180px_minmax(0,3fr)_100px_36px] items-center gap-2 px-3 h-10 text-[12.5px] border-b border-border-subtle last:border-b-0 hover:bg-bg-hover cursor-pointer transition-colors"
       onClick={onOpen}
     >
       <div className="flex items-center gap-2 min-w-0">

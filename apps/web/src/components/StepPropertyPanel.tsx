@@ -526,7 +526,7 @@ function CommonControlsSection({
           Auto-retry on failure (exponential backoff)
         </label>
         {retryEnabled && (
-          <div className="ml-5 mt-2 grid grid-cols-3 gap-2">
+          <div className="ml-5 mt-2 grid grid-cols-1 sm:grid-cols-3 gap-2">
             <label className="text-[10px] uppercase tracking-wider text-text-muted">
               Max retries
               <input

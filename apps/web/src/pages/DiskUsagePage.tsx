@@ -86,7 +86,7 @@ export function DiskUsagePage() {
   };
 
   return (
-    <div className="mx-auto max-w-4xl p-8">
+    <div className="mx-auto max-w-4xl p-3 sm:p-4 md:p-6 lg:p-8">
       <div className="mb-6 flex items-baseline justify-between">
         <div>
           <h1 className="flex items-center gap-2 text-xl font-semibold text-text-primary">

@@ -95,7 +95,7 @@ export function CreatePipelineDialog({ open, projectId, defaultBranch, onClose, 
           />
         </label>
 
-        <div className="mb-3 grid grid-cols-2 gap-3">
+        <div className="mb-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
           <label className="block">
             <span className="mb-1 block text-xs uppercase tracking-wide text-text-muted">
               Watch branch

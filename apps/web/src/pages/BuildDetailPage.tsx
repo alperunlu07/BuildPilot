@@ -565,7 +565,10 @@ export function BuildDetailPage({ buildId }: Props) {
           primitive but rendered inline so it can reach into the page's
           activeTab state without lifting it. */}
       <nav
-        className="flex items-center gap-1 border-b border-border-subtle bg-bg-panel px-2 sm:px-4"
+        // Responsive overhaul Faz 3 — tab bar scrolls horizontally on
+        // phones; tabs themselves are shrink-0 below so they don't
+        // squish.
+        className="flex items-center gap-1 overflow-x-auto border-b border-border-subtle bg-bg-panel px-2 sm:px-4"
         role="tablist"
         aria-label="Build sections"
       >
@@ -582,7 +585,7 @@ export function BuildDetailPage({ buildId }: Props) {
               aria-disabled={disabled}
               onClick={() => !disabled && setActiveTab(tab)}
               className={cn(
-                'relative flex items-center gap-1.5 px-3 h-9 text-[12.5px] font-medium transition-colors',
+                'relative flex shrink-0 items-center gap-1.5 px-3 h-9 text-[12.5px] font-medium transition-colors whitespace-nowrap',
                 active
                   ? 'text-text-primary'
                   : disabled
@@ -1386,7 +1389,7 @@ function BuildAnnotationsTab({ buildId }: { buildId: string }): JSX.Element {
   }
   return (
     <div className="flex-1 overflow-y-auto px-3 py-4 sm:px-6">
-      <div className="grid grid-cols-3 gap-3 mb-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
         <SummaryCard label="Errors" value={report.errorCount} tone="failed" />
         <SummaryCard label="Warnings" value={report.warningCount} tone="muted" />
         <SummaryCard label="Info" value={report.infoCount} tone="neutral" />

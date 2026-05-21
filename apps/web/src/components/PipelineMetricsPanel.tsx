@@ -71,7 +71,7 @@ export function PipelineMetricsPanel({ pipelineId, compact }: Props) {
 
   return (
     <div className={compact ? 'text-xs' : 'text-sm'}>
-      <div className="mb-3 grid grid-cols-3 gap-2">
+      <div className="mb-3 grid grid-cols-1 sm:grid-cols-3 gap-2">
         <Stat label="P50 duration" value={formatDurationMs(data.durationP50Ms)} />
         <Stat label="P95 duration" value={formatDurationMs(data.durationP95Ms)} />
         <Stat
