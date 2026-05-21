@@ -49,6 +49,21 @@ export const TypedConfirmation: Story = {
   },
 };
 
+// Responsive overhaul Faz 5 — same destructive story pre-set to the
+// iPhone SE viewport so reviewers can verify the dialog fluidly fills
+// the screen on a 375px viewport without horizontal overflow.
+export const PhonePortrait: Story = {
+  args: {
+    title: 'Remove pipeline',
+    body: 'This will remove the pipeline and stop all watchers.\nThis action cannot be undone.',
+    confirmLabel: 'Remove',
+    variant: 'destructive',
+  },
+  parameters: {
+    viewport: { defaultViewport: 'iphoneSE' },
+  },
+};
+
 // Interactive story — confirms can flip the dialog closed so reviewers can
 // see the open + closed states from the same canvas.
 export const Interactive: Story = {
