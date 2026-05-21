@@ -49,7 +49,12 @@ export function BuildLogPanel() {
       aria-label="Build log panel"
       aria-live="polite"
       aria-atomic="false"
-      className="flex h-72 shrink-0 flex-col border-t border-border-subtle bg-bg-base"
+      // Responsive overhaul Faz 1 — the log panel previously locked
+      // 288px (h-72) regardless of viewport, which on a 667px iPhone SE
+      // ate ~43% of the page below the topbar + main content. Scale the
+      // height to the screen size: ~50% of viewport on phones, then
+      // back to 288px on tablets.
+      className="flex h-48 shrink-0 flex-col border-t border-border-subtle bg-bg-base sm:h-60 md:h-72"
     >
       <div className="flex items-center justify-between border-b border-border-subtle px-4 py-2 text-xs">
         <div className="flex items-center gap-2">

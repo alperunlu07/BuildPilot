@@ -52,9 +52,12 @@ export function ActiveBuildsWidget() {
   const projectNameFor = (id: string) => projects.find((p) => p.id === id)?.name ?? 'project';
 
   return (
-    <div className="pointer-events-auto fixed bottom-4 right-4 z-40">
+    <div className="pointer-events-auto fixed bottom-2 right-2 z-40 sm:bottom-4 sm:right-4">
       {expanded ? (
-        <div className="w-80 overflow-hidden rounded-md border border-border-subtle bg-bg-panel shadow-xl">
+        // Responsive overhaul Faz 1 — clamp the expanded widget to the
+        // viewport on phones so it never spills off the right edge of
+        // a 320px screen.
+        <div className="w-[min(20rem,calc(100vw-16px))] overflow-hidden rounded-md border border-border-subtle bg-bg-panel shadow-xl">
           <div className="flex items-center justify-between border-b border-border-subtle px-3 py-2">
             <div className="flex items-center gap-2 text-xs font-medium text-text-primary">
               <Activity size={12} className="motion-safe:animate-pulse text-amber-400" aria-hidden="true" />

@@ -1,6 +1,7 @@
 import { Bell, ChevronRight, Menu, Search } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useStore } from '../../store/store';
+import { cn } from '../../lib/cn';
 import { Badge } from '../ui/Badge';
 import { Kbd } from '../ui/Kbd';
 import { UserMenu } from '../UserMenu';
@@ -82,16 +83,21 @@ export function Topbar({ onOpenMobileNav }: TopbarProps): JSX.Element | null {
       </div>
 
       {/* Centre: Cmd+K trigger. Visually a search input but click-only —
-          opens the command palette which has the actual input. */}
+          opens the command palette which has the actual input. On
+          phones (Faz 1) it collapses to an icon-only button so the
+          breadcrumb and right-side actions still fit on a 320px viewport. */}
       <button
         type="button"
         onClick={openPalette}
-        className="flex items-center gap-2 mx-auto h-7 px-2.5 max-w-[460px] flex-1 bg-bg-panel border border-border-subtle rounded-btn text-text-faint text-[12px] hover:border-border hover:text-text-muted transition-colors"
+        className="flex items-center gap-2 mx-auto h-7 px-2 sm:px-2.5 sm:max-w-[460px] sm:flex-1 bg-bg-panel border border-border-subtle rounded-btn text-text-faint text-[12px] hover:border-border hover:text-text-muted transition-colors"
         title="Open command palette"
+        aria-label="Open command palette"
       >
         <Search size={12} />
-        <span className="flex-1 text-left">Jump to anything…</span>
-        <Kbd>⌘K</Kbd>
+        <span className="hidden sm:flex sm:flex-1 sm:text-left">Jump to anything…</span>
+        <span className="hidden sm:inline-flex">
+          <Kbd>⌘K</Kbd>
+        </span>
       </button>
 
       {/* Right: running builds pill + notifications + user menu */}
@@ -214,8 +220,13 @@ function Breadcrumb({
     <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 min-w-0">
       {crumbs.map((c, i) => {
         const isLast = i === crumbs.length - 1;
+        // Responsive overhaul Faz 1 — on phones we only render the
+        // final crumb so the breadcrumb doesn't squeeze out the Cmd+K
+        // trigger and the right-side actions. The full trail comes
+        // back at the sm breakpoint.
+        const mobileHidden = !isLast ? 'hidden sm:flex' : 'flex';
         return (
-          <span key={i} className="flex items-center gap-1.5 min-w-0">
+          <span key={i} className={cn('items-center gap-1.5 min-w-0', mobileHidden)}>
             {i > 0 && <ChevronRight size={11} className="text-text-faint shrink-0" />}
             {c.onClick && !isLast ? (
               <button

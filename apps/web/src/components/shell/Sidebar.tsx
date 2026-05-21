@@ -191,7 +191,16 @@ export function Sidebar({
     }
   }, [openProjects]);
 
-  const effectiveWidth = !isDesktop ? Math.min(width, 320) : collapsed ? COLLAPSED_WIDTH : width;
+  // Responsive overhaul Faz 1 — drawer mode width capped to 85vw so narrow
+  // phones (320px) still see ~48px of the page underneath instead of a
+  // full-width drawer that hides the close affordance.
+  const mobileMaxWidth =
+    typeof window !== 'undefined' ? Math.min(320, Math.floor(window.innerWidth * 0.85)) : 320;
+  const effectiveWidth = !isDesktop
+    ? Math.min(width, mobileMaxWidth)
+    : collapsed
+      ? COLLAPSED_WIDTH
+      : width;
 
   const favProjects = projects.filter((p) => favorites.projectIds.includes(p.id));
   const favPipelines = pipelines.filter((p) => favorites.pipelineIds.includes(p.id));
