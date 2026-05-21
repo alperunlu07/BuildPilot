@@ -11,7 +11,7 @@ export function PipelinePage({ pipelineId }: Props) {
 
   if (!pipeline) {
     return (
-      <div className="p-8 text-sm text-text-muted">
+      <div className="p-4 sm:p-6 md:p-8 text-sm text-text-muted">
         Pipeline not found.{' '}
         <button
           type="button"

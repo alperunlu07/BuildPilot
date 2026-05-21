@@ -31,6 +31,7 @@ import { api } from '../lib/api';
 import { usePipelineClipboard } from '../lib/usePipelineClipboard';
 import { usePipelineHistory } from '../lib/usePipelineHistory';
 import { useStore } from '../store/store';
+import { useBelow } from '../lib/breakpoint';
 import { cn } from '../lib/cn';
 import {
   clearDraft,
@@ -232,6 +233,11 @@ function Editor({ pipeline }: Props) {
     if (typeof window === 'undefined') return false;
     return window.localStorage.getItem('buildpilot:editor:minimap') === '1';
   });
+  // Responsive overhaul Faz 4 — minimap takes ~20% of a phone viewport,
+  // making the canvas itself unreadable. Always hide it below md, even
+  // when the user previously enabled it on desktop.
+  const isMobile = useBelow('md');
+  const effectiveShowMinimap = showMinimap && !isMobile;
   // Cluster 10.E — draft auto-save. We surface a banner if a localStorage
   // draft is newer than the server pipeline so the user can choose to
   // restore. Drafts are written debounced as they edit.
@@ -851,7 +857,7 @@ function Editor({ pipeline }: Props) {
           actions sit on the right. Chips use bg-bg-elevated so the active
           dot stands out, and a filled "●" marker shows when an advanced
           option (tag pattern, cron, path filter, etc.) is configured. */}
-      <header className="flex items-center justify-between border-b border-border-subtle bg-bg-panel px-4 py-2">
+      <header className="flex flex-wrap items-center justify-between gap-y-2 border-b border-border-subtle bg-bg-panel px-3 py-2 sm:flex-nowrap sm:px-4">
         <div className="flex items-center gap-2 min-w-0">
           <div className="flex flex-col gap-0.5 min-w-0 mr-1">
             <input
@@ -1575,7 +1581,7 @@ function Editor({ pipeline }: Props) {
                 <div className="text-[9px] text-text-muted">click to cycle</div>
               </div>
             )}
-            {showMinimap && (
+            {effectiveShowMinimap && (
               <MiniMap
                 pannable
                 zoomable
@@ -1801,7 +1807,11 @@ function Palette({
         });
 
   return (
-    <div className="scrollbar-thin flex w-56 shrink-0 flex-col gap-2 overflow-y-auto border-r border-border-subtle bg-bg-panel p-2.5">
+    // Responsive overhaul Faz 4 — hide the drag-source palette on
+    // phones. Drag-and-drop node creation isn't usable from a touch
+    // viewport anyway, and the 224px sidebar otherwise leaves <100px
+    // for the canvas on a 320px screen. md+ keeps the original layout.
+    <div className="scrollbar-thin hidden w-56 shrink-0 flex-col gap-2 overflow-y-auto border-r border-border-subtle bg-bg-panel p-2.5 md:flex">
       <input
         type="text"
         value={query}
