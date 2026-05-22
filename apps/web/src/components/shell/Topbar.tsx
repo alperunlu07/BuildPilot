@@ -84,12 +84,14 @@ export function Topbar({ onOpenMobileNav }: TopbarProps): JSX.Element | null {
 
       {/* Centre: Cmd+K trigger. Visually a search input but click-only —
           opens the command palette which has the actual input. On
-          phones (Faz 1) it collapses to an icon-only button so the
-          breadcrumb and right-side actions still fit on a 320px viewport. */}
+          phones (Faz 1) it collapses to an icon-only button. The
+          min-w-[44px] enforces the iOS touch-target guideline; without
+          it the natural icon+padding width was ~28px, below the 32px
+          .touch-target floor and effectively undiscoverable. */}
       <button
         type="button"
         onClick={openPalette}
-        className="flex items-center gap-2 mx-auto h-7 px-2 sm:px-2.5 sm:max-w-[460px] sm:flex-1 bg-bg-panel border border-border-subtle rounded-btn text-text-faint text-[12px] hover:border-border hover:text-text-muted transition-colors"
+        className="flex items-center justify-center gap-2 mx-auto h-7 min-w-[44px] px-2 sm:px-2.5 sm:max-w-[460px] sm:flex-1 sm:justify-start bg-bg-panel border border-border-subtle rounded-btn text-text-faint text-[12px] hover:border-border hover:text-text-muted transition-colors"
         title="Open command palette"
         aria-label="Open command palette"
       >

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertCircle,
   Bell,
@@ -116,6 +116,19 @@ export function SettingsPage() {
     return () => window.removeEventListener('hashchange', onHash);
   }, []);
 
+  // Responsive overhaul follow-up — keep the active tab visible in the
+  // horizontal mobile tab strip. Without this, deep-linking to
+  // /settings#about lands on the About section but the strip stays
+  // anchored on 'General' with no indication of context. Refs are
+  // populated by the SECTIONS render below; the effect runs both on
+  // section change AND on mount so initial hash navigation scrolls.
+  const tabRefs = useRef<Partial<Record<SectionId, HTMLButtonElement | null>>>({});
+  useEffect(() => {
+    const node = tabRefs.current[section];
+    if (!node) return;
+    node.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+  }, [section]);
+
   function navigate(id: SectionId): void {
     if (window.location.hash !== `#${id}`) {
       window.history.replaceState(null, '', `#${id}`);
@@ -138,7 +151,12 @@ export function SettingsPage() {
           </p>
           {/* Below md the nav scrolls horizontally as a tab-strip so all
               section buttons stay reachable without giving up vertical
-              space to a full vertical list. */}
+              space to a full vertical list. The relative wrapper +
+              after:* pseudo paints a right-edge gradient that's only
+              visible on the mobile strip, signalling there's more
+              content past the viewport edge (iOS Safari hides
+              scrollbars by default so we'd otherwise have no hint). */}
+          <div className="relative md:contents after:pointer-events-none after:absolute after:right-0 after:top-3 after:h-7 after:w-6 after:bg-gradient-to-l after:from-bg-panel after:to-transparent md:after:hidden">
           <nav
             className="mt-3 flex flex-row gap-1 overflow-x-auto pb-1 md:mt-4 md:flex-col md:gap-px md:overflow-visible md:pb-0"
             aria-label="Settings sections"
@@ -149,6 +167,9 @@ export function SettingsPage() {
               return (
                 <button
                   key={s.id}
+                  ref={(el) => {
+                    tabRefs.current[s.id] = el;
+                  }}
                   type="button"
                   onClick={() => !s.soon && navigate(s.id)}
                   disabled={s.soon}
@@ -186,6 +207,7 @@ export function SettingsPage() {
               );
             })}
           </nav>
+          </div>
         </div>
       </aside>
       <div className="flex-1 overflow-y-auto px-4 pb-8 pt-4 sm:px-6 md:px-8 md:pb-12 md:pt-6">

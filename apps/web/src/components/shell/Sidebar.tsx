@@ -191,13 +191,14 @@ export function Sidebar({
     }
   }, [openProjects]);
 
-  // Responsive overhaul Faz 1 — drawer mode width capped to 85vw so narrow
-  // phones (320px) still see ~48px of the page underneath instead of a
-  // full-width drawer that hides the close affordance.
-  const mobileMaxWidth =
-    typeof window !== 'undefined' ? Math.min(320, Math.floor(window.innerWidth * 0.85)) : 320;
+  // Responsive overhaul Faz 1 — drawer mode width capped at 320px via
+  // JS plus an additional CSS-only `max-w-[85vw]` clamp on the rendered
+  // aside (see the className below). The CSS clamp is what handles
+  // orientation changes — reading `window.innerWidth` here at render
+  // time would freeze the value at first paint, since useMinWidth('md')
+  // only re-renders when crossing the md threshold.
   const effectiveWidth = !isDesktop
-    ? Math.min(width, mobileMaxWidth)
+    ? Math.min(width, 320)
     : collapsed
       ? COLLAPSED_WIDTH
       : width;
@@ -289,7 +290,12 @@ export function Sidebar({
         aria-label="Primary navigation"
         style={{ width: effectiveWidth }}
         className={cn(
-          'density-card relative flex h-full flex-col border-r border-border-subtle bg-bg-panel overflow-hidden',
+          // `max-w-[85vw]` re-clamps the inline width above so a phone
+          // that rotates portrait→landscape (or any other intra-mobile
+          // viewport change) immediately recomputes the drawer cap from
+          // the new viewport without needing a JS re-render. md+ ignores
+          // it because the inline width is always ≤ 400, well under 85vw.
+          'density-card relative flex h-full max-w-[85vw] flex-col border-r border-border-subtle bg-bg-panel overflow-hidden',
           mobileClasses,
         )}
         aria-hidden={!isDesktop && !mobileOpen ? true : undefined}
