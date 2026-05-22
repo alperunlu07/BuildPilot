@@ -45,3 +45,8 @@ e2e/test-results/
 e2e/screenshots/**/diff/
 e2e/screenshots/**/*-actual.png
 e2e/screenshots/**/*-diff.png
+
+# Ad-hoc local utility scripts + their output (seed scripts, screenshot
+# tours, responsive audit, etc.). Not part of the build or CI surface.
+scripts/
+docs/screenshots/
