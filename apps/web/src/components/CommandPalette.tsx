@@ -57,11 +57,18 @@ export function CommandPalette({ onAddProject, onManageHosts }: Props) {
     <div
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 z-[90] flex items-start justify-center bg-bg-overlay pt-[12vh]"
+      // Responsive overhaul follow-up — use dvh (dynamic viewport
+      // height) so iOS Safari shrinks the top inset when the virtual
+      // keyboard appears; otherwise the palette anchors to layout-vh
+      // and the input + result list end up behind the keyboard.
+      className="fixed inset-0 z-[90] flex items-start justify-center bg-bg-overlay px-3 pt-[8dvh] sm:pt-[12dvh]"
       onClick={close}
     >
       <div
-        className="w-full max-w-xl overflow-hidden rounded-card border border-border-subtle bg-bg-panel shadow-2xl"
+        // Responsive overhaul Faz 2 — was full-width on phones with no
+        // padding around it; now keeps a 12px gutter via the parent
+        // px-3 and caps at max-w-xl above the px-3 inset.
+        className="w-full max-w-xl max-h-[80dvh] overflow-hidden rounded-card border border-border-subtle bg-bg-panel shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <Command label="Command palette" loop>

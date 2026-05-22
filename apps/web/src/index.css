@@ -49,6 +49,53 @@ html,
 body,
 #root {
   height: 100%;
+  /* Responsive overhaul Faz 0 — prefer dynamic-vh so iOS Safari's
+     collapsing URL bar doesn't push the bottom log panel under the
+     chrome. Falls back to 100% for older browsers via the cascade. */
+}
+@supports (height: 100dvh) {
+  html,
+  body,
+  #root {
+    height: 100dvh;
+  }
+}
+
+/* Responsive overhaul Faz 0 — global guard against accidental horizontal
+   scroll on mobile. Uses `overflow-x: clip` rather than `hidden` for two
+   reasons:
+     1. `clip` does NOT force `overflow-y: auto` (per spec), so the body
+        stays a non-scroll container and `position: sticky` descendants
+        keep their original scroll context.
+     2. `clip` does NOT suppress the documentElement's horizontal scroll,
+        so the responsive smoke tests in e2e/tests/responsive.spec.ts
+        (which measure documentElement.scrollWidth - clientWidth) still
+        catch real overflow regressions. `hidden` masks them.
+   Components that intentionally scroll horizontally (tables, gantt
+   charts) live inside their own .overflow-x-auto wrapper so the inner
+   scroll keeps working. */
+body {
+  overflow-x: clip;
+}
+
+/* Safe-area utility for iOS notch / Android gesture bar. Apply via
+   className="pb-safe" / "pt-safe" / "px-safe". The fallback to 0 keeps
+   browsers without env() support identical to the no-utility state. */
+.pt-safe {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.pl-safe {
+  padding-left: env(safe-area-inset-left, 0px);
+}
+.pr-safe {
+  padding-right: env(safe-area-inset-right, 0px);
+}
+.px-safe {
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
 }
 
 body {

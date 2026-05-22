@@ -77,7 +77,7 @@ export function CoverageReportPanel({ buildId }: Props) {
 
   return (
     <div className="text-xs">
-      <div className="mb-2 grid grid-cols-3 gap-2">
+      <div className="mb-2 grid grid-cols-1 sm:grid-cols-3 gap-2">
         <Stat
           label="Line coverage"
           value={formatPct(data.lineRate)}

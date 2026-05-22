@@ -15,6 +15,7 @@ import { api } from '../lib/api';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
+import { PageContainer } from '../components/ui/PageContainer';
 import { Input } from '../components/ui/Input';
 import { Sparkline, type SparklineBar, type SparklineStatus } from '../components/ui/Sparkline';
 import { StatusDot } from '../components/ui/StatusDot';
@@ -161,7 +162,7 @@ export function ProjectsPage({ onAdd }: Props) {
   }
 
   return (
-    <div className="px-6 py-6 max-w-[1400px] mx-auto">
+    <PageContainer maxWidth="1400px">
       {/* Page head */}
       <div className="flex items-start justify-between gap-4 mb-5">
         <div className="min-w-0">
@@ -303,7 +304,7 @@ export function ProjectsPage({ onAdd }: Props) {
           onDelete={(id) => softDeleteProject(id)}
         />
       )}
-    </div>
+    </PageContainer>
   );
 }
 
@@ -445,8 +446,17 @@ function ProjectsTable({
   onDelete(id: string): void;
 }): JSX.Element {
   return (
-    <Card className="overflow-hidden">
-      <div className="grid grid-cols-[minmax(0,2fr)_120px_100px_180px_minmax(0,3fr)_100px_36px] px-3 py-2 text-[10px] uppercase tracking-wider text-text-muted font-semibold border-b border-border-subtle">
+    <Card className="overflow-clip">
+      {/* Responsive overhaul Faz 3 — wrap the 7-column table so phones
+          can horizontally scroll instead of clipping. Review follow-up:
+          Card uses `overflow-clip` (not `hidden`) so it doesn't
+          establish a new block formatting context — plain
+          `overflow-hidden` prevented the inner scroller's horizontal
+          scrollbar from showing and broke iOS Safari momentum scroll
+          inside a rounded-clipped ancestor. `overscroll-x-contain`
+          keeps swipes inside the table. */}
+      <div className="overflow-x-auto overscroll-x-contain">
+      <div className="min-w-[920px] grid grid-cols-[minmax(0,2fr)_120px_100px_180px_minmax(0,3fr)_100px_36px] px-3 py-2 text-[10px] uppercase tracking-wider text-text-muted font-semibold border-b border-border-subtle">
         <div>Project</div>
         <div>Branch</div>
         <div>Pipelines</div>
@@ -465,6 +475,7 @@ function ProjectsTable({
           onDelete={() => onDelete(p.id)}
         />
       ))}
+      </div>
     </Card>
   );
 }
@@ -493,7 +504,7 @@ function ProjectRow({
 
   return (
     <div
-      className="group grid grid-cols-[minmax(0,2fr)_120px_100px_180px_minmax(0,3fr)_100px_36px] items-center gap-2 px-3 h-10 text-[12.5px] border-b border-border-subtle last:border-b-0 hover:bg-bg-hover cursor-pointer transition-colors"
+      className="group grid min-w-[920px] grid-cols-[minmax(0,2fr)_120px_100px_180px_minmax(0,3fr)_100px_36px] items-center gap-2 px-3 h-10 text-[12.5px] border-b border-border-subtle last:border-b-0 hover:bg-bg-hover cursor-pointer transition-colors"
       onClick={onOpen}
     >
       <div className="flex items-center gap-2 min-w-0">
@@ -527,7 +538,11 @@ function ProjectRow({
           e.stopPropagation();
           onDelete();
         }}
-        className="opacity-0 group-hover:opacity-100 rounded-btn p-1 text-text-muted hover:text-rose-300 transition-opacity"
+        // Responsive overhaul follow-up — opacity-0 group-hover only
+        // works with a pointer. On coarse-pointer devices (phones,
+        // tablets, touch laptops) keep the button visible so the row
+        // stays deletable.
+        className="touch-target opacity-0 group-hover:opacity-100 [@media(pointer:coarse)]:opacity-100 rounded-btn p-1 text-text-muted hover:text-rose-300 transition-opacity"
         title="Remove project"
         aria-label={`Remove project ${project.name}`}
       >

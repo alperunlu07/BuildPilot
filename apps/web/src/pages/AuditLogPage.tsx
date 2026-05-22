@@ -8,6 +8,7 @@ import type {
   AuditResource,
 } from '@buildpilot/shared-types';
 import { api } from '../lib/api';
+import { PageContainer } from '../components/ui/PageContainer';
 
 const ACTIONS: AuditAction[] = ['create', 'update', 'delete', 'login', 'logout', 'other'];
 const RESOURCES: AuditResource[] = [
@@ -101,7 +102,7 @@ export function AuditLogPage() {
   }, [events]);
 
   return (
-    <div className="mx-auto max-w-6xl space-y-4 p-6">
+    <PageContainer maxWidth="72rem" className="space-y-4">
       <header className="flex items-center justify-between gap-3">
         <div>
           <h1 className="flex items-center gap-2 text-xl font-semibold text-text-primary">
@@ -278,7 +279,7 @@ export function AuditLogPage() {
           </tbody>
         </table>
       </div>
-    </div>
+    </PageContainer>
   );
 }
 

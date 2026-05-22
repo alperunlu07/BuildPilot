@@ -8,6 +8,7 @@ import { Time } from '../lib/formatDate';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
+import { PageContainer } from '../components/ui/PageContainer';
 import { FilterPill } from '../components/ui/FilterPill';
 
 // UI v2 Faz 7 — Builds list with three view modes:
@@ -107,7 +108,7 @@ export function BuildsPage() {
     projectId !== '' || pipelineId !== '' || status !== 'all' || branchFilter !== '';
 
   return (
-    <div className="px-6 py-6 max-w-[1500px] mx-auto">
+    <PageContainer>
       <div className="mb-5 flex items-start justify-between gap-4">
         <div className="min-w-0">
           <h1 className="text-xl font-semibold text-text-primary tracking-tight">Builds</h1>
@@ -245,7 +246,7 @@ export function BuildsPage() {
           onOpen={(id) => setView({ type: 'build', id })}
         />
       )}
-    </div>
+    </PageContainer>
   );
 }
 
@@ -263,8 +264,19 @@ function BuildsTable({
   onOpen(id: string): void;
 }) {
   return (
-    <Card className="overflow-hidden">
-      <div className="grid grid-cols-[120px_90px_minmax(0,1.5fr)_minmax(0,2fr)_120px_120px_90px_70px] px-3 py-2 text-[10px] uppercase tracking-wider text-text-muted font-semibold border-b border-border-subtle">
+    <Card className="overflow-clip">
+      {/* Responsive overhaul Faz 3 — wrap the grid in an overflow-x-auto
+          scroller so the 8 fixed columns (sum 750px) stay readable on
+          phones via horizontal scroll instead of overflowing the page.
+          Review follow-up: Card uses `overflow-clip` (not `hidden`) so
+          it doesn't establish a new block formatting context. Plain
+          `overflow-hidden` would have prevented the inner scroller's
+          horizontal scrollbar from appearing and broken iOS Safari's
+          momentum scroll inside a rounded-clipped ancestor. The
+          `overscroll-x-contain` keeps swipes inside this scroller
+          instead of triggering browser back-navigation. */}
+      <div className="overflow-x-auto overscroll-x-contain">
+      <div className="min-w-[760px] grid grid-cols-[120px_90px_minmax(0,1.5fr)_minmax(0,2fr)_120px_120px_90px_70px] px-3 py-2 text-[10px] uppercase tracking-wider text-text-muted font-semibold border-b border-border-subtle">
         <div>Status</div>
         <div>Build #</div>
         <div>Project</div>
@@ -282,7 +294,7 @@ function BuildsTable({
             key={b.id}
             type="button"
             onClick={() => onOpen(b.id)}
-            className="group grid grid-cols-[120px_90px_minmax(0,1.5fr)_minmax(0,2fr)_120px_120px_90px_70px] items-center px-3 h-10 text-[12.5px] border-b border-border-subtle last:border-b-0 hover:bg-bg-hover text-left w-full transition-colors"
+            className="group grid min-w-[760px] grid-cols-[120px_90px_minmax(0,1.5fr)_minmax(0,2fr)_120px_120px_90px_70px] items-center px-3 h-10 text-[12.5px] border-b border-border-subtle last:border-b-0 hover:bg-bg-hover text-left w-full transition-colors"
           >
             <div>
               <Badge variant={mapStatusToBadgeVariant(b.status)}>{STATUS_LABELS[b.status]}</Badge>
@@ -308,6 +320,7 @@ function BuildsTable({
           </button>
         );
       })}
+      </div>
     </Card>
   );
 }
@@ -344,7 +357,7 @@ function BuildsTimeline({
 
   return (
     <Card className="overflow-hidden">
-      <div className="grid grid-cols-[200px_minmax(0,1fr)] px-3 py-2 text-[10px] uppercase tracking-wider text-text-muted font-semibold border-b border-border-subtle">
+      <div className="grid grid-cols-[120px_minmax(0,1fr)] sm:grid-cols-[200px_minmax(0,1fr)] px-3 py-2 text-[10px] uppercase tracking-wider text-text-muted font-semibold border-b border-border-subtle">
         <div>Pipeline</div>
         <div>Last 24h</div>
       </div>
@@ -353,7 +366,7 @@ function BuildsTimeline({
         return (
           <div
             key={pipelineId}
-            className="grid grid-cols-[200px_minmax(0,1fr)] items-center px-3 h-10 border-b border-border-subtle last:border-b-0"
+            className="grid grid-cols-[120px_minmax(0,1fr)] sm:grid-cols-[200px_minmax(0,1fr)] items-center px-3 h-10 border-b border-border-subtle last:border-b-0"
           >
             <div className="truncate text-[12.5px] text-text-primary">
               {pipe?.name ?? pipelineId.slice(0, 7)}

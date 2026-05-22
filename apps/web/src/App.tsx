@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useBelow } from './lib/breakpoint';
 import { Sidebar } from './components/shell/Sidebar';
 import { Topbar } from './components/shell/Topbar';
 import { AddProjectDialog } from './components/AddProjectDialog';
@@ -191,6 +192,12 @@ export function App() {
     },
   });
 
+  // Responsive overhaul Faz 1 — collapse the sidebar grid column on
+  // phones/tablets so the topbar + main content can use the full
+  // viewport width. The sidebar's drawer mode (overlay with z-50) still
+  // renders on top via the same component, just outside the grid.
+  const isMobile = useBelow('md');
+
   return (
     // UI v2 Faz 3 — design's app-grid template. Sidebar (variable width)
     // spans both rows on the left; Topbar + main + BottomLogPanel stack
@@ -199,12 +206,17 @@ export function App() {
     <div
       className="grid h-full bg-bg-base text-text-primary"
       style={{
-        gridTemplateColumns: 'auto minmax(0, 1fr)',
+        gridTemplateColumns: isMobile ? 'minmax(0, 1fr)' : 'auto minmax(0, 1fr)',
         gridTemplateRows: '44px minmax(0, 1fr) auto',
-        gridTemplateAreas: '"sidebar topbar" "sidebar main" "sidebar logpanel"',
+        gridTemplateAreas: isMobile
+          ? '"topbar" "main" "logpanel"'
+          : '"sidebar topbar" "sidebar main" "sidebar logpanel"',
       }}
     >
-      <div style={{ gridArea: 'sidebar' }} className="contents md:block">
+      {/* Sidebar renders its own drawer overlay on mobile, so we only
+          claim a grid cell on md+. On phones the drawer floats above
+          the main content via fixed positioning. */}
+      <div style={{ gridArea: isMobile ? undefined : 'sidebar' }} className="contents md:block">
         <Sidebar
           onAddProject={() => setOpenAdd(true)}
           onShowChangelog={() => setOpenChangelog(true)}

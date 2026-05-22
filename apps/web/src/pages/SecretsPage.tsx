@@ -152,7 +152,7 @@ export function SecretsPage() {
 
   return (
     <div className="flex h-full">
-      <div className="min-w-0 flex-1 overflow-y-auto px-6 py-6">
+      <div className="min-w-0 flex-1 overflow-y-auto px-3 py-4 sm:px-4 md:px-6 md:py-6">
         <div className="mb-4 flex items-center justify-between gap-3">
           <div>
             <h2 className="flex items-center gap-2 text-lg font-semibold text-text-primary">
@@ -209,8 +209,11 @@ export function SecretsPage() {
             )}
           </div>
         ) : (
-          <div className="overflow-hidden rounded-md border border-border-subtle">
-            <table className="w-full text-sm">
+          // Responsive review follow-up — overflow-clip + inner
+          // overflow-x-auto so iPhone 12 scrolls instead of clipping.
+          <div className="overflow-clip rounded-md border border-border-subtle">
+            <div className="overflow-x-auto overscroll-x-contain">
+            <table className="min-w-[560px] w-full text-sm">
               <thead className="bg-bg-panel text-[11px] uppercase tracking-wider text-text-muted">
                 <tr>
                   <th className="px-3 py-2 text-left">Name</th>
@@ -272,6 +275,7 @@ export function SecretsPage() {
                 })}
               </tbody>
             </table>
+            </div>
           </div>
         )}
       </div>

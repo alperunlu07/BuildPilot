@@ -4,6 +4,7 @@ import type { Pipeline, PipelineEdge, PipelineNode } from '@buildpilot/shared-ty
 import { useStore } from '../store/store';
 import { api } from '../lib/api';
 import { BranchSelect } from './BranchSelect';
+import { Dialog } from './ui/Dialog';
 
 interface Props {
   open: boolean;
@@ -41,8 +42,6 @@ export function CreatePipelineDialog({ open, projectId, defaultBranch, onClose, 
     if (open) setBranch(defaultBranch);
   }, [open, defaultBranch]);
 
-  if (!open) return null;
-
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -68,15 +67,8 @@ export function CreatePipelineDialog({ open, projectId, defaultBranch, onClose, 
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-bg-base/60 backdrop-blur-sm"
-      onClick={onClose}
-    >
-      <form
-        onClick={(e) => e.stopPropagation()}
-        onSubmit={submit}
-        className="w-[460px] rounded-lg border border-border-subtle bg-bg-panel p-5 shadow-xl"
-      >
+    <Dialog open={open} onClose={onClose} ariaLabel="New pipeline" size="md">
+      <form onSubmit={submit}>
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-base font-semibold text-text-primary">New pipeline</h2>
           <button type="button" onClick={onClose} className="text-text-muted hover:text-text-primary">
@@ -94,7 +86,7 @@ export function CreatePipelineDialog({ open, projectId, defaultBranch, onClose, 
           />
         </label>
 
-        <div className="mb-3 grid grid-cols-2 gap-3">
+        <div className="mb-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
           <label className="block">
             <span className="mb-1 block text-xs uppercase tracking-wide text-text-muted">
               Watch branch
@@ -154,7 +146,7 @@ export function CreatePipelineDialog({ open, projectId, defaultBranch, onClose, 
           </button>
         </div>
       </form>
-    </div>
+    </Dialog>
   );
 }
 

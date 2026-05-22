@@ -70,7 +70,7 @@ export function HomePage() {
   }, [reload]);
 
   return (
-    <div className="mx-auto max-w-6xl p-8">
+    <div className="mx-auto max-w-6xl px-3 py-4 sm:px-4 sm:py-6 md:p-8">
       <div className="mb-6 flex items-baseline justify-between">
         <div>
           <h1 className="text-xl font-semibold text-text-primary">Dashboard</h1>

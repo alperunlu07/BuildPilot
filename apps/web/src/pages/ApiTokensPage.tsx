@@ -53,7 +53,7 @@ export function ApiTokensPage() {
   }
 
   return (
-    <div className="mx-auto max-w-4xl space-y-4 p-6">
+    <div className="mx-auto max-w-4xl space-y-4 p-3 sm:p-4 md:p-6">
       <header className="flex items-center justify-between gap-3">
         <div>
           <h1 className="flex items-center gap-2 text-xl font-semibold text-text-primary">
@@ -96,7 +96,10 @@ export function ApiTokensPage() {
           No tokens. Create one to call BuildPilot from CI scripts.
         </div>
       ) : (
-        <table className="w-full overflow-hidden rounded-md border border-border-subtle text-sm">
+        // Responsive review follow-up — see UsersPage for rationale.
+        <div className="overflow-clip rounded-md border border-border-subtle">
+        <div className="overflow-x-auto overscroll-x-contain">
+        <table className="min-w-[640px] w-full text-sm">
           <thead className="bg-bg-panel text-xs uppercase tracking-wider text-text-muted">
             <tr>
               <th className="px-3 py-2 text-left">Name</th>
@@ -137,6 +140,8 @@ export function ApiTokensPage() {
             ))}
           </tbody>
         </table>
+        </div>
+        </div>
       )}
 
       {showCreate && currentUser && (

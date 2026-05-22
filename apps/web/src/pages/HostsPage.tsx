@@ -59,6 +59,16 @@ export function HostsPage() {
 
   const [draft, setDraft] = useState<DraftHost>(EMPTY_DRAFT);
   const [showEditor, setShowEditor] = useState(false);
+  // Ref + effect — when the editor opens on a phone (where the aside
+  // sits BELOW the host list per the flex-col layout), scroll it into
+  // view so tapping 'Add host' from above the fold doesn't appear to
+  // be a no-op. Desktop layout (md+) renders the aside in the same row
+  // so scrollIntoView is harmless there.
+  const editorAsideRef = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    if (!showEditor) return;
+    editorAsideRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [showEditor]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // Per-host transient probe state.
@@ -205,13 +215,13 @@ export function HostsPage() {
         </button>
       </header>
 
-      <div className="flex min-h-0 flex-1">
-        <main className="flex-1 overflow-y-auto p-5">
+      <div className="flex min-h-0 flex-1 flex-col md:flex-row">
+        <main className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-5">
           {sortedHosts.length === 0 ? (
             <EmptyState onAdd={beginNew} />
           ) : (
-            <div className="overflow-hidden rounded-lg border border-border-subtle">
-              <table className="w-full text-left text-xs">
+            <div className="overflow-x-auto rounded-lg border border-border-subtle">
+              <table className="min-w-[760px] w-full text-left text-xs">
                 <thead className="bg-bg-panel text-[10px] uppercase tracking-wider text-text-muted">
                   <tr>
                     <th className="px-3 py-2">Status</th>
@@ -262,7 +272,10 @@ export function HostsPage() {
         </main>
 
         {showEditor && (
-          <aside className="flex w-96 shrink-0 flex-col border-l border-border-subtle bg-bg-panel/60">
+          <aside
+            ref={editorAsideRef}
+            className="flex w-full shrink-0 flex-col border-t border-border-subtle bg-bg-panel/60 md:w-96 md:border-l md:border-t-0"
+          >
             <div className="flex items-center justify-between border-b border-border-subtle px-4 py-3">
               <div>
                 <div className="text-[11px] uppercase tracking-wider text-text-muted">

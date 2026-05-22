@@ -94,7 +94,7 @@ export function StepPropertyPanel({
 
   if (!node) {
     return (
-      <aside className="flex h-full w-80 shrink-0 flex-col border-l border-border-subtle bg-bg-panel p-4 text-sm text-text-muted">
+      <aside className="hidden h-full w-80 shrink-0 flex-col border-l border-border-subtle bg-bg-panel p-4 text-sm text-text-muted md:flex">
         Select a node to edit its properties.
       </aside>
     );
@@ -124,7 +124,7 @@ export function StepPropertyPanel({
   const stepAcceptsHost = def.fields.some((f) => f.type === 'hostSelect');
 
   return (
-    <aside className="flex h-full w-80 shrink-0 flex-col border-l border-border-subtle bg-bg-panel">
+    <aside className="hidden h-full w-80 shrink-0 flex-col border-l border-border-subtle bg-bg-panel md:flex">
       <div className="border-b border-border-subtle px-4 py-3">
         <div className="text-[10px] uppercase tracking-wider text-text-muted font-semibold">
           Step properties
@@ -526,7 +526,7 @@ function CommonControlsSection({
           Auto-retry on failure (exponential backoff)
         </label>
         {retryEnabled && (
-          <div className="ml-5 mt-2 grid grid-cols-3 gap-2">
+          <div className="ml-5 mt-2 grid grid-cols-1 sm:grid-cols-3 gap-2">
             <label className="text-[10px] uppercase tracking-wider text-text-muted">
               Max retries
               <input
@@ -794,7 +794,7 @@ function BulkEditPanel({
   };
 
   return (
-    <aside className="flex h-full w-80 shrink-0 flex-col border-l border-border-subtle bg-bg-base">
+    <aside className="hidden h-full w-80 shrink-0 flex-col border-l border-border-subtle bg-bg-base md:flex">
       <div className="border-b border-border-subtle px-4 py-3">
         <div className="text-[11px] uppercase tracking-wider text-text-muted">Bulk edit</div>
         <h3 className="mt-1 text-sm font-semibold text-text-primary">

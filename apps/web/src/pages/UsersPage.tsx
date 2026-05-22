@@ -55,7 +55,7 @@ export function UsersPage() {
   const isAdmin = !authEnabled || currentUser?.role === 'admin';
 
   return (
-    <div className="mx-auto max-w-4xl space-y-4 p-6">
+    <div className="mx-auto max-w-4xl space-y-4 p-3 sm:p-4 md:p-6">
       <header className="flex items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-semibold text-text-primary">Users</h1>
@@ -91,7 +91,16 @@ export function UsersPage() {
           No users yet. Create the first one to enable login.
         </div>
       ) : (
-        <table className="w-full overflow-hidden rounded-md border border-border-subtle text-sm">
+        // Responsive review follow-up — wrap the table in an
+        // overflow-x-auto scroller and lift the rounded border to the
+        // wrapper. The previous `overflow-hidden` on the table itself
+        // suppressed horizontal scroll on iPhone 12 (390px), clipping
+        // the trailing Last-login + actions columns with no
+        // affordance. `overflow-clip` on the wrapper clips the rounded
+        // corners without creating a new scroll container.
+        <div className="overflow-clip rounded-md border border-border-subtle">
+        <div className="overflow-x-auto overscroll-x-contain">
+        <table className="min-w-[640px] w-full text-sm">
           <thead className="bg-bg-panel text-xs uppercase tracking-wider text-text-muted">
             <tr>
               <th className="px-3 py-2 text-left">Username</th>
@@ -145,6 +154,8 @@ export function UsersPage() {
             ))}
           </tbody>
         </table>
+        </div>
+        </div>
       )}
 
       {showCreate && (

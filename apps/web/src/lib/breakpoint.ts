@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
 
-// Tailwind breakpoints — kept in sync with the default theme. We mirror only
-// the ones we actively branch on (sm, md). lg/xl aren't currently consumed
-// from JS so we omit them to keep this tiny.
+// Tailwind breakpoints — kept in sync with the default theme. Full set is
+// listed so JS-driven layout decisions can branch on the same widths the
+// utility classes do (responsive overhaul, Faz 0).
 export const BREAKPOINTS = {
   sm: 640,
   md: 768,
   lg: 1024,
+  xl: 1280,
+  '2xl': 1536,
 } as const;
 
 export type Breakpoint = keyof typeof BREAKPOINTS;

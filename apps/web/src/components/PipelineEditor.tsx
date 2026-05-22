@@ -31,6 +31,7 @@ import { api } from '../lib/api';
 import { usePipelineClipboard } from '../lib/usePipelineClipboard';
 import { usePipelineHistory } from '../lib/usePipelineHistory';
 import { useStore } from '../store/store';
+import { useBelow } from '../lib/breakpoint';
 import { cn } from '../lib/cn';
 import {
   clearDraft,
@@ -232,6 +233,11 @@ function Editor({ pipeline }: Props) {
     if (typeof window === 'undefined') return false;
     return window.localStorage.getItem('buildpilot:editor:minimap') === '1';
   });
+  // Responsive overhaul Faz 4 — minimap takes ~20% of a phone viewport,
+  // making the canvas itself unreadable. Always hide it below md, even
+  // when the user previously enabled it on desktop.
+  const isMobile = useBelow('md');
+  const effectiveShowMinimap = showMinimap && !isMobile;
   // Cluster 10.E — draft auto-save. We surface a banner if a localStorage
   // draft is newer than the server pipeline so the user can choose to
   // restore. Drafts are written debounced as they edit.
@@ -851,7 +857,7 @@ function Editor({ pipeline }: Props) {
           actions sit on the right. Chips use bg-bg-elevated so the active
           dot stands out, and a filled "●" marker shows when an advanced
           option (tag pattern, cron, path filter, etc.) is configured. */}
-      <header className="flex items-center justify-between border-b border-border-subtle bg-bg-panel px-4 py-2">
+      <header className="flex flex-wrap items-center justify-between gap-y-2 border-b border-border-subtle bg-bg-panel px-3 py-2 sm:flex-nowrap sm:px-4">
         <div className="flex items-center gap-2 min-w-0">
           <div className="flex flex-col gap-0.5 min-w-0 mr-1">
             <input
@@ -1015,8 +1021,13 @@ function Editor({ pipeline }: Props) {
                 return next;
               });
             }}
+            // Responsive overhaul follow-up — hide the toggle on phones.
+            // The minimap itself is force-hidden below md (see
+            // effectiveShowMinimap), so leaving the button visible would
+            // produce a no-op tap that flips aria-pressed without any
+            // observable effect.
             className={cn(
-              'inline-flex items-center gap-1 rounded-btn border px-2 py-1 text-xs transition-colors',
+              'hidden md:inline-flex items-center gap-1 rounded-btn border px-2 py-1 text-xs transition-colors',
               showMinimap
                 ? 'border-accent bg-accent-soft text-accent'
                 : 'border-border-subtle bg-bg-elevated text-text-secondary hover:text-text-primary hover:border-border',
@@ -1398,6 +1409,21 @@ function Editor({ pipeline }: Props) {
         />
 
         <div ref={wrapperRef} className="relative min-h-0 flex-1" onDragOver={onDragOver} onDrop={onDrop}>
+          {/* Responsive overhaul follow-up — read-only banner on phones.
+              The Palette + StepPropertyPanel + BulkEditPanel are all
+              `hidden md:flex` because their interactions (drag-and-drop,
+              per-field sliders) need a desktop pointer. Surface that
+              limitation explicitly so phone users don't conclude the
+              feature is broken when tapping a node selects it but
+              produces no edit affordance. */}
+          {isMobile && (
+            <div
+              role="note"
+              className="absolute left-2 right-2 top-2 z-30 rounded-md border border-amber-500/30 bg-amber-500/[0.08] px-3 py-2 text-[11px] text-amber-200 shadow-md backdrop-blur md:hidden"
+            >
+              Read-only on phones — open on a tablet or desktop to drag steps and edit their properties.
+            </div>
+          )}
           {/* UI v2 Faz 5.A.4 — validation overlay. Floats top-left so it
               doesn't clash with the find dialog (top-right) or the canvas
               controls (bottom-right). */}
@@ -1575,7 +1601,7 @@ function Editor({ pipeline }: Props) {
                 <div className="text-[9px] text-text-muted">click to cycle</div>
               </div>
             )}
-            {showMinimap && (
+            {effectiveShowMinimap && (
               <MiniMap
                 pannable
                 zoomable
@@ -1801,7 +1827,11 @@ function Palette({
         });
 
   return (
-    <div className="scrollbar-thin flex w-56 shrink-0 flex-col gap-2 overflow-y-auto border-r border-border-subtle bg-bg-panel p-2.5">
+    // Responsive overhaul Faz 4 — hide the drag-source palette on
+    // phones. Drag-and-drop node creation isn't usable from a touch
+    // viewport anyway, and the 224px sidebar otherwise leaves <100px
+    // for the canvas on a 320px screen. md+ keeps the original layout.
+    <div className="scrollbar-thin hidden w-56 shrink-0 flex-col gap-2 overflow-y-auto border-r border-border-subtle bg-bg-panel p-2.5 md:flex">
       <input
         type="text"
         value={query}
