@@ -4,6 +4,7 @@ import { loadConfig } from './config';
 import { logger } from './logger';
 import { initDb } from './store/db';
 import { projectsRoutes } from './api/projects';
+import { projectExportRoutes } from './api/projectExport';
 import { pipelinesRoutes } from './api/pipelines';
 import { buildsRoutes } from './api/builds';
 import { eventsRoutes } from './api/events';
@@ -100,6 +101,7 @@ async function main(): Promise<void> {
   await apiTokensRoutes(app);
 
   await projectsRoutes(app);
+  await projectExportRoutes(app);
   await pipelinesRoutes(app);
   await buildsRoutes(app);
   await eventsRoutes(app);

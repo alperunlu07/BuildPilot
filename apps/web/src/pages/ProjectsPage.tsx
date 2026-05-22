@@ -1,5 +1,6 @@
 import {
   ChevronDown,
+  Download,
   Eye,
   Folder,
   GitBranch,
@@ -8,6 +9,7 @@ import {
   Plus,
   Search,
   Trash2,
+  Upload,
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useStore } from '../store/store';
@@ -20,7 +22,9 @@ import { Input } from '../components/ui/Input';
 import { Sparkline, type SparklineBar, type SparklineStatus } from '../components/ui/Sparkline';
 import { StatusDot } from '../components/ui/StatusDot';
 import { Time } from '../lib/formatDate';
-import type { Project } from '@buildpilot/shared-types';
+import type { Project, ProjectImportSummary } from '@buildpilot/shared-types';
+import { ProjectExportDialog } from '../components/ProjectExportDialog';
+import { ProjectImportDialog } from '../components/ProjectImportDialog';
 
 // UI v2 Faz 4 — full Projects page rewrite. Grid (default) + table view,
 // search filter, sort dropdown, per-card sparkline with success-rate.
@@ -68,6 +72,16 @@ export function ProjectsPage({ onAdd }: Props) {
   const [sortMode, setSortMode] = useState<SortMode>(() => readStoredSort());
   const [sortOpen, setSortOpen] = useState(false);
   const [filter, setFilter] = useState('');
+  // Cluster 12 — encrypted project bundle export / import.
+  const [exportingProject, setExportingProject] = useState<Project | null>(null);
+  const [importOpen, setImportOpen] = useState(false);
+  const loadProjects = useStore((s) => s.loadProjects);
+
+  function onImported(summary: ProjectImportSummary): void {
+    // Pull fresh data so the new project shows up in the list.
+    void loadProjects();
+    void summary;
+  }
 
   useEffect(() => {
     try {
@@ -258,6 +272,14 @@ export function ProjectsPage({ onAdd }: Props) {
               </>
             )}
           </div>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setImportOpen(true)}
+            leftIcon={<Upload size={12} />}
+          >
+            Import
+          </Button>
           <Button variant="primary" size="sm" onClick={onAdd} leftIcon={<Plus size={12} />}>
             Add project
           </Button>
@@ -293,6 +315,7 @@ export function ProjectsPage({ onAdd }: Props) {
               totalBuilds={buildsByProject.get(p.id)?.length ?? 0}
               onOpen={() => openProject(p)}
               onDelete={() => softDeleteProject(p.id)}
+              onExport={() => setExportingProject(p)}
             />
           ))}
         </div>
@@ -303,8 +326,20 @@ export function ProjectsPage({ onAdd }: Props) {
           buildsByProject={buildsByProject}
           onOpen={openProject}
           onDelete={(id) => softDeleteProject(id)}
+          onExport={(p) => setExportingProject(p)}
         />
       )}
+
+      <ProjectExportDialog
+        project={exportingProject}
+        open={exportingProject !== null}
+        onClose={() => setExportingProject(null)}
+      />
+      <ProjectImportDialog
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        onImported={onImported}
+      />
     </PageContainer>
   );
 }
@@ -317,12 +352,14 @@ function ProjectCard({
   totalBuilds,
   onOpen,
   onDelete,
+  onExport,
 }: {
   project: Project;
   pipelineCount: number;
   totalBuilds: number;
   onOpen(): void;
   onDelete(): void;
+  onExport(): void;
 }): JSX.Element {
   const sparkline = useProjectSparkline(project.id);
   const { successRate, lastStatus } = useMemo(() => {
@@ -354,18 +391,32 @@ function ProjectCard({
             {project.path}
           </code>
         </div>
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onDelete();
-          }}
-          className="opacity-0 group-hover:opacity-100 rounded-btn p-1 text-text-muted hover:bg-bg-hover hover:text-rose-300 transition-opacity [@media(pointer:coarse)]:opacity-100"
-          title="Remove project"
-          aria-label={`Remove project ${project.name}`}
-        >
-          <Trash2 size={13} />
-        </button>
+        <div className="flex items-center gap-0.5">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onExport();
+            }}
+            className="opacity-0 group-hover:opacity-100 rounded-btn p-1 text-text-muted hover:bg-bg-hover hover:text-accent transition-opacity [@media(pointer:coarse)]:opacity-100"
+            title="Export project (encrypted bundle)"
+            aria-label={`Export project ${project.name}`}
+          >
+            <Download size={13} />
+          </button>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete();
+            }}
+            className="opacity-0 group-hover:opacity-100 rounded-btn p-1 text-text-muted hover:bg-bg-hover hover:text-rose-300 transition-opacity [@media(pointer:coarse)]:opacity-100"
+            title="Remove project"
+            aria-label={`Remove project ${project.name}`}
+          >
+            <Trash2 size={13} />
+          </button>
+        </div>
       </div>
 
       {/* Meta pills */}
@@ -439,12 +490,14 @@ function ProjectsTable({
   buildsByProject,
   onOpen,
   onDelete,
+  onExport,
 }: {
   projects: ReadonlyArray<Project>;
   pipelinesByProject: ReadonlyMap<string, ReadonlyArray<unknown>>;
   buildsByProject: ReadonlyMap<string, ReadonlyArray<{ status: string }>>;
   onOpen(p: Project): void;
   onDelete(id: string): void;
+  onExport(p: Project): void;
 }): JSX.Element {
   return (
     <Card className="overflow-clip">
@@ -457,7 +510,7 @@ function ProjectsTable({
           inside a rounded-clipped ancestor. `overscroll-x-contain`
           keeps swipes inside the table. */}
       <div className="overflow-x-auto overscroll-x-contain">
-      <div className="min-w-[920px] grid grid-cols-[minmax(0,2fr)_120px_100px_180px_minmax(0,3fr)_100px_36px] px-3 py-2 text-[10px] uppercase tracking-wider text-text-muted font-semibold border-b border-border-subtle">
+      <div className="min-w-[920px] grid grid-cols-[minmax(0,2fr)_120px_100px_180px_minmax(0,3fr)_100px_64px] px-3 py-2 text-[10px] uppercase tracking-wider text-text-muted font-semibold border-b border-border-subtle">
         <div>Project</div>
         <div>Branch</div>
         <div>Pipelines</div>
@@ -474,6 +527,7 @@ function ProjectsTable({
           buildCount={buildsByProject.get(p.id)?.length ?? 0}
           onOpen={() => onOpen(p)}
           onDelete={() => onDelete(p.id)}
+          onExport={() => onExport(p)}
         />
       ))}
       </div>
@@ -487,12 +541,14 @@ function ProjectRow({
   buildCount: _buildCount,
   onOpen,
   onDelete,
+  onExport,
 }: {
   project: Project;
   pipelineCount: number;
   buildCount: number;
   onOpen(): void;
   onDelete(): void;
+  onExport(): void;
 }): JSX.Element {
   const sparkline = useProjectSparkline(project.id);
   const { successRate } = useMemo(() => {
@@ -505,7 +561,7 @@ function ProjectRow({
 
   return (
     <div
-      className="group grid min-w-[920px] grid-cols-[minmax(0,2fr)_120px_100px_180px_minmax(0,3fr)_100px_36px] items-center gap-2 px-3 h-10 text-[12.5px] border-b border-border-subtle last:border-b-0 hover:bg-bg-hover cursor-pointer transition-colors"
+      className="group grid min-w-[920px] grid-cols-[minmax(0,2fr)_120px_100px_180px_minmax(0,3fr)_100px_64px] items-center gap-2 px-3 h-10 text-[12.5px] border-b border-border-subtle last:border-b-0 hover:bg-bg-hover cursor-pointer transition-colors"
       onClick={onOpen}
     >
       <div className="flex items-center gap-2 min-w-0">
@@ -533,22 +589,36 @@ function ProjectRow({
       >
         {successRate === null ? '—' : `${successRate}%`}
       </div>
-      <button
-        type="button"
-        onClick={(e) => {
-          e.stopPropagation();
-          onDelete();
-        }}
-        // Responsive overhaul follow-up — opacity-0 group-hover only
-        // works with a pointer. On coarse-pointer devices (phones,
-        // tablets, touch laptops) keep the button visible so the row
-        // stays deletable.
-        className="touch-target opacity-0 group-hover:opacity-100 [@media(pointer:coarse)]:opacity-100 rounded-btn p-1 text-text-muted hover:text-rose-300 transition-opacity"
-        title="Remove project"
-        aria-label={`Remove project ${project.name}`}
-      >
-        <Trash2 size={12} />
-      </button>
+      <div className="flex items-center gap-0.5 justify-end">
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onExport();
+          }}
+          className="touch-target opacity-0 group-hover:opacity-100 [@media(pointer:coarse)]:opacity-100 rounded-btn p-1 text-text-muted hover:text-accent transition-opacity"
+          title="Export project (encrypted bundle)"
+          aria-label={`Export project ${project.name}`}
+        >
+          <Download size={12} />
+        </button>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete();
+          }}
+          // Responsive overhaul follow-up — opacity-0 group-hover only
+          // works with a pointer. On coarse-pointer devices (phones,
+          // tablets, touch laptops) keep the button visible so the row
+          // stays deletable.
+          className="touch-target opacity-0 group-hover:opacity-100 [@media(pointer:coarse)]:opacity-100 rounded-btn p-1 text-text-muted hover:text-rose-300 transition-opacity"
+          title="Remove project"
+          aria-label={`Remove project ${project.name}`}
+        >
+          <Trash2 size={12} />
+        </button>
+      </div>
     </div>
   );
 }

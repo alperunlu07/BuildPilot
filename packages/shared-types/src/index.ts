@@ -2735,3 +2735,107 @@ export interface AiIntegrationProbeEntry {
 export interface AiIntegrationsProbeResponse {
   results: AiIntegrationProbeEntry[];
 }
+
+// ── Project export / import bundle ──────────────────────────────────────────
+// Cluster 12 — full-fidelity project transfer between machines. The user
+// supplies a passphrase; the server walks the project's pipelines, decrypts
+// every referenced secret / file / host / VCS credential, and wraps the
+// whole payload in a PBKDF2 → AES-256-GCM envelope. The receiving machine
+// reverses the process with the same passphrase, re-encrypts everything
+// with ITS own master.key, and creates fresh rows.
+
+export interface ProjectBundleEnvelope {
+  kind: 'buildpilot-project-bundle';
+  version: 1;
+  saltBase64: string;
+  ivBase64: string;
+  ciphertextBase64: string;
+}
+
+export interface ProjectBundleSecret {
+  name: string;
+  value: string;
+}
+
+export interface ProjectBundleVaultFile {
+  name: string;
+  filename: string;
+  mime: string;
+  contentBase64: string;
+}
+
+export interface ProjectBundleVcsCredential {
+  id: string; // original id; importer assigns a new one
+  name: string;
+  provider: VcsProvider;
+  baseUrl: string | null;
+  token: string;
+}
+
+export interface ProjectBundleHost {
+  id: string; // original id; importer assigns a new one
+  name: string;
+  host: string;
+  identityFile: string | null;
+  password: string | null;
+  skipStrictHostKey: boolean;
+  description: string | null;
+}
+
+export interface ProjectBundlePayload {
+  version: 1;
+  exportedAt: number;
+  sourceProjectId: string;
+  project: {
+    name: string;
+    path: string;
+    defaultBranch: string;
+    vcsProvider: VcsProvider | null;
+    vcsRepo: string | null;
+    vcsCredentialId: string | null; // points into vcsCredentials[]
+  };
+  pipelines: Pipeline[];
+  secrets: ProjectBundleSecret[];
+  vaultFiles: ProjectBundleVaultFile[];
+  vcsCredentials: ProjectBundleVcsCredential[];
+  hosts: ProjectBundleHost[];
+}
+
+export type BundleConflictPolicy = 'skip' | 'rename' | 'overwrite';
+
+export interface ProjectImportOptions {
+  pathOverride?: string | null;
+  conflictPolicy: {
+    project: 'rename' | 'replace';
+    secrets: BundleConflictPolicy;
+    vaultFiles: BundleConflictPolicy;
+    hosts: 'new' | 'merge';
+    vcsCredentials: 'new' | 'merge';
+  };
+}
+
+export interface ProjectImportSummary {
+  projectId: string;
+  projectName: string;
+  pipelinesCreated: number;
+  secretsImported: number;
+  secretsSkipped: number;
+  secretsRenamed: number;
+  filesImported: number;
+  filesSkipped: number;
+  filesRenamed: number;
+  hostsCreated: number;
+  hostsMerged: number;
+  vcsCredentialsCreated: number;
+  vcsCredentialsMerged: number;
+  errors: string[];
+}
+
+export interface ProjectExportManifest {
+  pipelines: number;
+  secrets: number;
+  vaultFiles: number;
+  hosts: number;
+  vcsCredentials: number;
+  missingReferences: string[];
+}

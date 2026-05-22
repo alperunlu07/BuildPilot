@@ -29,6 +29,10 @@ import type {
   PrContext,
   Project,
   ProjectSummary,
+  ProjectBundleEnvelope,
+  ProjectExportManifest,
+  ProjectImportOptions,
+  ProjectImportSummary,
   ProjectVcsConfig,
   ProjectVcsUpdate,
   PruneBuildsResponse,
@@ -543,5 +547,24 @@ export const api = {
   probeAiIntegrations: () =>
     http<AiIntegrationsProbeResponse>('/config/ai-integrations/probe', {
       method: 'POST',
+    }),
+
+  // ── Cluster 12 — project export / import ─────────────────────────────────
+  exportProject: (id: string, passphrase: string) =>
+    http<{ envelope: ProjectBundleEnvelope; manifest: ProjectExportManifest }>(
+      `/projects/${id}/export`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ passphrase }),
+      },
+    ),
+  importProject: (input: {
+    envelope: ProjectBundleEnvelope;
+    passphrase: string;
+    options: ProjectImportOptions;
+  }) =>
+    http<ProjectImportSummary>('/projects/import', {
+      method: 'POST',
+      body: JSON.stringify(input),
     }),
 };
