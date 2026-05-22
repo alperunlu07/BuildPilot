@@ -446,10 +446,16 @@ function ProjectsTable({
   onDelete(id: string): void;
 }): JSX.Element {
   return (
-    <Card className="overflow-hidden">
+    <Card className="overflow-clip">
       {/* Responsive overhaul Faz 3 — wrap the 7-column table so phones
-          can horizontally scroll instead of clipping. */}
-      <div className="overflow-x-auto">
+          can horizontally scroll instead of clipping. Review follow-up:
+          Card uses `overflow-clip` (not `hidden`) so it doesn't
+          establish a new block formatting context — plain
+          `overflow-hidden` prevented the inner scroller's horizontal
+          scrollbar from showing and broke iOS Safari momentum scroll
+          inside a rounded-clipped ancestor. `overscroll-x-contain`
+          keeps swipes inside the table. */}
+      <div className="overflow-x-auto overscroll-x-contain">
       <div className="min-w-[920px] grid grid-cols-[minmax(0,2fr)_120px_100px_180px_minmax(0,3fr)_100px_36px] px-3 py-2 text-[10px] uppercase tracking-wider text-text-muted font-semibold border-b border-border-subtle">
         <div>Project</div>
         <div>Branch</div>

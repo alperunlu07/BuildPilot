@@ -264,11 +264,18 @@ function BuildsTable({
   onOpen(id: string): void;
 }) {
   return (
-    <Card className="overflow-hidden">
+    <Card className="overflow-clip">
       {/* Responsive overhaul Faz 3 — wrap the grid in an overflow-x-auto
           scroller so the 8 fixed columns (sum 750px) stay readable on
-          phones via horizontal scroll instead of overflowing the page. */}
-      <div className="overflow-x-auto">
+          phones via horizontal scroll instead of overflowing the page.
+          Review follow-up: Card uses `overflow-clip` (not `hidden`) so
+          it doesn't establish a new block formatting context. Plain
+          `overflow-hidden` would have prevented the inner scroller's
+          horizontal scrollbar from appearing and broken iOS Safari's
+          momentum scroll inside a rounded-clipped ancestor. The
+          `overscroll-x-contain` keeps swipes inside this scroller
+          instead of triggering browser back-navigation. */}
+      <div className="overflow-x-auto overscroll-x-contain">
       <div className="min-w-[760px] grid grid-cols-[120px_90px_minmax(0,1.5fr)_minmax(0,2fr)_120px_120px_90px_70px] px-3 py-2 text-[10px] uppercase tracking-wider text-text-muted font-semibold border-b border-border-subtle">
         <div>Status</div>
         <div>Build #</div>

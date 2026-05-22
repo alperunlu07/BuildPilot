@@ -61,15 +61,23 @@ export default defineConfig({
     // dedicated responsive.spec.ts at iPhone 12 and iPad widths so we
     // catch dialog overflow, sidebar drawer regressions, and grid
     // collapse failures in CI.
+    //
+    // Review follow-up — explicitly override `browserName: 'chromium'`
+    // so the iPhone / iPad device presets (which default to webkit)
+    // don't require an extra `playwright install webkit` step. Chromium
+    // emulation preserves the viewport, deviceScaleFactor, userAgent
+    // and isMobile flags from the device descriptor, which is what
+    // these responsive smoke tests actually need — webkit rendering
+    // parity is a separate concern handled by visreg.
     {
       name: 'mobile',
       testMatch: /responsive\.spec\.ts/,
-      use: { ...devices['iPhone 12'] },
+      use: { ...devices['iPhone 12'], browserName: 'chromium' },
     },
     {
       name: 'tablet',
       testMatch: /responsive\.spec\.ts/,
-      use: { ...devices['iPad (gen 7)'] },
+      use: { ...devices['iPad (gen 7)'], browserName: 'chromium' },
     },
   ],
 });

@@ -12,10 +12,22 @@ import {
   readStoredDensity,
   readStoredTheme,
 } from './lib/theme';
+import { useStore } from './store/store';
 
 applyTheme(readStoredTheme());
 applyDensity(readStoredDensity());
 applyAccent(readStoredAccent());
+
+// Review follow-up — expose the Zustand store on window in dev builds
+// so the Playwright responsive smoke tests can drive UI affordances
+// (e.g. requestConfirmation) without scripting per-page flows. The
+// production bundle never reaches this branch, so the surface only
+// exists during local dev + e2e runs (Playwright loads the dev server
+// when VITE_E2E=true). Cast through `unknown` so we don't widen the
+// global Window type for the rest of the codebase.
+if (import.meta.env.DEV || import.meta.env.VITE_E2E === 'true') {
+  (window as unknown as { useStore: typeof useStore }).useStore = useStore;
+}
 
 // Dev-only primitive catalog (Faz 2). Mounted at /__primitives — bypasses
 // the App router entirely so the page can be inspected without store

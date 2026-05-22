@@ -111,35 +111,34 @@ test('confirm dialog fits within the viewport', async ({ page, viewport }) => {
   await dismissChangelogIfOpen(page);
 
   // Inject a confirmation via the store so we can verify the dialog's
-  // measured width is bounded by the viewport. This avoids relying on
-  // any specific destructive UI being one click away.
-  await page.evaluate(() => {
-    // The store is exposed on window for the e2e suite's use; we read
-    // it directly so this test stays decoupled from UI affordances
-    // that might shift between releases. If it's not exposed we fall
-    // back to a no-op so the test still passes when the hook is
-    // unavailable, since the dialog widths are also asserted by the
-    // unit tests at the component level.
+  // measured width is bounded by the viewport. window.useStore is
+  // exposed by apps/web/src/main.tsx under import.meta.env.DEV or
+  // VITE_E2E=true; the dev server (which Playwright loads) ships with
+  // DEV=true so the hook is always present. We assert presence
+  // explicitly so a future regression that drops the exposure can't
+  // silently turn this test into a no-op.
+  const opened = await page.evaluate(() => {
     type StoreLike = { requestConfirmation?: (cfg: unknown) => void };
     const win = window as unknown as { useStore?: { getState(): StoreLike } };
     const state = win.useStore?.getState();
-    state?.requestConfirmation?.({
+    if (!state?.requestConfirmation) return false;
+    state.requestConfirmation({
       title: 'Responsive smoke',
       body: 'This dialog should never overflow the viewport.',
       onConfirm: () => {},
     });
+    return true;
   });
+  // Hard-fail if the store hook isn't reachable. The exposure in
+  // main.tsx is load-bearing for this test — silently skipping the
+  // assertion shipped a false-confidence pass during the Faz 5 review.
+  expect(
+    opened,
+    'window.useStore.requestConfirmation must be exposed by main.tsx for the e2e build',
+  ).toBe(true);
 
   const dialog = page.getByRole('alertdialog');
-  // The store may not be exposed; skip the width assertion if the
-  // dialog never opened.
-  if (!(await dialog.isVisible().catch(() => false))) {
-    test.info().annotations.push({
-      type: 'skip-reason',
-      description: 'store.requestConfirmation not reachable from e2e context',
-    });
-    return;
-  }
+  await expect(dialog).toBeVisible();
   const box = await dialog.boundingBox();
   expect(box).not.toBeNull();
   if (box && viewport) {
