@@ -1021,8 +1021,13 @@ function Editor({ pipeline }: Props) {
                 return next;
               });
             }}
+            // Responsive overhaul follow-up — hide the toggle on phones.
+            // The minimap itself is force-hidden below md (see
+            // effectiveShowMinimap), so leaving the button visible would
+            // produce a no-op tap that flips aria-pressed without any
+            // observable effect.
             className={cn(
-              'inline-flex items-center gap-1 rounded-btn border px-2 py-1 text-xs transition-colors',
+              'hidden md:inline-flex items-center gap-1 rounded-btn border px-2 py-1 text-xs transition-colors',
               showMinimap
                 ? 'border-accent bg-accent-soft text-accent'
                 : 'border-border-subtle bg-bg-elevated text-text-secondary hover:text-text-primary hover:border-border',

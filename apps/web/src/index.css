@@ -62,13 +62,20 @@ body,
 }
 
 /* Responsive overhaul Faz 0 — global guard against accidental horizontal
-   scroll on mobile. If a component overflows its viewport the page no
-   longer rubber-bands sideways; instead the offending element clips and
-   shows up in dev. Components that intentionally scroll horizontally
-   (tables, gantt charts) live inside their own .overflow-x-auto wrapper
-   so the inner scroll keeps working. */
+   scroll on mobile. Uses `overflow-x: clip` rather than `hidden` for two
+   reasons:
+     1. `clip` does NOT force `overflow-y: auto` (per spec), so the body
+        stays a non-scroll container and `position: sticky` descendants
+        keep their original scroll context.
+     2. `clip` does NOT suppress the documentElement's horizontal scroll,
+        so the responsive smoke tests in e2e/tests/responsive.spec.ts
+        (which measure documentElement.scrollWidth - clientWidth) still
+        catch real overflow regressions. `hidden` masks them.
+   Components that intentionally scroll horizontally (tables, gantt
+   charts) live inside their own .overflow-x-auto wrapper so the inner
+   scroll keeps working. */
 body {
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 /* Safe-area utility for iOS notch / Android gesture bar. Apply via

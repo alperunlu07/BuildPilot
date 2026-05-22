@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Sparkles, X } from 'lucide-react';
+import { lockBodyScroll } from '../lib/bodyScrollLock';
 
 interface Props {
   open: boolean;
@@ -157,6 +158,28 @@ export function ChangelogDrawer({ open, onClose }: Props) {
       writeSeen(entries[0]!.version);
     }
   }, [open, entries]);
+
+  // Responsive overhaul follow-up — lock body scroll so the auto-opening
+  // drawer (after every release) doesn't let the underlying page drift
+  // on mobile touch-drags over the backdrop. Refcount-aware so a stacked
+  // ConfirmDialog doesn't unlock the body when it closes.
+  useEffect(() => {
+    if (!open) return;
+    return lockBodyScroll();
+  }, [open]);
+
+  // Esc dismisses — use a ref for onClose so the listener doesn't churn
+  // when callers pass inline arrows.
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onCloseRef.current();
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [open]);
 
   if (!open) return null;
 

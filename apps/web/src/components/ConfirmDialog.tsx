@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { AlertTriangle } from 'lucide-react';
+import { lockBodyScroll } from '../lib/bodyScrollLock';
 
 interface Props {
   open: boolean;
@@ -42,6 +43,28 @@ export function ConfirmDialog({
       const id = window.setTimeout(() => inputRef.current?.focus(), 30);
       return () => window.clearTimeout(id);
     }
+  }, [open]);
+
+  // Responsive overhaul follow-up — lock body scroll so touch-drags on
+  // the backdrop padding (now larger on phones via p-3) don't rubber-band
+  // the page underneath. Refcount avoids the stacked-dialog clobber.
+  useEffect(() => {
+    if (!open) return;
+    return lockBodyScroll();
+  }, [open]);
+
+  // Esc dismisses — the prior comment said this was handled at the app
+  // level but no handler ever existed. Use the latest onCancel via a ref
+  // so the listener doesn't churn when callers pass inline arrows.
+  const onCancelRef = useRef(onCancel);
+  onCancelRef.current = onCancel;
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onCancelRef.current();
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
   }, [open]);
 
   if (!open) return null;
