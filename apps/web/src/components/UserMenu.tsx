@@ -7,6 +7,7 @@
 //   - auth enabled + no session: a small "Sign in" link.
 
 import { useEffect, useRef, useState } from 'react';
+import { pushEscHandler } from '../lib/escStack';
 import {
   ClipboardList,
   KeyRound,
@@ -48,20 +49,19 @@ export function UserMenu() {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement | null>(null);
 
-  // Close on outside click + Escape.
+  // Close on outside click; Esc routes through the top-of-stack
+  // registry so a stacked dialog (e.g. Sign-out confirmation) closes
+  // only itself on Escape, not the underlying menu too.
   useEffect(() => {
     if (!open) return;
     function onClick(e: MouseEvent) {
       if (!ref.current?.contains(e.target as Node)) setOpen(false);
     }
-    function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') setOpen(false);
-    }
     window.addEventListener('mousedown', onClick);
-    window.addEventListener('keydown', onKey);
+    const releaseEsc = pushEscHandler(() => setOpen(false));
     return () => {
       window.removeEventListener('mousedown', onClick);
-      window.removeEventListener('keydown', onKey);
+      releaseEsc();
     };
   }, [open]);
 

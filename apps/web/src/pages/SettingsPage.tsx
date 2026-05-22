@@ -44,6 +44,7 @@ import {
 import i18n from '../lib/i18n';
 import { Input } from '../components/ui/Input';
 import { Switch } from '../components/ui/Switch';
+import { cn } from '../lib/cn';
 import {
   SettingsBanner,
   SettingsCode,
@@ -129,6 +130,22 @@ export function SettingsPage() {
     node.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
   }, [section]);
 
+  // Gate the right-edge gradient on actual horizontal overflow so the
+  // last tab isn't visually faded when all tabs fit (no scroll context,
+  // no need for an affordance). ResizeObserver fires on viewport
+  // changes and on SECTIONS list mutations.
+  const navRef = useRef<HTMLElement | null>(null);
+  const [navOverflows, setNavOverflows] = useState(false);
+  useEffect(() => {
+    const node = navRef.current;
+    if (!node) return;
+    const measure = () => setNavOverflows(node.scrollWidth > node.clientWidth + 1);
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(node);
+    return () => ro.disconnect();
+  }, []);
+
   function navigate(id: SectionId): void {
     if (window.location.hash !== `#${id}`) {
       window.history.replaceState(null, '', `#${id}`);
@@ -156,8 +173,15 @@ export function SettingsPage() {
               visible on the mobile strip, signalling there's more
               content past the viewport edge (iOS Safari hides
               scrollbars by default so we'd otherwise have no hint). */}
-          <div className="relative md:contents after:pointer-events-none after:absolute after:right-0 after:top-3 after:h-7 after:w-6 after:bg-gradient-to-l after:from-bg-panel after:to-transparent md:after:hidden">
+          <div
+            className={cn(
+              'relative md:contents',
+              navOverflows &&
+                'after:pointer-events-none after:absolute after:right-0 after:top-3 after:h-7 after:w-6 after:bg-gradient-to-l after:from-bg-panel after:to-transparent md:after:hidden',
+            )}
+          >
           <nav
+            ref={navRef}
             className="mt-3 flex flex-row gap-1 overflow-x-auto pb-1 md:mt-4 md:flex-col md:gap-px md:overflow-visible md:pb-0"
             aria-label="Settings sections"
           >

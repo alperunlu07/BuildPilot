@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { Copy, EyeOff, Play, Plus, Trash2 } from 'lucide-react';
+import { pushEscHandler } from '../lib/escStack';
 
 export interface NodeContextMenuProps {
   x: number;
@@ -18,20 +19,22 @@ export function NodeContextMenu(props: NodeContextMenuProps) {
   const { x, y, nodeId, disabled, onClose } = props;
   const ref = useRef<HTMLDivElement>(null);
 
+  // Outside-click closes; Esc routes through the top-of-stack registry
+  // so a ConfirmDialog opened from a menu item dismisses only the
+  // dialog on Escape, not both layers.
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
   useEffect(() => {
     const onClick = (e: MouseEvent) => {
-      if (!ref.current?.contains(e.target as Node)) onClose();
-    };
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (!ref.current?.contains(e.target as Node)) onCloseRef.current();
     };
     window.addEventListener('mousedown', onClick);
-    window.addEventListener('keydown', onKey);
+    const releaseEsc = pushEscHandler(() => onCloseRef.current());
     return () => {
       window.removeEventListener('mousedown', onClick);
-      window.removeEventListener('keydown', onKey);
+      releaseEsc();
     };
-  }, [onClose]);
+  }, []);
 
   const items: Array<{
     label: string;

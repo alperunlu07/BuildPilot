@@ -13,6 +13,7 @@ import type { HostCapabilities, SshHost } from '@buildpilot/shared-types';
 import { useStore } from '../store/store';
 import { api } from '../lib/api';
 import { cn } from '../lib/cn';
+import { useBelow } from '../lib/breakpoint';
 import { Time } from '../lib/formatDate';
 
 // Cluster 11.H · Hosts page. Promotes the previous HostsDialog modal to a
@@ -62,13 +63,22 @@ export function HostsPage() {
   // Ref + effect — when the editor opens on a phone (where the aside
   // sits BELOW the host list per the flex-col layout), scroll it into
   // view so tapping 'Add host' from above the fold doesn't appear to
-  // be a no-op. Desktop layout (md+) renders the aside in the same row
-  // so scrollIntoView is harmless there.
+  // be a no-op. Gated on `useBelow('md')` so desktop users (aside is
+  // beside the list) don't get a surprise scroll-jump, and on the
+  // OS-level `prefers-reduced-motion` so AT users aren't given a smooth
+  // animation they explicitly disabled (WCAG 2.3.3).
+  const isMobile = useBelow('md');
   const editorAsideRef = useRef<HTMLElement | null>(null);
   useEffect(() => {
-    if (!showEditor) return;
-    editorAsideRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }, [showEditor]);
+    if (!showEditor || !isMobile) return;
+    const prefersReducedMotion =
+      typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    editorAsideRef.current?.scrollIntoView({
+      behavior: prefersReducedMotion ? 'auto' : 'smooth',
+      block: 'start',
+    });
+  }, [showEditor, isMobile]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // Per-host transient probe state.

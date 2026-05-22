@@ -45,6 +45,12 @@ export function PageContainer({
   // utility class — avoids the Tailwind class-order ambiguity where
   // `className="max-w-[1400px]"` competes with `max-w-[1500px]` and
   // whichever appears later in the generated CSS wins.
+  if (import.meta.env.DEV && wide && maxWidth) {
+    // eslint-disable-next-line no-console
+    console.warn(
+      '[PageContainer] `maxWidth` is ignored when `wide` is true. Drop one of the props to silence this warning.',
+    );
+  }
   const style: CSSProperties | undefined =
     !wide && maxWidth ? { maxWidth } : undefined;
   return (

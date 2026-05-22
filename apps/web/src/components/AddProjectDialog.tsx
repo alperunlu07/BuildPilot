@@ -57,6 +57,7 @@ export function AddProjectDialog({ open, onClose }: Props) {
             placeholder="C:\Users\you\code\my-repo"
             required
             spellCheck={false}
+            data-autofocus
             className="focusable w-full rounded-md border border-border-subtle bg-bg-base px-3 py-2 text-sm font-mono text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none"
           />
         </label>

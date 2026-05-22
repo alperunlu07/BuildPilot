@@ -81,7 +81,11 @@ export function CommandPalette({ onAddProject, onManageHosts }: Props) {
               className="w-full bg-transparent py-3 text-sm text-text-primary placeholder:text-text-faint focus:outline-none"
             />
           </div>
-          <Command.List className="max-h-[60vh] overflow-y-auto p-2 text-sm">
+          {/* Inner list uses dvh to match the outer container's max-h-[80dvh].
+              With vh, iOS Safari kept the inner list at its large-viewport
+              size when the virtual keyboard opened, hiding bottom results
+              behind the keyboard with no way to scroll them into view. */}
+          <Command.List className="max-h-[60dvh] overflow-y-auto p-2 text-sm">
             <Command.Empty className="px-3 py-6 text-center text-text-muted">
               {t('palette.empty')}
             </Command.Empty>

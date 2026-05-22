@@ -356,7 +356,10 @@ function BuildsTimeline({
   const start = now - windowMs;
 
   return (
-    <Card className="overflow-hidden">
+    // overflow-clip (not -hidden) for parity with BuildsTable above —
+    // doesn't establish a new block formatting context, so any future
+    // inner overflow-x-auto scroller works correctly on iOS Safari.
+    <Card className="overflow-clip">
       <div className="grid grid-cols-[120px_minmax(0,1fr)] sm:grid-cols-[200px_minmax(0,1fr)] px-3 py-2 text-[10px] uppercase tracking-wider text-text-muted font-semibold border-b border-border-subtle">
         <div>Pipeline</div>
         <div>Last 24h</div>

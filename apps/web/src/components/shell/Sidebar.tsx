@@ -31,6 +31,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useStore } from '../../store/store';
 import { useMinWidth } from '../../lib/breakpoint';
+import { pushEscHandler } from '../../lib/escStack';
 import { cn } from '../../lib/cn';
 import { Logo } from '../Logo';
 import { UserMenu } from '../UserMenu';
@@ -134,14 +135,15 @@ export function Sidebar({
   const dragStartRef = useRef<{ x: number; w: number } | null>(null);
   const isDesktop = useMinWidth('md');
 
+  // Esc closes the mobile drawer via the top-of-stack registry so a
+  // dialog opened from within the drawer (e.g. user menu sign-out
+  // confirmation) dismisses only itself on Escape, not the drawer too.
+  const onMobileCloseRef = useRef(onMobileClose);
+  onMobileCloseRef.current = onMobileClose;
   useEffect(() => {
     if (isDesktop || !mobileOpen) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onMobileClose?.();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [isDesktop, mobileOpen, onMobileClose]);
+    return pushEscHandler(() => onMobileCloseRef.current?.());
+  }, [isDesktop, mobileOpen]);
 
   const onResizeMouseDown = useCallback(
     (e: React.MouseEvent) => {

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Copy, Download, Search, X, ChevronsDown, ChevronsUp } from 'lucide-react';
 import type { BuildArtifact } from '@buildpilot/shared-types';
 import { api } from '../lib/api';
+import { pushEscHandler } from '../lib/escStack';
 
 interface Props {
   artifact: BuildArtifact | null;
@@ -97,11 +98,18 @@ export function ArtifactPreviewModal({ artifact, onClose }: Props) {
     };
   }, [artifact]);
 
-  // ESC closes; ⌘/Ctrl-F focuses the search box.
+  // ESC closes via the top-of-stack registry so a ConfirmDialog opened
+  // from inside this modal dismisses only itself on Escape, not both.
+  // ⌘/Ctrl-F still focuses the search box (no stacking concern there).
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+  useEffect(() => {
+    if (!open) return;
+    return pushEscHandler(() => onCloseRef.current());
+  }, [open]);
   useEffect(() => {
     if (!open) return;
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'f') {
         e.preventDefault();
         const el = document.getElementById('artifact-preview-search') as HTMLInputElement | null;
@@ -110,7 +118,7 @@ export function ArtifactPreviewModal({ artifact, onClose }: Props) {
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [open, onClose]);
+  }, [open]);
 
   // Split + (optionally) filter + memoise to avoid recomputing on every render.
   const lines = useMemo(() => {

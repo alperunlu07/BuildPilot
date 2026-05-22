@@ -102,7 +102,10 @@ export function Dialog({
   }, [open]);
 
   // Focus management — capture the prior focus, move focus into the
-  // dialog after mount, and restore on close.
+  // dialog after mount, and restore on close. Callers can opt-in to a
+  // specific initial target by marking it with `data-autofocus`; the
+  // wrapper falls back to the first VISIBLE focusable (matching the
+  // Tab handler's filter below), and finally the panel itself.
   useEffect(() => {
     if (!open) return;
     previouslyFocused.current = (document.activeElement as HTMLElement) ?? null;
@@ -110,8 +113,16 @@ export function Dialog({
     const id = window.setTimeout(() => {
       const panel = panelRef.current;
       if (!panel) return;
-      const first = panel.querySelector<HTMLElement>(FOCUSABLE_SELECTOR);
-      (first ?? panel).focus();
+      const autoFocus = panel.querySelector<HTMLElement>('[data-autofocus]');
+      const firstVisible = autoFocus
+        ? null
+        : Array.from(
+            panel.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR),
+          ).find((el) => {
+            if (el.getClientRects().length === 0) return false;
+            return getComputedStyle(el).visibility !== 'hidden';
+          });
+      (autoFocus ?? firstVisible ?? panel).focus();
     }, 0);
     return () => {
       window.clearTimeout(id);
