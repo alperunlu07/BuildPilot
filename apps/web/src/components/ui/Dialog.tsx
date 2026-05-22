@@ -1,5 +1,6 @@
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { cn } from '../../lib/cn';
+import { lockBodyScroll } from '../../lib/bodyScrollLock';
 
 // Responsive overhaul Faz 0 — shared modal wrapper.
 //
@@ -15,6 +16,17 @@ import { cn } from '../../lib/cn';
 //
 // Callers should NOT add their own w-[...] class; the wrapper owns sizing.
 // Pass `size` to choose which desktop width applies.
+//
+// Faz 5 review follow-up:
+//   - body-scroll-lock goes through the refcounted lockBodyScroll() so
+//     stacked dialogs don't clobber each other's prior-state snapshot.
+//   - Esc/backdrop handlers route through refs so callers passing inline
+//     arrows don't churn the listener on every parent re-render.
+//   - Focus trap + focus restoration: keyboard Tab cycles inside the
+//     dialog while open; focus returns to the previously-focused
+//     element on close.
+//   - Initial-focus: the first focusable descendant gets focus on open
+//     (matches the WAI-ARIA Authoring Practices for modal dialogs).
 export type DialogSize = 'sm' | 'md' | 'lg' | 'xl';
 
 const SIZE_CLASSES: Record<DialogSize, string> = {
@@ -30,63 +42,137 @@ export interface DialogProps {
   // Optional aria-label. When omitted the consumer should pass a labelled
   // heading inside `children` so screen readers still announce the dialog.
   ariaLabel?: string;
-  // Renders the surrounding role="dialog" container's own className. The
-  // background overlay is always rendered.
+  // ARIA role. Defaults to "dialog"; pass "alertdialog" for confirmation
+  // prompts that need to interrupt the user (ConfirmDialog pattern).
+  role?: 'dialog' | 'alertdialog';
   size?: DialogSize;
+  // Class applied to the inner panel (sizing/visuals). Use for adding
+  // custom padding or background overrides per-consumer.
   className?: string;
+  // Class applied to the fixed-inset overlay. Use only when stacking
+  // demands (e.g. z-[60] over another modal at z-50).
+  overlayClassName?: string;
   // Set true for full-bleed body content (e.g. ArtifactPreviewModal with
   // its own padded chrome). Default applies p-5.
   unpadded?: boolean;
   children: ReactNode;
 }
 
+// Tab-focusable descendants for the trap. Excludes negative tabindex,
+// disabled controls, and elements rendered inside aria-hidden subtrees
+// (handled implicitly because we query only inside the dialog).
+const FOCUSABLE_SELECTOR =
+  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
 export function Dialog({
   open,
   onClose,
   ariaLabel,
+  role = 'dialog',
   size = 'md',
   className,
+  overlayClassName,
   unpadded = false,
   children,
 }: DialogProps) {
-  // Close on Escape — mirrors the pattern every existing dialog implemented
-  // ad-hoc. Centralising it here keeps behaviour consistent.
+  // onClose ref so the Esc / backdrop listeners don't tear down whenever
+  // the parent re-renders with a new inline arrow.
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
+  // Track the element that had focus when the dialog opened so we can
+  // hand focus back on close (WCAG 2.4.3 focus order).
+  const previouslyFocused = useRef<HTMLElement | null>(null);
+  const panelRef = useRef<HTMLDivElement | null>(null);
+
+  // Esc dismisses.
   useEffect(() => {
     if (!open) return;
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') onCloseRef.current();
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [open, onClose]);
+  }, [open]);
 
-  // Lock body scroll while the dialog is open so the page underneath
-  // doesn't drift on mobile when the user scrolls inside the dialog.
+  // Body-scroll lock via refcount.
   useEffect(() => {
     if (!open) return;
-    const previous = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
+    return lockBodyScroll();
+  }, [open]);
+
+  // Focus management — capture the prior focus, move focus into the
+  // dialog after mount, and restore on close.
+  useEffect(() => {
+    if (!open) return;
+    previouslyFocused.current = (document.activeElement as HTMLElement) ?? null;
+    // Defer to next tick so the panel and its children are in the DOM.
+    const id = window.setTimeout(() => {
+      const panel = panelRef.current;
+      if (!panel) return;
+      const first = panel.querySelector<HTMLElement>(FOCUSABLE_SELECTOR);
+      (first ?? panel).focus();
+    }, 0);
     return () => {
-      document.body.style.overflow = previous;
+      window.clearTimeout(id);
+      previouslyFocused.current?.focus?.();
     };
+  }, [open]);
+
+  // Focus trap — intercept Tab inside the dialog and wrap focus around
+  // the focusable descendants instead of escaping into the page behind.
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key !== 'Tab') return;
+      const panel = panelRef.current;
+      if (!panel) return;
+      const focusables = Array.from(
+        panel.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR),
+      ).filter((el) => el.offsetParent !== null);
+      if (focusables.length === 0) {
+        e.preventDefault();
+        panel.focus();
+        return;
+      }
+      const first = focusables[0]!;
+      const last = focusables[focusables.length - 1]!;
+      const active = document.activeElement as HTMLElement | null;
+      if (e.shiftKey && active === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && active === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
   }, [open]);
 
   if (!open) return null;
 
   return (
     <div
-      role="dialog"
+      role={role}
       aria-modal="true"
       aria-label={ariaLabel}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-3 sm:p-4"
-      onClick={onClose}
+      className={cn(
+        'fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-3 sm:p-4',
+        overlayClassName,
+      )}
+      onClick={() => onCloseRef.current()}
     >
       <div
+        ref={panelRef}
+        // tabIndex=-1 so the panel itself can receive focus as a
+        // fallback when no focusable descendants exist.
+        tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
         className={cn(
           // Mobile: fill width minus inset (the parent already has p-3),
           // cap height to dynamic-vh and allow internal scroll.
-          'w-full max-h-[calc(100dvh-24px)] overflow-y-auto',
+          'w-full max-h-[calc(100dvh-24px)] overflow-y-auto outline-none',
           // From sm up: switch to a fixed width per the size preset.
           SIZE_CLASSES[size],
           // Visuals.

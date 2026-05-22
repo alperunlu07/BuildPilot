@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
 import type { StepType } from '@buildpilot/shared-types';
 import { STEP_DEFINITIONS } from '@buildpilot/step-registry';
+import { Dialog } from './ui/Dialog';
 
 interface Props {
   open: boolean;
@@ -34,7 +35,6 @@ export function SaveTemplateDialog({
     }
   }, [open, initialName]);
 
-  if (!open) return null;
   const def = STEP_DEFINITIONS[baseStepType];
 
   const submit = async (e: React.FormEvent) => {
@@ -55,16 +55,17 @@ export function SaveTemplateDialog({
   };
 
   return (
-    <div
-      className="fixed inset-0 z-[60] flex items-center justify-center bg-bg-base/70 backdrop-blur-sm p-3 sm:p-4"
-      onClick={onClose}
+    <Dialog
+      open={open}
+      onClose={onClose}
+      ariaLabel="Save as node template"
+      size="md"
+      // SaveTemplateDialog used z-[60] so it could appear over the
+      // PipelineEditor's z-50 NodeContextMenu. Preserve that stacking
+      // via overlayClassName which lands on the fixed-inset wrapper.
+      overlayClassName="z-[60]"
     >
-      <form
-        onClick={(e) => e.stopPropagation()}
-        onSubmit={submit}
-        // Responsive overhaul Faz 2 — phone-width fluid, snaps to 440px sm+.
-        className="w-full max-h-[calc(100dvh-24px)] overflow-y-auto sm:w-[440px] rounded-lg border border-border-subtle bg-bg-panel p-5 shadow-xl"
-      >
+      <form onSubmit={submit}>
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-base font-semibold text-text-primary">Save as node template</h2>
           <button type="button" onClick={onClose} className="text-text-muted hover:text-text-primary">
@@ -131,6 +132,6 @@ export function SaveTemplateDialog({
           </button>
         </div>
       </form>
-    </div>
+    </Dialog>
   );
 }

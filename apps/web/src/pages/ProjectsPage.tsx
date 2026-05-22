@@ -15,6 +15,7 @@ import { api } from '../lib/api';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
+import { PageContainer } from '../components/ui/PageContainer';
 import { Input } from '../components/ui/Input';
 import { Sparkline, type SparklineBar, type SparklineStatus } from '../components/ui/Sparkline';
 import { StatusDot } from '../components/ui/StatusDot';
@@ -161,7 +162,7 @@ export function ProjectsPage({ onAdd }: Props) {
   }
 
   return (
-    <div className="px-3 py-4 sm:px-4 md:px-6 md:py-6 max-w-[1400px] mx-auto">
+    <PageContainer maxWidth="1400px">
       {/* Page head */}
       <div className="flex items-start justify-between gap-4 mb-5">
         <div className="min-w-0">
@@ -303,7 +304,7 @@ export function ProjectsPage({ onAdd }: Props) {
           onDelete={(id) => softDeleteProject(id)}
         />
       )}
-    </div>
+    </PageContainer>
   );
 }
 
@@ -531,7 +532,11 @@ function ProjectRow({
           e.stopPropagation();
           onDelete();
         }}
-        className="opacity-0 group-hover:opacity-100 rounded-btn p-1 text-text-muted hover:text-rose-300 transition-opacity"
+        // Responsive overhaul follow-up — opacity-0 group-hover only
+        // works with a pointer. On coarse-pointer devices (phones,
+        // tablets, touch laptops) keep the button visible so the row
+        // stays deletable.
+        className="touch-target opacity-0 group-hover:opacity-100 [@media(pointer:coarse)]:opacity-100 rounded-btn p-1 text-text-muted hover:text-rose-300 transition-opacity"
         title="Remove project"
         aria-label={`Remove project ${project.name}`}
       >

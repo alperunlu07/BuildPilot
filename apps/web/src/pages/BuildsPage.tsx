@@ -8,6 +8,7 @@ import { Time } from '../lib/formatDate';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
+import { PageContainer } from '../components/ui/PageContainer';
 import { FilterPill } from '../components/ui/FilterPill';
 
 // UI v2 Faz 7 — Builds list with three view modes:
@@ -107,7 +108,7 @@ export function BuildsPage() {
     projectId !== '' || pipelineId !== '' || status !== 'all' || branchFilter !== '';
 
   return (
-    <div className="px-3 py-4 sm:px-4 md:px-6 md:py-6 max-w-[1500px] mx-auto">
+    <PageContainer>
       <div className="mb-5 flex items-start justify-between gap-4">
         <div className="min-w-0">
           <h1 className="text-xl font-semibold text-text-primary tracking-tight">Builds</h1>
@@ -245,7 +246,7 @@ export function BuildsPage() {
           onOpen={(id) => setView({ type: 'build', id })}
         />
       )}
-    </div>
+    </PageContainer>
   );
 }
 

@@ -22,7 +22,7 @@ export function UndoToast() {
   if (pending.length === 0 && errors.length === 0) return null;
 
   return (
-    <div className="pointer-events-none fixed bottom-2 left-1/2 z-40 flex w-full max-w-[calc(100vw-16px)] -translate-x-1/2 flex-col items-center gap-2 px-2 sm:bottom-4 sm:max-w-none sm:px-0">
+    <div className="pointer-events-none fixed bottom-2 left-1/2 z-40 flex w-full max-w-[calc(100vw-16px)] -translate-x-1/2 flex-col items-center gap-2 px-2 pb-safe sm:bottom-4 sm:max-w-none sm:px-0">
       {errors.map((e) => (
         <div
           key={e.id}

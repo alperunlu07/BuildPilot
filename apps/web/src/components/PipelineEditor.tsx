@@ -1409,6 +1409,21 @@ function Editor({ pipeline }: Props) {
         />
 
         <div ref={wrapperRef} className="relative min-h-0 flex-1" onDragOver={onDragOver} onDrop={onDrop}>
+          {/* Responsive overhaul follow-up — read-only banner on phones.
+              The Palette + StepPropertyPanel + BulkEditPanel are all
+              `hidden md:flex` because their interactions (drag-and-drop,
+              per-field sliders) need a desktop pointer. Surface that
+              limitation explicitly so phone users don't conclude the
+              feature is broken when tapping a node selects it but
+              produces no edit affordance. */}
+          {isMobile && (
+            <div
+              role="note"
+              className="absolute left-2 right-2 top-2 z-30 rounded-md border border-amber-500/30 bg-amber-500/[0.08] px-3 py-2 text-[11px] text-amber-200 shadow-md backdrop-blur md:hidden"
+            >
+              Read-only on phones — open on a tablet or desktop to drag steps and edit their properties.
+            </div>
+          )}
           {/* UI v2 Faz 5.A.4 — validation overlay. Floats top-left so it
               doesn't clash with the find dialog (top-right) or the canvas
               controls (bottom-right). */}

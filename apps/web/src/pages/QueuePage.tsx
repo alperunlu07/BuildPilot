@@ -3,6 +3,7 @@ import { Layers, RefreshCw } from 'lucide-react';
 import type { Build, QueueLaneSnapshot } from '@buildpilot/shared-types';
 import { useStore } from '../store/store';
 import { cn } from '../lib/cn';
+import { PageContainer } from '../components/ui/PageContainer';
 
 // WP5 (queue): "Execution Queue" board. Polls /api/queue every few seconds
 // so the dashboard reflects the coordinator's live state without us having
@@ -50,7 +51,7 @@ export function QueuePage() {
   const lanes = queue?.lanes ?? [];
 
   return (
-    <div className="mx-auto max-w-6xl p-3 sm:p-4 md:p-6">
+    <PageContainer maxWidth="72rem">
       <div className="mb-5 flex items-baseline justify-between">
         <div>
           <h1 className="text-xl font-semibold text-text-primary">Execution Queue</h1>
@@ -102,7 +103,7 @@ export function QueuePage() {
           ))}
         </div>
       )}
-    </div>
+    </PageContainer>
   );
 }
 

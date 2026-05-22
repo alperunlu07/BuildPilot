@@ -52,7 +52,11 @@ export function ActiveBuildsWidget() {
   const projectNameFor = (id: string) => projects.find((p) => p.id === id)?.name ?? 'project';
 
   return (
-    <div className="pointer-events-auto fixed bottom-2 right-2 z-40 sm:bottom-4 sm:right-4">
+    // pb-safe + pr-safe so the widget clears iOS gesture bar (34px on
+    // iPhones with home indicator) and Android edge insets. The
+    // explicit pb-safe on the inner wrapper is additive with bottom-2
+    // — both contribute to the actual offset.
+    <div className="pointer-events-auto fixed bottom-2 right-2 z-40 pb-safe pr-safe sm:bottom-4 sm:right-4">
       {expanded ? (
         // Responsive overhaul Faz 1 — clamp the expanded widget to the
         // viewport on phones so it never spills off the right edge of
