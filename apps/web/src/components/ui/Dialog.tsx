@@ -1,6 +1,7 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import { cn } from '../../lib/cn';
 import { lockBodyScroll } from '../../lib/bodyScrollLock';
+import { pushEscHandler } from '../../lib/escStack';
 
 // Responsive overhaul Faz 0 — shared modal wrapper.
 //
@@ -85,14 +86,13 @@ export function Dialog({
   const previouslyFocused = useRef<HTMLElement | null>(null);
   const panelRef = useRef<HTMLDivElement | null>(null);
 
-  // Esc dismisses.
+  // Esc dismisses — go through the top-of-stack registry so stacked
+  // dialogs (e.g. ConfirmDialog z-[60] over AddProjectDialog z-50)
+  // dismiss only the topmost on a single Escape press, instead of
+  // every registered handler firing in attach order.
   useEffect(() => {
     if (!open) return;
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onCloseRef.current();
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
+    return pushEscHandler(() => onCloseRef.current());
   }, [open]);
 
   // Body-scroll lock via refcount.
@@ -127,9 +127,28 @@ export function Dialog({
       if (e.key !== 'Tab') return;
       const panel = panelRef.current;
       if (!panel) return;
+      // Visibility filter — accept anything with at least one client
+      // rect and not explicitly `visibility:hidden`. The previous
+      // `offsetParent !== null` check missed `position: fixed` and any
+      // descendant of a `display: contents` ancestor.
       const focusables = Array.from(
         panel.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR),
-      ).filter((el) => el.offsetParent !== null);
+      ).filter((el) => {
+        if (el.getClientRects().length === 0) return false;
+        return getComputedStyle(el).visibility !== 'hidden';
+      });
+      const active = document.activeElement as HTMLElement | null;
+      // Containment branch — if focus ever leaks outside the panel
+      // (e.g. the initial-focus path landed on the panel itself and
+      // the next Tab tries to move into the page behind), force it
+      // back to the first focusable child. Without this, focus
+      // escapes the dialog and Tab cycles through background controls
+      // — WCAG 2.4.3 violation.
+      if (!panel.contains(active)) {
+        e.preventDefault();
+        (focusables[0] ?? panel).focus();
+        return;
+      }
       if (focusables.length === 0) {
         e.preventDefault();
         panel.focus();
@@ -137,7 +156,6 @@ export function Dialog({
       }
       const first = focusables[0]!;
       const last = focusables[focusables.length - 1]!;
-      const active = document.activeElement as HTMLElement | null;
       if (e.shiftKey && active === first) {
         e.preventDefault();
         last.focus();

@@ -138,6 +138,13 @@ export async function startStack(): Promise<RunningStack> {
       env: {
         ...env,
         BUILDPILOT_API_PORT: String(API_PORT),
+        // Opt the dev bundle into the e2e-only `window.useStore` exposure
+        // (see apps/web/src/main.tsx). This flag is consumed at build/
+        // hot-reload time by Vite as `import.meta.env.VITE_E2E`; without
+        // it the responsive smoke tests can't drive store-level
+        // affordances and the confirm-dialog viewport-fit test
+        // hard-fails by design.
+        VITE_E2E: 'true',
       },
       stdio: ['ignore', 'pipe', 'pipe'],
       detached: true,

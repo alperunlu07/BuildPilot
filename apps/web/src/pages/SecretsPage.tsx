@@ -209,8 +209,11 @@ export function SecretsPage() {
             )}
           </div>
         ) : (
-          <div className="overflow-hidden rounded-md border border-border-subtle">
-            <table className="w-full text-sm">
+          // Responsive review follow-up — overflow-clip + inner
+          // overflow-x-auto so iPhone 12 scrolls instead of clipping.
+          <div className="overflow-clip rounded-md border border-border-subtle">
+            <div className="overflow-x-auto overscroll-x-contain">
+            <table className="min-w-[560px] w-full text-sm">
               <thead className="bg-bg-panel text-[11px] uppercase tracking-wider text-text-muted">
                 <tr>
                   <th className="px-3 py-2 text-left">Name</th>
@@ -272,6 +275,7 @@ export function SecretsPage() {
                 })}
               </tbody>
             </table>
+            </div>
           </div>
         )}
       </div>

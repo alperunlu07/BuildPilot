@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Sparkles, X } from 'lucide-react';
 import { lockBodyScroll } from '../lib/bodyScrollLock';
+import { pushEscHandler } from '../lib/escStack';
 
 interface Props {
   open: boolean;
@@ -168,17 +169,13 @@ export function ChangelogDrawer({ open, onClose }: Props) {
     return lockBodyScroll();
   }, [open]);
 
-  // Esc dismisses — use a ref for onClose so the listener doesn't churn
-  // when callers pass inline arrows.
+  // Esc dismisses — top-of-stack registry so a stacked ConfirmDialog
+  // over the drawer closes only the dialog on Escape, not both.
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
   useEffect(() => {
     if (!open) return;
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onCloseRef.current();
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
+    return pushEscHandler(() => onCloseRef.current());
   }, [open]);
 
   if (!open) return null;

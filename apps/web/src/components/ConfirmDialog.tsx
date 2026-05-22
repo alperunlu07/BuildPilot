@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { AlertTriangle } from 'lucide-react';
 import { lockBodyScroll } from '../lib/bodyScrollLock';
+import { pushEscHandler } from '../lib/escStack';
 
 interface Props {
   open: boolean;
@@ -53,18 +54,15 @@ export function ConfirmDialog({
     return lockBodyScroll();
   }, [open]);
 
-  // Esc dismisses — the prior comment said this was handled at the app
-  // level but no handler ever existed. Use the latest onCancel via a ref
-  // so the listener doesn't churn when callers pass inline arrows.
+  // Esc dismisses — route through the top-of-stack registry so a
+  // ConfirmDialog stacked over another modal closes only itself on
+  // Escape rather than every registered handler firing in attach
+  // order.
   const onCancelRef = useRef(onCancel);
   onCancelRef.current = onCancel;
   useEffect(() => {
     if (!open) return;
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onCancelRef.current();
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
+    return pushEscHandler(() => onCancelRef.current());
   }, [open]);
 
   if (!open) return null;

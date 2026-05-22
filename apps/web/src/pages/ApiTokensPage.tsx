@@ -96,7 +96,10 @@ export function ApiTokensPage() {
           No tokens. Create one to call BuildPilot from CI scripts.
         </div>
       ) : (
-        <table className="w-full overflow-hidden rounded-md border border-border-subtle text-sm">
+        // Responsive review follow-up — see UsersPage for rationale.
+        <div className="overflow-clip rounded-md border border-border-subtle">
+        <div className="overflow-x-auto overscroll-x-contain">
+        <table className="min-w-[640px] w-full text-sm">
           <thead className="bg-bg-panel text-xs uppercase tracking-wider text-text-muted">
             <tr>
               <th className="px-3 py-2 text-left">Name</th>
@@ -137,6 +140,8 @@ export function ApiTokensPage() {
             ))}
           </tbody>
         </table>
+        </div>
+        </div>
       )}
 
       {showCreate && currentUser && (

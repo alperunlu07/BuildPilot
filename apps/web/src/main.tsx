@@ -18,14 +18,17 @@ applyTheme(readStoredTheme());
 applyDensity(readStoredDensity());
 applyAccent(readStoredAccent());
 
-// Review follow-up — expose the Zustand store on window in dev builds
-// so the Playwright responsive smoke tests can drive UI affordances
-// (e.g. requestConfirmation) without scripting per-page flows. The
-// production bundle never reaches this branch, so the surface only
-// exists during local dev + e2e runs (Playwright loads the dev server
-// when VITE_E2E=true). Cast through `unknown` so we don't widen the
+// Review follow-up — expose the Zustand store on window ONLY when the
+// e2e harness explicitly opts in via VITE_E2E=true. Previous build
+// also enabled this under `import.meta.env.DEV`, which left the full
+// store reachable from devtools / browser extensions / userscripts on
+// every `pnpm dev` session — including destructive setters
+// (softDeleteProject, deleteHost, cancelBuild, etc.) and PII
+// (host addresses, identityFile paths, currentUser). The production
+// bundle never reaches this branch; the e2e fixture passes VITE_E2E
+// when it spawns vite. Cast through `unknown` so we don't widen the
 // global Window type for the rest of the codebase.
-if (import.meta.env.DEV || import.meta.env.VITE_E2E === 'true') {
+if (import.meta.env.VITE_E2E === 'true') {
   (window as unknown as { useStore: typeof useStore }).useStore = useStore;
 }
 
