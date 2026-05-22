@@ -297,7 +297,15 @@ export function Sidebar({
           // viewport change) immediately recomputes the drawer cap from
           // the new viewport without needing a JS re-render. md+ ignores
           // it because the inline width is always ≤ 400, well under 85vw.
-          'density-card relative flex h-full max-w-[85vw] flex-col border-r border-border-subtle bg-bg-panel overflow-hidden',
+          //
+          // `md:relative` (not bare `relative`) — on mobile this <aside>
+          // is `position: fixed` via mobileClasses below. `cn` is plain
+          // clsx (no twMerge), so an unconditional `relative` here would
+          // emit BOTH `relative` and `fixed` classes; Tailwind's source
+          // order puts `.relative` after `.fixed`, making the aside
+          // statically positioned and auto-placed into an implicit grid
+          // row that ate ~600px of the main slot on every phone view.
+          'density-card flex h-full max-w-[85vw] flex-col border-r border-border-subtle bg-bg-panel overflow-hidden md:relative',
           mobileClasses,
         )}
         aria-hidden={!isDesktop && !mobileOpen ? true : undefined}

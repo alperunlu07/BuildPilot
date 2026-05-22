@@ -35,7 +35,14 @@ export default defineConfig({
     strictPort: true,
     open: !isE2E,
     proxy: {
-      '/api': apiTarget,
+      // Match `/api/...` strictly so SPA routes that happen to start
+      // with `/api` (e.g. `/api-tokens`) keep going to the dev server
+      // and not the backend. Vite's string proxy is a *prefix* match,
+      // so plain `'/api'` would also forward `/api-tokens`.
+      '^/api(/|$)': {
+        target: apiTarget,
+        changeOrigin: false,
+      },
       '/events': {
         target: apiTarget,
         changeOrigin: true,

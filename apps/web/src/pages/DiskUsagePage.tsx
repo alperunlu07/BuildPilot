@@ -175,8 +175,13 @@ export function DiskUsagePage() {
             </div>
           </div>
 
-          <div className="overflow-hidden rounded-md border border-border-subtle">
-            <table className="w-full text-left text-sm">
+          {/* Responsive overhaul follow-up — match BuildsPage/UsersPage
+              pattern: outer overflow-clip clips rounded corners without
+              creating a new block formatting context; inner overflow-x-auto
+              lets phones scroll instead of clipping the right columns. */}
+          <div className="overflow-clip rounded-md border border-border-subtle">
+            <div className="overflow-x-auto overscroll-x-contain">
+            <table className="min-w-[640px] w-full text-left text-sm">
               <thead className="bg-bg-panel text-[11px] uppercase tracking-wider text-text-muted">
                 <tr>
                   <th className="px-3 py-2">Project</th>
@@ -233,6 +238,7 @@ export function DiskUsagePage() {
                 )}
               </tbody>
             </table>
+            </div>
           </div>
         </>
       )}

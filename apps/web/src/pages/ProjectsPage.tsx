@@ -163,8 +163,9 @@ export function ProjectsPage({ onAdd }: Props) {
 
   return (
     <PageContainer maxWidth="1400px">
-      {/* Page head */}
-      <div className="flex items-start justify-between gap-4 mb-5">
+      {/* Page head — stacks vertically on phones so the 280px filter
+          input + sort toggle don't push past the 390px viewport. */}
+      <div className="flex flex-col gap-3 mb-5 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
         <div className="min-w-0">
           <h1 className="text-xl font-semibold text-text-primary tracking-tight">
             Projects
@@ -180,8 +181,8 @@ export function ProjectsPage({ onAdd }: Props) {
             )}
           </div>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <div className="relative w-[280px]">
+        <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
+          <div className="relative w-full sm:w-[280px]">
             <Search
               size={12}
               className="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-faint pointer-events-none"
