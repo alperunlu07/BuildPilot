@@ -1,7 +1,7 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { app } from 'electron';
-import { CONFIG_DIR, DESKTOP_STATE_FILE } from './config';
+import { DESKTOP_STATE_FILE } from './config';
 
 interface DesktopState {
   // Whether we've completed the one-time first-run setup (enabling launch at
@@ -41,7 +41,8 @@ export function isLaunchAtLogin(): boolean {
 // On the very first run, opt the user into launch-at-login (the whole point of
 // a tray app) — but only once, so a later opt-out sticks.
 export function applyFirstRunDefaults(): void {
-  if (!existsSync(CONFIG_DIR)) mkdirSync(CONFIG_DIR, { recursive: true });
+  // write() ensures CONFIG_DIR exists (recursive mkdir), so no separate
+  // directory check is needed here.
   const state = read();
   if (!state.initialized) {
     setLaunchAtLogin(true);

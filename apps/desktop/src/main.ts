@@ -3,7 +3,7 @@ import type { ServerEvent } from '@buildpilot/shared-types';
 import { ensureServer, stopServer } from './server';
 import { subscribeEvents } from './api';
 import { handlePipelineEvent } from './notify';
-import { createTray, destroyTray, rebuildTrayMenu } from './tray';
+import { createTray, destroyTray, rebuildTrayMenu, scheduleTrayRebuild } from './tray';
 import { applyFirstRunDefaults } from './state';
 import { setQuitting, showWindow } from './window';
 
@@ -41,24 +41,28 @@ async function start(): Promise<void> {
       'BuildPilot',
       'BuildPilot sunucusu başlatılamadı. Günlükleri kontrol edin.',
     );
+  } else {
+    // Server is up — populate the tray with the real project list (createTray
+    // only set a synchronous placeholder).
+    void rebuildTrayMenu();
   }
 
-  // Stream pipeline events → OS notifications. Project lifecycle events also
-  // refresh the tray shortcuts so the menu always reflects the current set.
+  // Stream pipeline events → OS notifications. Only project add/remove changes
+  // the tray's project shortcuts; rebuild is debounced to coalesce bursts.
   unsubscribe = subscribeEvents((e: ServerEvent) => {
     handlePipelineEvent(e);
-    if (
-      e.type === 'projectAdded' ||
-      e.type === 'projectRemoved' ||
-      e.type === 'pipelineChanged'
-    ) {
-      void rebuildTrayMenu();
+    if (e.type === 'projectAdded' || e.type === 'projectRemoved') {
+      scheduleTrayRebuild();
     }
   });
 
-  // Launched at login (`--hidden`) → stay in the tray. A manual launch opens
-  // the window so the user sees something happened.
-  if (!process.argv.includes('--hidden')) showWindow('/');
+  // Stay in the tray when launched at login: Windows/Linux pass `--hidden`
+  // (set in setLoginItemSettings); macOS doesn't forward args, so consult the
+  // login-item settings directly. A manual launch opens the window.
+  const launchedAtLogin =
+    process.argv.includes('--hidden') ||
+    app.getLoginItemSettings().wasOpenedAtLogin;
+  if (!launchedAtLogin) showWindow('/');
 }
 
 app.on('before-quit', () => {

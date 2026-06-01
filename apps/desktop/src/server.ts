@@ -8,7 +8,9 @@ let serverProcess: ChildProcess | null = null;
 
 async function isServerUp(): Promise<boolean> {
   try {
-    const res = await fetch(`${BASE_URL}/api/system/info`, {
+    // /api/health is always public (even with auth enabled), so this probe
+    // works without a credential — unlike /api/system/info, which is gated.
+    const res = await fetch(`${BASE_URL}/api/health`, {
       signal: AbortSignal.timeout(1500),
     });
     return res.ok;

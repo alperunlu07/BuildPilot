@@ -51,8 +51,21 @@ server via the workspace `tsx`, so the window loads the freshly built SPA from
 `http://127.0.0.1:51731`. If you already have `pnpm dev` running, the app
 adopts that server instead of starting a second one.
 
-Override the target server with `BUILDPILOT_API_PORT` / `BUILDPILOT_HOST`, or
-point at a custom launch command with `BUILDPILOT_SERVER_CMD`.
+### Talking to the server
+
+The desktop app discovers the server's **host and port from the same
+`~/.buildpilot/config.json` the server reads** (falling back to the documented
+`127.0.0.1:51731` default), so the two never disagree — even if you change the
+port in `config.json`. `BUILDPILOT_HOME` relocates that file for both sides; set
+`BUILDPILOT_SERVER_CMD` to launch the server with a custom command.
+
+**Auth-enabled servers.** When `auth.enabled` is true, the static app shell and
+login page stay public, but the data API (`/api/*`) requires a credential. Give
+the desktop app an API token (generate one on the dashboard's **API tokens**
+page) via either the `BUILDPILOT_API_TOKEN` env var or an `apiToken` field in
+`~/.buildpilot/desktop.json`. It's then sent as `Authorization: Bearer …` on
+every API/SSE call, so the tray project list and Pull/Fetch actions work. No
+token is needed on a default (auth-disabled) install.
 
 ## Fully self-contained — no Node on the target PC
 

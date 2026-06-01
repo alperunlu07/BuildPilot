@@ -15,6 +15,7 @@
 // The PRODUCED installer has no such requirements.
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { NATIVE_EXTERNALS, SERVER_EXTERNALS } from './server-externals.mjs';
@@ -24,7 +25,9 @@ const desktopDir = join(here, '..');
 const repoRoot = join(desktopDir, '..', '..');
 const serverDir = join(desktopDir, 'server');
 
-const npmCmd = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+const exe = process.platform === 'win32' ? '.cmd' : '';
+const npmCmd = `npm${exe}`;
+const npxCmd = `npx${exe}`;
 
 function run(cmd, args, cwd) {
   console.log(`\n$ ${cmd} ${args.join(' ')}  (cwd: ${cwd})`);
@@ -44,6 +47,41 @@ for (const name of SERVER_EXTERNALS) {
     );
   }
   dependencies[name] = version;
+}
+
+// 1b. Drift guard: a server dep that ships a native addon (binding.gyp /
+// "gypfile" / a node-gyp/prebuild install script) but ISN'T in SERVER_EXTERNALS
+// would be silently inlined by esbuild and crash at runtime in the packaged
+// app. Catch it at build time instead. (Pure-JS deps are meant to be bundled.)
+const externalSet = new Set(SERVER_EXTERNALS);
+// Resolve deps from the server package's context — under pnpm they live in
+// apps/server/node_modules (symlinked into the store), not the repo root.
+const serverRequire = createRequire(join(repoRoot, 'apps', 'server', 'package.json'));
+const nativeMissing = [];
+for (const name of Object.keys(serverPkg.dependencies ?? {})) {
+  if (externalSet.has(name)) continue;
+  let depPkgPath;
+  try {
+    depPkgPath = serverRequire.resolve(`${name}/package.json`);
+  } catch {
+    continue; // not resolvable — skip
+  }
+  const depPkg = JSON.parse(readFileSync(depPkgPath, 'utf8'));
+  const installScript = `${depPkg.scripts?.install ?? ''} ${depPkg.scripts?.preinstall ?? ''}`;
+  const looksNative =
+    depPkg.gypfile === true ||
+    depPkg.binary != null ||
+    /node-gyp|prebuild|cmake-js|node-pre-gyp/.test(installScript) ||
+    existsSync(join(dirname(depPkgPath), 'binding.gyp'));
+  if (looksNative) nativeMissing.push(name);
+}
+if (nativeMissing.length > 0) {
+  throw new Error(
+    `These server deps look native but are missing from SERVER_EXTERNALS ` +
+      `(esbuild would inline them and the packaged app would crash at runtime): ` +
+      `${nativeMissing.join(', ')}. Add them to apps/desktop/scripts/server-externals.mjs ` +
+      `(and NATIVE_EXTERNALS if they ship a .node binary).`,
+  );
 }
 
 // 2. Fresh, isolated install (no workspace symlinks) so the shipped tree is
@@ -80,12 +118,7 @@ if (!existsSync(electronPkgPath)) {
 }
 const electronVersion = JSON.parse(readFileSync(electronPkgPath, 'utf8')).version;
 
-const rebuildBin = join(
-  desktopDir,
-  'node_modules',
-  '.bin',
-  process.platform === 'win32' ? 'electron-rebuild.cmd' : 'electron-rebuild',
-);
+const rebuildBin = join(desktopDir, 'node_modules', '.bin', `electron-rebuild${exe}`);
 const rebuildArgs = [
   '--version',
   electronVersion,
@@ -98,7 +131,7 @@ if (existsSync(rebuildBin)) {
   run(rebuildBin, rebuildArgs, serverDir);
 } else {
   // Fall back to npx if @electron/rebuild wasn't hoisted to desktop's bin.
-  run(npmCmd.replace(/npm(\.cmd)?$/, 'npx$1'), ['@electron/rebuild', ...rebuildArgs], serverDir);
+  run(npxCmd, ['@electron/rebuild', ...rebuildArgs], serverDir);
 }
 
 console.log('\n✓ Server runtime prepared at apps/desktop/server (bundle + node_modules).');

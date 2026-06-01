@@ -10,16 +10,22 @@ import { logger } from './logger';
 // up under `web/dist`. A packaged desktop build ships the bundle elsewhere
 // and points us at it via BUILDPILOT_WEB_DIST.
 function resolveWebDist(): string | null {
+  // A directory only counts as a usable bundle if it actually contains
+  // index.html — checked identically for both the env override and the
+  // relative dev guess, so an empty/wrong BUILDPILOT_WEB_DIST is rejected
+  // rather than registering a handler that 404s every route.
+  const hasIndex = (dir: string): string | null =>
+    existsSync(join(dir, 'index.html')) ? dir : null;
+
   const fromEnv = process.env.BUILDPILOT_WEB_DIST;
-  if (fromEnv) return existsSync(fromEnv) ? fromEnv : null;
+  if (fromEnv) return hasIndex(fromEnv);
 
   // When this module is bundled to CommonJS (packaged desktop build),
   // `import.meta.url` is empty — but that build always sets BUILDPILOT_WEB_DIST
   // above, so we never rely on the relative guess there.
   if (!import.meta.url) return null;
   const here = dirname(fileURLToPath(import.meta.url));
-  const guess = join(here, '..', '..', 'web', 'dist');
-  return existsSync(join(guess, 'index.html')) ? guess : null;
+  return hasIndex(join(here, '..', '..', 'web', 'dist'));
 }
 
 // Serve the SPA from the same origin as the API so the desktop window (and a
@@ -38,11 +44,14 @@ export async function registerWebStatic(app: FastifyInstance): Promise<void> {
   await app.register(fastifyStatic, { root: dist, wildcard: false });
 
   app.setNotFoundHandler((req, reply) => {
-    if (
-      req.method === 'GET' &&
-      !req.url.startsWith('/api') &&
-      !req.url.startsWith('/events')
-    ) {
+    // Serve the SPA shell for client-side routes. Anchor the prefixes on a
+    // path boundary so a client route like `/api-tokens` isn't mistaken for an
+    // API call (a bare startsWith('/api') would swallow it). HEAD mirrors GET
+    // so probes/bots see the same status as a browser navigation.
+    const path = req.url.split('?')[0] ?? req.url;
+    const isApi = path === '/api' || path.startsWith('/api/');
+    const isEvents = path === '/events' || path.startsWith('/events/');
+    if ((req.method === 'GET' || req.method === 'HEAD') && !isApi && !isEvents) {
       return reply.type('text/html').sendFile('index.html');
     }
     return reply.code(404).send({ error: 'not found' });

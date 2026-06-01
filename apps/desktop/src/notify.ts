@@ -20,21 +20,24 @@ export function handlePipelineEvent(e: ServerEvent): void {
   switch (e.type) {
     case 'buildFinished': {
       const { status, id, triggerBranch } = e.build;
-      if (status === 'success') {
-        notify(
-          'Derleme başarılı ✓',
-          `${triggerBranch} dalındaki derleme tamamlandı.`,
-          `/builds/${id}`,
-        );
-      } else if (status === 'failed') {
-        notify(
-          'Derleme başarısız ✗',
-          `${triggerBranch} dalındaki derleme hata verdi.`,
-          `/builds/${id}`,
-        );
-      } else if (status === 'cancelled') {
-        notify('Derleme iptal edildi', `${triggerBranch} dalı.`, `/builds/${id}`);
-      }
+      // Only terminal outcomes raise a toast; the route + data are identical
+      // across them, so a small lookup keeps it to one notify() call.
+      const messages: Partial<Record<typeof status, { title: string; body: string }>> = {
+        success: {
+          title: 'Derleme başarılı ✓',
+          body: `${triggerBranch} dalındaki derleme tamamlandı.`,
+        },
+        failed: {
+          title: 'Derleme başarısız ✗',
+          body: `${triggerBranch} dalındaki derleme hata verdi.`,
+        },
+        cancelled: {
+          title: 'Derleme iptal edildi',
+          body: `${triggerBranch} dalı.`,
+        },
+      };
+      const msg = messages[status];
+      if (msg) notify(msg.title, msg.body, `/builds/${id}`);
       return;
     }
     case 'buildAwaitingApproval': {

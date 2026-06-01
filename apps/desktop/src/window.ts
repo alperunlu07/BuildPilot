@@ -4,6 +4,12 @@ import { BASE_URL } from './config';
 
 let win: BrowserWindow | null = null;
 
+// Tracks whether the current document has finished loading. `win` being
+// non-null is NOT a proxy for "loaded" — loadURL is async — so in-app
+// (pushState) navigation must wait for this, and a failed load must fall back
+// to a fresh loadURL instead of scripting a blank/error page.
+let loaded = false;
+
 // True once app.quit() has been requested, so the close handler knows to let
 // the window actually close instead of hiding it back to the tray.
 let quitting = false;
@@ -35,6 +41,18 @@ function create(): BrowserWindow {
   });
   w.on('closed', () => {
     win = null;
+    loaded = false;
+  });
+
+  // Track load state so navigation picks pushState vs a full reload correctly.
+  w.webContents.on('did-start-loading', () => {
+    loaded = false;
+  });
+  w.webContents.on('did-finish-load', () => {
+    loaded = true;
+  });
+  w.webContents.on('did-fail-load', () => {
+    loaded = false;
   });
 
   // Open external links (target=_blank, http(s) outside our origin) in the
@@ -57,14 +75,19 @@ export function showWindow(path = '/'): void {
   if (!win) {
     win = create();
     void win.loadURL(`${BASE_URL}${path}`);
-  } else {
-    // Already loaded — push the new route in-app so we don't trigger a full
-    // reload of the SPA on every menu click.
+  } else if (loaded) {
+    // Page is up — push the new route in-app so we don't reload the SPA on
+    // every menu click.
     void win.webContents.executeJavaScript(
       `window.history.pushState({}, '', ${JSON.stringify(
         path,
       )}); window.dispatchEvent(new PopStateEvent('popstate'));`,
     );
+  } else {
+    // Window exists but is still loading (rapid clicks at startup) or the last
+    // load failed (server was briefly down) — do a fresh load to the target
+    // path rather than scripting a not-yet-ready / error page.
+    void win.loadURL(`${BASE_URL}${path}`);
   }
   if (win.isMinimized()) win.restore();
   win.show();

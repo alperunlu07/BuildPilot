@@ -1,9 +1,10 @@
 import type { ProjectSummary, ServerEvent } from '@buildpilot/shared-types';
-import { BASE_URL } from './config';
+import { BASE_URL, authHeaders } from './config';
 
 export async function fetchProjects(): Promise<ProjectSummary[]> {
   try {
     const res = await fetch(`${BASE_URL}/api/projects`, {
+      headers: authHeaders(),
       signal: AbortSignal.timeout(4000),
     });
     if (!res.ok) return [];
@@ -26,7 +27,7 @@ export function subscribeEvents(onEvent: (e: ServerEvent) => void): () => void {
     controller = new AbortController();
     try {
       const res = await fetch(`${BASE_URL}/events`, {
-        headers: { accept: 'text/event-stream' },
+        headers: { accept: 'text/event-stream', ...authHeaders() },
         signal: controller.signal,
       });
       if (!res.ok || !res.body) throw new Error(`events ${res.status}`);
