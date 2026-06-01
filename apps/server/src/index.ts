@@ -41,6 +41,7 @@ import { auditLogRoutes } from './api/audit-log';
 import { apiTokensRoutes } from './api/api-tokens';
 import { registerSessionMiddleware, pruneExpiredSessions } from './auth/sessions';
 import { registerAuditHook } from './audit';
+import { registerWebStatic } from './static-web';
 
 async function main(): Promise<void> {
   const config = loadConfig();
@@ -125,6 +126,11 @@ async function main(): Promise<void> {
   await approvalsRoutes(app);
   await lanesRoutes(app);
   await queueRoutes(app);
+
+  // Serve the built web SPA from this origin (production / desktop). No-op
+  // in dev where Vite owns the web on 51732. Registered last so all /api and
+  // /events routes take precedence over the static wildcard + SPA fallback.
+  await registerWebStatic(app);
 
   // Re-sync poller whenever projects change. Pipeline mutations also trigger sync;
   // for now we just sync on any project event and rely on listPipelines() returning

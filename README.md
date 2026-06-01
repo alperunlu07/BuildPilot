@@ -94,6 +94,22 @@ auto-migrates the config on startup.
 The web app proxies `/api/*` and `/events` to the server, so you can
 treat the Vite URL as the single entry point.
 
+### Desktop tray app (background + auto-start)
+
+`apps/desktop` packages BuildPilot as an Electron **system-tray app**: it
+starts the server in the background, auto-launches at login (hidden into the
+tray), shows native OS notifications for pipeline events, and opens the
+dashboard from a left-click. Right-click for per-project shortcuts (open
+folder, `git pull`/`fetch`, jump into the panel).
+
+```bash
+pnpm desktop:dev      # build the web bundle + launch Electron locally
+pnpm desktop:dist     # build a platform installer (.exe / .dmg / AppImage)
+```
+
+See **[docs/DESKTOP.md](docs/DESKTOP.md)** for the architecture and the
+Windows installer / native-rebuild steps.
+
 ### Adding a project
 
 Click the **+** button in the sidebar, paste an absolute path to a git
