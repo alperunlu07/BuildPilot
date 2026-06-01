@@ -1,0 +1,14 @@
+# Regenerated outputs — never committed.
+dist/
+release/
+server/
+node_modules/
+*.log
+
+# The repo-root .gitignore ignores any `build/` and `scripts/` directory at
+# every level. Ours hold committed source (tray icons + the server bundler),
+# so re-include them here.
+!build/
+!build/**
+!scripts/
+!scripts/**

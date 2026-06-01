@@ -1,0 +1,59 @@
+appId: dev.buildpilot.desktop
+productName: BuildPilot
+copyright: Copyright © BuildPilot
+
+directories:
+  output: release
+  buildResources: build
+
+# Only the compiled main process + assets go inside the app. The server and
+# the web bundle ride along as extra resources so they live as real files on
+# disk (native addons + pino workers can't run from inside an asar archive).
+files:
+  - dist/**
+  - build/**
+  - package.json
+
+extraResources:
+  # The self-contained server runtime: the esbuild bundle plus the installed +
+  # Electron-ABI-rebuilt node_modules for the native/pino externals. Produced
+  # by `scripts/prepare-resources.mjs` (wired into the `dist` scripts). Source
+  # maps are dev-only, so they're excluded from the shipped app.
+  - from: server
+    to: server
+    filter:
+      - '**/*'
+      - '!**/*.map'
+  - from: ../../apps/web/dist
+    to: web/dist
+
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+  icon: build/icon.png
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  # Launch automatically after install and create a Start-menu + desktop entry.
+  runAfterFinish: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+
+mac:
+  target:
+    - target: dmg
+      arch: [arm64, x64]
+  category: public.app-category.developer-tools
+  icon: build/icon.png
+  # Background/accessory app: no Dock icon (we also call app.dock.hide()).
+  extendInfo:
+    LSUIElement: true
+
+linux:
+  target:
+    - AppImage
+  category: Development
+  icon: build/icon.png

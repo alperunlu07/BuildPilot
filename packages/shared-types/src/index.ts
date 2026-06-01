@@ -2665,7 +2665,9 @@ export interface SystemInfo {
   license: string;
   host: string;
   port: number;
-  webOrigin: string;
+  // Nullable: a local-only install can have no configured web origin
+  // (mirrors ServerConfig.webOrigin). The Settings page renders '—' for null.
+  webOrigin: string | null;
   pollIntervalSec: number;
   authEnabled: boolean;
   configDir: string;

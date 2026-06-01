@@ -258,7 +258,15 @@ export async function registerSessionMiddleware(app: FastifyInstance): Promise<v
 
     // ── 3. Enforcement.
     if (auth.enabled && !req.user) {
-      if (!isPublicPath(req.url)) {
+      // Only the API surface is protected. The static app shell — index.html,
+      // /assets/*, the favicon, and every client-side route (/projects,
+      // /login, …) — must load unauthenticated so the user can reach the
+      // login page; the SPA then calls /api/auth/me, gets 401, and renders
+      // login. All sensitive routes live under /api (SSE /events is already
+      // public via the allowlist), so gating on the /api prefix is sufficient.
+      const path = req.url.split('?')[0] ?? req.url;
+      const isApi = path === '/api' || path.startsWith('/api/');
+      if (isApi && !isPublicPath(req.url)) {
         return reply
           .code(401)
           .send({ error: 'authentication required', authEnabled: true });

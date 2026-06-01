@@ -5,9 +5,11 @@
   "description": "Local CI/CD with web dashboard and React Flow pipeline editor",
   "packageManager": "pnpm@10.33.3",
   "scripts": {
-    "dev": "pnpm --parallel --filter \"./apps/*\" run dev",
-    "build": "pnpm --filter \"./apps/*\" run build",
+    "dev": "pnpm --parallel --filter @buildpilot/web --filter @buildpilot/server run dev",
+    "build": "pnpm --filter @buildpilot/web --filter @buildpilot/server run build",
     "start": "pnpm --filter @buildpilot/server run start",
+    "desktop:dev": "pnpm --filter @buildpilot/web run build && pnpm --filter @buildpilot/desktop run dev",
+    "desktop:dist": "pnpm --filter @buildpilot/web run build && pnpm --filter @buildpilot/desktop run dist",
     "typecheck": "pnpm -r --if-present run typecheck",
     "test": "pnpm -r --if-present run test && pnpm test:e2e",
     "test:e2e": "playwright test --config=e2e/playwright.config.ts --project=happy-path",
