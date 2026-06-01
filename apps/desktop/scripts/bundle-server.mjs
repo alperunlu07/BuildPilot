@@ -7,6 +7,7 @@
 import { build } from 'esbuild';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { SERVER_EXTERNALS } from './server-externals.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(here, '..', '..', '..');
@@ -21,21 +22,9 @@ await build({
   target: 'node20',
   format: 'cjs',
   sourcemap: true,
-  // Native addons (better-sqlite3, ssh2) and modules that spawn worker
-  // threads / load files at runtime (pino) can't be inlined.
-  external: [
-    'better-sqlite3',
-    'ssh2',
-    'pino',
-    'pino-pretty',
-    'thread-stream',
-    'fastify',
-    '@fastify/static',
-    '@fastify/cors',
-    '@aws-sdk/client-s3',
-    '@aws-sdk/lib-storage',
-    '@aws-sdk/s3-request-presigner',
-  ],
+  // Everything pure-JS is inlined; only native addons + the pino worker
+  // family stay external and ship as real node_modules (see server-externals.mjs).
+  external: SERVER_EXTERNALS,
   logLevel: 'info',
 });
 
