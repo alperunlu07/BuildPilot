@@ -2484,6 +2484,8 @@ function defaultData(type: StepType): Record<string, unknown> {
         manifestKey: '',
         manifestChannel: 'stable',
         manifestPlatform: 'linux-x86_64',
+        clientVersionFile: 'ProjectSettings/ProjectSettings.asset',
+        clientVersionPattern: 'bundleVersion:\\s*(.+)',
       };
     case 'gradleBuild':
       return {

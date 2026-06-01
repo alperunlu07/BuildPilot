@@ -529,6 +529,18 @@ export const STEP_DEFINITIONS: Record<StepType, StepDefinition> = {
         type: 'text',
         placeholder: 'linux-x86_64',
       },
+      {
+        name: 'clientVersionFile',
+        label: 'clientVersion file (relative to project root)',
+        type: 'text',
+        placeholder: 'ProjectSettings/ProjectSettings.asset',
+      },
+      {
+        name: 'clientVersionPattern',
+        label: 'clientVersion regex (one capture group)',
+        type: 'text',
+        placeholder: 'bundleVersion:\\s*(.+)',
+      },
     ],
   },
   xcodebuild: {

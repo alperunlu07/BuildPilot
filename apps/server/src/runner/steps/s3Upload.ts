@@ -50,6 +50,41 @@ function contentTypeFor(fmt: string): string | undefined {
   return undefined;
 }
 
+const DEFAULT_CLIENT_VERSION_FILE = 'ProjectSettings/ProjectSettings.asset';
+const DEFAULT_CLIENT_VERSION_PATTERN = 'bundleVersion:\\s*(.+)';
+
+async function readClientVersion(
+  ctx: StepContext,
+  fileOverride: string | undefined,
+  patternOverride: string | undefined,
+): Promise<string | undefined> {
+  const rel = fileOverride?.trim() || DEFAULT_CLIENT_VERSION_FILE;
+  const patternSrc = patternOverride?.trim() || DEFAULT_CLIENT_VERSION_PATTERN;
+  const abs = isAbsolute(rel) ? rel : join(ctx.project.path, rel);
+  let content: string;
+  try {
+    content = await fs.readFile(abs, 'utf8');
+  } catch {
+    ctx.log(`clientVersion: file not found (${rel}), skipping`, 'info');
+    return undefined;
+  }
+  let re: RegExp;
+  try {
+    re = new RegExp(patternSrc);
+  } catch (err) {
+    ctx.log(`clientVersion: invalid regex (${patternSrc}): ${(err as Error).message}`, 'stderr');
+    return undefined;
+  }
+  const m = content.match(re);
+  if (!m || m[1] == null) {
+    ctx.log(`clientVersion: pattern did not match in ${rel}`, 'stderr');
+    return undefined;
+  }
+  const v = m[1].trim();
+  ctx.log(`clientVersion: ${v} (from ${rel})`, 'stdout');
+  return v;
+}
+
 export async function runS3Upload(
   ctx: StepContext,
   data: Record<string, unknown>,
@@ -126,6 +161,7 @@ export async function runS3Upload(
   }
 
   if (d.manifestKey && d.manifestKey.trim().length > 0) {
+    const clientVersion = await readClientVersion(ctx, d.clientVersionFile, d.clientVersionPattern);
     const manifest = {
       channel: d.manifestChannel ?? 'stable',
       platform: d.manifestPlatform ?? 'unknown',
@@ -135,6 +171,7 @@ export async function runS3Upload(
       size: stat.size,
       archive_format: fmt,
       released_at: new Date().toISOString(),
+      ...(clientVersion ? { clientVersion } : {}),
     };
     await client.send(
       new PutObjectCommand({

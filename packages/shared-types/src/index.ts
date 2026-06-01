@@ -436,6 +436,13 @@ export interface S3UploadStepData {
   manifestKey?: string;
   manifestChannel?: string;
   manifestPlatform?: string;
+  // Optional file (relative to project root) the manifest's `clientVersion`
+  // is read from. Defaults to Unity's ProjectSettings.asset. If the file is
+  // missing the field is omitted from the manifest.
+  clientVersionFile?: string;
+  // Regex with one capture group; the captured value becomes clientVersion.
+  // Defaults to Unity's `bundleVersion: x.y.z` line.
+  clientVersionPattern?: string;
 }
 
 export interface GitMergeStepData {
