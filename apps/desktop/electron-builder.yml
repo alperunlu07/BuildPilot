@@ -44,9 +44,13 @@ nsis:
 
 mac:
   target:
-    - dmg
+    - target: dmg
+      arch: [arm64, x64]
   category: public.app-category.developer-tools
   icon: build/icon.png
+  # Background/accessory app: no Dock icon (we also call app.dock.hide()).
+  extendInfo:
+    LSUIElement: true
 
 linux:
   target:

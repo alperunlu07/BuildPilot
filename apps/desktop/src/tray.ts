@@ -82,14 +82,29 @@ export async function rebuildTrayMenu(): Promise<void> {
 }
 
 export async function createTray(): Promise<void> {
-  const icon = nativeImage.createFromPath(
+  let icon = nativeImage.createFromPath(
     join(__dirname, '..', 'build', 'tray.png'),
   );
+
+  if (!icon.isEmpty()) {
+    if (process.platform === 'darwin') {
+      // macOS menu-bar icons are small and monochrome. Resizing to ~18px and
+      // marking the image as a template lets the OS recolour it for the
+      // light/dark menu bar (the logo's alpha channel becomes the mask).
+      icon = icon.resize({ width: 18, height: 18 });
+      icon.setTemplateImage(true);
+    } else {
+      // Windows/Linux trays want a small crisp icon (16px @1x).
+      icon = icon.resize({ width: 16, height: 16 });
+    }
+  }
+
   tray = new Tray(icon.isEmpty() ? nativeImage.createEmpty() : icon);
   tray.setToolTip('BuildPilot');
 
-  // Left-click toggles the window (Windows/Linux). On macOS a left-click
-  // opens the menu by default, so we also bind it to the window for parity.
+  // Left-click toggles the window (Windows/Linux). On macOS, setting a context
+  // menu makes any click open the menu, so the window is reached via the
+  // menu's "BuildPilot'u Aç" item instead.
   tray.on('click', () => toggleWindow());
 
   await rebuildTrayMenu();

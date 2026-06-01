@@ -87,6 +87,41 @@ not your system Node's. Step 3 above (`@electron/rebuild`) handles this. If you
 prefer to run the server with a standalone Node runtime instead, set
 `BUILDPILOT_SERVER_CMD` to point at it and skip the rebuild.
 
+## macOS
+
+The app runs fine on macOS — it's the same Electron codebase:
+
+- It lives in the **menu bar** (not the Dock). On launch we call
+  `app.dock.hide()` so it behaves as a background/accessory app, mirroring the
+  Windows tray. The tray icon is resized to ~18px and marked as a *template
+  image*, so the menu bar recolours it for light/dark mode automatically.
+- On macOS a click on a menu-bar item opens its menu, so the window is reached
+  via the menu's **BuildPilot'u Aç** entry (rather than a left-click toggle).
+- **Auto-start at login** uses the same `setLoginItemSettings` call and works
+  on macOS.
+- **Notifications** work out of the box. In an unsigned dev build the system
+  shows them under the name "Electron"; a signed `.app` shows "BuildPilot".
+
+### Build a macOS app (.dmg)
+
+Run **on a Mac**:
+
+```bash
+pnpm install
+pnpm --filter @buildpilot/server deploy --prod apps/desktop/server
+cd apps/desktop && npx @electron/rebuild -m server/node_modules   # native addons → Electron ABI
+cd ../.. && pnpm desktop:dist:mac
+```
+
+The `.dmg` lands in `apps/desktop/release/`.
+
+**Gatekeeper / signing:** an unsigned build runs, but the first launch needs
+*right-click → Open* (or `xattr -dr com.apple.quarantine /Applications/BuildPilot.app`).
+For distribution, set an Apple Developer ID in `electron-builder.yml` (`mac.identity`)
+and enable notarization — see electron-builder's
+[code signing docs](https://www.electron.build/code-signing). Apple Silicon vs
+Intel: add `arch: [arm64, x64]` (or `universal`) under the `mac` target.
+
 ## Auto-start behaviour
 
 On first launch the app registers itself with the OS login items

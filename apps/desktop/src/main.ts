@@ -21,6 +21,10 @@ let unsubscribe: (() => void) | null = null;
 async function start(): Promise<void> {
   await app.whenReady();
 
+  // macOS: run as a menu-bar-only background app — no Dock icon, no Cmd+Tab
+  // entry — mirroring the Windows system-tray behaviour.
+  if (process.platform === 'darwin') app.dock?.hide();
+
   // Tray app: closing the last window must not quit the process. Subscribing
   // to this event (and not calling app.quit()) suppresses the default
   // quit-on-last-window-closed behaviour on Windows/Linux.
