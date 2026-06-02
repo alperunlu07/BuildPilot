@@ -1,23 +1,17 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <!-- BuildPilot launcher icon — sky-blue rounded tile + Compass glyph mark
-       from docs/designs/icons.jsx. Compass = navigate/orient (the dashboard
-       points you at the next thing to build). Kept maskable-safe with 96px
-       padding so neither the needle tips nor the tick marks get clipped on
-       Android's masked-icon shapes. -->
-  <rect width="512" height="512" rx="96" ry="96" fill="#0ea5e9"/>
-  <g transform="translate(96 96) scale(13.333)">
-    <!-- Outer ring -->
-    <circle cx="12" cy="12" r="9.5" fill="none" stroke="#f8fafc" stroke-width="1.5"/>
-    <!-- Hub -->
-    <circle cx="12" cy="12" r="1.6" fill="#f8fafc"/>
-    <!-- North needle (bright) -->
-    <path d="M12 4 L14 11 L12 13 L10 11 Z" fill="#f8fafc" opacity="0.95"/>
-    <!-- South needle (dim) -->
-    <path d="M12 20 L10 13 L12 11 L14 13 Z" fill="#f8fafc" opacity="0.35"/>
-    <!-- Cardinal tick marks -->
-    <line x1="12" y1="2" x2="12" y2="3.6" stroke="#f8fafc" stroke-width="1.5" stroke-linecap="round"/>
-    <line x1="12" y1="20.4" x2="12" y2="22" stroke="#f8fafc" stroke-width="1.5" stroke-linecap="round"/>
-    <line x1="2" y1="12" x2="3.6" y2="12" stroke="#f8fafc" stroke-width="1.5" stroke-linecap="round"/>
-    <line x1="20.4" y1="12" x2="22" y2="12" stroke="#f8fafc" stroke-width="1.5" stroke-linecap="round"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" width="600" height="600">
+  <!-- BuildPilot launcher / favicon icon — used ONLY where a rounded background
+       applies (browser tab, PWA install, taskbar). Full-bleed sky-blue rounded
+       tile + the Frame 14 compass; geometry matches the supplied roundeded.png.
+       In-app (non-rounded) usage uses the bare compass (Logo.tsx). -->
+  <rect width="600" height="600" rx="31" ry="31" fill="#0ea5e9"/>
+  <g transform="translate(0.75 0.75) scale(3.99)">
+    <path opacity="0.95" d="M87 67L84.3037 69.1338C82.355 66.0497 78.9179 64 75 64C71.0819 64 67.6439 66.0495 65.6953 69.1338L63 67L75 24L87 67Z" fill="#ffffff"/>
+    <path opacity="0.95" d="M87 83.1338L84.3037 81C82.355 84.0841 78.9179 86.1338 75 86.1338C71.0819 86.1338 67.6439 84.0843 65.6953 81L63 83.1338L75 126.134L87 83.1338Z" fill="#C2C2C2"/>
+    <circle cx="75" cy="75" r="9" fill="#D9D9D9"/>
+    <path d="M139 75C139 110.346 110.346 139 75 139C39.6538 139 11 110.346 11 75C11 39.6538 39.6538 11 75 11C110.346 11 139 39.6538 139 75ZM14.52 75C14.52 108.402 41.5978 135.48 75 135.48C108.402 135.48 135.48 108.402 135.48 75C135.48 41.5978 108.402 14.52 75 14.52C41.5978 14.52 14.52 41.5978 14.52 75Z" fill="#D9D9D9"/>
+    <path d="M73 13C73 11.8954 73.8954 11 75 11C76.1046 11 77 11.8954 77 13V23H73V13Z" fill="#D9D9D9"/>
+    <path d="M73 127H77V137C77 138.105 76.1046 139 75 139C73.8954 139 73 138.105 73 137V127Z" fill="#D9D9D9"/>
+    <path d="M127 77V73H137C138.105 73 139 73.8954 139 75C139 76.1046 138.105 77 137 77H127Z" fill="#D9D9D9"/>
+    <path d="M13 77C11.8954 77 11 76.1046 11 75C11 73.8954 11.8954 73 13 73H23V77H13Z" fill="#D9D9D9"/>
   </g>
 </svg>
