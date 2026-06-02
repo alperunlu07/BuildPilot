@@ -31,22 +31,54 @@ const npxCmd = `npx${exe}`;
 
 function run(cmd, args, cwd) {
   console.log(`\n$ ${cmd} ${args.join(' ')}  (cwd: ${cwd})`);
-  execFileSync(cmd, args, { cwd, stdio: 'inherit' });
+  // On Windows, modern Node refuses to spawn a .cmd/.bat shim (npm.cmd,
+  // npx.cmd, electron-rebuild.cmd) without shell:true — it throws EINVAL
+  // (the same fix applied to the dev server spawn in src/server.ts). Run
+  // those through the shell and quote the command + any args containing
+  // spaces so paths like "C:\Program Files\…" survive. Real executables
+  // (POSIX npm/npx, or .exe) spawn directly as before.
+  const useShell = process.platform === 'win32' && /\.(cmd|bat)$/i.test(cmd);
+  const quote = (s) => (/\s/.test(s) ? `"${s}"` : s);
+  execFileSync(
+    useShell ? quote(cmd) : cmd,
+    useShell ? args.map(quote) : args,
+    { cwd, stdio: 'inherit', shell: useShell },
+  );
 }
 
-// 1. Resolve pinned versions from the server package.
+// 1. Resolve the EXACT installed version of each external from the server's
+//    real node_modules (not the semver range in its package.json). Installing
+//    against a range with `--no-package-lock` lets the shipped tree drift
+//    between builds (e.g. a patch bump publishes upstream); pinning the exact
+//    version already on disk makes the synthetic install reproducible against
+//    the committed pnpm-lock that produced apps/server/node_modules.
 const serverPkg = JSON.parse(
   readFileSync(join(repoRoot, 'apps', 'server', 'package.json'), 'utf8'),
 );
+// Resolve deps from the server package's context — under pnpm they live in
+// apps/server/node_modules (symlinked into the store), not the repo root.
+const serverRequire = createRequire(join(repoRoot, 'apps', 'server', 'package.json'));
 const dependencies = {};
 for (const name of SERVER_EXTERNALS) {
-  const version = serverPkg.dependencies?.[name];
-  if (!version) {
+  // The range must still be declared — that's what the drift guard and the
+  // server itself rely on; its absence means server-externals.mjs is stale.
+  if (!serverPkg.dependencies?.[name]) {
     throw new Error(
       `"${name}" is listed as an external but isn't a dependency of @buildpilot/server`,
     );
   }
-  dependencies[name] = version;
+  // Read the version actually installed in apps/server/node_modules so the
+  // pin matches what the repo's lockfile resolved, byte-for-byte.
+  let installedPkgPath;
+  try {
+    installedPkgPath = serverRequire.resolve(`${name}/package.json`);
+  } catch {
+    throw new Error(
+      `"${name}" is a declared dependency of @buildpilot/server but isn't installed in ` +
+        `apps/server/node_modules — run \`pnpm install\` at the repo root first.`,
+    );
+  }
+  dependencies[name] = JSON.parse(readFileSync(installedPkgPath, 'utf8')).version;
 }
 
 // 1b. Drift guard: a server dep that ships a native addon (binding.gyp /
@@ -54,9 +86,6 @@ for (const name of SERVER_EXTERNALS) {
 // would be silently inlined by esbuild and crash at runtime in the packaged
 // app. Catch it at build time instead. (Pure-JS deps are meant to be bundled.)
 const externalSet = new Set(SERVER_EXTERNALS);
-// Resolve deps from the server package's context — under pnpm they live in
-// apps/server/node_modules (symlinked into the store), not the repo root.
-const serverRequire = createRequire(join(repoRoot, 'apps', 'server', 'package.json'));
 const nativeMissing = [];
 for (const name of Object.keys(serverPkg.dependencies ?? {})) {
   if (externalSet.has(name)) continue;

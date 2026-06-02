@@ -1,20 +1,37 @@
-import { app, Menu, Tray, nativeImage, shell, type MenuItemConstructorOptions } from 'electron';
+import {
+  app,
+  Menu,
+  Notification,
+  Tray,
+  nativeImage,
+  shell,
+  type MenuItemConstructorOptions,
+} from 'electron';
 import { join } from 'node:path';
-import { fetchProjects } from './api';
+import type { Pipeline } from '@buildpilot/shared-types';
+import {
+  fetchPipelines,
+  fetchProjects,
+  fetchQueueCounts,
+  triggerBuild,
+} from './api';
 import { getAuthHeaders, getBaseUrl } from './config';
 import { isLaunchAtLogin, setLaunchAtLogin } from './state';
 import { openInBrowser, showWindow, toggleWindow } from './window';
 
 let tray: Tray | null = null;
 
+const ICON = join(__dirname, '..', 'build', 'icon.png');
+
 // Last-known server health, surfaced as a disabled status line at the top of
-// the menu. null = not yet probed (cold start). Updated via setServerHealth on
-// health changes (see main.ts) without re-fetching the project list.
+// the menu. null = not yet probed (cold start).
 let serverHealthy: boolean | null = null;
 
-// Cache of the most recently fetched projects so a health-only update can
-// rebuild the native menu without firing another fetch.
+// Caches so a health-/counts-only update can rebuild the native menu without
+// re-fetching the whole project + pipeline set.
 let lastProjects: ReadonlyArray<{ id: string; name: string; path: string }> = [];
+let lastPipelines: ReadonlyArray<Pipeline> = [];
+let lastCounts: { running: number; queued: number } = { running: 0, queued: 0 };
 let lastPlaceholder: string | undefined = '(loading…)';
 
 function serverHealthLabel(): string {
@@ -34,12 +51,44 @@ async function postAction(path: string): Promise<void> {
   }
 }
 
-// Build the per-project submenu: a deep-link into the panel plus the quick
-// actions a user reaches for from the tray — open the files on disk, pull,
-// or fetch — without opening the full UI.
+// Trigger a pipeline straight from the tray and surface a quick toast so the
+// user gets immediate feedback (the eventual buildFinished toast follows via
+// the SSE stream). Refresh the running/queued counts shortly after.
+async function runPipeline(p: { id: string; name: string }): Promise<void> {
+  const ok = await triggerBuild(p.id);
+  if (Notification.isSupported()) {
+    new Notification({
+      title: ok ? 'Pipeline started ▶' : 'Couldn’t start pipeline',
+      body: ok ? p.name : `${p.name} could not be started.`,
+      icon: ICON,
+      silent: false,
+    }).show();
+  }
+  scheduleTrayStatusRefresh();
+}
+
+// Full restart of everything: quitting tears down the owned server child
+// (before-quit → stopServer), then relaunch boots a fresh app which spawns a
+// fresh server. Adopted servers (started elsewhere) are left running by design.
+function restartApp(): void {
+  app.relaunch();
+  app.quit();
+}
+
+// Build the per-project submenu: panel/browser deep-links, the on-disk + git
+// quick actions, then the project's pipelines — each runnable in one click.
 function projectSubmenu(
   project: { id: string; name: string; path: string },
+  pipelines: ReadonlyArray<Pipeline>,
 ): MenuItemConstructorOptions {
+  const pipelineItems: MenuItemConstructorOptions[] =
+    pipelines.length > 0
+      ? pipelines.map((p) => ({
+          label: `▶ ${p.name}`,
+          click: () => void runPipeline(p),
+        }))
+      : [{ label: '(no pipelines)', enabled: false }];
+
   return {
     label: project.name,
     submenu: [
@@ -50,7 +99,6 @@ function projectSubmenu(
         label: 'Open Project Folder',
         click: () => void shell.openPath(project.path),
       },
-      { type: 'separator' },
       {
         label: 'Git Pull',
         click: () => void postAction(`/api/projects/${project.id}/pull`),
@@ -59,26 +107,40 @@ function projectSubmenu(
         label: 'Git Fetch',
         click: () => void postAction(`/api/projects/${project.id}/fetch`),
       },
+      { type: 'separator' },
+      { label: 'Run pipeline', enabled: false },
+      ...pipelineItems,
     ],
   };
 }
 
-// Build the context menu from a known project list. `placeholder` renders a
-// disabled stand-in for the project group when we don't yet have data (cold
-// start, before the server is up) instead of firing a fetch.
-function buildMenu(
-  projects: ReadonlyArray<{ id: string; name: string; path: string }>,
-  placeholder?: string,
-): Menu {
+// Build the context menu from cached data. `placeholder` renders a disabled
+// stand-in for the project group at cold start (before the server is up).
+function buildMenu(placeholder?: string): Menu {
   const projectItems: MenuItemConstructorOptions[] = placeholder
     ? [{ label: placeholder, enabled: false }]
-    : projects.length > 0
-      ? projects.map((p) => projectSubmenu(p))
+    : lastProjects.length > 0
+      ? lastProjects.map((p) =>
+          projectSubmenu(
+            p,
+            lastPipelines.filter((pl) => pl.projectId === p.id),
+          ),
+        )
       : [{ label: '(no projects)', enabled: false }];
 
-  return Menu.buildFromTemplate([
-    // Disabled status line reflecting last-known server health.
+  const items: MenuItemConstructorOptions[] = [
     { label: serverHealthLabel(), enabled: false },
+  ];
+  // Active build + queue counts — only shown when there's actually something
+  // running or waiting (per request: "eğer varsa").
+  if (lastCounts.running > 0 || lastCounts.queued > 0) {
+    items.push({
+      label: `${lastCounts.running} running · ${lastCounts.queued} queued`,
+      enabled: false,
+    });
+  }
+
+  items.push(
     { type: 'separator' },
     { label: 'Open BuildPilot', click: () => showWindow('/') },
     { label: 'Open in Browser', click: () => openInBrowser('/') },
@@ -95,35 +157,61 @@ function buildMenu(
       checked: isLaunchAtLogin(),
       click: (item) => setLaunchAtLogin(item.checked),
     },
+    { label: 'Restart BuildPilot', click: () => restartApp() },
     { type: 'separator' },
     { label: 'Quit', role: 'quit' },
-  ]);
+  );
+
+  return Menu.buildFromTemplate(items);
 }
 
-// Fetch the current project set and apply the menu. Called once after the
-// server is up and thereafter (debounced) on project add/remove events.
+// Apply the menu from current caches and refresh the tooltip with live counts.
+function applyMenu(): void {
+  if (!tray) return;
+  tray.setContextMenu(buildMenu(lastPlaceholder));
+  const { running, queued } = lastCounts;
+  tray.setToolTip(
+    running > 0 || queued > 0
+      ? `BuildPilot — ${running} running, ${queued} queued`
+      : 'BuildPilot',
+  );
+}
+
+// Fetch the full project + pipeline set and the queue counts, then apply the
+// menu. Called once the server is up and (debounced) on project add/remove.
 export async function rebuildTrayMenu(): Promise<void> {
   if (!tray) return;
-  const projects = await fetchProjects();
+  const [projects, pipelines, counts] = await Promise.all([
+    fetchProjects(),
+    fetchPipelines(),
+    fetchQueueCounts(),
+  ]);
   lastProjects = projects;
+  lastPipelines = pipelines;
+  lastCounts = counts;
   lastPlaceholder = undefined;
-  if (tray) tray.setContextMenu(buildMenu(projects));
+  applyMenu();
 }
 
-// Update the last-known server health and refresh the menu's status line in
-// place (reusing the cached project list — no fetch). No-op if the value
-// hasn't actually changed, so repeated identical health probes don't rebuild
-// the native menu needlessly.
+// Refresh only the running/queued counts (cheap) and re-apply the menu from
+// cache — used when build events fire without the project set changing.
+export async function refreshTrayStatus(): Promise<void> {
+  if (!tray) return;
+  lastCounts = await fetchQueueCounts();
+  applyMenu();
+}
+
+// Update last-known server health and re-apply the menu in place (cached
+// projects/pipelines/counts — no fetch). No-op if unchanged.
 export function setServerHealth(healthy: boolean): void {
   if (serverHealthy === healthy) return;
   serverHealthy = healthy;
-  if (tray) tray.setContextMenu(buildMenu(lastProjects, lastPlaceholder));
+  applyMenu();
 }
 
 let rebuildTimer: ReturnType<typeof setTimeout> | null = null;
 
-// Coalesce a burst of project events (e.g. importing several repos at once)
-// into a single fetch + native-menu rebuild.
+// Coalesce a burst of project events into a single fetch + native-menu rebuild.
 export function scheduleTrayRebuild(): void {
   if (rebuildTimer) clearTimeout(rebuildTimer);
   rebuildTimer = setTimeout(() => {
@@ -132,16 +220,29 @@ export function scheduleTrayRebuild(): void {
   }, 400);
 }
 
+let statusTimer: ReturnType<typeof setTimeout> | null = null;
+
+// Coalesce a burst of build events into a single queue-count refresh.
+export function scheduleTrayStatusRefresh(): void {
+  if (statusTimer) clearTimeout(statusTimer);
+  statusTimer = setTimeout(() => {
+    statusTimer = null;
+    void refreshTrayStatus();
+  }, 600);
+}
+
 export async function createTray(): Promise<void> {
-  let icon = nativeImage.createFromPath(
-    join(__dirname, '..', 'build', 'tray.png'),
-  );
+  // Windows/Linux show the full-colour rounded brand icon in the tray; macOS
+  // uses a monochrome template (the OS recolours it for the light/dark menu
+  // bar) — a colour tile there would look out of place and break templating.
+  const iconPath =
+    process.platform === 'darwin'
+      ? join(__dirname, '..', 'build', 'trayTemplate.png')
+      : join(__dirname, '..', 'build', 'tray.png');
+  let icon = nativeImage.createFromPath(iconPath);
 
   if (!icon.isEmpty()) {
     if (process.platform === 'darwin') {
-      // macOS menu-bar icons are small and monochrome. Resizing to ~18px and
-      // marking the image as a template lets the OS recolour it for the
-      // light/dark menu bar (the logo's alpha channel becomes the mask).
       icon = icon.resize({ width: 18, height: 18 });
       icon.setTemplateImage(true);
     } else {
@@ -158,15 +259,16 @@ export async function createTray(): Promise<void> {
   // menu's "Open BuildPilot" item instead.
   tray.on('click', () => toggleWindow());
 
-  // Synchronous placeholder — the real project list is applied by main once
-  // the server is up (rebuildTrayMenu), avoiding a fetch against a server that
-  // hasn't started yet.
-  tray.setContextMenu(buildMenu([], '(loading…)'));
+  // Synchronous placeholder — the real data is applied by main once the server
+  // is up (rebuildTrayMenu), avoiding a fetch against a not-yet-started server.
+  applyMenu();
 }
 
 export function destroyTray(): void {
   if (rebuildTimer) clearTimeout(rebuildTimer);
+  if (statusTimer) clearTimeout(statusTimer);
   rebuildTimer = null;
+  statusTimer = null;
   tray?.destroy();
   tray = null;
 }

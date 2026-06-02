@@ -8,6 +8,7 @@ import {
   destroyTray,
   rebuildTrayMenu,
   scheduleTrayRebuild,
+  scheduleTrayStatusRefresh,
   setServerHealth,
 } from './tray';
 import { applyFirstRunDefaults } from './state';
@@ -79,6 +80,15 @@ async function start(): Promise<void> {
     handlePipelineEvent(e);
     if (e.type === 'projectAdded' || e.type === 'projectRemoved') {
       scheduleTrayRebuild();
+    } else if (
+      e.type === 'buildStarted' ||
+      e.type === 'buildFinished' ||
+      e.type === 'buildAwaitingApproval' ||
+      e.type === 'buildApprovalDecided'
+    ) {
+      // Build lifecycle changes the running/queued counts — refresh the tray's
+      // status line (cheap queue fetch, debounced).
+      scheduleTrayStatusRefresh();
     }
   });
 
