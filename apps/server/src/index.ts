@@ -148,6 +148,34 @@ async function main(): Promise<void> {
   await app.listen({ host: config.host, port: config.port });
   logger.info({ host: config.host, port: config.port }, 'BuildPilot server listening');
 
+  // Security guardrail: the default install binds loopback with auth off,
+  // which is safe. But if someone widens the bind (e.g. host "0.0.0.0" to
+  // reach the dashboard from another machine) WITHOUT turning auth on, the
+  // dashboard and the entire API are reachable on the network with no
+  // credentials. Warn loudly at startup — we don't change the bind or any
+  // default, just make the exposure impossible to miss in the logs.
+  const isLoopbackHost = (h: string): boolean => {
+    const host = h.trim().toLowerCase();
+    return (
+      host === 'localhost' ||
+      host === '127.0.0.1' ||
+      host === '::1' ||
+      // IPv4 loopback block 127.0.0.0/8.
+      host.startsWith('127.')
+    );
+  };
+  // `auth` is optional on the type but always backfilled by loadConfig();
+  // `?.enabled` keeps this type-safe and still warns if the block is absent
+  // (absent === auth not enforced).
+  if (!isLoopbackHost(config.host) && !config.auth?.enabled) {
+    logger.warn(
+      { host: config.host, port: config.port },
+      'SECURITY: server is bound to a non-loopback address with auth DISABLED — ' +
+        'the dashboard and API are reachable on the network WITHOUT credentials. ' +
+        'Enable auth (config.json → auth.enabled) or bind to 127.0.0.1.',
+    );
+  }
+
   startPoller();
   if (config.telegram) startTelegramBot(config.telegram);
 

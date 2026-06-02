@@ -41,7 +41,29 @@ export async function registerWebStatic(app: FastifyInstance): Promise<void> {
     return;
   }
 
-  await app.register(fastifyStatic, { root: dist, wildcard: false });
+  await app.register(fastifyStatic, {
+    root: dist,
+    wildcard: false,
+    // Take full control of Cache-Control via setHeaders below. Without this,
+    // @fastify/static's own cacheControl default stamps `public, max-age=0` on
+    // every file AFTER our hook, clobbering the per-file policy.
+    cacheControl: false,
+    // Per-file cache policy. Content-hashed assets under /assets/ are safe to
+    // cache forever — a new build emits new filenames, so the URL itself busts
+    // the cache. Everything else (the unhashed index.html shell, the service
+    // worker sw.js, the web manifest and root icons) must stay revalidated so a
+    // freshly installed desktop build is picked up immediately rather than
+    // pinned to a stale shell/worker.
+    setHeaders: (res, filePath) => {
+      const hashedAsset = /[\\/]assets[\\/]/.test(filePath);
+      res.setHeader(
+        'Cache-Control',
+        hashedAsset
+          ? 'public, max-age=31536000, immutable'
+          : 'no-cache, must-revalidate',
+      );
+    },
+  });
 
   app.setNotFoundHandler((req, reply) => {
     // Serve the SPA shell for client-side routes. Anchor the prefixes on a
@@ -52,6 +74,8 @@ export async function registerWebStatic(app: FastifyInstance): Promise<void> {
     const isApi = path === '/api' || path.startsWith('/api/');
     const isEvents = path === '/events' || path.startsWith('/events/');
     if ((req.method === 'GET' || req.method === 'HEAD') && !isApi && !isEvents) {
+      // The fallback shell is index.html, so the setHeaders policy above sends
+      // it `no-cache, must-revalidate` — a new build is never pinned.
       return reply.type('text/html').sendFile('index.html');
     }
     return reply.code(404).send({ error: 'not found' });

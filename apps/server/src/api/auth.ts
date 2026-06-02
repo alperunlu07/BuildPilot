@@ -21,11 +21,18 @@ const loginSchema = z.object({
 });
 
 function isHttpsRequest(req: FastifyRequest): boolean {
-  // Behind a reverse proxy the protocol comes in via X-Forwarded-Proto;
-  // Fastify exposes it on req.protocol when trustProxy is enabled, but
-  // we don't enable trust proxy by default. Fall back to the raw scheme.
-  const xfp = req.headers['x-forwarded-proto'];
-  if (typeof xfp === 'string' && xfp.split(',')[0]?.trim() === 'https') return true;
+  // `req.protocol` is the only trustworthy source for the cookie's `secure`
+  // flag. This server does NOT enable Fastify `trustProxy` (see index.ts),
+  // so Fastify ignores X-Forwarded-* and `req.protocol` reflects the real
+  // TLS state of the socket. We deliberately do NOT parse X-Forwarded-Proto
+  // ourselves: with trustProxy off, any plaintext client could send
+  // `X-Forwarded-Proto: https` to flip secure=true, which would make the
+  // browser refuse to store/return the cookie over http and silently break
+  // login on the desktop localhost-over-http path.
+  //
+  // If a deployment ever fronts this with a real reverse proxy, enabling
+  // Fastify `trustProxy` there makes `req.protocol` honor the (now trusted)
+  // forwarded header automatically — no change needed here.
   return req.protocol === 'https';
 }
 
