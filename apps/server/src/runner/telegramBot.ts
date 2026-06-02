@@ -117,12 +117,12 @@ async function handleCommand(chatId: number, text: string): Promise<void> {
     await sendChatMessage(
       chatId,
       [
-        '<b>BuildPilot</b> — komutlar:',
+        '<b>BuildPilot</b> — commands:',
         '',
-        '<code>/list</code> — pipeline\'ları listeler',
-        '<code>/build</code> — pipeline seçtiren buton menüsü gönderir',
-        '<code>/build &lt;ad&gt;</code> — eşleşen pipeline\'ı çalıştırır',
-        '<code>/help</code> — bu yardım',
+        '<code>/list</code> — list pipelines',
+        '<code>/build</code> — send a button menu to pick a pipeline',
+        '<code>/build &lt;name&gt;</code> — run the matching pipeline',
+        '<code>/help</code> — this help',
       ].join('\n'),
     );
     return;

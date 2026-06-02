@@ -1,11 +1,26 @@
 import { app, dialog } from 'electron';
 import type { ServerEvent } from '@buildpilot/shared-types';
-import { ensureServer, stopServer } from './server';
+import { ensureServer, registerProcessTeardown, stopServer } from './server';
 import { subscribeEvents } from './api';
 import { handlePipelineEvent } from './notify';
-import { createTray, destroyTray, rebuildTrayMenu, scheduleTrayRebuild } from './tray';
+import {
+  createTray,
+  destroyTray,
+  rebuildTrayMenu,
+  scheduleTrayRebuild,
+  setServerHealth,
+} from './tray';
 import { applyFirstRunDefaults } from './state';
 import { setQuitting, showWindow } from './window';
+
+// Windows: native toast notifications only display when the app declares an
+// AppUserModelID matching its (installed) Start Menu shortcut — without it
+// Electron's Notification silently no-ops and Windows can't attribute the toast
+// to BuildPilot. Must equal electron-builder.yml's `appId` (the NSIS installer
+// registers the same AUMID on the shortcut). No-op on macOS & Linux.
+if (process.platform === 'win32') {
+  app.setAppUserModelId('dev.buildpilot.desktop');
+}
 
 // Single-instance: a second launch (or the user double-clicking the shortcut
 // again) just surfaces the existing window instead of starting a rival server.
@@ -17,6 +32,13 @@ if (!app.requestSingleInstanceLock()) {
 }
 
 let unsubscribe: (() => void) | null = null;
+
+const serverLog = (line: string): void => console.log('[server]', line);
+
+// Backstop teardown: if the Electron main is killed by a signal or exits
+// without going through 'before-quit' (Ctrl-C in dev, OS shutdown), this fires
+// a synchronous kill of the owned server child so no node/server is orphaned.
+registerProcessTeardown(serverLog);
 
 async function start(): Promise<void> {
   await app.whenReady();
@@ -35,11 +57,12 @@ async function start(): Promise<void> {
   applyFirstRunDefaults();
   await createTray();
 
-  const ok = await ensureServer((line) => console.log('[server]', line));
+  const ok = await ensureServer(serverLog);
+  setServerHealth(ok);
   if (!ok) {
     dialog.showErrorBox(
       'BuildPilot',
-      'BuildPilot sunucusu başlatılamadı. Günlükleri kontrol edin.',
+      'Failed to start the BuildPilot server. Check the logs.',
     );
   } else {
     // Server is up — populate the tray with the real project list (createTray
@@ -48,8 +71,11 @@ async function start(): Promise<void> {
   }
 
   // Stream pipeline events → OS notifications. Only project add/remove changes
-  // the tray's project shortcuts; rebuild is debounced to coalesce bursts.
+  // the tray's project shortcuts; rebuild is debounced to coalesce bursts. The
+  // SSE stream only delivers frames while the server is reachable, so any
+  // event is also a liveness signal — reflect that in the tray's health line.
   unsubscribe = subscribeEvents((e: ServerEvent) => {
+    setServerHealth(true);
     handlePipelineEvent(e);
     if (e.type === 'projectAdded' || e.type === 'projectRemoved') {
       scheduleTrayRebuild();
@@ -69,5 +95,10 @@ app.on('before-quit', () => {
   setQuitting(true);
   unsubscribe?.();
   destroyTray();
-  stopServer();
+  // Mark teardown and ask the owned server to stop gracefully (SIGTERM →
+  // SIGKILL on POSIX; tree-kill on Windows). before-quit is synchronous so we
+  // can't await here, but stopServer flips the shutting-down flag immediately
+  // (suppressing auto-restart) and the registered process-exit backstop
+  // guarantees the child is killed even if the async escalation is cut short.
+  void stopServer(serverLog);
 });

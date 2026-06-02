@@ -1,6 +1,6 @@
 import { BrowserWindow, shell } from 'electron';
 import { join } from 'node:path';
-import { BASE_URL } from './config';
+import { getBaseUrl } from './config';
 
 let win: BrowserWindow | null = null;
 
@@ -32,7 +32,7 @@ function create(): BrowserWindow {
   });
 
   // Closing the window only hides it — the app keeps running in the tray.
-  // A real quit (tray → Çıkış) flips `quitting` first.
+  // A real quit (tray → Quit) flips `quitting` first.
   w.on('close', (e) => {
     if (!quitting) {
       e.preventDefault();
@@ -58,7 +58,7 @@ function create(): BrowserWindow {
   // Open external links (target=_blank, http(s) outside our origin) in the
   // user's default browser rather than spawning child windows.
   w.webContents.setWindowOpenHandler(({ url }) => {
-    if (!url.startsWith(BASE_URL)) {
+    if (!url.startsWith(getBaseUrl())) {
       void shell.openExternal(url);
       return { action: 'deny' };
     }
@@ -74,7 +74,7 @@ function create(): BrowserWindow {
 export function showWindow(path = '/'): void {
   if (!win) {
     win = create();
-    void win.loadURL(`${BASE_URL}${path}`);
+    void win.loadURL(`${getBaseUrl()}${path}`);
   } else if (loaded) {
     // Page is up — push the new route in-app so we don't reload the SPA on
     // every menu click.
@@ -87,7 +87,7 @@ export function showWindow(path = '/'): void {
     // Window exists but is still loading (rapid clicks at startup) or the last
     // load failed (server was briefly down) — do a fresh load to the target
     // path rather than scripting a not-yet-ready / error page.
-    void win.loadURL(`${BASE_URL}${path}`);
+    void win.loadURL(`${getBaseUrl()}${path}`);
   }
   if (win.isMinimized()) win.restore();
   win.show();
@@ -103,5 +103,5 @@ export function toggleWindow(): void {
 }
 
 export function openInBrowser(path = '/'): void {
-  void shell.openExternal(`${BASE_URL}${path}`);
+  void shell.openExternal(`${getBaseUrl()}${path}`);
 }

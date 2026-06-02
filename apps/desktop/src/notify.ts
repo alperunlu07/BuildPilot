@@ -24,16 +24,16 @@ export function handlePipelineEvent(e: ServerEvent): void {
       // across them, so a small lookup keeps it to one notify() call.
       const messages: Partial<Record<typeof status, { title: string; body: string }>> = {
         success: {
-          title: 'Derleme başarılı ✓',
-          body: `${triggerBranch} dalındaki derleme tamamlandı.`,
+          title: 'Build succeeded ✓',
+          body: `The build on ${triggerBranch} completed.`,
         },
         failed: {
-          title: 'Derleme başarısız ✗',
-          body: `${triggerBranch} dalındaki derleme hata verdi.`,
+          title: 'Build failed ✗',
+          body: `The build on ${triggerBranch} errored.`,
         },
         cancelled: {
-          title: 'Derleme iptal edildi',
-          body: `${triggerBranch} dalı.`,
+          title: 'Build cancelled',
+          body: `Branch ${triggerBranch}.`,
         },
       };
       const msg = messages[status];
@@ -42,16 +42,16 @@ export function handlePipelineEvent(e: ServerEvent): void {
     }
     case 'buildAwaitingApproval': {
       notify(
-        'Onay bekleniyor',
-        'Bir derleme manuel onayınızı bekliyor.',
+        'Awaiting approval',
+        'A build is waiting for your manual approval.',
         `/builds/${e.buildId}`,
       );
       return;
     }
     case 'notifyMatrix': {
       notify(
-        'Matris derlemesi tamamlandı',
-        `${e.success}/${e.total} başarılı, ${e.failed} başarısız.`,
+        'Matrix build finished',
+        `${e.success}/${e.total} passed, ${e.failed} failed.`,
         `/builds/${e.parentBuildId}`,
       );
       return;
@@ -59,8 +59,8 @@ export function handlePipelineEvent(e: ServerEvent): void {
     case 'newCommit': {
       const n = e.commits.length;
       notify(
-        'Yeni commit algılandı',
-        `${e.branch} dalına ${n} yeni commit geldi.`,
+        'New commit detected',
+        `${n} new commit(s) landed on ${e.branch}.`,
         '/projects',
       );
       return;

@@ -1,17 +1,32 @@
 import { app, Menu, Tray, nativeImage, shell, type MenuItemConstructorOptions } from 'electron';
 import { join } from 'node:path';
 import { fetchProjects } from './api';
-import { BASE_URL, authHeaders } from './config';
+import { getAuthHeaders, getBaseUrl } from './config';
 import { isLaunchAtLogin, setLaunchAtLogin } from './state';
 import { openInBrowser, showWindow, toggleWindow } from './window';
 
 let tray: Tray | null = null;
 
+// Last-known server health, surfaced as a disabled status line at the top of
+// the menu. null = not yet probed (cold start). Updated via setServerHealth on
+// health changes (see main.ts) without re-fetching the project list.
+let serverHealthy: boolean | null = null;
+
+// Cache of the most recently fetched projects so a health-only update can
+// rebuild the native menu without firing another fetch.
+let lastProjects: ReadonlyArray<{ id: string; name: string; path: string }> = [];
+let lastPlaceholder: string | undefined = '(loading…)';
+
+function serverHealthLabel(): string {
+  if (serverHealthy === null) return 'Server: checking…';
+  return serverHealthy ? 'Server: running' : 'Server: not responding';
+}
+
 async function postAction(path: string): Promise<void> {
   try {
-    await fetch(`${BASE_URL}${path}`, {
+    await fetch(`${getBaseUrl()}${path}`, {
       method: 'POST',
-      headers: authHeaders(),
+      headers: getAuthHeaders(),
       signal: AbortSignal.timeout(8000),
     });
   } catch {
@@ -28,11 +43,11 @@ function projectSubmenu(
   return {
     label: project.name,
     submenu: [
-      { label: 'Panelde Aç', click: () => showWindow('/projects') },
-      { label: 'Tarayıcıda Aç', click: () => openInBrowser('/projects') },
+      { label: 'Open in Panel', click: () => showWindow('/projects') },
+      { label: 'Open in Browser', click: () => openInBrowser('/projects') },
       { type: 'separator' },
       {
-        label: 'Proje Klasörünü Aç',
+        label: 'Open Project Folder',
         click: () => void shell.openPath(project.path),
       },
       { type: 'separator' },
@@ -59,26 +74,29 @@ function buildMenu(
     ? [{ label: placeholder, enabled: false }]
     : projects.length > 0
       ? projects.map((p) => projectSubmenu(p))
-      : [{ label: '(proje yok)', enabled: false }];
+      : [{ label: '(no projects)', enabled: false }];
 
   return Menu.buildFromTemplate([
-    { label: 'BuildPilot’u Aç', click: () => showWindow('/') },
-    { label: 'Tarayıcıda Aç', click: () => openInBrowser('/') },
+    // Disabled status line reflecting last-known server health.
+    { label: serverHealthLabel(), enabled: false },
     { type: 'separator' },
-    { label: 'Projeler', submenu: projectItems },
+    { label: 'Open BuildPilot', click: () => showWindow('/') },
+    { label: 'Open in Browser', click: () => openInBrowser('/') },
     { type: 'separator' },
-    { label: 'Derlemeler', click: () => showWindow('/builds') },
-    { label: 'Kuyruk', click: () => showWindow('/queue') },
-    { label: 'Ayarlar', click: () => showWindow('/settings') },
+    { label: 'Projects', submenu: projectItems },
+    { type: 'separator' },
+    { label: 'Builds', click: () => showWindow('/builds') },
+    { label: 'Queue', click: () => showWindow('/queue') },
+    { label: 'Settings', click: () => showWindow('/settings') },
     { type: 'separator' },
     {
-      label: 'Açılışta Başlat',
+      label: 'Launch at Login',
       type: 'checkbox',
       checked: isLaunchAtLogin(),
       click: (item) => setLaunchAtLogin(item.checked),
     },
     { type: 'separator' },
-    { label: 'Çıkış', role: 'quit' },
+    { label: 'Quit', role: 'quit' },
   ]);
 }
 
@@ -87,7 +105,19 @@ function buildMenu(
 export async function rebuildTrayMenu(): Promise<void> {
   if (!tray) return;
   const projects = await fetchProjects();
+  lastProjects = projects;
+  lastPlaceholder = undefined;
   if (tray) tray.setContextMenu(buildMenu(projects));
+}
+
+// Update the last-known server health and refresh the menu's status line in
+// place (reusing the cached project list — no fetch). No-op if the value
+// hasn't actually changed, so repeated identical health probes don't rebuild
+// the native menu needlessly.
+export function setServerHealth(healthy: boolean): void {
+  if (serverHealthy === healthy) return;
+  serverHealthy = healthy;
+  if (tray) tray.setContextMenu(buildMenu(lastProjects, lastPlaceholder));
 }
 
 let rebuildTimer: ReturnType<typeof setTimeout> | null = null;
@@ -125,13 +155,13 @@ export async function createTray(): Promise<void> {
 
   // Left-click toggles the window (Windows/Linux). On macOS, setting a context
   // menu makes any click open the menu, so the window is reached via the
-  // menu's "BuildPilot'u Aç" item instead.
+  // menu's "Open BuildPilot" item instead.
   tray.on('click', () => toggleWindow());
 
   // Synchronous placeholder — the real project list is applied by main once
   // the server is up (rebuildTrayMenu), avoiding a fetch against a server that
   // hasn't started yet.
-  tray.setContextMenu(buildMenu([], '(yükleniyor…)'));
+  tray.setContextMenu(buildMenu([], '(loading…)'));
 }
 
 export function destroyTray(): void {
