@@ -24,7 +24,8 @@
     "shortDescription": "Local CI/CD tray app",
     "resources": {
       "resources/server": "server",
-      "resources/web": "web"
+      "resources/web": "web",
+      "resources/runtime": "runtime"
     },
     "macOS": {
       "minimumSystemVersion": "10.15"

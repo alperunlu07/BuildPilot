@@ -133,6 +133,20 @@ Tauri needs a generated icon set (`.ico`, `.icns`, sized PNGs). Run
 generate them into `src-tauri/icons/`. The brand source PNG/SVG and the tray
 images (`tray.png`, `trayTemplate.png` for the macOS template) are committed.
 
+## Known differences from the Electron app
+
+- **Notification click-to-navigate.** The Electron toasts navigated to the
+  relevant page when clicked. Tauri's desktop notification plugin
+  (`tauri-plugin-notification`, backed by `notify-rust`) exposes **no
+  click/action callback on desktop**, so toasts here are show-only. Reinstating
+  click navigation would require bypassing the plugin with platform-specific
+  `notify-rust` handling (effectively Linux-only) or a custom toast — out of
+  scope for now (see the note in `src/notify.rs`).
+- **Shipping a Node runtime.** `src-tauri/resources/runtime/` is bundled (mapped
+  to `runtime/` in the app's resources). Drop a `node` / `node.exe` there before
+  packaging to be fully self-contained; otherwise the app falls back to the
+  system `node`. The directory ships empty by default.
+
 ## Relationship to `apps/desktop` (Electron)
 
 Both apps coexist on this branch so you can compare/test the Tauri build before

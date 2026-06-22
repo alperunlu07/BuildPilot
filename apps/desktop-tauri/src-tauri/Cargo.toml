@@ -27,6 +27,7 @@ reqwest = { version = "0.12", default-features = false, features = ["json", "str
 tokio = { version = "1", features = ["full"] }
 futures-util = "0.3"
 dirs = "5"
+fastrand = "2"
 
 # Single-instance is desktop-only (it's a no-op concept on mobile), so gate the
 # plugin to desktop targets — same pattern Tauri's own examples use.

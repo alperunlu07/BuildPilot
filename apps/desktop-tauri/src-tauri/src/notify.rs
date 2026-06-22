@@ -5,6 +5,17 @@
 //!
 //! Events arrive as `serde_json::Value` (parsed from the SSE `data:` line) so we
 //! never break on a server-side type addition — unknown `type`s fall through.
+//!
+//! NOTE — click-to-navigate parity gap. The Electron app wired each toast's
+//! click to open the relevant dashboard page (`n.on('click', …)`). Tauri's
+//! desktop notification plugin (`tauri-plugin-notification`, backed by
+//! `notify-rust`) does NOT expose a click/action callback on desktop — it calls
+//! `Notification::show()` and discards the handle — so there is no supported way
+//! to run code when the user clicks a toast here. We therefore show the
+//! notification without a click route. Reinstating navigation would mean
+//! bypassing the plugin with platform-specific `notify-rust` action handling
+//! (effectively Linux-only) or a custom toast implementation; see
+//! docs/DESKTOP_TAURI.md.
 
 use serde_json::Value;
 use tauri::AppHandle;

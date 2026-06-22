@@ -263,6 +263,10 @@ pub async fn wait_for_server(http: &reqwest::Client, timeout: Duration) -> bool 
 
 enum Startup {
     Healthy,
+    /// The child is still alive but didn't answer `/api/health` within the
+    /// window. Kept running (it may just be slow to bind), but NOT counted as a
+    /// healthy start — so a hung server doesn't reset the failure budget.
+    Timeout,
     Exited,
     Stopped,
 }
@@ -284,8 +288,10 @@ async fn await_startup(http: &reqwest::Client, child: &mut Child, state: &AppSta
         if Instant::now() >= deadline {
             // Timed out waiting but the child is still alive — keep it and let
             // the run phase monitor it (matches Electron, which leaves the child
-            // running even when waitForServer times out).
-            return Startup::Healthy;
+            // running even when waitForServer times out), but report it as a
+            // timeout so the supervisor does NOT reset the failure counter on a
+            // server that's up-but-not-answering.
+            return Startup::Timeout;
         }
         tokio::select! {
             _ = tokio::time::sleep(Duration::from_millis(500)) => {}
@@ -374,12 +380,18 @@ async fn supervise(app: AppHandle) {
             }
         };
 
+        // Track the owned child's pid so the signal backstop (Ctrl-C / SIGTERM
+        // to the app itself) can kill it even if the async teardown can't run.
+        state.set_server_pid(child.id().unwrap_or(0));
+
         match await_startup(&http, &mut child, &state).await {
             Startup::Stopped => {
+                state.set_server_pid(0);
                 graceful_kill(child).await;
                 break;
             }
             Startup::Exited => {
+                state.set_server_pid(0);
                 if state.is_server_shutting_down() {
                     break;
                 }
@@ -401,11 +413,17 @@ async fn supervise(app: AppHandle) {
                 log("BuildPilot server is up.");
                 failures = 0; // healthy → reset the failure cap
             }
+            Startup::Timeout => {
+                // Alive but not answering yet — keep monitoring without resetting
+                // the failure counter, so a hung server still hits the cap.
+                log("BuildPilot server started but isn't answering /api/health yet; monitoring.");
+            }
         }
 
         // Run phase: wait for an unexpected exit or a stop request.
         tokio::select! {
             status = child.wait() => {
+                state.set_server_pid(0);
                 if state.is_server_shutting_down() {
                     break;
                 }
@@ -428,6 +446,7 @@ async fn supervise(app: AppHandle) {
                 continue 'outer;
             }
             _ = state.stop_notify.notified() => {
+                state.set_server_pid(0);
                 graceful_kill(child).await;
                 break;
             }
@@ -469,5 +488,67 @@ pub fn stop_server(app: &AppHandle) {
     if let Some(state) = app.try_state::<AppState>() {
         state.set_server_shutting_down(true);
         state.stop_notify.notify_waiters();
+    }
+}
+
+/// Synchronously kill the owned server child's process (tree) by pid — the
+/// backstop for hard exits where the async supervisor can't run to completion
+/// (Ctrl-C / SIGTERM to the app itself). No-op when we don't own a server
+/// (adopted, or none spawned). Mirrors the Electron `registerProcessTeardown`.
+pub fn kill_owned_server_now(app: &AppHandle) {
+    if let Some(state) = app.try_state::<AppState>() {
+        state.set_server_shutting_down(true);
+        kill_pid_tree(state.take_server_pid());
+    }
+}
+
+/// Best-effort, non-blocking kill of a process (tree) by pid. Used by the signal
+/// backstop, so it spawns the killer and returns immediately rather than waiting.
+fn kill_pid_tree(pid: u32) {
+    if pid == 0 {
+        return;
+    }
+    #[cfg(windows)]
+    {
+        let _ = std::process::Command::new("taskkill")
+            .args(["/PID", &pid.to_string(), "/T", "/F"])
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .spawn();
+    }
+    #[cfg(not(windows))]
+    {
+        // Polite SIGTERM — we're on our way out, so don't wait for it to settle.
+        let _ = std::process::Command::new("kill")
+            .args(["-TERM", &pid.to_string()])
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .spawn();
+    }
+}
+
+/// Resolve once the process receives an OS termination signal (SIGINT/SIGTERM on
+/// Unix, Ctrl-C on Windows). Used to drive the teardown backstop so the server
+/// child isn't orphaned on a hard exit.
+pub async fn wait_for_termination_signal() {
+    #[cfg(unix)]
+    {
+        use tokio::signal::unix::{signal, SignalKind};
+        let mut sigterm = match signal(SignalKind::terminate()) {
+            Ok(s) => s,
+            Err(_) => return,
+        };
+        let mut sigint = match signal(SignalKind::interrupt()) {
+            Ok(s) => s,
+            Err(_) => return,
+        };
+        tokio::select! {
+            _ = sigterm.recv() => {}
+            _ = sigint.recv() => {}
+        }
+    }
+    #[cfg(not(unix))]
+    {
+        let _ = tokio::signal::ctrl_c().await;
     }
 }

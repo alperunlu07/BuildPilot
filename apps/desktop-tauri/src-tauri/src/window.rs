@@ -35,9 +35,10 @@ fn create(app: &AppHandle, path: &str) {
 
     // Open target=_blank / cross-origin links in the system browser rather than
     // spawning child webviews. Set on the builder so it's wired before the first
-    // navigation happens.
+    // navigation happens. The origin is read from the (cached, refresh-aware)
+    // config on every navigation rather than captured once, so a server that
+    // moves ports across a restart doesn't misclassify same-origin links.
     let nav_handle = app.clone();
-    let origin = config::base_url();
     let builder = WebviewWindowBuilder::new(app, MAIN, WebviewUrl::External(url))
         .title("BuildPilot")
         .inner_size(1280.0, 860.0)
@@ -46,6 +47,7 @@ fn create(app: &AppHandle, path: &str) {
         .focused(true)
         .on_navigation(move |url| {
             let u = url.to_string();
+            let origin = config::base_url();
             if u.starts_with(&origin) || u.starts_with("tauri://") || u.starts_with("about:") {
                 return true; // same-origin (or internal) navigation stays in-window
             }

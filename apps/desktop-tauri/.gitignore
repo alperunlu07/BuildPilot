@@ -10,6 +10,8 @@ src-tauri/resources/server/*
 !src-tauri/resources/server/.gitkeep
 src-tauri/resources/web/*
 !src-tauri/resources/web/.gitkeep
+src-tauri/resources/runtime/*
+!src-tauri/resources/runtime/.gitkeep
 
 # Node tooling.
 node_modules/

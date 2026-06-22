@@ -332,6 +332,7 @@ name = "buildpilot-desktop"
 version = "0.1.0"
 dependencies = [
  "dirs 5.0.1",
+ "fastrand",
  "futures-util",
  "reqwest 0.12.28",
  "serde",

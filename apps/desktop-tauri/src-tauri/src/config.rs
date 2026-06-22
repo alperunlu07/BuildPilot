@@ -13,6 +13,7 @@
 //! change (e.g. the server reports a different port across a restart).
 
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
 
 use serde_json::Value;
@@ -97,16 +98,22 @@ fn resolve() -> ResolvedConfig {
         .and_then(Value::as_str)
         .unwrap_or(DEFAULT_HOST)
         .to_owned();
+    // A `port` outside the valid TCP range (or 0) is bogus — fall back to the
+    // documented default rather than silently truncating with `as u16`
+    // (e.g. 70000 would wrap to 4464 and connect to the wrong port).
     let port = server_config
         .get("port")
         .and_then(Value::as_u64)
+        .filter(|p| (1..=u16::MAX as u64).contains(p))
         .map(|p| p as u16)
         .unwrap_or(DEFAULT_PORT);
 
     // The desktop assumes loopback: it adopts/spawns the server locally and
     // attaches a token only when auth is on. A non-loopback host with auth
-    // disabled exposes the dashboard + API to anyone on the LAN — warn loudly.
-    if !is_loopback_host(&host) {
+    // disabled exposes the dashboard + API to anyone on the LAN — warn loudly,
+    // but only once per process so a hot config that pins a LAN host (re-read on
+    // every server restart) doesn't spam the log.
+    if !is_loopback_host(&host) && !WARNED_NON_LOOPBACK.swap(true, Ordering::Relaxed) {
         eprintln!(
             "WARNING: server host \"{host}\" is not a loopback address. The desktop \
              app assumes loopback; a non-loopback host with auth disabled exposes \
@@ -124,6 +131,10 @@ fn resolve() -> ResolvedConfig {
 /// Process-wide config cache. Resolved on first access exactly like the old
 /// top-level reads, and replaceable via [`refresh`].
 static CACHE: Mutex<Option<ResolvedConfig>> = Mutex::new(None);
+
+/// Whether the non-loopback host warning has already been emitted this process,
+/// so re-resolving the config (e.g. on every server restart) warns only once.
+static WARNED_NON_LOOPBACK: AtomicBool = AtomicBool::new(false);
 
 /// Snapshot of the current resolved config (host/port/token).
 pub fn current() -> ResolvedConfig {

@@ -144,7 +144,7 @@ where
             // fall through to reconnect
         }
         // Jittered backoff, never below the base, before the next attempt.
-        let jitter = fastrand_u64() % RECONNECT_JITTER_MS;
+        let jitter = fastrand::u64(0..RECONNECT_JITTER_MS);
         tokio::time::sleep(Duration::from_millis(RECONNECT_BASE_MS + jitter)).await;
     }
 }
@@ -199,28 +199,4 @@ where
 /// Index of the first `\n\n` frame separator in the buffer, if any.
 fn find_frame_boundary(buf: &[u8]) -> Option<usize> {
     buf.windows(2).position(|w| w == b"\n\n")
-}
-
-/// Tiny xorshift PRNG for reconnect jitter — avoids pulling in a `rand`
-/// dependency just to spread a couple of timers.
-fn fastrand_u64() -> u64 {
-    use std::cell::Cell;
-    use std::time::{SystemTime, UNIX_EPOCH};
-    thread_local! {
-        static STATE: Cell<u64> = Cell::new(
-            SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .map(|d| d.as_nanos() as u64)
-                .unwrap_or(0x9E3779B97F4A7C15)
-                | 1,
-        );
-    }
-    STATE.with(|s| {
-        let mut x = s.get();
-        x ^= x << 13;
-        x ^= x >> 7;
-        x ^= x << 17;
-        s.set(x);
-        x
-    })
 }

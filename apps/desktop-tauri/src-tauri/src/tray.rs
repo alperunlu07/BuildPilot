@@ -374,6 +374,15 @@ async fn run_pipeline(app: &AppHandle, pipeline_id: String) {
     refresh_tray_status(app).await;
 }
 
+/// Fire a best-effort POST to a project action endpoint on a background task.
+fn spawn_post_action(app: &AppHandle, path: String) {
+    let app = app.clone();
+    tauri::async_runtime::spawn(async move {
+        let http = app.state::<AppState>().http.clone();
+        api::post_action(&http, &path).await;
+    });
+}
+
 fn project_path(app: &AppHandle, project_id: &str) -> Option<String> {
     let state = app.state::<AppState>();
     let cache = state.tray.lock().unwrap();
@@ -419,19 +428,9 @@ pub fn handle_menu_event(app: &AppHandle, id: &str) {
                     let _ = app.opener().open_path(path, None::<&str>);
                 }
             } else if let Some(pid) = id.strip_prefix("proj-pull:") {
-                let app = app.clone();
-                let path = format!("/api/projects/{pid}/pull");
-                tauri::async_runtime::spawn(async move {
-                    let http = app.state::<AppState>().http.clone();
-                    api::post_action(&http, &path).await;
-                });
+                spawn_post_action(app, format!("/api/projects/{pid}/pull"));
             } else if let Some(pid) = id.strip_prefix("proj-fetch:") {
-                let app = app.clone();
-                let path = format!("/api/projects/{pid}/fetch");
-                tauri::async_runtime::spawn(async move {
-                    let http = app.state::<AppState>().http.clone();
-                    api::post_action(&http, &path).await;
-                });
+                spawn_post_action(app, format!("/api/projects/{pid}/fetch"));
             }
         }
     }

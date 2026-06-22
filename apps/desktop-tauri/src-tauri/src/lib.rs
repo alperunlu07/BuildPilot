@@ -20,7 +20,7 @@ mod state;
 mod tray;
 mod window;
 
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::time::Duration;
@@ -45,6 +45,9 @@ pub struct AppState {
     server_shutting_down: AtomicBool,
     /// Wakes the server supervisor so it can perform the graceful kill.
     pub stop_notify: Arc<Notify>,
+    /// PID of the server child we currently own (0 = none / adopted). Lets the
+    /// signal backstop kill it synchronously on a hard exit.
+    server_pid: AtomicU32,
     /// Cached tray data the menu is rebuilt from.
     pub tray: Mutex<TrayCache>,
     /// Debounce signals: coalesce bursts of project/build events into a single
@@ -60,6 +63,7 @@ impl AppState {
             quitting: AtomicBool::new(false),
             server_shutting_down: AtomicBool::new(false),
             stop_notify: Arc::new(Notify::new()),
+            server_pid: AtomicU32::new(0),
             tray: Mutex::new(TrayCache::default()),
             rebuild_notify: Arc::new(Notify::new()),
             status_notify: Arc::new(Notify::new()),
@@ -77,6 +81,14 @@ impl AppState {
     }
     pub fn set_server_shutting_down(&self, v: bool) {
         self.server_shutting_down.store(v, Ordering::SeqCst);
+    }
+    /// Record the pid of the server child we now own (0 to clear).
+    pub fn set_server_pid(&self, pid: u32) {
+        self.server_pid.store(pid, Ordering::SeqCst);
+    }
+    /// Atomically read-and-clear the owned server pid.
+    pub fn take_server_pid(&self) -> u32 {
+        self.server_pid.swap(0, Ordering::SeqCst)
     }
     /// Request a debounced full tray rebuild (project set changed).
     pub fn schedule_rebuild(&self) {
@@ -111,6 +123,24 @@ fn setup(app: &AppHandle) {
     #[cfg(target_os = "macos")]
     {
         let _ = app.set_activation_policy(tauri::ActivationPolicy::Accessory);
+    }
+
+    // Teardown backstop: on a hard exit (Ctrl-C / SIGTERM to the app itself),
+    // `RunEvent::Exit` may not fire and a tokio `kill_on_drop` child won't be
+    // dropped — so without this the spawned server would be orphaned. Catch the
+    // signal and synchronously kill the owned server child before exiting.
+    // Mirrors the Electron `registerProcessTeardown`.
+    {
+        let sig_app = app.clone();
+        tauri::async_runtime::spawn(async move {
+            server::wait_for_termination_signal().await;
+            eprintln!("[server] Received termination signal; shutting down.");
+            if let Some(s) = sig_app.try_state::<AppState>() {
+                s.set_quitting(true);
+            }
+            server::kill_owned_server_now(&sig_app);
+            sig_app.exit(0);
+        });
     }
 
     // First-run default: opt into launch-at-login (the whole point of a tray
