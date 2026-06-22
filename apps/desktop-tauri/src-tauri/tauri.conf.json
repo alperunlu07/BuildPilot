@@ -1,0 +1,44 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "BuildPilot",
+  "version": "0.1.0",
+  "identifier": "dev.buildpilot.desktop",
+  "build": {
+    "frontendDist": "../frontend"
+  },
+  "app": {
+    "macOSPrivateApi": false,
+    "withGlobalTauri": false,
+    "security": {
+      "csp": null
+    },
+    "windows": []
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis", "dmg", "appimage"],
+    "icon": ["icons/icon.png"],
+    "category": "DeveloperTool",
+    "copyright": "Copyright © BuildPilot",
+    "longDescription": "Local CI/CD that lives in your system tray — runs the BuildPilot server in the background, shows pipeline notifications, and opens the dashboard from the tray.",
+    "shortDescription": "Local CI/CD tray app",
+    "resources": {
+      "resources/server": "server",
+      "resources/web": "web"
+    },
+    "macOS": {
+      "minimumSystemVersion": "10.15"
+    },
+    "linux": {
+      "appimage": {
+        "bundleMediaFramework": false
+      }
+    },
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser"
+      }
+    }
+  },
+  "plugins": {}
+}
