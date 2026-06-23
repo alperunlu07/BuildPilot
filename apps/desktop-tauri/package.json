@@ -1,0 +1,22 @@
+{
+  "name": "@buildpilot/desktop-tauri",
+  "version": "0.1.0",
+  "private": true,
+  "description": "BuildPilot system-tray desktop app (Tauri v2) — runs the server in the background, shows pipeline notifications, and opens the dashboard from the tray. Rust-native rewrite of the Electron app.",
+  "scripts": {
+    "dev": "tauri dev",
+    "build:web": "pnpm --filter @buildpilot/web run build",
+    "build:server": "node scripts/bundle-server.mjs",
+    "prepare:resources": "node scripts/prepare-resources.mjs",
+    "icons": "tauri icon src-tauri/icons/icon.png",
+    "tauri": "tauri",
+    "dist": "pnpm run build:web && pnpm run build:server && pnpm run prepare:resources && tauri build",
+    "dist:win": "pnpm run build:web && pnpm run build:server && pnpm run prepare:resources && tauri build --target x86_64-pc-windows-msvc",
+    "dist:mac": "pnpm run build:web && pnpm run build:server && pnpm run prepare:resources && tauri build",
+    "dist:linux": "pnpm run build:web && pnpm run build:server && pnpm run prepare:resources && tauri build"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.1.0",
+    "esbuild": "^0.24.0"
+  }
+}

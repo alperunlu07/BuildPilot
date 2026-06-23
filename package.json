@@ -10,6 +10,8 @@
     "start": "pnpm --filter @buildpilot/server run start",
     "desktop:dev": "pnpm --filter @buildpilot/web run build && pnpm --filter @buildpilot/desktop run dev",
     "desktop:dist": "pnpm --filter @buildpilot/web run build && pnpm --filter @buildpilot/desktop run dist",
+    "desktop-tauri:dev": "pnpm --filter @buildpilot/desktop-tauri run dev",
+    "desktop-tauri:dist": "pnpm --filter @buildpilot/desktop-tauri run dist",
     "typecheck": "pnpm -r --if-present run typecheck",
     "test": "pnpm -r --if-present run test && pnpm test:e2e",
     "test:e2e": "playwright test --config=e2e/playwright.config.ts --project=happy-path",

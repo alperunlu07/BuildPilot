@@ -1,0 +1,24 @@
+# Rust / Tauri build outputs — never committed.
+src-tauri/target/
+src-tauri/gen/
+
+# Generated/bundled server runtime + web bundle shipped as resources. The
+# directories themselves are kept (Tauri validates the resource paths exist at
+# build time, including `cargo check`/`tauri dev`) via a committed .gitkeep; only
+# the generated contents are ignored.
+src-tauri/resources/server/*
+!src-tauri/resources/server/.gitkeep
+src-tauri/resources/web/*
+!src-tauri/resources/web/.gitkeep
+src-tauri/resources/runtime/*
+!src-tauri/resources/runtime/.gitkeep
+
+# Node tooling.
+node_modules/
+*.log
+
+# The repo-root .gitignore ignores any `build/` and `scripts/` directory at
+# every level. Ours holds committed source (the server bundler scripts), so
+# re-include it here.
+!scripts/
+!scripts/**

@@ -1,0 +1,8 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "BuildPilot loads its UI from the local server's own origin (a remote URL). The dashboard does not use any Tauri JS APIs — all native work (tray, server lifecycle, notifications, autostart) happens in Rust — so the webview is intentionally granted no IPC permissions. Capabilities are scoped to local content only; the remote dashboard origin is not listed and is therefore sandboxed from core/plugin commands by default.",
+  "windows": ["main"],
+  "local": true,
+  "permissions": []
+}
