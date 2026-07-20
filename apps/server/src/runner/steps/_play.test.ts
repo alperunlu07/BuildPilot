@@ -82,4 +82,54 @@ describe('parseReleaseNotes', () => {
     expect(parseReleaseNotes('')).toEqual([]);
     expect(parseReleaseNotes(undefined)).toEqual([]);
   });
+
+  // Block form exists because real store release notes are multi-line and
+  // bulleted, which the inline form cannot express at all.
+  it('parses [lang] blocks into multi-line text', () => {
+    const input = [
+      '[en-US]',
+      "What's new:",
+      '• Faster loading',
+      '',
+      '[tr-TR]',
+      'Yenilikler:',
+      '• Daha hızlı yükleme',
+    ].join('\n');
+    expect(parseReleaseNotes(input)).toEqual([
+      { language: 'en-US', text: "What's new:\n• Faster loading" },
+      { language: 'tr-TR', text: 'Yenilikler:\n• Daha hızlı yükleme' },
+    ]);
+  });
+
+  it('keeps blank lines inside a block but trims them at the edges', () => {
+    const input = ['[en-US]', '', 'Intro', '', 'Outro', '', ''].join('\n');
+    expect(parseReleaseNotes(input)).toEqual([
+      { language: 'en-US', text: 'Intro\n\nOutro' },
+    ]);
+  });
+
+  it('accepts bare language codes and drops text before the first header', () => {
+    const input = ['stray preamble', '[ar]', 'مرحبا', '[zh-CN]', '你好'].join('\n');
+    expect(parseReleaseNotes(input)).toEqual([
+      { language: 'ar', text: 'مرحبا' },
+      { language: 'zh-CN', text: '你好' },
+    ]);
+  });
+
+  it('drops a header with no body', () => {
+    expect(parseReleaseNotes(['[en-US]', '', '[tr-TR]', 'dolu'].join('\n'))).toEqual([
+      { language: 'tr-TR', text: 'dolu' },
+    ]);
+  });
+
+  // A '=' inside block text must not be mistaken for the inline form, and an
+  // inline note that happens to contain brackets must not trigger block mode.
+  it('keeps the two forms from bleeding into each other', () => {
+    expect(parseReleaseNotes(['[en-US]', 'ratio = 2:1'].join('\n'))).toEqual([
+      { language: 'en-US', text: 'ratio = 2:1' },
+    ]);
+    expect(parseReleaseNotes('en-US=see [notes] below')).toEqual([
+      { language: 'en-US', text: 'see [notes] below' },
+    ]);
+  });
 });

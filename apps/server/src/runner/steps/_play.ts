@@ -191,12 +191,40 @@ export function playErrorMessage(res: PlayResponse): string {
   return `HTTP ${res.status}: ${res.text.slice(0, 200)}`;
 }
 
-// Parse "lang=text" multiline release notes input. The Play API takes a list
-// of `{ language, text }` objects on tracks.releases[].releaseNotes.
+// A line that is nothing but a bracketed BCP-47 tag, e.g. "[tr-TR]" or "[ar]".
+const LOCALE_HEADER_RE = /^\[([A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*)\]$/;
+
+// Release notes come in two shapes, both fed from the same textarea. The Play
+// API takes a list of `{ language, text }` on tracks.releases[].releaseNotes.
+//
+//   inline — one locale per line, for short notes:
+//     en-US=Bug fixes
+//     tr-TR=Hata düzeltmeleri
+//
+//   block — a "[lang]" header followed by that locale's lines, which is the
+//   only way to express the multi-line, bulleted notes real store releases
+//   use (the inline form ends each locale at the newline):
+//     [en-US]
+//     What's new:
+//     • Faster loading
+//
+//     [tr-TR]
+//     Yenilikler:
+//     • Daha hızlı yükleme
+//
+// Block form is selected when any locale header is present, so existing inline
+// notes keep parsing exactly as before.
 export function parseReleaseNotes(s: string | undefined): Array<{ language: string; text: string }> {
   if (!s || s.trim().length === 0) return [];
+  const lines = s.split(/\r?\n/);
+  return lines.some((l) => LOCALE_HEADER_RE.test(l.trim()))
+    ? parseBlockNotes(lines)
+    : parseInlineNotes(lines);
+}
+
+function parseInlineNotes(lines: string[]): Array<{ language: string; text: string }> {
   const out: Array<{ language: string; text: string }> = [];
-  for (const line of s.split(/\r?\n/)) {
+  for (const line of lines) {
     const idx = line.indexOf('=');
     if (idx < 1) continue;
     const language = line.slice(0, idx).trim();
@@ -204,5 +232,32 @@ export function parseReleaseNotes(s: string | undefined): Array<{ language: stri
     if (language.length === 0) continue;
     out.push({ language, text });
   }
+  return out;
+}
+
+function parseBlockNotes(lines: string[]): Array<{ language: string; text: string }> {
+  const out: Array<{ language: string; text: string }> = [];
+  let language: string | null = null;
+  let buf: string[] = [];
+  // Blank lines between blocks are separators, not content, so a locale's text
+  // is trimmed of leading/trailing empties but keeps the blanks inside it.
+  const flush = (): void => {
+    if (language === null) return;
+    while (buf.length > 0 && (buf[0] ?? '').trim() === '') buf.shift();
+    while (buf.length > 0 && (buf[buf.length - 1] ?? '').trim() === '') buf.pop();
+    if (buf.length > 0) out.push({ language, text: buf.join('\n') });
+  };
+  for (const line of lines) {
+    const tag = LOCALE_HEADER_RE.exec(line.trim())?.[1];
+    if (tag) {
+      flush();
+      language = tag;
+      buf = [];
+      continue;
+    }
+    // Text before the first header has no locale to belong to — drop it.
+    if (language !== null) buf.push(line);
+  }
+  flush();
   return out;
 }

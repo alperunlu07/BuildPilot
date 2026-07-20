@@ -72,6 +72,71 @@ export function resolvePlayInputs(
   };
 }
 
+const EOCD_SIG = 0x06054b50;
+const CD_ENTRY_SIG = 0x02014b50;
+const EOCD_MIN_SIZE = 22;
+const MAX_ZIP_COMMENT = 0xffff;
+
+// Walk a zip's central directory and return every entry name. Returns null —
+// meaning "could not determine" — for anything we don't decode, including
+// ZIP64, so callers can wave the archive through instead of blocking on a
+// layout quirk.
+function readZipEntryNames(buf: Buffer): Set<string> | null {
+  const scanLimit = Math.min(buf.length, EOCD_MIN_SIZE + MAX_ZIP_COMMENT);
+  let eocd = -1;
+  for (let i = buf.length - EOCD_MIN_SIZE; i >= buf.length - scanLimit && i >= 0; i--) {
+    if (buf.readUInt32LE(i) === EOCD_SIG) {
+      eocd = i;
+      break;
+    }
+  }
+  if (eocd < 0) return null;
+  const entryCount = buf.readUInt16LE(eocd + 10);
+  const cdOffset = buf.readUInt32LE(eocd + 16);
+  // 0xffff/0xffffffff are the ZIP64 "look in the 64-bit record" sentinels.
+  if (entryCount === 0xffff || cdOffset === 0xffffffff) return null;
+  const names = new Set<string>();
+  let p = cdOffset;
+  for (let n = 0; n < entryCount; n++) {
+    if (p + 46 > buf.length || buf.readUInt32LE(p) !== CD_ENTRY_SIG) return null;
+    const nameLen = buf.readUInt16LE(p + 28);
+    const extraLen = buf.readUInt16LE(p + 30);
+    const commentLen = buf.readUInt16LE(p + 32);
+    if (p + 46 + nameLen > buf.length) return null;
+    names.add(buf.toString('utf8', p + 46, p + 46 + nameLen));
+    p += 46 + nameLen + extraLen + commentLen;
+  }
+  return names;
+}
+
+// Play accepts the upload of anything zip-shaped and only discovers a format
+// mismatch deep in server-side processing, where it surfaces as a bare HTTP
+// 500 — after the entire binary has gone over the wire (~3 min for a 180 MiB
+// bundle). Unity is the usual source: with EditorUserBuildSettings.buildAppBundle
+// off it emits an APK regardless of what the output file is named, so an
+// "*.aab" that is really an APK is the common failure.
+//
+// APK and AAB are both zip containers; the structural marker that separates
+// them is `BundleConfig.pb`, which only an App Bundle carries.
+export function assertBinaryMatchesKind(buf: Buffer, kind: 'apk' | 'aab'): void {
+  const names = readZipEntryNames(buf);
+  if (names === null) return; // undecodable — let Play be the judge
+  const isBundle = names.has('BundleConfig.pb');
+  if (kind === 'aab' && !isBundle) {
+    throw new Error(
+      'playConsoleUpload: file is named .aab but contains no "BundleConfig.pb" — ' +
+        'it is an APK with an .aab name, which Play rejects with an opaque HTTP 500. ' +
+        'In Unity, set EditorUserBuildSettings.buildAppBundle = true before building.',
+    );
+  }
+  if (kind === 'apk' && isBundle) {
+    throw new Error(
+      'playConsoleUpload: file is named .apk but contains "BundleConfig.pb" — ' +
+        'it is an App Bundle with an .apk name. Rename the artifact to .aab.',
+    );
+  }
+}
+
 // Standard Play 4-step edit flow:
 //   1. POST   /androidpublisher/v3/applications/{pkg}/edits         → editId
 //   2. POST   /upload/.../edits/{id}/(bundles|apks)                  → uploaded, versionCode
@@ -102,6 +167,7 @@ export async function runPlayConsoleUpload(
   }
   const binary = await fs.readFile(inputs.binaryAbs);
   ctx.log(`play: read ${binary.length} bytes from ${inputs.binaryAbs}`);
+  assertBinaryMatchesKind(binary, inputs.binaryKind);
 
   const accessToken = await getPlayAccessToken(key);
   ctx.log('play: OAuth access token acquired');
@@ -119,21 +185,46 @@ export async function runPlayConsoleUpload(
   ctx.log(`play: opened edit ${editId}`);
 
   // 2. Upload the binary against /upload (the multipart-or-resumable host).
-  // For files under ~100 MiB the simple media upload is fine; for larger
-  // files Play recommends the resumable path. We use the simple path for
-  // both — failures surface as 4xx with a clear message.
-  const uploadPath = inputs.binaryKind === 'aab'
-    ? `/upload/androidpublisher/v3/applications/${encodeURIComponent(inputs.packageName)}/edits/${encodeURIComponent(editId)}/bundles?uploadType=media`
-    : `/upload/androidpublisher/v3/applications/${encodeURIComponent(inputs.packageName)}/edits/${encodeURIComponent(editId)}/apks?uploadType=media`;
-  const uploadUrl = 'https://androidpublisher.googleapis.com' + uploadPath;
+  // The single-shot `uploadType=media` POST is only reliable under ~100 MiB;
+  // above that Google's simple-upload path intermittently returns a bare
+  // HTTP 500 instead of a clear error (seen in practice on a 182 MiB AAB).
+  // Play's documented fix is the resumable protocol: initiate a session
+  // (get a Location URI back), then PUT the full body to that URI.
+  const uploadBasePath = inputs.binaryKind === 'aab'
+    ? `/upload/androidpublisher/v3/applications/${encodeURIComponent(inputs.packageName)}/edits/${encodeURIComponent(editId)}/bundles`
+    : `/upload/androidpublisher/v3/applications/${encodeURIComponent(inputs.packageName)}/edits/${encodeURIComponent(editId)}/apks`;
   const uploadContentType = inputs.binaryKind === 'aab'
     ? 'application/octet-stream'
     : 'application/vnd.android.package-archive';
-  const uploadRes = await fetch(uploadUrl, {
-    method: 'POST',
+  const initiateRes = await fetch(
+    `https://androidpublisher.googleapis.com${uploadBasePath}?uploadType=resumable`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json; charset=UTF-8',
+        'X-Upload-Content-Type': uploadContentType,
+        'X-Upload-Content-Length': String(binary.length),
+      },
+      body: '{}',
+    },
+  );
+  if (!initiateRes.ok) {
+    const initiateText = await initiateRes.text();
+    throw new Error(
+      `play: failed to start resumable upload session: HTTP ${initiateRes.status} ${initiateText.slice(0, 300)}`,
+    );
+  }
+  const sessionUri = initiateRes.headers.get('location');
+  if (!sessionUri) {
+    throw new Error('play: resumable upload session response is missing a Location header');
+  }
+  const uploadRes = await fetch(sessionUri, {
+    method: 'PUT',
     headers: {
       Authorization: `Bearer ${accessToken}`,
       'Content-Type': uploadContentType,
+      'Content-Length': String(binary.length),
     },
     body: new Uint8Array(binary),
   });

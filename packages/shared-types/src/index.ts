@@ -1114,9 +1114,16 @@ export interface PlayConsoleUploadStepData {
   status?: string;
   // 0..1 (default unset; required when status='inProgress').
   userFraction?: number;
-  // Release notes per locale. One-per-line "lang=text" form, e.g.
-  //   en-US=Bug fixes and improvements
-  //   tr-TR=Hata düzeltmeleri
+  // Release notes per locale, in either form (see parseReleaseNotes):
+  //   short — one locale per line:
+  //     en-US=Bug fixes and improvements
+  //     tr-TR=Hata düzeltmeleri
+  //   multi-line — a "[lang]" header per locale, which is what real store
+  //   releases need since the short form ends each locale at the newline:
+  //     [en-US]
+  //     What's new:
+  //     • Faster loading
+  // Play caps each locale's notes at 500 characters.
   releaseNotes?: string;
 }
 

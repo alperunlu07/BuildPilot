@@ -3069,9 +3069,12 @@ export const STEP_DEFINITIONS: Record<StepType, StepDefinition> = {
       },
       {
         name: 'releaseNotes',
-        label: 'Release notes (one "lang=text" per line)',
+        label: 'Release notes',
         type: 'textarea',
-        placeholder: 'en-US=Bug fixes\ntr-TR=Hata düzeltmeleri',
+        placeholder: '[en-US]\nWhat\'s new:\n• Faster loading\n\n[tr-TR]\nYenilikler:\n• Daha hızlı yükleme',
+        help:
+          'Use "[lang]" headers for multi-line notes (one block per locale), or the short ' +
+          'one-per-line "lang=text" form. Play caps each locale at 500 characters.',
       },
     ],
   },
