@@ -5,7 +5,7 @@
 //! Faithful port of the Electron `src/config.ts`:
 //!   * `BUILDPILOT_HOME` relocates the whole profile (config + state).
 //!   * host/port come from `~/.buildpilot/config.json` (the server's own file),
-//!     falling back to the documented `127.0.0.1:51731` default.
+//!     falling back to the documented `127.0.0.1:35700` default.
 //!   * the API token comes from `BUILDPILOT_API_TOKEN` or an `apiToken` field in
 //!     `~/.buildpilot/desktop.json` (absent on default, auth-disabled installs).
 //!
@@ -21,7 +21,7 @@ use serde_json::Value;
 // Defaults match `apps/server/src/config.ts` DEFAULT_CONFIG — used until the
 // server's config.json has been written (a fresh install writes the same).
 const DEFAULT_HOST: &str = "127.0.0.1";
-const DEFAULT_PORT: u16 = 51731;
+const DEFAULT_PORT: u16 = 35700;
 
 /// The on-disk profile directory. `BUILDPILOT_HOME` relocates the whole profile
 /// (config, DB, …) and is honoured by both the server and this app.

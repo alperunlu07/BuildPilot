@@ -1,6 +1,6 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
-import { loadConfig } from './config';
+import { loadConfig, persistPort } from './config';
 import { logger } from './logger';
 import { initDb } from './store/db';
 import { projectsRoutes } from './api/projects';
@@ -43,6 +43,51 @@ import { registerSessionMiddleware, pruneExpiredSessions } from './auth/sessions
 import { registerAuditHook } from './audit';
 import { registerWebStatic } from './static-web';
 
+// How many ports past the configured one we're willing to try before giving up.
+const PORT_FALLBACK_ATTEMPTS = 20;
+
+// Windows (Hyper-V / WinNAT / WSL) reserves blocks of TCP ports; binding inside
+// one fails with EACCES even though no process holds the port. The reserved
+// blocks are per-machine and move across reboots, so no hardcoded default is
+// safe — BuildPilot has already had two defaults swallowed this way, each time
+// leaving the server unable to start at all.
+//
+// Rather than hunt for another "safe" constant, walk forward from the configured
+// port until one binds, then persist the winner so the desktop apps and the web
+// proxy (which read host/port out of config.json) follow us there. EADDRINUSE is
+// treated the same way: a second instance quietly takes the next free port.
+async function bindWithFallback(
+  app: { listen(opts: { host: string; port: number }): Promise<unknown> },
+  host: string,
+  configuredPort: number,
+): Promise<number> {
+  for (let offset = 0; offset < PORT_FALLBACK_ATTEMPTS; offset++) {
+    const port = configuredPort + offset;
+    try {
+      await app.listen({ host, port });
+      if (port !== configuredPort) {
+        logger.warn(
+          { configuredPort, port },
+          `port ${configuredPort} is unavailable (reserved by the OS or already in use) — ` +
+            `bound to ${port} instead and updated config.json so clients follow`,
+        );
+        persistPort(port);
+      }
+      return port;
+    } catch (err) {
+      const code = (err as NodeJS.ErrnoException).code;
+      if (code !== 'EACCES' && code !== 'EADDRINUSE') throw err;
+      logger.debug({ port, code }, 'port unavailable, trying the next one');
+    }
+  }
+  throw new Error(
+    `Could not bind any port in ${configuredPort}–${configuredPort + PORT_FALLBACK_ATTEMPTS - 1} ` +
+      `on ${host}. On Windows, check reserved ranges with ` +
+      `"netsh interface ipv4 show excludedportrange protocol=tcp" and set a port ` +
+      `outside them in ~/.buildpilot/config.json.`,
+  );
+}
+
 async function main(): Promise<void> {
   const config = loadConfig();
   initDb(config.dbPath);
@@ -68,9 +113,20 @@ async function main(): Promise<void> {
   });
 
   const allowedOrigins = new Set<string>();
-  if (config.webOrigin) allowedOrigins.add(config.webOrigin);
-  allowedOrigins.add('http://127.0.0.1:51732');
-  allowedOrigins.add('http://localhost:51732');
+  if (config.webOrigin) {
+    allowedOrigins.add(config.webOrigin);
+    // The dev server answers on both 127.0.0.1 and localhost, and the browser
+    // sends back whichever the user typed. Derive that alias from webOrigin
+    // instead of hardcoding the port — the default has already moved twice, and
+    // a stale literal here silently breaks CORS in dev.
+    try {
+      const url = new URL(config.webOrigin);
+      const alias = url.hostname === 'localhost' ? '127.0.0.1' : 'localhost';
+      allowedOrigins.add(`${url.protocol}//${alias}${url.port ? `:${url.port}` : ''}`);
+    } catch {
+      // Malformed webOrigin — the exact value above still works, just no alias.
+    }
+  }
 
   await app.register(cors, {
     origin: (origin, cb) => {
@@ -78,8 +134,8 @@ async function main(): Promise<void> {
       cb(null, allowedOrigins.has(origin));
     },
     // Cluster 11.A — credentials must be true so the session cookie
-    // round-trips between the Vite dev server (51732) and the API
-    // (51731). When auth is disabled the cookie isn't set, so this is
+    // round-trips between the Vite dev server (35701) and the API
+    // (35700). When auth is disabled the cookie isn't set, so this is
     // a no-op for default installs.
     credentials: true,
   });
@@ -128,7 +184,7 @@ async function main(): Promise<void> {
   await queueRoutes(app);
 
   // Serve the built web SPA from this origin (production / desktop). No-op
-  // in dev where Vite owns the web on 51732. Registered last so all /api and
+  // in dev where Vite owns the web on 35701. Registered last so all /api and
   // /events routes take precedence over the static wildcard + SPA fallback.
   await registerWebStatic(app);
 
@@ -145,8 +201,8 @@ async function main(): Promise<void> {
     }
   });
 
-  await app.listen({ host: config.host, port: config.port });
-  logger.info({ host: config.host, port: config.port }, 'BuildPilot server listening');
+  const boundPort = await bindWithFallback(app, config.host, config.port);
+  logger.info({ host: config.host, port: boundPort }, 'BuildPilot server listening');
 
   // Security guardrail: the default install binds loopback with auth off,
   // which is safe. But if someone widens the bind (e.g. host "0.0.0.0" to
@@ -169,7 +225,7 @@ async function main(): Promise<void> {
   // (absent === auth not enforced).
   if (!isLoopbackHost(config.host) && !config.auth?.enabled) {
     logger.warn(
-      { host: config.host, port: config.port },
+      { host: config.host, port: boundPort },
       'SECURITY: server is bound to a non-loopback address with auth DISABLED — ' +
         'the dashboard and API are reachable on the network WITHOUT credentials. ' +
         'Enable auth (config.json → auth.enabled) or bind to 127.0.0.1.',

@@ -12,7 +12,7 @@ const HERE: string = __dirname;
 const REPO_ROOT = resolve(HERE, '..', '..');
 
 // Ports we use across all E2E runs. Allocated low in the dynamic range so
-// they're unlikely to clash with the dev defaults (51731/51732).
+// they're unlikely to clash with the dev defaults (35700/35701).
 //
 // 51741 — BuildPilot API
 // 51742 — Vite static preview
@@ -128,7 +128,7 @@ export async function startStack(): Promise<RunningStack> {
   server.stderr?.on('data', (d) => process.stderr.write(`[server] ${d}`));
 
   // Web — Vite dev server with proxy pointing at our chosen API port. We
-  // override the default port (51732) via CLI and inject the API host via
+  // override the default port (35701) via CLI and inject the API host via
   // an env var consumed by a small wrapper script (see e2e/fixtures/web.ts).
   const web: ChildProcess = spawn(
     'pnpm',

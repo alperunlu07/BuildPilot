@@ -33,7 +33,7 @@ function resolveWebDist(): string | null {
 // server required in production. Falls back to index.html for client-side
 // routes (e.g. /projects, /builds/123) while leaving /api and /events to the
 // real handlers. A no-op when no build is present (normal during `pnpm dev`,
-// where Vite serves the web on 51732 and proxies the API here).
+// where Vite serves the web on 35701 and proxies the API here).
 export async function registerWebStatic(app: FastifyInstance): Promise<void> {
   const dist = resolveWebDist();
   if (!dist) {

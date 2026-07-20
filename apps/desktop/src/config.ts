@@ -26,7 +26,7 @@ function readJson(path: string): Record<string, unknown> {
 // the server's config.json hasn't been written yet (a fresh install writes the
 // same defaults).
 const DEFAULT_HOST = '127.0.0.1';
-const DEFAULT_PORT = 51731;
+const DEFAULT_PORT = 35700;
 
 interface ResolvedConfig {
   host: string;

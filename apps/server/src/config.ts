@@ -16,17 +16,24 @@ import { ServerConfigSchema, formatValidationError } from './config-schema';
 
 const CONFIG_FILE = join(CONFIG_DIR, 'config.json');
 
-// IANA dynamic/private port range (49152–65535). The previous defaults
-// (49831/49832) collided with Windows Hyper-V's reserved dynamic-port block
-// (49823–49922 here), which produces EACCES at bind time even with no
-// process holding the port. 51731/51732 land in the safe 50695–53849
-// window outside every reservation observed on a default Win11 host.
+// Windows (Hyper-V / WinNAT / WSL) reserves blocks of TCP ports, and binding
+// inside one fails with EACCES even though nothing holds the port. Two earlier
+// defaults were picked by finding a "free window" and both were later swallowed
+// — 49831/49832 by the 49823–49922 block, then 51731/51732 by 51665–51764.
+//
+// Hunting for a safer constant does not work: reservations are per-machine and
+// move across reboots, and on a stock Win11 host they start as low as port 1462
+// — so no fixed default is safe. What we can do is (a) stay out of the IANA
+// dynamic range (49152–65535), where Windows allocates and reserves most
+// aggressively, and (b) fall back to another port at bind time instead of
+// failing to start. See bindWithFallback in index.ts — that is the actual fix;
+// this constant is only the first candidate it tries.
 const DEFAULT_CONFIG: ServerConfig = {
   host: '127.0.0.1',
-  port: 51731,
+  port: 35700,
   pollIntervalSec: 60,
   dbPath: join(CONFIG_DIR, 'db.sqlite'),
-  webOrigin: 'http://127.0.0.1:51732',
+  webOrigin: 'http://127.0.0.1:35701',
   telegram: {
     enabled: false,
     botToken: '',
@@ -48,6 +55,7 @@ const DEFAULT_CONFIG: ServerConfig = {
 const LEGACY_DEFAULTS: ReadonlyArray<{ port: number; webOrigin: string }> = [
   { port: 7777, webOrigin: 'http://127.0.0.1:5173' },
   { port: 49831, webOrigin: 'http://127.0.0.1:49832' },
+  { port: 51731, webOrigin: 'http://127.0.0.1:51732' },
 ];
 
 function migrateLegacyDefaults(cfg: ServerConfig): ServerConfig {
@@ -237,6 +245,20 @@ export function loadConfig(): ServerConfig {
   const runtime = toRuntime(withSecret);
   cachedConfig = runtime;
   return runtime;
+}
+
+// Persist the port the server actually bound to. Both desktop apps and the web
+// dev-server proxy read host/port straight out of config.json, so when the
+// configured port is unusable and bindWithFallback lands on another one, that
+// choice has to be written back — otherwise every client keeps dialling the
+// port that just failed. No-op when the port already matches, so the common
+// path doesn't rewrite the file on every boot.
+export function persistPort(port: number): void {
+  const base = cachedConfig ?? loadConfig();
+  if (base.port === port) return;
+  const updated: ServerConfig = { ...base, port };
+  writeFileSync(CONFIG_FILE, JSON.stringify(toOnDisk(updated), null, 2), 'utf-8');
+  cachedConfig = updated;
 }
 
 // Persist a new telegram config to disk (encrypted) and update the in-process
