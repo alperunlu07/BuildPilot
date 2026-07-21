@@ -10,7 +10,7 @@
     "build": "pnpm run build:main && pnpm run build:server",
     "prepare:resources": "node scripts/prepare-resources.mjs",
     "dev": "pnpm run build:main && electron .",
-    "start": "electron .",
+    "start": "pnpm run build:main && electron .",
     "dist": "pnpm run build && pnpm run prepare:resources && electron-builder",
     "dist:win": "pnpm run build && pnpm run prepare:resources && electron-builder --win",
     "dist:mac": "pnpm run build && pnpm run prepare:resources && electron-builder --mac",
