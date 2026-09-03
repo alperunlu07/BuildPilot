@@ -21,16 +21,49 @@ export const DEFAULT_BADGE = 'latest';
 //
 // A real (non-npm) `ugs` binary parses argv directly and would take those
 // quotes as part of the value, hence the 'native' escape hatch.
+// These commands run through `spawn(..., { shell: true })`, so every argument
+// is shell syntax until it is quoted. Two rules keep that honest:
+//
+// BARE_TOKEN is the set that may be emitted unquoted. Quoting used to depend
+// on whitespace alone, which let a value like `a&calc.bundle` through raw —
+// and bundle names are NOT hand-authored, they come off the filesystem and out
+// of the catalog's m_InternalIds, so "the pipeline author would have to type
+// it" is not a defence. Anything outside the set is quoted instead.
+//
+// EXPANDS_INSIDE_QUOTES is what no quoting can save us from: POSIX expands
+// ` and $ inside double quotes, cmd.exe expands %VAR%, and a newline ends the
+// command outright. We spawn whichever shell the platform gives us, so there
+// is no single escaping that covers both — such a value is refused rather
+// than silently rewritten into something that runs.
+const BARE_TOKEN = /^[A-Za-z0-9._+=:@/,-]+$/;
+const EXPANDS_INSIDE_QUOTES = /[`$%\r\n]/;
+
+function assertNoShellExpansion(value: string, what: string): void {
+  if (!EXPANDS_INSIDE_QUOTES.test(value)) return;
+  const shown = value.length > 60 ? `${value.slice(0, 59)}…` : value;
+  throw new Error(
+    `ccd: refusing to build a ugs command — ${what} contains a backtick, "$", "%" or a newline, ` +
+      `which stays live inside shell quotes on Windows or POSIX (value: ${shown})`,
+  );
+}
+
 export function ugsQuote(value: string, mode: string | undefined): string {
-  const native = (mode ?? 'shim') === 'native';
-  if (native) return /\s/.test(value) ? `"${value.replace(/"/g, '')}"` : value;
+  assertNoShellExpansion(value, 'an argument');
   const cleaned = value.replace(/"/g, '');
-  return /\s/.test(cleaned) || cleaned.length === 0 ? `"\\"${cleaned}\\""` : cleaned;
+  if (BARE_TOKEN.test(cleaned)) return cleaned;
+  const native = (mode ?? 'shim') === 'native';
+  return native ? `"${cleaned}"` : `"\\"${cleaned}\\""`;
 }
 
 export function buildUgsCommand(d: Partial<CcdTargetFields>, args: readonly string[]): string {
   const launcher = d.ugsPath && d.ugsPath.trim().length > 0 ? d.ugsPath.trim() : 'ugs';
-  const quotedLauncher = /\s/.test(launcher) ? `"${launcher}"` : launcher;
+  assertNoShellExpansion(launcher, '"ugsPath"');
+  // The launcher is consumed by the shell itself, never by the npm shim's
+  // argv re-concatenation, so it takes plain quotes in both modes.
+  const cleanedLauncher = launcher.replace(/"/g, '');
+  const quotedLauncher = BARE_TOKEN.test(cleanedLauncher)
+    ? cleanedLauncher
+    : `"${cleanedLauncher}"`;
   return [quotedLauncher, ...args.map((a) => ugsQuote(a, d.argQuoting))].join(' ');
 }
 

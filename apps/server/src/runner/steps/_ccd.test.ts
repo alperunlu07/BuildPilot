@@ -34,6 +34,23 @@ describe('ugsQuote', () => {
   it('defaults to shim quoting when the mode is unset', () => {
     expect(ugsQuote('a b', undefined)).toBe('"\\"a b\\""');
   });
+
+  // The command string is handed to spawn(..., { shell: true }), and bundle
+  // names come off the filesystem / out of the catalog rather than from a
+  // human, so a metacharacter must never reach the shell unquoted.
+  it('quotes shell metacharacters even without whitespace', () => {
+    expect(ugsQuote('a&calc.bundle', 'shim')).toBe('"\\"a&calc.bundle\\""');
+    expect(ugsQuote('x;y', 'shim')).toBe('"\\"x;y\\""');
+    expect(ugsQuote('a|b', 'native')).toBe('"a|b"');
+    expect(ugsQuote('(x)', 'shim')).toBe('"\\"(x)\\""');
+  });
+
+  it('refuses values that keep expanding inside quotes', () => {
+    for (const bad of ['a`whoami`', 'a$(id)', '%USERPROFILE%', 'a\nb']) {
+      expect(() => ugsQuote(bad, 'shim')).toThrow(/refusing to build a ugs command/);
+      expect(() => ugsQuote(bad, 'native')).toThrow(/refusing to build a ugs command/);
+    }
+  });
 });
 
 describe('buildUgsCommand', () => {
@@ -47,6 +64,14 @@ describe('buildUgsCommand', () => {
 
   it('falls back to ugs on PATH', () => {
     expect(buildUgsCommand({}, ['ccd', 'buckets', 'list'])).toBe('ugs ccd buckets list');
+  });
+
+  it('quotes a launcher carrying a metacharacter instead of passing it through', () => {
+    expect(buildUgsCommand({ ugsPath: 'ugs&calc' }, ['ccd'])).toBe('"ugs&calc" ccd');
+  });
+
+  it('refuses a launcher that would expand inside quotes', () => {
+    expect(() => buildUgsCommand({ ugsPath: 'ugs`id`' }, ['ccd'])).toThrow(/"ugsPath"/);
   });
 });
 
