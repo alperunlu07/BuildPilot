@@ -945,6 +945,7 @@ function TelegramSection() {
   const [enabled, setEnabled] = useState(false);
   const [botToken, setBotToken] = useState('');
   const [chatId, setChatId] = useState('');
+  const [startupNotify, setStartupNotify] = useState(true);
   const [showToken, setShowToken] = useState(false);
   const [banner, setBanner] = useState<TelegramBanner>({ kind: 'idle' });
 
@@ -956,6 +957,7 @@ function TelegramSection() {
         if (cancelled) return;
         setLoaded(cfg);
         setEnabled(cfg.enabled);
+        setStartupNotify(cfg.startupNotify);
       } catch (err) {
         if (cancelled) return;
         setBanner({
@@ -976,8 +978,10 @@ function TelegramSection() {
         enabled,
         botToken,
         defaultChatId: chatId,
+        startupNotify,
       });
       setLoaded(next);
+      setStartupNotify(next.startupNotify);
       setBotToken('');
       setChatId('');
       setShowToken(false);
@@ -1128,6 +1132,20 @@ function TelegramSection() {
               </button>
             )}
           </div>
+        }
+      />
+      <SettingsRow
+        label="Startup report"
+        hint="On every server start, post a short report to the default chat: machine name, local time, server URL, then one section per repository — the BuildPilot checkout and every registered project — with its branch, drift and latest commits. Repeated restarts within 5 minutes are suppressed."
+        control={
+          <label className="inline-flex items-center gap-2 text-[12.5px] text-text-secondary">
+            <Switch
+              checked={startupNotify}
+              onCheckedChange={setStartupNotify}
+              aria-label="Send a startup report"
+            />
+            <span>{startupNotify ? 'On' : 'Off'}</span>
+          </label>
         }
       />
       <div className="flex items-center justify-between gap-3 border-t border-border-subtle px-4 py-3">

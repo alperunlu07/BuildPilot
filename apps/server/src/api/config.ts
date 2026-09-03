@@ -54,6 +54,7 @@ function toPublic(cfg: TelegramConfig | null): TelegramConfigPublic {
       botTokenPreview: '',
       hasChatId: false,
       chatIdPreview: '',
+      startupNotify: true,
     };
   }
   return {
@@ -62,6 +63,8 @@ function toPublic(cfg: TelegramConfig | null): TelegramConfigPublic {
     botTokenPreview: preview(cfg.botToken),
     hasChatId: Boolean(cfg.defaultChatId),
     chatIdPreview: chatPreview(cfg.defaultChatId),
+    // Undefined on disk means on; only an explicit false disables it.
+    startupNotify: cfg.startupNotify !== false,
   };
 }
 
@@ -72,6 +75,7 @@ const updateSchema = z.object({
   defaultChatId: z.string().optional(),
   clearBotToken: z.boolean().optional(),
   clearChatId: z.boolean().optional(),
+  startupNotify: z.boolean().optional(),
 });
 
 const testSchema = z.object({
@@ -283,6 +287,10 @@ export async function configRoutes(app: FastifyInstance): Promise<void> {
       enabled: nextEnabled,
       botToken: nextBotToken,
       defaultChatId: nextChatId,
+      startupNotify:
+        typeof input.startupNotify === 'boolean'
+          ? input.startupNotify
+          : existing.startupNotify,
     };
 
     const saved = saveTelegramConfig(merged);

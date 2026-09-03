@@ -28,6 +28,7 @@ import { queueRoutes } from './api/queue';
 import { reloadSchedules, startPoller } from './poller';
 import { eventBus } from './events/bus';
 import { startTelegramBot } from './runner/telegramBot';
+import { sendStartupReport } from './runner/startupReport';
 import { registerSlackParser, slackBotRoutes } from './slack-bot';
 import { discordBotRoutes } from './discord-bot';
 import { testNotifyRoutes } from './api/test-notify';
@@ -42,6 +43,9 @@ import { apiTokensRoutes } from './api/api-tokens';
 import { registerSessionMiddleware, pruneExpiredSessions } from './auth/sessions';
 import { registerAuditHook } from './audit';
 import { registerWebStatic } from './static-web';
+
+// Reported by /api/health and by the Telegram startup report.
+const SERVER_VERSION = '0.1.0';
 
 // How many ports past the configured one we're willing to try before giving up.
 const PORT_FALLBACK_ATTEMPTS = 20;
@@ -140,7 +144,7 @@ async function main(): Promise<void> {
     credentials: true,
   });
 
-  app.get('/api/health', async () => ({ ok: true, version: '0.1.0' }));
+  app.get('/api/health', async () => ({ ok: true, version: SERVER_VERSION }));
 
   // Slack delivers x-www-form-urlencoded; register the raw-preserving
   // parser before the routes so signature verification can read the body.
@@ -234,6 +238,15 @@ async function main(): Promise<void> {
 
   startPoller();
   if (config.telegram) startTelegramBot(config.telegram);
+
+  // Boot report to Telegram: which machine came up, when, on what URL, and
+  // where this checkout stands. Fire-and-forget on purpose - it collects git
+  // state and talks to telegram.org, neither of which may delay listening.
+  // sendStartupReport swallows its own errors; the void catch is belt-and-braces.
+  void sendStartupReport(config.telegram, {
+    serverUrl: `http://${config.host}:${boundPort}`,
+    version: SERVER_VERSION,
+  }).catch(() => undefined);
 
   // Cluster 11.A — daily sweep to delete expired session rows. The
   // middleware deletes them lazily on touch too; this just keeps the

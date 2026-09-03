@@ -21,6 +21,7 @@ For the HTTP API behind the Settings page, see
   - [2. Get the chat id](#2-get-the-chat-id)
   - [3. Configure BuildPilot](#3-configure-buildpilot)
 - [Bot commands](#bot-commands)
+- [Startup report](#startup-report)
 - [Approval prompts on new commits](#approval-prompts-on-new-commits)
 - [The `telegramNotify` step](#the-telegramnotify-step)
 - [Security model](#security-model)
@@ -35,6 +36,7 @@ For the HTTP API behind the Settings page, see
 | **Pipeline step** | A `telegramNotify` node sends a message during a build | The step's `data` (or fall through to defaults) |
 | **Approval prompts** | New commits on a watched branch send an inline **✅ Build / ⏭ Skip** message | `pipeline.watch.telegramApprovals = true` |
 | **Bot commands** | `/list`, `/build`, `/help` work in your authorised chat | Settings → Telegram |
+| **Startup report** | Every server boot posts machine, local time, server URL and the latest commits of BuildPilot *and* every registered project | Settings → Telegram → **Startup report** |
 | **Build-started / build-finished pings** | Optional — wire `telegramNotify` nodes with `condition: always` | Pipeline edges |
 
 ---
@@ -141,6 +143,74 @@ silent.
 
 To rotate which chat is authorised, just update **Default chat ID**
 in Settings.
+
+---
+
+## Startup report
+
+Whenever the BuildPilot server starts — you launched the desktop app,
+rebooted the build machine, or the service restarted on its own — the
+bot posts a short report to the **default chat**:
+
+```
+🚀 BuildPilot started
+
+PC:     BUILDBOX (PF)
+OS:     win32 10.0.26200
+Time:   03.09.2026 10:45:12 (UTC+03:00)
+Server: http://127.0.0.1:35700 · v0.1.0
+
+BuildPilot @ main · in sync · 6 uncommitted files
+  • fe9d09c fix(desktop): build the main process before `start` — Alper Ünlü · 21.07
+  • 479bc67 fix(server): fall back to another port instead of failing to start — Alper Ünlü · 21.07
+
+Zooyale @ development · ↓2 · clean
+  • 7c31a08 feat: daily reward streak — Alper Ünlü · 02.09
+
+NetworkTest @ development · in sync · clean
+  • 1a9f4d2 fix: lobby reconnect — Alper Ünlü · 28.08
+```
+
+It answers "which machine is this, and what code is it running?" at a
+glance when one bot serves several build boxes. The message is sent
+silently (no notification sound).
+
+**Which repositories are listed.** The BuildPilot checkout the server
+itself runs from comes first (found by walking up from the server
+source directory until a `.git` shows up, 5 commits deep), then one
+section per **registered project** whose path is a git checkout, 3
+commits each, newest project first.
+
+Projects sharing a working copy are listed once, a project pointing at
+the BuildPilot checkout isn't repeated, and a project whose directory
+has gone missing is skipped. At most 10 projects are inspected; the
+rest are summarised as `… and N more repos not shown`, which also
+appears if the message would otherwise pass Telegram's 4096-char limit
+(whole sections are dropped, never half of one).
+
+A packaged install outside any checkout has no BuildPilot section — set
+`BUILDPILOT_REPO_DIR` to point the report at a specific repository.
+
+**Restart flood control.** `pnpm dev` restarts the server on every file
+save, and a crash loop restarts it faster still. A report is therefore
+suppressed if one was already sent in the last 5 minutes; the last-sent
+timestamp lives in `~/.buildpilot/startup-report.json`. Override the
+window with `BUILDPILOT_STARTUP_NOTIFY_COOLDOWN_MS` (`0` disables the
+suppression entirely).
+
+**Turning it off.** Settings → Telegram → **Startup report**, or in
+`~/.buildpilot/config.json`:
+
+```jsonc
+"telegram": {
+  "enabled": true,
+  "startupNotify": false   // ← absent means on
+}
+```
+
+The report never blocks or fails the boot: the repositories are
+inspected in parallel, and git errors, a slow `git status` (8s budget
+per repo) and Telegram outages are logged and dropped.
 
 ---
 

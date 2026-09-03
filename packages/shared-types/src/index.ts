@@ -1953,6 +1953,10 @@ export interface TelegramConfig {
   // Default chat used by telegramNotify steps that don't specify one of
   // their own, and the destination for new-commit approval prompts.
   defaultChatId: string;
+  // Post a short "BuildPilot started" report (machine, local time, server
+  // URL, checkout branch + last commits) to defaultChatId on every server
+  // boot. Undefined means on — set false to opt out.
+  startupNotify?: boolean;
 }
 
 export interface ServerConfig {
@@ -2051,6 +2055,8 @@ export interface TelegramConfigPublic {
   botTokenPreview: string; // e.g. "••••1234" or ""
   hasChatId: boolean;
   chatIdPreview: string; // e.g. "@channel" or "••••5678" or ""
+  // Resolved value of TelegramConfig.startupNotify (undefined → true).
+  startupNotify: boolean;
 }
 
 // ── AI Integrations ────────────────────────────────────────────────────────
@@ -2089,6 +2095,7 @@ export interface TelegramConfigUpdate {
   // When true, explicitly clear the stored botToken (overrides "" semantics).
   clearBotToken?: boolean;
   clearChatId?: boolean;
+  startupNotify?: boolean;
 }
 
 // Optional per-pipeline flag exposed on PipelineWatch — when set + a bot

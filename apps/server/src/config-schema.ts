@@ -19,6 +19,8 @@ export const TelegramConfigSchema = z
     enabled: z.boolean(),
     botToken: z.string(),
     defaultChatId: z.string(),
+    // Absent means on — see TelegramConfig.startupNotify.
+    startupNotify: z.boolean().optional(),
   })
   .passthrough()
   .superRefine((val, ctx) => {
