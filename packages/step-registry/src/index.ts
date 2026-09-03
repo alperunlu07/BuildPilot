@@ -92,6 +92,50 @@ const ASC_CRED_FIELDS: readonly StepFieldSchema[] = [
   },
 ];
 
+// Bucket coordinates + `ugs` launcher settings, shared by the CCD steps.
+// Project and environment are optional on purpose: `ugs` keeps a logged-in
+// default, so a pipeline running on an authenticated builder only names the
+// bucket.
+const CCD_TARGET_FIELDS: readonly StepFieldSchema[] = [
+  {
+    name: 'bucketName',
+    label: 'CCD bucket',
+    type: 'text',
+    required: true,
+    placeholder: 'Android',
+    help: 'Unity’s Addressables CCD profiles name buckets after the build target.',
+  },
+  {
+    name: 'environmentName',
+    label: 'Environment',
+    type: 'text',
+    defaultValue: 'production',
+  },
+  {
+    name: 'ugsProjectId',
+    label: 'UGS project id',
+    type: 'text',
+    placeholder: '(blank = `ugs config get project-id`)',
+  },
+  {
+    name: 'ugsPath',
+    label: 'ugs executable',
+    type: 'text',
+    placeholder: 'ugs',
+  },
+  {
+    name: 'argQuoting',
+    label: 'Argument quoting',
+    type: 'select',
+    options: ['shim', 'native'] as const,
+    defaultValue: 'shim',
+    help:
+      'npm’s `ugs` launcher re-concatenates argv into a shell string, so a value containing ' +
+      'spaces arrives split in two unless it carries literal quotes — "shim" adds them. ' +
+      'Pick "native" only when pointing at a real binary that parses argv directly.',
+  },
+];
+
 export const STEP_DEFINITIONS: Record<StepType, StepDefinition> = {
   checkout: {
     type: 'checkout',
@@ -3078,6 +3122,109 @@ export const STEP_DEFINITIONS: Record<StepType, StepDefinition> = {
       },
     ],
   },
+  ccdPublish: {
+    type: 'ccdPublish',
+    label: 'CCD Publish',
+    description:
+      'Upload an Addressables content build to a Unity CCD bucket and cut a release (ugs CLI).',
+    color: '#0ea5e9',
+    icon: 'CloudUpload',
+    fields: [
+      ...CCD_TARGET_FIELDS,
+      {
+        name: 'contentDir',
+        label: 'Built content directory',
+        type: 'text',
+        required: true,
+        placeholder: 'CCDBuildData/ManagedEnvironment/ManagedBucket/ManagedBadge',
+        help: 'Where the CCD Addressables profile writes. Relative paths resolve against the project root.',
+      },
+      {
+        name: 'uploadScope',
+        label: 'What to upload',
+        type: 'select',
+        options: ['catalogReferenced', 'allFiles'] as const,
+        defaultValue: 'catalogReferenced',
+        help:
+          'catalogReferenced (recommended) uploads only the bundles the current catalog names, ' +
+          'skipping the stale bundles every Addressables output directory accumulates. ' +
+          'Either way only entries the bucket is missing go over the wire, and nothing is deleted.',
+      },
+      {
+        name: 'catalogFile',
+        label: 'Catalog file',
+        type: 'text',
+        placeholder: '(newest catalog_*.json in the directory)',
+      },
+      {
+        name: 'createRelease',
+        label: 'Cut a release after uploading',
+        type: 'select',
+        options: ['true', 'false'] as const,
+        defaultValue: 'true',
+        help: 'CCD serves nothing new until a release is cut; "false" leaves the entries staged.',
+      },
+      {
+        name: 'releaseNotes',
+        label: 'CCD release notes',
+        type: 'textarea',
+        placeholder: 'catalog 0.0.53 — build 18f93e7d',
+        help: 'Recorded on the CCD release. Unrelated to the store listing’s release notes.',
+      },
+      {
+        name: 'badge',
+        label: 'Extra badge to move',
+        type: 'text',
+        placeholder: '(CCD always moves "latest"; name a second badge here)',
+      },
+    ],
+  },
+  ccdVerify: {
+    type: 'ccdVerify',
+    label: 'CCD Verify',
+    description:
+      'Fail the build unless the bucket already serves the catalog this player was built against.',
+    color: '#0284c7',
+    icon: 'ShieldCheck',
+    fields: [
+      ...CCD_TARGET_FIELDS,
+      {
+        name: 'contentDir',
+        label: 'Built content directory',
+        type: 'text',
+        required: true,
+        placeholder: 'CCDBuildData/ManagedEnvironment/ManagedBucket/ManagedBadge',
+      },
+      {
+        name: 'catalogHashFile',
+        label: 'Catalog hash file',
+        type: 'text',
+        placeholder: '(newest catalog_*.hash in the directory)',
+      },
+      {
+        name: 'badge',
+        label: 'Badge players resolve through',
+        type: 'text',
+        defaultValue: 'latest',
+      },
+      {
+        name: 'sampleBundles',
+        label: 'Remote bundles to fetch back',
+        type: 'number',
+        defaultValue: 3,
+        help: 'Catches a release that names entries whose content never finished uploading. 0 skips.',
+      },
+      {
+        name: 'binaryPath',
+        label: 'Cross-check this .aab / .apk',
+        type: 'text',
+        placeholder: 'Builds/Android/Game.aab',
+        help:
+          'Reads assets/aa/settings.json out of the archive and fails when the environment, ' +
+          'bucket or badge compiled into the player is not the one just verified.',
+      },
+    ],
+  },
   aiPrompt: {
     type: 'aiPrompt',
     label: 'AI Prompt',
@@ -4601,6 +4748,7 @@ export type StepCategory =
   | 'iosTest'
   | 'iosVerify'
   | 'android'
+  | 'ccd'
   | 'steam';
 
 export interface StepCategoryGroup {
@@ -4738,6 +4886,11 @@ export const STEP_CATEGORIES: readonly StepCategoryGroup[] = [
       'androidSign',
       'playConsoleUpload',
     ],
+  },
+  {
+    key: 'ccd',
+    label: 'Unity Cloud Content Delivery',
+    types: ['ccdPublish', 'ccdVerify'],
   },
   {
     key: 'steam',

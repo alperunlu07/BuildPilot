@@ -593,6 +593,62 @@ Smoke-test cluster — pair a Wi-Fi device with `adbConnect`, push the
 APK with `adbInstall`, launch the activity with `adbShellLaunch`, then
 capture N seconds of `adbLogcat` as an artifact.
 
+### Unity Cloud Content Delivery
+
+Remote Addressables content and the player that loads it are built
+separately but have to ship together: every content build writes a new
+`catalog_<version>.json`, the player is compiled against that catalog's
+hash, and if the bucket still serves the previous catalog then every
+remote load fails at runtime. The binary looks fine and ships with no
+content. These two steps close that gap — publish the content, prove the
+bucket serves it, and only then upload the binary to the store.
+
+Both drive the `ugs` CLI, which carries the builder's UGS login, so
+`ugsProjectId` / `environmentName` can be left blank on an authenticated
+machine. `argQuoting` defaults to `shim` because npm's `ugs` launcher
+re-concatenates argv into a shell string — a value containing spaces
+arrives split in two unless it carries literal quotes. Point it at a
+real binary and set `native`.
+
+#### `ccdPublish`
+- `bucketName` — e.g. `Android`. Unity's CCD profiles name buckets after
+  the build target.
+- `contentDir` — where the Addressables CCD profile writes, e.g.
+  `CCDBuildData/ManagedEnvironment/ManagedBucket/ManagedBadge`.
+- `uploadScope?` — `catalogReferenced` (default) uploads only the bundles
+  the current catalog names; `allFiles` uploads everything the bucket is
+  missing. Either way only missing entries go over the wire.
+- `catalogFile?` — default: newest `catalog_*.json` in `contentDir`.
+- `createRelease?` — `'true'` (default) cuts a release; CCD serves
+  nothing new until one exists.
+- `releaseNotes?` — recorded on the CCD release (not the store listing);
+  collapsed to a single line.
+- `badge?` — CCD always moves `latest`; name a second badge to move too.
+
+This is deliberately **not** `ugs ccd entries sync`. Sync mirrors a
+directory, so it deletes bucket entries that are missing locally — and an
+Addressables output directory accumulates every past build's bundles, so
+syncing it re-uploads stale content *and* drops entries that shipped
+players still resolve. `ccdPublish` diffs and only ever adds. The catalog
+pair is re-uploaded even when the name already exists, because rebuilding
+one player version reuses the file name while its contents change.
+
+#### `ccdVerify`
+- `bucketName`, `contentDir` — as above.
+- `catalogHashFile?` — default: newest `catalog_*.hash` in `contentDir`.
+- `badge?` — default `latest`; the badge players resolve through.
+- `sampleBundles?` — default 3. Fetches the largest remote bundles back
+  and compares byte counts, catching a release cut while an entry's
+  content was still uploading. `0` skips.
+- `binaryPath?` — reads `assets/aa/settings.json` out of the `.aab`/`.apk`
+  and fails when the environment, bucket or badge compiled into the
+  player is not the one just verified. Catches a profile switched between
+  the content build and the player build, which every other check here
+  would pass.
+
+Put it between the content publish and the store upload so a mismatch
+fails the pipeline instead of shipping.
+
 ### Steam
 
 #### `steamcmdSetup`

@@ -131,6 +131,8 @@ export type StepType =
   | 'steamSetLive'
   | 'steamWorkshopUpload'
   | 'iosDeviceLog'
+  | 'ccdPublish'
+  | 'ccdVerify'
   | 'manualApproval';
 
 export type AiTool = 'claude' | 'codex' | 'aider' | 'gemini' | 'custom';
@@ -1125,6 +1127,78 @@ export interface PlayConsoleUploadStepData {
   //     • Faster loading
   // Play caps each locale's notes at 500 characters.
   releaseNotes?: string;
+}
+
+// Fields every Unity Cloud Content Delivery step needs to address a bucket.
+// The runner drives the `ugs` CLI, which already carries the machine's UGS
+// login; project/environment fall back to whatever `ugs config` holds, so a
+// pipeline on an authenticated builder only has to name the bucket.
+export interface CcdTargetFields {
+  // UGS project UUID. Blank = use the `ugs config get project-id` default.
+  ugsProjectId?: string;
+  // Services environment name. Blank = 'production'.
+  environmentName?: string;
+  // CCD bucket name, e.g. 'Android'. Unity's Addressables CCD profiles name
+  // buckets after the build target.
+  bucketName: string;
+  // Path to the `ugs` executable. Blank = 'ugs' from PATH.
+  ugsPath?: string;
+  // How to quote arguments that contain spaces. 'shim' (default) wraps them
+  // in literal quotes because npm's `ugs` launcher re-concatenates argv into
+  // a shell string, which otherwise splits any spaced value. 'native' passes
+  // them through untouched — correct only for a real (non-npm) binary.
+  argQuoting?: string;
+}
+
+// Publish an Addressables content build to a CCD bucket, then cut a release.
+//
+// Deliberately NOT `ugs ccd entries sync`: sync mirrors a local directory,
+// so it DELETES bucket entries missing locally. An Addressables output
+// directory accumulates every past build's bundles, so syncing it both
+// re-uploads stale content and drops entries older players still resolve.
+// Instead we diff and upload only what the current catalog references.
+export interface CcdPublishStepData extends CcdTargetFields {
+  // Directory holding the built content — the CCD profile's output, e.g.
+  // 'CCDBuildData/ManagedEnvironment/ManagedBucket/ManagedBadge'.
+  contentDir: string;
+  // 'catalogReferenced' (default) uploads only the bundles the newest local
+  // catalog_*.json actually references, plus that catalog's .json/.hash.
+  // 'allFiles' uploads every file in contentDir that the bucket is missing.
+  uploadScope?: string;
+  // Explicit catalog to publish, e.g. 'catalog_0.0.53.json'. Blank = newest
+  // catalog_*.json in contentDir by mtime.
+  catalogFile?: string;
+  // 'true' (default) cuts a release after uploading. 'false' leaves the
+  // entries staged so a later step (or a human) can release them.
+  createRelease?: string;
+  // Release notes recorded on the CCD release (not the store listing).
+  releaseNotes?: string;
+  // Badge to point at the new release. CCD already moves 'latest' on every
+  // release; name another badge here to move it too. Blank = none.
+  badge?: string;
+}
+
+// Prove a built player and the bucket agree BEFORE the binary ships.
+//
+// The failure this exists to catch: Addressables writes a new catalog on
+// every content build, the player is compiled against that catalog's hash,
+// and if the bucket still serves the previous catalog every remote load
+// fails at runtime — the build looks fine and ships with no content.
+export interface CcdVerifyStepData extends CcdTargetFields {
+  // Directory holding the built content (same value as the publish step).
+  contentDir: string;
+  // Explicit catalog hash file, e.g. 'catalog_0.0.53.hash'. Blank = newest
+  // catalog_*.hash in contentDir by mtime.
+  catalogHashFile?: string;
+  // Badge the player resolves content through. Blank = 'latest'.
+  badge?: string;
+  // How many of the catalog's remote bundles to fetch back and size-check.
+  // 0 skips the sampling and only compares the catalog hash. Default 3.
+  sampleBundles?: number;
+  // Optional .aab/.apk to cross-check: the step reads assets/aa/settings.json
+  // out of the archive and fails when the environment / bucket / badge baked
+  // into the player disagree with what this step just verified.
+  binaryPath?: string;
 }
 
 // Common shape shared by every App Store Connect API-driven step. The

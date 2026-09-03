@@ -103,6 +103,8 @@ import { runSteamUpload } from './steps/steamUpload';
 import { runSteamSetLive } from './steps/steamSetLive';
 import { runSteamWorkshopUpload } from './steps/steamWorkshopUpload';
 import { runIosDeviceLog } from './steps/iosDeviceLog';
+import { runCcdPublish } from './steps/ccdPublish';
+import { runCcdVerify } from './steps/ccdVerify';
 import { runManualApproval } from './steps/manualApproval';
 
 export interface StepContext {
@@ -211,6 +213,8 @@ const RUNNERS: Record<StepType, StepRunner> = {
   steamSetLive: runSteamSetLive,
   steamWorkshopUpload: runSteamWorkshopUpload,
   iosDeviceLog: runIosDeviceLog,
+  ccdPublish: runCcdPublish,
+  ccdVerify: runCcdVerify,
   manualApproval: runManualApproval,
 };
 

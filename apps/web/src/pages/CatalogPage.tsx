@@ -124,6 +124,7 @@ const CATEGORY_LABEL: Record<StepCategory, string> = {
   iosTest: 'iOS Test',
   iosVerify: 'iOS Verify',
   android: 'Android',
+  ccd: 'Unity CCD',
   steam: 'Steam',
 };
 
