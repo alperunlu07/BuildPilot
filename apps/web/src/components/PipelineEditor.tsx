@@ -141,6 +141,7 @@ const nodeTypes = {
   bundletool: StepNode,
   androidSign: StepNode,
   playConsoleUpload: StepNode,
+  playConsolePromote: StepNode,
 };
 
 interface Props {

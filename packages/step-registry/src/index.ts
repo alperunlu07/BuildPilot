@@ -3078,6 +3078,77 @@ export const STEP_DEFINITIONS: Record<StepType, StepDefinition> = {
       },
     ],
   },
+  playConsolePromote: {
+    type: 'playConsolePromote',
+    label: 'Play Console Promote',
+    description:
+      'Release a version code Play already has onto a track — publish a draft, promote internal → production, halt a rollout. No re-upload.',
+    color: '#16a34a',
+    icon: 'CloudUpload',
+    fields: [
+      {
+        name: 'packageName',
+        label: 'Package name (applicationId)',
+        type: 'text',
+        required: true,
+        placeholder: 'com.example.app',
+      },
+      {
+        name: 'versionCode',
+        label: 'Version code (must already exist in Play)',
+        type: 'number',
+        required: true,
+        placeholder: '18',
+      },
+      {
+        name: 'serviceAccountJsonPath',
+        label: 'Service-account .json path (or paste contents below)',
+        type: 'text',
+        placeholder: '~/.buildpilot/play-service-account.json',
+      },
+      {
+        name: 'playServiceAccountJson',
+        label: 'Service-account JSON contents (paste; encrypted at rest)',
+        type: 'textarea',
+        placeholder: '{ "type": "service_account", ... }',
+      },
+      {
+        name: 'track',
+        label: 'Target track',
+        type: 'select',
+        options: ['internal', 'alpha', 'beta', 'production'] as const,
+        required: true,
+      },
+      {
+        name: 'status',
+        label: 'Release status',
+        type: 'select',
+        options: ['completed', 'inProgress', 'halted', 'draft'] as const,
+        defaultValue: 'completed',
+      },
+      {
+        name: 'userFraction',
+        label: 'User fraction (status=inProgress only; 0..1)',
+        type: 'number',
+        placeholder: '0.1',
+      },
+      {
+        name: 'releaseName',
+        label: 'Release name (optional)',
+        type: 'text',
+        placeholder: '0.0.45',
+      },
+      {
+        name: 'releaseNotes',
+        label: 'Release notes',
+        type: 'textarea',
+        placeholder: '[en-US]\nWhat\'s new:\n• Faster loading\n\n[tr-TR]\nYenilikler:\n• Daha hızlı yükleme',
+        help:
+          'Use "[lang]" headers for multi-line notes (one block per locale), or the short ' +
+          'one-per-line "lang=text" form. Play caps each locale at 500 characters.',
+      },
+    ],
+  },
   aiPrompt: {
     type: 'aiPrompt',
     label: 'AI Prompt',
@@ -4737,6 +4808,7 @@ export const STEP_CATEGORIES: readonly StepCategoryGroup[] = [
       'bundletool',
       'androidSign',
       'playConsoleUpload',
+      'playConsolePromote',
     ],
   },
   {

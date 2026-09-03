@@ -207,7 +207,7 @@ including each step's required/optional fields lives in
 | **iOS — Versioning & Plist** | `incrementBuildNumber`, `getBuildNumber`, `updateInfoPlist`, `xcresultParse` |
 | **iOS — Quality** | `swiftlint`, `swiftFormat`, `peripheryScan`, `slatherCoverage`, `xcovGate` |
 | **iOS — Screenshots** | `snapshot`, `frameit` |
-| **Android** | `gradleBuild`, `adbConnect`, `adbInstall`, `adbShellLaunch`, `adbLogcat` |
+| **Android** | `gradleBuild`, `adbConnect`, `adbPair`, `adbInstall`, `adbShellLaunch`, `adbLogcat`, `bundletool`, `androidSign`, `playConsoleUpload`, `playConsolePromote` |
 | **Steam** | `steamcmdSetup`, `steamUpload`, `steamSetLive`, `steamWorkshopUpload` |
 
 Pipelines are DAGs. Edges carry a condition (`success`, `failure`,

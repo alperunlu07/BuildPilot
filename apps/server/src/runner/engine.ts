@@ -64,6 +64,7 @@ import { runAdbPair } from './steps/adbPair';
 import { runBundletool } from './steps/bundletool';
 import { runAndroidSign } from './steps/androidSign';
 import { runPlayConsoleUpload } from './steps/playConsoleUpload';
+import { runPlayConsolePromote } from './steps/playConsolePromote';
 import { runTeamsNotify } from './steps/teamsNotify';
 import { runEmailNotify } from './steps/emailNotify';
 import { runAppStoreConnectApi } from './steps/appStoreConnectApi';
@@ -172,6 +173,7 @@ const RUNNERS: Record<StepType, StepRunner> = {
   bundletool: runBundletool,
   androidSign: runAndroidSign,
   playConsoleUpload: runPlayConsoleUpload,
+  playConsolePromote: runPlayConsolePromote,
   teamsNotify: runTeamsNotify,
   emailNotify: runEmailNotify,
   appStoreConnectApi: runAppStoreConnectApi,

@@ -276,5 +276,11 @@ export async function runPlayConsoleUpload(
   if (!commitRes.ok) {
     throw new Error(`play: commit failed: ${playErrorMessage(commitRes)}`);
   }
-  ctx.log(`play: edit committed — versionCode ${versionCode} live on track ${inputs.track}`);
+  // status=draft uploads the binary but serves it to nobody, so "live" would
+  // misreport what just happened — the release still needs publishing.
+  ctx.log(
+    inputs.status === 'draft'
+      ? `play: edit committed — versionCode ${versionCode} staged as a draft on track ${inputs.track} (publish it to roll out)`
+      : `play: edit committed — versionCode ${versionCode} live on track ${inputs.track}`,
+  );
 }

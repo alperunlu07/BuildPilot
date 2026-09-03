@@ -92,6 +92,7 @@ export type StepType =
   | 'bundletool'
   | 'androidSign'
   | 'playConsoleUpload'
+  | 'playConsolePromote'
   | 'teamsNotify'
   | 'emailNotify'
   | 'appStoreConnectApi'
@@ -1124,6 +1125,35 @@ export interface PlayConsoleUploadStepData {
   //     What's new:
   //     • Faster loading
   // Play caps each locale's notes at 500 characters.
+  releaseNotes?: string;
+}
+
+// Move a version code that Play already has onto a track, without sending the
+// binary again. playConsoleUpload always uploads first, so it cannot re-release
+// an existing build: Play rejects a repeat upload of the same version code with
+// "Version code N has already been used". The common cases this covers are
+// publishing a draft that was uploaded earlier, promoting internal → beta →
+// production, and halting or resuming a staged rollout.
+export interface PlayConsolePromoteStepData {
+  packageName: string;
+  // Same credential pair as PlayConsoleUploadStepData — path OR pasted JSON.
+  serviceAccountJsonPath?: string;
+  playServiceAccountJson?: string;
+  // The version code to place on the track. It must already exist in the app
+  // (uploaded by a previous run or from the Console).
+  versionCode: number;
+  // 'internal' | 'alpha' | 'beta' | 'production'. No default: promoting is a
+  // deliberate act and a wrong-track default would publish to the wrong
+  // audience.
+  track: string;
+  // 'completed' (default — fully rolled out) | 'inProgress' | 'halted' |
+  // 'draft'. When 'inProgress', userFraction must be set.
+  status?: string;
+  // 0..1 (required when status='inProgress').
+  userFraction?: number;
+  // Optional release name shown in the Console; Play derives one when unset.
+  releaseName?: string;
+  // Same two forms as PlayConsoleUploadStepData.releaseNotes.
   releaseNotes?: string;
 }
 
