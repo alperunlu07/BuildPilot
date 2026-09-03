@@ -588,10 +588,77 @@ in marketing device frames.
 - `registerArtifact?` — `'true'` (default) auto-registers the produced
   APK/AAB into the build's artifact catalog.
 
-#### `adbConnect` / `adbInstall` / `adbShellLaunch` / `adbLogcat`
+#### `adbConnect` / `adbPair` / `adbInstall` / `adbShellLaunch` / `adbLogcat`
 Smoke-test cluster — pair a Wi-Fi device with `adbConnect`, push the
 APK with `adbInstall`, launch the activity with `adbShellLaunch`, then
 capture N seconds of `adbLogcat` as an artifact.
+
+#### `androidSign` / `bundletool`
+`androidSign` signs an **APK** (`apksigner`, falling back to
+`jarsigner`) with a keystore. `bundletool` turns an `.aab` into a
+`.apks` set (`build-apks`) or installs one on a device
+(`install-apks`) — useful for testing a bundle locally before it goes
+to Play. Neither is needed for a Play upload: Play takes a signed
+`.aab` straight from the build.
+
+#### Google Play setup (one-time)
+
+Both Play steps authenticate as a **service account**, not as you:
+
+1. Google Cloud Console → the project linked to your Play developer
+   account → *IAM & Admin → Service Accounts* → create one, then
+   *Keys → Add key → JSON*. Download it.
+2. Play Console → *Setup → API access* → link the Cloud project, find
+   the service account, *Grant access*, give it **Release manager** on
+   the app (Admin works too, but is broader than needed).
+3. Put the `.json` somewhere the server can read — `~/.buildpilot/`
+   keeps it next to the other runtime state. Point
+   `serviceAccountJsonPath` at it, or paste the contents into
+   `playServiceAccountJson`, which is encrypted at rest.
+
+Permission changes can take a few minutes to propagate; a fresh grant
+that 403s is usually just early.
+
+#### `playConsoleUpload`
+Uploads an `.aab` (preferred) or `.apk` and releases it on a track.
+
+- `packageName` — the `applicationId`, e.g. `com.example.app`.
+- `binaryPath` — relative to the project root, or absolute.
+- `track` — `internal` (default) | `alpha` | `beta` | `production`.
+- `status` — `completed` (default, fully rolled out) | `inProgress`
+  (staged; requires `userFraction` in `(0, 1]`) | `halted` | `draft`
+  (uploaded but served to nobody — publish it from the Console).
+- `releaseNotes` — `[lang]` blocks for multi-line notes, or the short
+  `lang=text` form. 500 characters per locale.
+
+Two failures worth knowing before they cost you a build:
+
+- **"Version code N has already been used"** — Play requires a unique,
+  never-reused version code per upload. Bump it in the build itself
+  (Unity: `PlayerSettings.Android.bundleVersionCode++`; Gradle:
+  `versionCode` in `build.gradle`) rather than by hand, or every
+  unattended run fails here.
+- **An `.aab` that is really an APK** — Unity emits an APK unless
+  `EditorUserBuildSettings.buildAppBundle` is `true`, whatever the
+  output file is named. The step checks for `BundleConfig.pb` and
+  refuses locally, because Play only reports this as a bare HTTP 500
+  *after* the whole binary has been uploaded.
+
+#### `playConsolePromote`
+Releases a version code Play **already has** onto a track, with no
+re-upload — publishing a draft, moving internal → beta → production,
+or halting a rollout. `playConsoleUpload` cannot do this: it always
+uploads first, and re-uploading an existing version code is rejected.
+
+- `versionCode` — must already exist in the app. The step lists the
+  app's bundles/APKs first and fails with the known codes if it
+  doesn't, rather than letting `:commit` fail opaquely.
+- `track` — required, no default. Promoting chooses the audience, so
+  guessing it is not safe.
+- `status`, `userFraction`, `releaseName`, `releaseNotes` — as above.
+
+Updating a track replaces its release list, so a promote supersedes
+whatever that track was serving.
 
 ### Steam
 
