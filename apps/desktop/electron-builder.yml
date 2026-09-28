@@ -10,6 +10,7 @@ directories:
 # the web bundle ride along as extra resources so they live as real files on
 # disk (native addons + pino workers can't run from inside an asar archive).
 files:
+  - main.js
   - dist/**
   - build/**
   - package.json

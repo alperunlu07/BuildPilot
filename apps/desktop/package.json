@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "description": "BuildPilot system-tray desktop app (Electron) — runs the server in the background, shows pipeline notifications, and opens the dashboard from the tray.",
-  "main": "dist/main.js",
+  "main": "main.js",
   "scripts": {
     "build:main": "tsc -p tsconfig.json",
     "build:server": "node scripts/bundle-server.mjs",
