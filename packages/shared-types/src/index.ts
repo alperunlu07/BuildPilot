@@ -1957,6 +1957,12 @@ export interface TelegramConfig {
   // URL, checkout branch + last commits) to defaultChatId on every server
   // boot. Undefined means on — set false to opt out.
   startupNotify?: boolean;
+  // Commands-only mode: the bot keeps answering /build, /list, /help and
+  // reports builds started from Telegram, but sends no unsolicited
+  // notifications of its own (new-commit approval prompts, startup report).
+  // Meant for setups where another service owns notifications. Undefined
+  // means false. User-authored `telegramNotify` pipeline steps are unaffected.
+  commandsOnly?: boolean;
 }
 
 export interface ServerConfig {
@@ -2057,6 +2063,8 @@ export interface TelegramConfigPublic {
   chatIdPreview: string; // e.g. "@channel" or "••••5678" or ""
   // Resolved value of TelegramConfig.startupNotify (undefined → true).
   startupNotify: boolean;
+  // Resolved value of TelegramConfig.commandsOnly (undefined → false).
+  commandsOnly: boolean;
 }
 
 // ── AI Integrations ────────────────────────────────────────────────────────
@@ -2096,6 +2104,7 @@ export interface TelegramConfigUpdate {
   clearBotToken?: boolean;
   clearChatId?: boolean;
   startupNotify?: boolean;
+  commandsOnly?: boolean;
 }
 
 // Optional per-pipeline flag exposed on PipelineWatch — when set + a bot
@@ -2769,6 +2778,10 @@ export interface SystemInfo {
   configPath: string;
   dbPath: string;
   masterKeyPath: string;
+  // Version of the external-bridge API contract (bumped on breaking changes).
+  apiVersion: number;
+  // Feature flags an external client (e.g. pf-agent) can probe before use.
+  capabilities: string[];
 }
 
 export interface SystemPathEntry {

@@ -946,6 +946,7 @@ function TelegramSection() {
   const [botToken, setBotToken] = useState('');
   const [chatId, setChatId] = useState('');
   const [startupNotify, setStartupNotify] = useState(true);
+  const [commandsOnly, setCommandsOnly] = useState(false);
   const [showToken, setShowToken] = useState(false);
   const [banner, setBanner] = useState<TelegramBanner>({ kind: 'idle' });
 
@@ -958,6 +959,7 @@ function TelegramSection() {
         setLoaded(cfg);
         setEnabled(cfg.enabled);
         setStartupNotify(cfg.startupNotify);
+        setCommandsOnly(cfg.commandsOnly);
       } catch (err) {
         if (cancelled) return;
         setBanner({
@@ -979,9 +981,11 @@ function TelegramSection() {
         botToken,
         defaultChatId: chatId,
         startupNotify,
+        commandsOnly,
       });
       setLoaded(next);
       setStartupNotify(next.startupNotify);
+      setCommandsOnly(next.commandsOnly);
       setBotToken('');
       setChatId('');
       setShowToken(false);
@@ -1145,6 +1149,21 @@ function TelegramSection() {
               aria-label="Send a startup report"
             />
             <span>{startupNotify ? 'On' : 'Off'}</span>
+          </label>
+        }
+      />
+      <SettingsRow
+        label="Commands only"
+        hint="The bot only answers /build, /list and /help and reports builds started from Telegram. It sends no new-commit approval prompts and no startup report. Pipeline telegramNotify steps are unaffected."
+        control={
+          <label className="inline-flex items-center gap-2 text-[12.5px] text-text-secondary">
+            <input
+              type="checkbox"
+              checked={commandsOnly}
+              onChange={(e) => setCommandsOnly(e.target.checked)}
+              aria-label="Commands only (notifications are sent by PF Agent)"
+            />
+            <span>Commands only (notifications are sent by PF Agent)</span>
           </label>
         }
       />

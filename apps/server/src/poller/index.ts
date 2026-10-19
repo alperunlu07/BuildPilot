@@ -1,3 +1,4 @@
+import { shouldSendApprovalPrompts } from '../runner/telegramMode';
 import { getPipeline, listPipelines } from '../store/pipelines';
 import { getProject } from '../store/projects';
 import {
@@ -241,7 +242,7 @@ async function runOnce(entry: ScheduledWatch): Promise<void> {
     // ask via Telegram with Build / Skip inline buttons.
     if (pipeline?.watch.telegramApprovals && isTelegramEnabled()) {
       const cfg = getTelegramConfig();
-      if (cfg && cfg.defaultChatId) {
+      if (cfg && cfg.defaultChatId && shouldSendApprovalPrompts(cfg)) {
         const head4 = commits[0]!.shortSha;
         const subj = commits[0]!.subject.slice(0, 80);
         const more = commits.length > 1 ? ` (+${commits.length - 1} more)` : '';

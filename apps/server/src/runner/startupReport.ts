@@ -389,6 +389,7 @@ export async function sendStartupReport(
   try {
     if (!cfg?.enabled || !cfg.botToken) return;
     if (cfg.startupNotify === false) return;
+    if (cfg.commandsOnly === true) return;
     if (!cfg.defaultChatId) {
       logger.debug('startup report: telegram has no default chat id, skipping');
       return;

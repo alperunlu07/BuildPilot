@@ -214,6 +214,18 @@ per repo) and Telegram outages are logged and dropped.
 
 ---
 
+## Commands-only mode
+
+Set `telegram.commandsOnly: true` (Settings → Telegram → **Commands only**,
+or `PUT /api/config/telegram`) when another service, such as PF Agent, owns
+notifications. BuildPilot then never speaks first: no new-commit approval
+prompts and no startup report. The bot still answers `/build`, `/list` and
+`/help` and keeps reporting the results of builds started from Telegram.
+`telegramNotify` pipeline steps are explicit and keep working. Absent means
+off.
+
+---
+
 ## Approval prompts on new commits
 
 If you set `watch.telegramApprovals = true` on a pipeline *and* the
