@@ -262,9 +262,27 @@ Triggers a build.
 ```ts
 {
   pipelineId: string,
-  fromNodeId?: string  // restart from one node (BFS over outgoing edges)
+  fromNodeId?: string, // restart from one node (BFS over outgoing edges)
+  branch?: string,     // recorded as the build's triggerBranch
+  sha?: string         // recorded as the build's triggerSha
 }
 ```
+
+`branch` must match `/^[A-Za-z0-9][A-Za-z0-9._\/-]{0,199}$/` (so no leading
+dash) and must not contain `..`; `sha` must be 7-40 hex characters. Anything
+else is a `400`. When omitted, both default to the project checkout's current
+branch / HEAD, as before.
+
+**What `branch` / `sha` actually do.** They are metadata about the trigger,
+not a checkout request. They are stored on the build (`triggerBranch`,
+`triggerSha`), shown in the build header and log, used by
+`branchTargetedTestFlight`, PR-context lookups, and `sha` becomes the
+pipeline's "last built" marker on success. The engine does **not** check the
+ref out: the working copy is whatever the project directory holds, and only
+an explicit `checkout` / `pull` step in the pipeline (which takes its own
+`branch` from step data) changes it. If a pending build already exists for the
+pipeline, the request is coalesced into it and overwrites its trigger
+branch/sha.
 
 `fromNodeId` is what the dashboard's "Retry from failed step" button
 uses — earlier nodes are skipped.
@@ -511,6 +529,24 @@ no `sha256=` prefix).
 
 ## Server config
 
+### `GET /api/system/info`
+
+Host/runtime information. The last two fields are the contract for external
+bridges such as PF Agent:
+
+```ts
+{
+  appVersion: string, nodeVersion: string, sqliteVersion: string, license: string,
+  host: string, port: number, webOrigin: string | null, pollIntervalSec: number,
+  authEnabled: boolean, configDir: string, configPath: string, dbPath: string,
+  masterKeyPath: string,
+  apiVersion: 1,            // bumped on breaking changes
+  capabilities: string[]    // ['builds.trigger.ref', 'approvals.decide',
+                            //  'entries.sinceSeq', 'events.sse',
+                            //  'telegram.commandsOnly']
+}
+```
+
 ### `GET /api/config/telegram`
 
 Returns the masked public shape — secrets never leave the server:
@@ -521,7 +557,9 @@ Returns the masked public shape — secrets never leave the server:
   hasBotToken: boolean,
   botTokenPreview: string,    // "" or "••••<last4>"
   hasChatId: boolean,
-  chatIdPreview: string       // "" or "@channel" or "••••<last4>"
+  chatIdPreview: string,      // "" or "@channel" or "••••<last4>"
+  startupNotify: boolean,     // absent on disk → true
+  commandsOnly: boolean       // absent on disk → false
 }
 ```
 
@@ -536,7 +574,9 @@ every save.
   botToken?: string,          // "" → keep existing
   defaultChatId?: string,     // "" → keep existing
   clearBotToken?: boolean,    // explicitly wipe stored token
-  clearChatId?: boolean
+  clearChatId?: boolean,
+  startupNotify?: boolean,
+  commandsOnly?: boolean      // bot only answers commands; no unsolicited messages
 }
 ```
 

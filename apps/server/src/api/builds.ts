@@ -18,11 +18,22 @@ import {
 } from '../runner/coordinator';
 import { eventBus } from '../events/bus';
 
-const triggerSchema = z.object({
+export const BRANCH_RE = /^[A-Za-z0-9][A-Za-z0-9._\/-]{0,199}$/;
+export const SHA_RE = /^[0-9a-fA-F]{7,40}$/;
+
+export const triggerSchema = z.object({
   pipelineId: z.string().min(1),
   // Optional: only run this node and its descendants (BFS over outgoing edges).
   // Lets you "Retry from failed step" without re-running earlier steps.
   fromNodeId: z.string().min(1).optional(),
+  // Optional ref metadata recorded on the build (see docs/API.md). The
+  // branch ends up in git argv, so a leading dash is rejected, as is '..'.
+  branch: z
+    .string()
+    .regex(BRANCH_RE)
+    .refine((v) => !v.includes('..'), { message: "branch must not contain '..'" })
+    .optional(),
+  sha: z.string().regex(SHA_RE).optional(),
 });
 
 export async function buildsRoutes(app: FastifyInstance): Promise<void> {
@@ -211,6 +222,8 @@ export async function buildsRoutes(app: FastifyInstance): Promise<void> {
     // applies here too (rapid double-clicks on "Run" shouldn't fan out).
     const build = await startBuildForPipeline(pipeline.id, {
       fromNodeId: parsed.data.fromNodeId,
+      triggerBranch: parsed.data.branch,
+      triggerSha: parsed.data.sha,
     });
     if (!build) return reply.code(500).send({ error: 'could not start build' });
     return build;

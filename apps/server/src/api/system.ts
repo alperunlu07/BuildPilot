@@ -28,6 +28,18 @@ import { getDb } from '../store/db';
 const APP_VERSION = '0.1.0';
 const LICENSE = 'Apache-2.0';
 
+// Contract version + feature flags for external bridges (pf-agent). Bump
+// API_VERSION only on breaking changes; add a capability string when a
+// bridge-relevant feature ships so clients can probe instead of guessing.
+export const API_VERSION = 1;
+export const API_CAPABILITIES: string[] = [
+  'builds.trigger.ref',
+  'approvals.decide',
+  'entries.sinceSeq',
+  'events.sse',
+  'telegram.commandsOnly',
+];
+
 // Per-tool default invocation. Mirrors the DEFAULTS table in
 // runner/steps/aiPrompt.ts. Repeated here so we can probe versions
 // without importing runner-only modules into the API layer.
@@ -194,6 +206,8 @@ export async function systemRoutes(app: FastifyInstance): Promise<void> {
       configPath: join(CONFIG_DIR, 'config.json'),
       dbPath: cfg.dbPath,
       masterKeyPath: process.env.BUILDPILOT_MASTER_KEY_FILE ?? join(CONFIG_DIR, 'master.key'),
+      apiVersion: API_VERSION,
+      capabilities: [...API_CAPABILITIES],
     };
     return body;
   });
