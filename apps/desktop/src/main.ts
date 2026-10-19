@@ -34,7 +34,23 @@ if (!app.requestSingleInstanceLock()) {
 
 let unsubscribe: (() => void) | null = null;
 
-const serverLog = (line: string): void => console.log('[server]', line);
+// Logging is best-effort. A tray app launched from a terminal keeps that
+// terminal's stdout; once the terminal goes away the pipe is broken and every
+// console.log throws EPIPE, which Electron reports as a modal "JavaScript error
+// in the main process" dialog per server log line. Swallow both the
+// synchronous throw and the stream's async 'error' event.
+for (const stream of [process.stdout, process.stderr]) {
+  stream?.on?.('error', () => {
+    /* console is gone; nothing to report it to */
+  });
+}
+const serverLog = (line: string): void => {
+  try {
+    console.log('[server]', line);
+  } catch {
+    /* broken console (EPIPE) */
+  }
+};
 
 // Backstop teardown: if the Electron main is killed by a signal or exits
 // without going through 'before-quit' (Ctrl-C in dev, OS shutdown), this fires
